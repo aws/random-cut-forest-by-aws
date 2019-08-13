@@ -1,0 +1,14 @@
+<FindBugsFilter>
+    <!--
+         EI_EXPOSE_REP: May expose internal representation by returning reference to mutable object
+
+             Returning a reference to a mutable object value stored in one of the object's fields exposes the internal representation of the object.  If instances are accessed by untrusted code, and unchecked changes to the mutable object would compromise security or other important properties, you will need to do something different. Returning a new copy of the object is better approach in many situations.
+
+         EI_EXPOSE_REP2: May expose internal representation by incorporating reference to mutable object
+
+             This code stores a reference to an externally mutable object into the internal representation of the object.  If instances are accessed by untrusted code, and unchecked changes to the mutable object would compromise security or other important properties, you will need to do something different. Storing a copy of the object is better approach in many situations.
+    -->
+    <Match>
+        <Bug code="EI,EI2"/>
+    </Match>
+</FindBugsFilter>
