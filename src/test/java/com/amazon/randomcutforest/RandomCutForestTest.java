@@ -649,4 +649,25 @@ public class RandomCutForestTest {
         assertThat(neighbors.get(1).sequenceIndexes, is(expectedIndexes));
     }
 
+    @Test
+    public void testUpdateOnSmallBoundingBox() {
+        // verifies on small bounding boxes random cuts and tree updates are functional
+        RandomCutForest.Builder forestBuilder = RandomCutForest.builder()
+            .dimensions(1)
+            .numberOfTrees(1)
+            .sampleSize(2)
+            .lambda(0.5)
+            .randomSeed(0)
+            .parallelExecutionEnabled(false);
+
+       RandomCutForest forest = forestBuilder.build();
+       double[][] data = new double[][] {
+           {48.08}
+           ,{48.08000000000001}
+       };
+
+       for (int i = 0; i < 20000; i++) {
+           forest.update(data[i % data.length]);
+       }
+    }
 }
