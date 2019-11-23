@@ -131,7 +131,11 @@ public class RandomCutTree {
         for (int i = 0; i < box.getDimensions(); i++) {
             double range = box.getRange(i);
             if (breakPoint <= range) {
-                return new Cut(i, box.getMinValue(i) + breakPoint);
+                double cutValue = box.getMinValue(i) + breakPoint;
+                if ((cutValue == box.getMaxValue(i)) && (box.getMinValue(i) < box.getMaxValue(i))) {
+                    cutValue = Math.nextAfter(box.getMaxValue(i), box.getMinValue(i));
+                }
+                return new Cut(i, cutValue);
             }
             breakPoint -= range;
         }
