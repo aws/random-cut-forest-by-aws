@@ -20,6 +20,9 @@ import java.util.List;
 
 import com.amazon.randomcutforest.RandomCutForest;
 
+/**
+ * A line transformer that updates its internal RandomCutForest instance but does not produce any output.
+ */
 public class UpdateOnlyTransformer implements LineTransformer {
 
     private final RandomCutForest forest;

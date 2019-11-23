@@ -25,9 +25,9 @@ import com.amazon.randomcutforest.tree.Node;
 
 import static com.amazon.randomcutforest.tree.Node.isLeftOf;
 
-
 /**
- * A day will come when the comments shall be written. It is not this day.
+ * A Visitor which computes several geometric measures that related a given query point to the points stored in a
+ * RandomCutTree.
  **/
 public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure> {
 

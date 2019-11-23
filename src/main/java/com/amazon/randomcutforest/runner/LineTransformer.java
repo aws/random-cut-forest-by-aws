@@ -19,12 +19,32 @@ import java.util.List;
 
 import com.amazon.randomcutforest.RandomCutForest;
 
+/**
+ * This interface is used by SimpleRunner to transform input lines into output lines.
+ */
 public interface LineTransformer {
-    List<String> getResultValues(double... point);
 
+    /**
+     * For the given parsed input point, return a list of string values that should be written as output. The list
+     * of strings will be joined together using the user-specified delimiter.
+     * @param point A point value that was parsed from the input stream.
+     * @return a list of string values that should be written as output.
+     */
+    List<String> getResultValues(double[] point);
+
+    /**
+     * @return a list of string values that should be written to the output when processing a line if there is no
+     * input point available. This method is invoked when shingling is enabled before the first shingle is full.
+     */
     List<String> getEmptyResultValue();
 
+    /**
+     * @return a list of column names to write to the output if headers are enabled.
+     */
     List<String> getResultColumnNames();
 
+    /**
+     * @return the RandomCutForest instance which is being used internally to process lines.
+     */
     RandomCutForest getForest();
 }
