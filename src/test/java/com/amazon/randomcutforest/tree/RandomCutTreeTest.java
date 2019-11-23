@@ -457,4 +457,23 @@ public class RandomCutTreeTest {
         assertNotEquals(cut1.getDimension(), cut3.getDimension());
         assertNotEquals(cut1.getDimension(), cut3.getDimension());
     }
+
+    @Test
+    public void testUpdatesOnSmallBoundingBox() {
+        // verifies on small bounding boxes random cuts and tree updates are functional
+        RandomCutTree tree = RandomCutTree.defaultTree();
+
+        WeightedPoint[] points = new WeightedPoint[] {
+            new WeightedPoint(new double[] {48.08}, 1L, 0),
+            new WeightedPoint(new double[] {48.08000000000001}, 2L, 0) };
+
+        tree.addPoint(points[0]);
+        tree.addPoint(points[1]);
+
+        for (int i = 0; i < 10000; i++) {
+            WeightedPoint point = points[i % points.length];
+            tree.deletePoint(point);
+            tree.addPoint(point);
+        }
+    }
 }
