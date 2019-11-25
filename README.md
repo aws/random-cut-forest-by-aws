@@ -11,6 +11,10 @@ The public interface to this package is the RandomCutForest class, which
 defines methods for anomaly detection, anomaly detection with attribution,
 density estimation, imputation, and forecasting.
 
+## Limitations
+
+What this library doesn't do?
+
 ## Basic operations
 
 To create a RandomCutForest instance with all parameters set to defaults:
@@ -67,7 +71,15 @@ The following parameters can be configured in the RandomCutForest builder.
 | threadPoolSize | int | The number of threads to use in the internal threadpool. | Number of available processors - 1 |
 | windowSize | int | An alternate way of specifying the lambda value. Using this parameter will set lambda to 1 / windowSize. | |
 
-## Command-line usage
+## Setup
+
+Are there other setup instructions? For e.g. paths, dependencies, JDK version etc.
+
+## Build
+
+Are there build dependencies we need to call out?
+
+## Build Command-line (CLI) usage
 
 For each algorithm included in this package there is CLI application that can
 be used for experiments. These applications use `String::split` to read
@@ -103,3 +115,21 @@ Options:
         --help, -h: Print this help message and exit.
 ```
 
+## Code of Conduct
+
+This project has adopted an [Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
+
+
+## Security issue notifications
+
+If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public GitHub issue.
+
+
+## Licensing
+
+See the [LICENSE](./LICENSE.txt) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+
+
+## Copyright
+
+Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
