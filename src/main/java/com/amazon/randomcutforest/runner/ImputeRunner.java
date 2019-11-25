@@ -24,6 +24,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.StringJoiner;
 
+/**
+ * A command-line application that imputes missing values. Points are read from STDIN and output is written to STDOUT.
+ * One output point is written for each input point. If the input point does not contain any missing value indicators,
+ * then it is copied as-is to the output. If an input point contains one or more missing value indicators, then the
+ * missing values are imputed and the imputed point is written to the output.
+ */
 public class ImputeRunner extends SimpleRunner {
 
     private String missingValueMarker;

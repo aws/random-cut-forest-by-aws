@@ -26,6 +26,10 @@ import java.util.List;
 
 import com.amazon.randomcutforest.RandomCutForest;
 
+/**
+ * A command-line application that computes anomaly scores. Points are read from STDIN and output is written to
+ * STDOUT. Output consists of the original input point with the anomaly score appended.
+ */
 public class AnomalyScoreRunner extends SimpleRunner {
 
     public AnomalyScoreRunner() {

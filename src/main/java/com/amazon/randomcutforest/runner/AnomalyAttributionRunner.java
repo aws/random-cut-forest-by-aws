@@ -27,6 +27,10 @@ import java.util.List;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
+/**
+ * A command-line application that computes anomaly attribution. Points are read from STDIN and output is written to
+ * STDOUT. Output consists of the original input point with the anomaly attribution vector appended.
+ */
 public class AnomalyAttributionRunner extends SimpleRunner {
 
     public AnomalyAttributionRunner() {

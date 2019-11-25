@@ -23,9 +23,12 @@ import java.util.function.Function;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+/**
+ * A utility class for parsing command-line arguments.
+ */
 public class ArgumentParser {
 
-    public static final String ARCHIVE_NAME = "RandomCutForest-1.0-super.jar";
+    public static final String ARCHIVE_NAME = "target/random-cut-forest-1.0.jar";
     private final String runnerClass;
     private final String runnerDescription;
     private final Map<String, Argument<?>> shortFlags;
@@ -38,6 +41,12 @@ public class ArgumentParser {
     private final StringArgument delimiter;
     private final BooleanArgument headerRow;
     private final IntegerArgument randomSeed;
+
+    /**
+     * Create a new ArgumentParser.The runner class and runner description will be used in help text.
+     * @param runnerClass       The name of the runner class where this argument parser is being invoked.
+     * @param runnerDescription A description of the runner class where this argument parser is being invoked.
+     */
     public ArgumentParser(String runnerClass, String runnerDescription) {
         this.runnerClass = runnerClass;
         this.runnerDescription = runnerDescription;
@@ -111,9 +120,12 @@ public class ArgumentParser {
         );
 
         addArgument(randomSeed);
-
     }
 
+    /**
+     * Add a new argument to this argument parser.
+     * @param argument An Argument instance for a command-line argument that should be parsed.
+     */
     protected void addArgument(Argument<?> argument) {
         checkNotNull(argument, "argument should not be null");
 
@@ -144,6 +156,10 @@ public class ArgumentParser {
         }
     }
 
+    /**
+     * Parse the given array of command-line arguments.
+     * @param arguments An array of command-line arguments.
+     */
     public void parse(String... arguments) {
         int i = 0;
         while (i < arguments.length) {
@@ -168,6 +184,9 @@ public class ArgumentParser {
         }
     }
 
+    /**
+     * Print a usage message to STDOUT.
+     */
     public void printUsage() {
         System.out.println(String.format("Usage: java -cp %s %s [options] < input_file > output_file", ARCHIVE_NAME,
             runnerClass));
@@ -185,24 +204,42 @@ public class ArgumentParser {
         System.out.println("\t--help, -h: Print this help message and exit.");
     }
 
+    /**
+     * Print an error message, the usage message, and exit the application.
+     * @param errorMessage  An error message to show the user.
+     * @param formatObjects An array of format objects that will be interpolated into the error message using
+     *                      {@link String#format}.
+     */
     public void printUsageAndExit(String errorMessage, Object... formatObjects) {
         System.err.println("Error: " + String.format(errorMessage, formatObjects));
         printUsage();
         System.exit(1);
     }
 
+    /**
+     * @return the user-specified value of the number-of-trees parameter.
+     */
     public int getNumberOfTrees() {
         return numberOfTrees.getValue();
     }
 
+    /**
+     * @return the user-specified value of the sample-size parameter.
+     */
     public int getSampleSize() {
         return sampleSize.getValue();
     }
 
+    /**
+     * @return the user-specified value of the window-size parameter
+     */
     public int getWindowSize() {
         return windowSize.getValue();
     }
 
+    /**
+     * @return the user-specified value of the lambda parameter
+     */
     public double getLambda() {
         if (getWindowSize() > 0) {
             return 1.0 / getWindowSize();
@@ -211,22 +248,37 @@ public class ArgumentParser {
         }
     }
 
+    /**
+     * @return the user-specified value of the shingle-size parameter
+     */
     public int getShingleSize() {
         return shingleSize.getValue();
     }
 
+    /**
+     * @return the user-specified value of the shingle-cyclic parameter
+     */
     public boolean getShingleCyclic() {
         return shingleCyclic.getValue();
     }
 
+    /**
+     * @return the user-specified value of the delimiter parameter
+     */
     public String getDelimiter() {
         return delimiter.getValue();
     }
 
+    /**
+     * @return the user-specified value of the header-row parameter
+     */
     public boolean getHeaderRow() {
         return headerRow.getValue();
     }
 
+    /**
+     * @return the user-specified value of the random-seed parameter
+     */
     public int getRandomSeed() {
         return randomSeed.getValue();
     }

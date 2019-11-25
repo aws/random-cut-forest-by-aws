@@ -27,6 +27,10 @@ import java.util.List;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
+/**
+ * A command-line application that computes directional density. Points are read from STDIN and output is written to
+ * STDOUT. Output consists of the original input point with the directional density vector appended.
+ */
 public class SimpleDensityRunner extends SimpleRunner {
 
     public SimpleDensityRunner() {
@@ -57,7 +61,7 @@ public class SimpleDensityRunner extends SimpleRunner {
 
         @Override
         public List<String> getResultValues(double... point) {
-            DiVector densityFactors = forest.getSimpleDensity(point).getDirectionalDensity(0.001, forest.getDimensions());
+            DiVector densityFactors = forest.getSimpleDensity(point).getDirectionalDensity();
             forest.update(point);
 
             List<String> result = new ArrayList<>(2 * forest.getDimensions());
