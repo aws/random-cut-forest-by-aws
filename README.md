@@ -86,7 +86,7 @@ Build this package and run the full test suite by running
 mvn package
 ```
 
-For a faster build that excludes that long-running "functional" tests, run
+For a faster build that excludes the long-running "functional" tests, run
 
 ```text
 mvn package -DexcludedGroups=functional
@@ -136,7 +136,7 @@ anomaly score to anomalous points (where "anomalous" is with respect to the spec
 are indicated both in the test class name (e.g., `RandomCutForestFunctionalTest`) and in a `@Tag` annotation on the
 test class.
 
-The full test suite including functional test currently takes over 10 minutes to complete. If you are contributing to
+The full test suite including functional tests currently takes over 10 minutes to complete. If you are contributing to
 this package, we recommend excluding the functional tests while actively developing, and only running the full test
 suite before creating a pull request. Functional tests can be excluded from Maven build targets by passing
 `-DexcludedGroups=functional` at the command line. For example:
