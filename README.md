@@ -127,6 +127,36 @@ Options:
         --help, -h: Print this help message and exit.
 ```
 
+## Testing
+
+Our test suite is divided into unit tests and "functional" tests. By "functional", we mean tests that verify the
+expected behavior of the algorithms defined in the package. For example, a functional test for the anomaly detection
+algorithm will first train a forest on a pre-defined distribution and then verify that the forest assigns a high
+anomaly score to anomalous points (where "anomalous" is with respect to the specified distribution). Functional tests
+are indicated both in the test class name (e.g., `RandomCutForestFunctionalTest`) and in a `@Tag` annotation on the
+test class.
+
+The full test suite including functional test currently takes over 10 minutes to complete. If you are contributing to
+this package, we recommend excluding the functional tests while actively developing, and only running the full test
+suite before creating a pull request. Functional tests can be excluded from Maven build targets by passing
+`-DexcludedGroups=functional` at the command line. For example:
+
+```text
+% mvn test -DexcludedGroups=functional
+```
+
+We currently have 90% line coverage with the full test suite, and 80% line coverage when running the unit tests only
+(i.e., when excluding functional tests). Our goal is to reach 100% unit test coverage, and we welcome (and encourage!)
+test contributions. After running tests with Maven, you can see the test coverage broken out by class by opening
+`target/site/jacoco/index.html` in a web browser.
+
+Our tests are implemented in [JUnit 5](https://junit.org/junit5/) with [Mockito](https://site.mockito.org/), [Powermock](https://github.com/powermock/powermock), and [Hamcrest](http://hamcrest.org/) for testing. 
+Test dependencies will be downloaded automatically when invoking `mvn test` or `mvn package`.
+
+## Documentation
+
+* Guha, S., Mishra, N., Roy, G., & Schrijvers, O. (2016, June). Robust random cut forest based anomaly detection on streams. In *International conference on machine learning* (pp. 2712-2721).
+
 ## Code of Conduct
 
 This project has adopted an [Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
