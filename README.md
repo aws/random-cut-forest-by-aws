@@ -13,7 +13,8 @@ density estimation, imputation, and forecasting.
 
 ## Limitations
 
-What this library doesn't do?
+* Update operations in a forest are *not thread-safe*. Running concurrent updates or running an update concurrently
+  with a traversal may result in errors.
 
 ## Basic operations
 
@@ -73,28 +74,39 @@ The following parameters can be configured in the RandomCutForest builder.
 
 ## Setup
 
-Are there other setup instructions? For e.g. paths, dependencies, JDK version etc.
+1. Checkout this package from our GitHub repository.
+1. Install [Apache Maven](https://maven.apache.org/) by following the direcitons on that site.
+1. Set your `JAVA_HOME` environment variable to a JDK version 8 or greater.
 
 ## Build
 
-Are there build dependencies we need to call out?
+Build this package and run the full test suite by running
+
+```text
+mvn package
+```
+
+For a faster build that excludes that long-running "functional" tests, run
+
+```text
+mvn package -DexcludedGroups=functional
+```
 
 ## Build Command-line (CLI) usage
 
-For each algorithm included in this package there is CLI application that can
+For some of the algorithms included in this package, there are CLI applications that can
 be used for experiments. These applications use `String::split` to read
 delimited data, and as such are **not intended for production use**. Instead,
 use these applications as example code and as a way to learn about the
 algorithms and their hyperparameters.
 
-You can build a local archive by running the Maven package command. Use the "excludedGroups" flag to disable the
-long-running "functional" tests, which take about 10 minutes to complete.
+Build a local archive by running the Maven package command.
 
 ```text
 % mvn package -DexcludedGroups=functional
 ```
 
-You can then invoke an example CLI application by adding the superjar to your classpath. For example:
+You can then invoke an example CLI application by adding the resulting jar file to your classpath. For example:
 
 ```text
 % java -cp target/random-cut-forest-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
