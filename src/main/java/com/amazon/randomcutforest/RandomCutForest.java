@@ -726,20 +726,17 @@ public class RandomCutForest {
 
         for (int k = 0; k < horizon; k++) {
             for (int y = 0; y < blockSize; y++) {
-                missingIndexes[y] = (currentPosition - blockSize + y) % dimensions;
+                missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
             double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
 
             for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[(currentPosition - blockSize + y) % dimensions] =
-                    imputedPoint[(currentPosition - blockSize + y) % dimensions];
+                result[resultIndex++] = queryPoint[(currentPosition + y) % dimensions] =
+                    imputedPoint[(currentPosition + y) % dimensions];
             }
 
-            // We want currentPosition - blockSize + y to be a valid index (which should be a positive multiple of blockSize)
-            // When currentPosition == dimensions - blockSize, the following expression will be equal to dimensions
-
-            currentPosition = (currentPosition + blockSize - 1) % dimensions + 1;
+            currentPosition = (currentPosition + blockSize) % dimensions;
         }
     }
 
