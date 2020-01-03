@@ -652,8 +652,12 @@ public class RandomCutForest {
      * @return a forecasted time series.
      */
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
-        checkArgument(blockSize < dimensions && dimensions % blockSize == 0,
+        checkArgument(0 < blockSize && blockSize < dimensions,
+                "blockSize must be between 0 and dimensions (exclusive)");
+        checkArgument(dimensions % blockSize == 0,
             "dimensions must be evenly divisible by blockSize");
+        checkArgument(0 <= shingleIndex && shingleIndex <  dimensions / blockSize,
+                "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
 
         double[] result = new double[blockSize * horizon];
         int[] missingIndexes = new int[blockSize];

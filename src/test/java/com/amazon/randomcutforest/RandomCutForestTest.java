@@ -12,6 +12,7 @@ import java.util.stream.Collector;
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
+import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
@@ -23,6 +24,7 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulato
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.util.ShingleBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
@@ -37,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -568,6 +573,128 @@ public class RandomCutForestTest {
     }
 
     @Test
+    public void testExtrapolateBasic() {
+        doNothing().when(forest).extrapolateBasicCyclic(any(double[].class), anyInt(), anyInt(), anyInt(),
+                any(double[].class), any(int[].class));
+        doNothing().when(forest).extrapolateBasicSliding(any(double[].class), anyInt(), anyInt(),
+                any(double[].class), any(int[].class));
+
+        double[] point = new double[] {2.0, -3.0};
+        int horizon = 2;
+        int blockSize = 1;
+        boolean cyclic = true;
+        int shingleIndex = 1;
+
+        forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
+        verify(forest).extrapolateBasicCyclic(any(double[].class), eq(horizon),
+                eq(blockSize), eq(shingleIndex), any(double[].class), any(int[].class));
+
+        forest.extrapolateBasic(point, horizon, blockSize, cyclic);
+        verify(forest).extrapolateBasicCyclic(any(double[].class), eq(horizon),
+                eq(blockSize), eq(0), any(double[].class), any(int[].class));
+
+        cyclic = false;
+        forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
+        forest.extrapolateBasic(point, horizon, blockSize, cyclic);
+        verify(forest, times(2)).extrapolateBasicSliding(any(double[].class), eq(horizon),
+                eq(blockSize), any(double[].class), any(int[].class));
+    }
+
+    @Test
+    public void testExtrapolateBasicInvalid() {
+        double[] point = new double[] {2.0, -3.0};
+        int horizon = 2;
+        int blockSize = 1;
+        boolean cyclic = true;
+        int shingleIndex = 1;
+
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.extrapolateBasic(point, horizon, -10, cyclic, shingleIndex));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.extrapolateBasic(point, horizon, 0, cyclic, shingleIndex));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.extrapolateBasic(point, horizon, dimensions, cyclic, shingleIndex));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.extrapolateBasic(point, horizon, dimensions * 2, cyclic, shingleIndex));
+        assertThrows(NullPointerException.class,
+                () -> forest.extrapolateBasic(null, horizon, blockSize, cyclic, shingleIndex));
+
+        RandomCutForest f = RandomCutForest.defaultForest(20);
+        double[] p = new double[20];
+
+        // dimensions not divisible by blockSize
+        assertThrows(IllegalArgumentException.class,
+                () -> f.extrapolateBasic(p, horizon, 7, cyclic, shingleIndex));
+
+        // invalid shingle index values
+        assertThrows(IllegalArgumentException.class,
+                () -> f.extrapolateBasic(point, horizon, 5, cyclic, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> f.extrapolateBasic(point, horizon, 5, cyclic, 4));
+        assertThrows(IllegalArgumentException.class,
+                () -> f.extrapolateBasic(point, horizon, 4, cyclic, 44));
+    }
+
+    @Test
+    public void testExrapolateBasicWithShingleBuilder() {
+        doNothing().when(forest).extrapolateBasicCyclic(any(double[].class), anyInt(), anyInt(), anyInt(),
+                any(double[].class), any(int[].class));
+        doNothing().when(forest).extrapolateBasicSliding(any(double[].class), anyInt(), anyInt(),
+                any(double[].class), any(int[].class));
+
+        ShingleBuilder shingleBuilder = new ShingleBuilder(1, 2, true);
+        int horizon = 3;
+
+        forest.extrapolateBasic(shingleBuilder, horizon);
+        verify(forest, times(1)).extrapolateBasicCyclic(any(double[].class), eq(horizon),
+                eq(1), eq(0), any(double[].class), any(int[].class));
+
+        shingleBuilder = new ShingleBuilder(1, 2, false);
+        forest.extrapolateBasic(shingleBuilder, horizon);
+        verify(forest, times(1)).extrapolateBasicSliding(any(double[].class), eq(horizon),
+                eq(1), any(double[].class), any(int[].class));
+    }
+
+    @Test
+    public void testExtrapolateBasicSliding() {
+        int horizon = 3;
+        int blockSize = 2;
+        double[] result = new double[dimensions * horizon];
+        double[] queryPoint = new double[] {1.0, -2.0};
+        int[] missingIndexes = new int[blockSize];
+
+        doReturn(new double[] {2.0, -3.0})
+                .doReturn(new double[] {4.0, -5.0})
+                .doReturn(new double[] {6.0, -7.0})
+                .when(forest).imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+
+        forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes);
+
+        double[] expectedResult = new double[] {2.0, -3.0, 4.0, -5.0, 6.0, -7.0};
+        assertArrayEquals(expectedResult, result);
+    }
+
+    @Test
+    public void testExtrapolateBasicCyclic() {
+        int horizon = 3;
+        int blockSize = 2;
+        double[] result = new double[dimensions * horizon];
+        int shingleIndex = 1;
+        double[] queryPoint = new double[] {1.0, -2.0};
+        int[] missingIndexes = new int[blockSize];
+
+        doReturn(new double[] {2.0, -3.0})
+                .doReturn(new double[] {4.0, -5.0})
+                .doReturn(new double[] {6.0, -7.0})
+                .when(forest).imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+
+        forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
+
+        double[] expectedResult = new double[] {-3.0, 2.0, -5.0, 4.0, -7.0, 6.0};
+        assertArrayEquals(expectedResult, result);
+    }
+
+    @Test
     public void testGetNearNeighborInSample() {
         List<Long> indexes1 = new ArrayList<>();
         indexes1.add(1L);
@@ -585,53 +712,31 @@ public class RandomCutForestTest {
         indexes5.add(2L);
         indexes5.add(4L);
 
-        Neighbor neighbor1 = new Neighbor(new double[]{1, 2}, 5, indexes1);
-        RandomCutTree tree1 = mock(RandomCutTree.class);
-        when(tree1.traverseTree(any(), any())).thenReturn(Optional.of(neighbor1));
+        Neighbor neighbor1 = new Neighbor(new double[] {1, 2}, 5, indexes1);
+        when(treeUpdaters.get(0).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                .thenReturn(Optional.of(neighbor1));
 
-        Neighbor neighbor2 = new Neighbor(new double[]{1, 2}, 5, indexes2);
-        RandomCutTree tree2 = mock(RandomCutTree.class);
-        when(tree2.traverseTree(any(), any())).thenReturn(Optional.of(neighbor2));
+        Neighbor neighbor2 = new Neighbor(new double[] {1, 2}, 5, indexes2);
+        when(treeUpdaters.get(1).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                .thenReturn(Optional.of(neighbor2));
 
-        RandomCutTree tree3 = mock(RandomCutTree.class);
-        when(tree3.traverseTree(any(), any())).thenReturn(Optional.empty());
+        when(treeUpdaters.get(2).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                .thenReturn(Optional.empty());
 
-        Neighbor neighbor4 = new Neighbor(new double[]{2, 3}, 4, indexes4);
-        RandomCutTree tree4 = mock(RandomCutTree.class);
-        when(tree4.traverseTree(any(), any())).thenReturn(Optional.of(neighbor4));
+        Neighbor neighbor4 = new Neighbor(new double[] {2, 3}, 4, indexes4);
+        when(treeUpdaters.get(3).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                .thenReturn(Optional.of(neighbor4));
 
-        Neighbor neighbor5 = new Neighbor(new double[]{2, 3}, 4, indexes5);
-        RandomCutTree tree5 = mock(RandomCutTree.class);
-        when(tree5.traverseTree(any(), any())).thenReturn(Optional.of(neighbor5));
+        Neighbor neighbor5 = new Neighbor(new double[] {2, 3}, 4, indexes5);
+        when(treeUpdaters.get(4).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                .thenReturn(Optional.of(neighbor5));
 
-        RandomCutForest forest = spy(RandomCutForest.defaultForest(2));
-
-        TreeUpdater treeUpdater1 = mock(TreeUpdater.class);
-        when(treeUpdater1.getTree()).thenReturn(tree1);
-
-        TreeUpdater treeUpdater2 = mock(TreeUpdater.class);
-        when(treeUpdater2.getTree()).thenReturn(tree2);
-
-        TreeUpdater treeUpdater3 = mock(TreeUpdater.class);
-        when(treeUpdater3.getTree()).thenReturn(tree3);
-
-        TreeUpdater treeUpdater4 = mock(TreeUpdater.class);
-        when(treeUpdater4.getTree()).thenReturn(tree4);
-
-        TreeUpdater treeUpdater5 = mock(TreeUpdater.class);
-        when(treeUpdater5.getTree()).thenReturn(tree5);
-
-        ArrayList<TreeUpdater> treeUpdaters = new ArrayList<>();
-        treeUpdaters.add(treeUpdater1);
-        treeUpdaters.add(treeUpdater2);
-        treeUpdaters.add(treeUpdater3);
-        treeUpdaters.add(treeUpdater4);
-        treeUpdaters.add(treeUpdater5);
-
-        AbstractForestTraversalExecutor executor = new SequentialForestTraversalExecutor(treeUpdaters);
+        for (int i = 5; i < treeUpdaters.size(); i++) {
+            when(treeUpdaters.get(i).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+                    .thenReturn(Optional.empty());
+        }
 
         Whitebox.setInternalState(forest, "storeSequenceIndexesEnabled", true);
-        Whitebox.setInternalState(forest, "executor", executor);
 
         doReturn(true).when(forest).isOutputReady();
         List<Neighbor> neighbors = forest.getNearNeighborsInSample(new double[]{0, 0}, 5);
@@ -647,6 +752,25 @@ public class RandomCutForestTest {
         assertEquals(5, neighbors.get(1).distance );
         assertEquals(4, neighbors.get(1).sequenceIndexes.size());
         assertThat(neighbors.get(1).sequenceIndexes, is(expectedIndexes));
+    }
+
+    @Test
+    public void testGetNearNeighborsInSampleBeforeOutputReady() {
+        assertFalse(forest.isOutputReady());
+        assertTrue(forest.getNearNeighborsInSample(new double[] {0.1, 0.2}, 5.0).isEmpty());
+    }
+
+    @Test
+    public void testGetNearNeighborsInSampleNoDistanceThreshold() {
+        forest.getNearNeighborsInSample(new double[] {0.1, 0.2});
+        verify(forest, times(1)).getNearNeighborsInSample(aryEq(new double[] {0.1, 0.2}), eq(Double.POSITIVE_INFINITY));
+    }
+
+    @Test
+    public void testGetNearNeighborsInSampleInvalid() {
+        assertThrows(NullPointerException.class, () -> forest.getNearNeighborsInSample(null, 101.1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getNearNeighborsInSample(new double[] {1.1, 2.2}, -101.1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getNearNeighborsInSample(new double[] {1.1, 2.2}, 0.0));
     }
 
     @Test
@@ -669,5 +793,27 @@ public class RandomCutForestTest {
        for (int i = 0; i < 20000; i++) {
            forest.update(data[i % data.length]);
        }
+    }
+
+    @Test
+    public void testSamplersFull() {
+        long totalUpdates = sampleSize / 2;
+        when(executor.getTotalUpdates()).thenReturn(totalUpdates);
+        assertFalse(forest.samplersFull());
+
+        totalUpdates = sampleSize;
+        when(executor.getTotalUpdates()).thenReturn(totalUpdates);
+        assertTrue(forest.samplersFull());
+
+        totalUpdates = sampleSize * 10;
+        when(executor.getTotalUpdates()).thenReturn(totalUpdates);
+        assertTrue(forest.samplersFull());
+    }
+
+    @Test
+    public void testGetTotalUpdates() {
+        long totalUpdates = 987654321L;
+        when(executor.getTotalUpdates()).thenReturn(totalUpdates);
+        assertEquals(totalUpdates, forest.getTotalUpdates());
     }
 }
