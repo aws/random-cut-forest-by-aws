@@ -1,15 +1,12 @@
 # Random Cut Forest
 
-This package is an implementation of the Random Cut Forest probabilistic data 
-structure. Random Cut Forests (RCFs) were originally developed at Amazon to use in an
-anomaly detection algorithm. After anomaly detection was launched, new 
-algorithms based on RCFs were developed for density estimation, imputation,
-and forecasting. The goal of this library is to be easy to use and to strike
-a balance between efficiency and extensibility.
+This package is an implementation of the Random Cut Forest probabilistic data structure. Random Cut Forests (RCFs) were 
+originally developed at Amazon to use in a nonparametric anomaly detection algorithm for streaming data. Later new 
+algorithms based on RCFs were developed for density estimation, imputation, and forecasting. The goal of this library 
+is to be easy to use and to strike a balance between efficiency and extensibility.
 
-The public interface to this package is the RandomCutForest class, which 
-defines methods for anomaly detection, anomaly detection with attribution,
-density estimation, imputation, and forecasting.
+The public interface to this package is the RandomCutForest class, which defines methods for anomaly detection, anomaly 
+detection with attribution, density estimation, imputation, and forecasting.
 
 ## Limitations
 
@@ -152,6 +149,28 @@ test contributions. After running tests with Maven, you can see the test coverag
 
 Our tests are implemented in [JUnit 5](https://junit.org/junit5/) with [Mockito](https://site.mockito.org/), [Powermock](https://github.com/powermock/powermock), and [Hamcrest](http://hamcrest.org/) for testing. 
 Test dependencies will be downloaded automatically when invoking `mvn test` or `mvn package`.
+
+## Benchmarks
+
+This package includes [JMH](https://openjdk.java.net/projects/code-tools/jmh/) microbenchmarks. Build an executable
+jar containing the benchmark code by running
+
+```text
+% mvn package assembly:single -DexcludedGroups=functional
+```
+
+To invoke the full benchmark suite:
+
+```text
+% java -jar target/random-cut-forest-1.0-benchmarks.jar
+```
+
+The full benchmark suite takes a long time to run. You can also pass a regex at the command-line, then only matching
+benchmark methods will be executed.
+
+```text
+% java -jar target/random-cut-forest-1.0-benchmarks.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
+```
 
 ## Documentation
 
