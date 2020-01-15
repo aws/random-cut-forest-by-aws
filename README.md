@@ -106,8 +106,8 @@ Build a local archive by running the Maven package command.
 You can then invoke an example CLI application by adding the resulting jar file to your classpath. For example:
 
 ```text
-% java -cp target/random-cut-forest-1.0.jar com.amazon.com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
-Usage: java -cp RandomCutForest-1.0-super.jar com.amazon.com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
+% java -cp target/random-cut-forest-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+Usage: java -cp RandomCutForest-1.0-super.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
 
@@ -165,7 +165,8 @@ To invoke the full benchmark suite:
 % java -jar target/random-cut-forest-1.0-benchmarks.jar
 ```
 
-You can also pass a regex at the command-line to filter which benchmarks are run:
+The full benchmark suite takes a long time to run. You can also pass a regex at the command-line, then only matching
+benchmark methods will be executed.
 
 ```text
 % java -jar target/random-cut-forest-1.0-benchmarks.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore

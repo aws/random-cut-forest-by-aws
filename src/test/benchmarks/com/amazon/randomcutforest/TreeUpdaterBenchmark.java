@@ -50,8 +50,7 @@ public class TreeUpdaterBenchmark {
         @Param({"0.0", "1e-5"})
         double lambda;
 
-        // @Param({"false", "true"})
-        @Param({"true"})
+        @Param({"false", "true"})
         boolean storeSequenceIndexesEnabled;
 
         @Param({"false", "true"})
