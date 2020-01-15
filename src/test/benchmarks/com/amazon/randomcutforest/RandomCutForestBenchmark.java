@@ -30,7 +30,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-@Warmup(iterations = 10)
+@Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(value = 1)
 @State(Scope.Benchmark)
@@ -40,14 +40,11 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({"1", "8", "64"})
+        @Param({"1", "16", "256"})
         int dimensions;
 
         @Param({"50", "100"})
         int numberOfTrees;
-
-        @Param({"256"})
-        int sampleSize;
 
         @Param({"false", "true"})
         boolean parallelExecutionEnabled;
@@ -65,7 +62,6 @@ public class RandomCutForestBenchmark {
         public void setUpForest() {
             forest = RandomCutForest.builder()
                     .numberOfTrees(numberOfTrees)
-                    .sampleSize(sampleSize)
                     .dimensions(dimensions)
                     .parallelExecutionEnabled(parallelExecutionEnabled)
                     .randomSeed(99)

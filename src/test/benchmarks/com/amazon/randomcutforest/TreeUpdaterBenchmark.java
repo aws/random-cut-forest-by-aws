@@ -31,7 +31,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-@Warmup(iterations = 10)
+@Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(value = 1)
 @State(Scope.Benchmark)
@@ -41,20 +41,14 @@ public class TreeUpdaterBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({"1", "8", "64"})
+        @Param({"1", "16", "256"})
         int dimensions;
-
-        @Param({"256"})
-        int sampleSize;
 
         @Param({"0.0", "1e-5"})
         double lambda;
 
         @Param({"false", "true"})
         boolean storeSequenceIndexesEnabled;
-
-        @Param({"false", "true"})
-        boolean centerOfMassEnabled;
 
         double[][] data;
         TreeUpdater treeUpdater;
@@ -67,11 +61,10 @@ public class TreeUpdaterBenchmark {
 
         @Setup(Level.Iteration)
         public void setUpTree() {
-            SimpleStreamSampler sampler = new SimpleStreamSampler(sampleSize, lambda, 99);
+            SimpleStreamSampler sampler = new SimpleStreamSampler(RandomCutForest.DEFAULT_SAMPLE_SIZE, lambda, 99);
             RandomCutTree tree = RandomCutTree.builder()
                     .randomSeed(101)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .centerOfMassEnabled(centerOfMassEnabled)
                     .build();
             treeUpdater = new TreeUpdater(sampler, tree);
         }
