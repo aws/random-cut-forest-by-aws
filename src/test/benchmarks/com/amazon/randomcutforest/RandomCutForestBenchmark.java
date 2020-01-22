@@ -33,7 +33,7 @@ import org.openjdk.jmh.infra.Blackhole;
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(value = 1)
-@State(Scope.Benchmark)
+@State(Scope.Thread)
 public class RandomCutForestBenchmark {
 
     public final static int DATA_SIZE = 50_000;
@@ -58,7 +58,7 @@ public class RandomCutForestBenchmark {
             data = testData.generateTestData(DATA_SIZE, dimensions);
         }
 
-        @Setup(Level.Iteration)
+        @Setup(Level.Invocation)
         public void setUpForest() {
             forest = RandomCutForest.builder()
                     .numberOfTrees(numberOfTrees)
