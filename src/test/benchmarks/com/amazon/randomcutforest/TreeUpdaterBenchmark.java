@@ -39,7 +39,7 @@ public class TreeUpdaterBenchmark {
 
     public static final int DATA_SIZE = 50_000;
 
-    @State(Scope.Benchmark)
+    @State(Scope.Thread)
     public static class BenchmarkState {
         @Param({"1", "16", "256"})
         int dimensions;
@@ -59,7 +59,7 @@ public class TreeUpdaterBenchmark {
             data = testData.generateTestData(DATA_SIZE, dimensions);
         }
 
-        @Setup(Level.Iteration)
+        @Setup(Level.Invocation)
         public void setUpTree() {
             SimpleStreamSampler sampler = new SimpleStreamSampler(RandomCutForest.DEFAULT_SAMPLE_SIZE, lambda, 99);
             RandomCutTree tree = RandomCutTree.builder()
@@ -80,13 +80,7 @@ public class TreeUpdaterBenchmark {
         long entriesSeen = 0;
 
         for (int i = 0; i < data.length; i++) {
-            try {
-                tree.update(data[i], ++entriesSeen);
-            } catch (Exception e) {
-                System.out.println("Point = " + Arrays.toString(data[i]));
-                System.out.println("Sequence Index = " + entriesSeen);
-                throw e;
-            }
+            tree.update(data[i], ++entriesSeen);
         }
 
         return tree;
