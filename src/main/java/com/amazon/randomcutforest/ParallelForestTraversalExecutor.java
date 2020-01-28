@@ -62,8 +62,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
             })
             .reduce(accumulator)
             .map(finisher)
-            .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"))
-        );
+        ).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
@@ -119,8 +118,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
             })
             .reduce(accumulator)
             .map(finisher)
-            .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"))
-        );
+        ).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
