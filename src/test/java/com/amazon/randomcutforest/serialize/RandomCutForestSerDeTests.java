@@ -68,19 +68,23 @@ public class RandomCutForestSerDeTests {
         }
 
         String json = serializer.toJson(forest);
-        RandomCutForest reForest = serializer.fromJson(json);
+        RandomCutForest jsonForest = serializer.fromJson(json);
+        byte[] ion = serializer.toIon(forest);
+        RandomCutForest ionForest = serializer.fromIon(ion);
 
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;
         for (double[] point : generate(numTestSamples, numDims)) {
-            assertEquals(forest.getAnomalyScore(point), reForest.getAnomalyScore(point), delta);
+            assertEquals(forest.getAnomalyScore(point), jsonForest.getAnomalyScore(point), delta);
+            assertEquals(forest.getAnomalyScore(point), ionForest.getAnomalyScore(point), delta);
             forest.update(point);
-            reForest.update(point);
+            jsonForest.update(point);
+            ionForest.update(point);
         }
     }
 
     private double[][] generate(int numSamples, int numDimensions) {
         return IntStream.range(0, numSamples)
-            .mapToObj(i -> new Random().doubles(numDimensions).toArray())
+            .mapToObj(i -> new Random(0L).doubles(numDimensions).toArray())
             .toArray(double[][]::new);
     }
 }
