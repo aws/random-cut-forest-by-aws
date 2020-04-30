@@ -25,108 +25,107 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ShingleBuilderTest {
 
-    private int dimensions;
-    private int shingleSize;
-    private ShingleBuilder builder;
+	private int dimensions;
+	private int shingleSize;
+	private ShingleBuilder builder;
 
-    @BeforeEach
-    public void setUp() {
-        dimensions = 2;
-        shingleSize = 3;
-        builder = new ShingleBuilder(dimensions, shingleSize);
-    }
+	@BeforeEach
+	public void setUp() {
+		dimensions = 2;
+		shingleSize = 3;
+		builder = new ShingleBuilder(dimensions, shingleSize);
+	}
 
-    @Test
-    public void testNew() {
-        assertEquals(dimensions, builder.getInputPointSize());
-        assertEquals(dimensions * shingleSize, builder.getShingledPointSize());
-        assertFalse(builder.isCyclic());
-    }
+	@Test
+	public void testNew() {
+		assertEquals(dimensions, builder.getInputPointSize());
+		assertEquals(dimensions * shingleSize, builder.getShingledPointSize());
+		assertFalse(builder.isCyclic());
+	}
 
-    @Test
-    public void testNewWithInvalidArguments() {
-        assertThrows(IllegalArgumentException.class, () -> new ShingleBuilder(0, shingleSize));
-        assertThrows(IllegalArgumentException.class, () -> new ShingleBuilder(dimensions, 0));
-    }
+	@Test
+	public void testNewWithInvalidArguments() {
+		assertThrows(IllegalArgumentException.class, () -> new ShingleBuilder(0, shingleSize));
+		assertThrows(IllegalArgumentException.class, () -> new ShingleBuilder(dimensions, 0));
+	}
 
-    @Test
-    public void testAddPoint() {
-        double[] shingle = builder.getShingle();
-        assertArrayEquals(new double[] {0, 0, 0, 0, 0, 0}, shingle);
+	@Test
+	public void testAddPoint() {
+		double[] shingle = builder.getShingle();
+		assertArrayEquals(new double[]{0, 0, 0, 0, 0, 0}, shingle);
 
-        builder.addPoint(new double[] {9, 10});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[] {0, 0, 0, 0, 9, 10}, shingle);
+		builder.addPoint(new double[]{9, 10});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{0, 0, 0, 0, 9, 10}, shingle);
 
-        builder.addPoint(new double[] {7, 8});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[] {0, 0, 9, 10, 7, 8}, shingle);
+		builder.addPoint(new double[]{7, 8});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{0, 0, 9, 10, 7, 8}, shingle);
 
-        builder.addPoint(new double[] {5, 6});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[] {9, 10, 7, 8, 5, 6}, shingle);
+		builder.addPoint(new double[]{5, 6});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{9, 10, 7, 8, 5, 6}, shingle);
 
-        builder.addPoint(new double[] {3, 4});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[]{7, 8, 5, 6, 3, 4}, shingle);
-    }
+		builder.addPoint(new double[]{3, 4});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{7, 8, 5, 6, 3, 4}, shingle);
+	}
 
-    @Test
-    public void testAddPointCyclic() {
-        builder = new ShingleBuilder(dimensions, shingleSize, true);
-        double[] shingle = builder.getShingle();
-        assertArrayEquals(new double[] {0, 0, 0, 0, 0, 0}, shingle);
+	@Test
+	public void testAddPointCyclic() {
+		builder = new ShingleBuilder(dimensions, shingleSize, true);
+		double[] shingle = builder.getShingle();
+		assertArrayEquals(new double[]{0, 0, 0, 0, 0, 0}, shingle);
 
-        builder.addPoint(new double[] {9, 10});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[]{9, 10, 0, 0, 0, 0}, shingle);
+		builder.addPoint(new double[]{9, 10});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{9, 10, 0, 0, 0, 0}, shingle);
 
-        builder.addPoint(new double[] {7, 8});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[]{9, 10, 7, 8, 0, 0}, shingle);
+		builder.addPoint(new double[]{7, 8});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{9, 10, 7, 8, 0, 0}, shingle);
 
-        builder.addPoint(new double[] {5, 6});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[]{9, 10, 7, 8, 5, 6}, shingle);
+		builder.addPoint(new double[]{5, 6});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{9, 10, 7, 8, 5, 6}, shingle);
 
-        builder.addPoint(new double[] {3, 4});
-        shingle = builder.getShingle();
-        assertArrayEquals(new double[]{3, 4, 7, 8, 5, 6}, shingle);
-    }
+		builder.addPoint(new double[]{3, 4});
+		shingle = builder.getShingle();
+		assertArrayEquals(new double[]{3, 4, 7, 8, 5, 6}, shingle);
+	}
 
-    @Test
-    public void testAddPointWithInvalidArguments() {
-        assertThrows(NullPointerException.class, () -> builder.addPoint(null));
+	@Test
+	public void testAddPointWithInvalidArguments() {
+		assertThrows(NullPointerException.class, () -> builder.addPoint(null));
 
-        double[] point = new double[9]; // wrong size of array
-        assertThrows(IllegalArgumentException.class, () -> builder.addPoint(point));
-    }
+		double[] point = new double[9]; // wrong size of array
+		assertThrows(IllegalArgumentException.class, () -> builder.addPoint(point));
+	}
 
+	@Test
+	public void testShingleCopy() {
+		double[] buffer = new double[dimensions * shingleSize];
 
-    @Test
-    public void testShingleCopy() {
-        double[] buffer = new double[dimensions * shingleSize];
+		builder.addPoint(new double[]{2, 1});
+		builder.addPoint(new double[]{4, 3});
+		builder.addPoint(new double[]{6, 5});
 
-        builder.addPoint(new double[] {2, 1});
-        builder.addPoint(new double[] {4, 3});
-        builder.addPoint(new double[] {6, 5});
+		double[] shingle = builder.getShingle();
+		assertArrayEquals(new double[]{2, 1, 4, 3, 6, 5}, shingle);
+		assertArrayEquals(new double[]{0, 0, 0, 0, 0, 0}, buffer);
 
-        double[] shingle = builder.getShingle();
-        assertArrayEquals(new double[] {2, 1, 4, 3, 6, 5}, shingle);
-        assertArrayEquals(new double[] {0, 0, 0, 0, 0, 0}, buffer);
+		builder.getShingle(buffer);
+		assertArrayEquals(shingle, buffer);
 
-        builder.getShingle(buffer);
-        assertArrayEquals(shingle, buffer);
+		buffer[0] = 0;
+		assertEquals(2, shingle[0]);
+	}
 
-        buffer[0] = 0;
-        assertEquals(2, shingle[0]);
-    }
+	@Test
+	public void testGetShingleWithInvalidArguments() {
+		assertThrows(NullPointerException.class, () -> builder.getShingle(null));
 
-    @Test
-    public void testGetShingleWithInvalidArguments() {
-        assertThrows(NullPointerException.class, () -> builder.getShingle(null));
-
-        double[] buffer = new double[2]; // wrong size of array
-        assertThrows(IllegalArgumentException.class, () -> builder.getShingle(buffer));
-    }
+		double[] buffer = new double[2]; // wrong size of array
+		assertThrows(IllegalArgumentException.class, () -> builder.getShingle(buffer));
+	}
 }

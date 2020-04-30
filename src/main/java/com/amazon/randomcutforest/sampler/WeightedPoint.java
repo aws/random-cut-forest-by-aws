@@ -16,59 +16,63 @@
 package com.amazon.randomcutforest.sampler;
 
 /**
- * This container class stores a point along with a weight value and a sequence index. This class is used by
- * SimpleStreamSampler, where the weight value determines which points in the sample are evicted when new points are
- * added.
+ * This container class stores a point along with a weight value and a sequence
+ * index. This class is used by SimpleStreamSampler, where the weight value
+ * determines which points in the sample are evicted when new points are added.
  */
 public final class WeightedPoint {
 
-    /**
-     * The point values.
-     */
-    private final double[] point;
+	/**
+	 * The point values.
+	 */
+	private final double[] point;
 
-    /**
-     * A weight value.
-     */
-    private final double weight;
+	/**
+	 * A weight value.
+	 */
+	private final double weight;
 
-    /**
-     * An ordinal value corresponding to when this point was added to the forest.
-     */
-    private final long sequenceIndex;
+	/**
+	 * An ordinal value corresponding to when this point was added to the forest.
+	 */
+	private final long sequenceIndex;
 
-    /**
-     * Construct a new WeightedPoint.
-     *
-     * @param point         The point values.
-     * @param sequenceIndex An ordinal value corresponding to when this point was added to the forest.
-     * @param weight        A weight value.
-     */
-    public WeightedPoint(double[] point, final long sequenceIndex, final double weight) {
-        this.point = point;
-        this.weight = weight;
-        this.sequenceIndex = sequenceIndex;
-    }
+	/**
+	 * Construct a new WeightedPoint.
+	 *
+	 * @param point
+	 *            The point values.
+	 * @param sequenceIndex
+	 *            An ordinal value corresponding to when this point was added to the
+	 *            forest.
+	 * @param weight
+	 *            A weight value.
+	 */
+	public WeightedPoint(double[] point, final long sequenceIndex, final double weight) {
+		this.point = point;
+		this.weight = weight;
+		this.sequenceIndex = sequenceIndex;
+	}
 
-    /**
-     * @return the point values.
-     */
-    public double[] getPoint() {
-        return point;
-    }
+	/**
+	 * @return the point values.
+	 */
+	public double[] getPoint() {
+		return point;
+	}
 
-    /**
-     * @return the weight value.
-     */
-    public double getWeight() {
-        return weight;
-    }
+	/**
+	 * @return the weight value.
+	 */
+	public double getWeight() {
+		return weight;
+	}
 
-    /**
-     * @return the sequence index, an ordinal value corresponding to when this point was added to the forest.
-     */
-    public long getSequenceIndex() {
-        return sequenceIndex;
-    }
+	/**
+	 * @return the sequence index, an ordinal value corresponding to when this point
+	 *         was added to the forest.
+	 */
+	public long getSequenceIndex() {
+		return sequenceIndex;
+	}
 }
-

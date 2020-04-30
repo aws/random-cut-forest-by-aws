@@ -22,18 +22,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DynamicAttributionVisitorTest {
-    @Test
-    public void testScoringMethods() {
-        BiFunction<Double, Double, Double> scoreSeen = (x, y) -> (x + y) / 2;
-        BiFunction<Double, Double, Double> scoreUneen = (x, y) -> 0.75 * x + 0.25 * y;
-        BiFunction<Double, Double, Double> damp = (x, y) -> Math.sqrt(x * y);
-        DynamicAttributionVisitor visitor = new DynamicAttributionVisitor(new double[] {1.1, -2.2}, 100,  2,
-                scoreSeen, scoreUneen, damp);
+	@Test
+	public void testScoringMethods() {
+		BiFunction<Double, Double, Double> scoreSeen = (x, y) -> (x + y) / 2;
+		BiFunction<Double, Double, Double> scoreUneen = (x, y) -> 0.75 * x + 0.25 * y;
+		BiFunction<Double, Double, Double> damp = (x, y) -> Math.sqrt(x * y);
+		DynamicAttributionVisitor visitor = new DynamicAttributionVisitor(new double[]{1.1, -2.2}, 100, 2, scoreSeen,
+				scoreUneen, damp);
 
-        int x = 9;
-        int y = 4;
-        assertEquals((x + y) / 2.0, visitor.scoreSeen(x, y));
-        assertEquals(0.75 * x + 0.25 * y, visitor.scoreUnseen(x, y));
-        assertEquals(Math.sqrt(x * y), visitor.damp(x, y));
-    }
+		int x = 9;
+		int y = 4;
+		assertEquals((x + y) / 2.0, visitor.scoreSeen(x, y));
+		assertEquals(0.75 * x + 0.25 * y, visitor.scoreUnseen(x, y));
+		assertEquals(Math.sqrt(x * y), visitor.damp(x, y));
+	}
 }

@@ -27,57 +27,54 @@ import java.util.List;
 import com.amazon.randomcutforest.RandomCutForest;
 
 /**
- * A command-line application that computes anomaly scores. Points are read from STDIN and output is written to
- * STDOUT. Output consists of the original input point with the anomaly score appended.
+ * A command-line application that computes anomaly scores. Points are read from
+ * STDIN and output is written to STDOUT. Output consists of the original input
+ * point with the anomaly score appended.
  */
 public class AnomalyScoreRunner extends SimpleRunner {
 
-    public AnomalyScoreRunner() {
-        super(
-            AnomalyScoreRunner.class.getName(),
-            "Compute scalar anomaly scores from the input rows and append them to the output rows.",
-            AnomalyScoreTransformer::new
-        );
-    }
+	public AnomalyScoreRunner() {
+		super(AnomalyScoreRunner.class.getName(),
+				"Compute scalar anomaly scores from the input rows and append them to the output rows.",
+				AnomalyScoreTransformer::new);
+	}
 
-    public static void main(String... args) throws IOException {
-        AnomalyScoreRunner runner = new AnomalyScoreRunner();
-        runner.parse(args);
-        System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(
-            new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
-            new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8))
-        );
-        System.out.println("Done.");
-    }
+	public static void main(String... args) throws IOException {
+		AnomalyScoreRunner runner = new AnomalyScoreRunner();
+		runner.parse(args);
+		System.out.println("Reading from stdin... (Ctrl-c to exit)");
+		runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+				new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
+		System.out.println("Done.");
+	}
 
-    public static class AnomalyScoreTransformer implements LineTransformer {
-        private final RandomCutForest forest;
+	public static class AnomalyScoreTransformer implements LineTransformer {
+		private final RandomCutForest forest;
 
-        public AnomalyScoreTransformer(RandomCutForest forest) {
-            this.forest = forest;
-        }
+		public AnomalyScoreTransformer(RandomCutForest forest) {
+			this.forest = forest;
+		}
 
-        @Override
-        public List<String> getResultValues(double... point) {
-            double score = forest.getAnomalyScore(point);
-            forest.update(point);
-            return Collections.singletonList(Double.toString(score));
-        }
+		@Override
+		public List<String> getResultValues(double... point) {
+			double score = forest.getAnomalyScore(point);
+			forest.update(point);
+			return Collections.singletonList(Double.toString(score));
+		}
 
-        @Override
-        public List<String> getEmptyResultValue() {
-            return Collections.singletonList("NA");
-        }
+		@Override
+		public List<String> getEmptyResultValue() {
+			return Collections.singletonList("NA");
+		}
 
-        @Override
-        public List<String> getResultColumnNames() {
-            return Collections.singletonList("anomaly_score");
-        }
+		@Override
+		public List<String> getResultColumnNames() {
+			return Collections.singletonList("anomaly_score");
+		}
 
-        @Override
-        public RandomCutForest getForest() {
-            return forest;
-        }
-    }
+		@Override
+		public RandomCutForest getForest() {
+			return forest;
+		}
+	}
 }

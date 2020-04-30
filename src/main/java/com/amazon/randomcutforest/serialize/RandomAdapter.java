@@ -28,19 +28,20 @@ import com.google.gson.JsonSerializer;
 /**
  * Adapter for customizing {@link Random} serialization.
  *
- * {@link Random} states are not preserved during serialization and are always re-created, seeded with system time.
+ * {@link Random} states are not preserved during serialization and are always
+ * re-created, seeded with system time.
  */
 public class RandomAdapter implements JsonSerializer<Random>, JsonDeserializer<Random> {
 
-    private Random rng = new Random();
+	private Random rng = new Random();
 
-    @Override
-    public JsonElement serialize(Random src, Type typeOfSrc, JsonSerializationContext context) {
-        return new JsonObject();
-    }
+	@Override
+	public JsonElement serialize(Random src, Type typeOfSrc, JsonSerializationContext context) {
+		return new JsonObject();
+	}
 
-    @Override
-    public Random deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
-        return new Random(rng.nextLong());
-    }
+	@Override
+	public Random deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
+		return new Random(rng.nextLong());
+	}
 }

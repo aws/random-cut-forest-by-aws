@@ -31,76 +31,68 @@ import static org.mockito.Mockito.when;
 
 public class AnomalyScoreRunnerTest {
 
-    private int numberOfTrees;
-    private int sampleSize;
-    private int shingleSize;
-    private int windowSize;
-    private String delimiter;
-    private boolean headerRow;
-    private AnomalyScoreRunner runner;
+	private int numberOfTrees;
+	private int sampleSize;
+	private int shingleSize;
+	private int windowSize;
+	private String delimiter;
+	private boolean headerRow;
+	private AnomalyScoreRunner runner;
 
-    private BufferedReader in;
-    private PrintWriter out;
+	private BufferedReader in;
+	private PrintWriter out;
 
-    @BeforeEach
-    public void setUp() {
-        numberOfTrees = 50;
-        sampleSize = 100;
-        shingleSize = 1;
-        windowSize = 10;
-        delimiter = ",";
-        headerRow = true;
-        runner = new AnomalyScoreRunner();
+	@BeforeEach
+	public void setUp() {
+		numberOfTrees = 50;
+		sampleSize = 100;
+		shingleSize = 1;
+		windowSize = 10;
+		delimiter = ",";
+		headerRow = true;
+		runner = new AnomalyScoreRunner();
 
-        runner.parse(
-                "--number-of-trees", Integer.toString(numberOfTrees),
-                "--sample-size", Integer.toString(sampleSize),
-                "--shingle-size", Integer.toString(shingleSize),
-                "--window-size", Integer.toString(windowSize),
-                "--delimiter", delimiter,
-                "--header-row", Boolean.toString(headerRow)
-        );
+		runner.parse("--number-of-trees", Integer.toString(numberOfTrees), "--sample-size",
+				Integer.toString(sampleSize), "--shingle-size", Integer.toString(shingleSize), "--window-size",
+				Integer.toString(windowSize), "--delimiter", delimiter, "--header-row", Boolean.toString(headerRow));
 
-        in = mock(BufferedReader.class);
-        out = mock(PrintWriter.class);
-    }
+		in = mock(BufferedReader.class);
+		out = mock(PrintWriter.class);
+	}
 
-    @Test
-    public void testRun() throws IOException {
-        when(in.readLine()).thenReturn("a,b,c")
-                .thenReturn("1.0,2.0,3.0")
-                .thenReturn("4.0,5.0,6.0")
-                .thenReturn(null);
-        runner.run(in, out);
-        verify(out).println("a,b,c,anomaly_score");
-        verify(out).println("1.0,2.0,3.0,0.0");
-        verify(out).println("4.0,5.0,6.0,0.0");
-    }
+	@Test
+	public void testRun() throws IOException {
+		when(in.readLine()).thenReturn("a,b,c").thenReturn("1.0,2.0,3.0").thenReturn("4.0,5.0,6.0").thenReturn(null);
+		runner.run(in, out);
+		verify(out).println("a,b,c,anomaly_score");
+		verify(out).println("1.0,2.0,3.0,0.0");
+		verify(out).println("4.0,5.0,6.0,0.0");
+	}
 
-    @Test
-    public void testWriteHeader() {
-        String[] line = new String[] {"a", "b", "c"};
-        runner.prepareAlgorithm(3);
-        runner.writeHeader(line, out);
-        verify(out).println("a,b,c,anomaly_score");
-    }
+	@Test
+	public void testWriteHeader() {
+		String[] line = new String[]{"a", "b", "c"};
+		runner.prepareAlgorithm(3);
+		runner.writeHeader(line, out);
+		verify(out).println("a,b,c,anomaly_score");
+	}
 
-    @Test
-    public void testProcessLine() {
-        String[] line = new String[] {"1.0", "2.0", "3.0"};
-        runner.prepareAlgorithm(3);
-        runner.processLine(line, out);
-        verify(out).println("1.0,2.0,3.0,0.0");
-    }
+	@Test
+	public void testProcessLine() {
+		String[] line = new String[]{"1.0", "2.0", "3.0"};
+		runner.prepareAlgorithm(3);
+		runner.processLine(line, out);
+		verify(out).println("1.0,2.0,3.0,0.0");
+	}
 
-    @Test
-    public void testAnomalyScoreTransformer() {
-        RandomCutForest forest = mock(RandomCutForest.class);
-        AnomalyScoreRunner.AnomalyScoreTransformer transformer = new AnomalyScoreRunner.AnomalyScoreTransformer(forest);
+	@Test
+	public void testAnomalyScoreTransformer() {
+		RandomCutForest forest = mock(RandomCutForest.class);
+		AnomalyScoreRunner.AnomalyScoreTransformer transformer = new AnomalyScoreRunner.AnomalyScoreTransformer(forest);
 
-        when(forest.getAnomalyScore(new double[] {1.0, 2.0, 3.0})).thenReturn(11.0);
-        assertEquals(Collections.singletonList("11.0"), transformer.getResultValues(1.0, 2.0, 3.0));
-        assertEquals(Collections.singletonList("anomaly_score"), transformer.getResultColumnNames());
-        assertEquals(Collections.singletonList("NA"), transformer.getEmptyResultValue());
-    }
+		when(forest.getAnomalyScore(new double[]{1.0, 2.0, 3.0})).thenReturn(11.0);
+		assertEquals(Collections.singletonList("11.0"), transformer.getResultValues(1.0, 2.0, 3.0));
+		assertEquals(Collections.singletonList("anomaly_score"), transformer.getResultColumnNames());
+		assertEquals(Collections.singletonList("NA"), transformer.getEmptyResultValue());
+	}
 }

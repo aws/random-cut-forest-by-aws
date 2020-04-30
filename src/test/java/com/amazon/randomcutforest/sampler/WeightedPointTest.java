@@ -23,12 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WeightedPointTest {
 
-    @Test
-    public void testNew() {
-        WeightedPoint point = new WeightedPoint(new double[]{0.99, -55.2}, 999L, 1.23);
-        assertEquals(1.23, point.getWeight());
-        assertEquals(999L, point.getSequenceIndex());
-        assertArrayEquals(new double[] {0.99, -55.2}, point.getPoint());
-    }
+	@Test
+	public void testNew() {
+		WeightedPoint point = new WeightedPoint(new double[]{0.99, -55.2}, 999L, 1.23);
+		assertEquals(1.23, point.getWeight());
+		assertEquals(999L, point.getSequenceIndex());
+		assertArrayEquals(new double[]{0.99, -55.2}, point.getPoint());
+	}
 
 }

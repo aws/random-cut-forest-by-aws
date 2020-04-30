@@ -24,63 +24,49 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ArgumentParserTest {
 
-    private ArgumentParser parser;
+	private ArgumentParser parser;
 
-    @BeforeEach
-    public void setUp() {
-        parser = new ArgumentParser("runner-class", "runner-description");
-    }
+	@BeforeEach
+	public void setUp() {
+		parser = new ArgumentParser("runner-class", "runner-description");
+	}
 
-    @Test
-    public void testNew() {
-        assertEquals(100, parser.getNumberOfTrees());
-        assertEquals(256, parser.getSampleSize());
-        assertEquals(0, parser.getWindowSize());
-        assertEquals(0.0, parser.getLambda());
-        assertEquals(1, parser.getShingleSize());
-        assertFalse(parser.getShingleCyclic());
-        assertEquals(",", parser.getDelimiter());
-        assertFalse(parser.getHeaderRow());
-    }
+	@Test
+	public void testNew() {
+		assertEquals(100, parser.getNumberOfTrees());
+		assertEquals(256, parser.getSampleSize());
+		assertEquals(0, parser.getWindowSize());
+		assertEquals(0.0, parser.getLambda());
+		assertEquals(1, parser.getShingleSize());
+		assertFalse(parser.getShingleCyclic());
+		assertEquals(",", parser.getDelimiter());
+		assertFalse(parser.getHeaderRow());
+	}
 
-    @Test
-    public void testParse() {
-        parser.parse(
-                "--number-of-trees", "222",
-                "--sample-size", "123",
-                "--window-size", "50",
-                "--shingle-size", "4",
-                "--shingle-cyclic", "true",
-                "--delimiter", "\t",
-                "--header-row", "true"
-        );
+	@Test
+	public void testParse() {
+		parser.parse("--number-of-trees", "222", "--sample-size", "123", "--window-size", "50", "--shingle-size", "4",
+				"--shingle-cyclic", "true", "--delimiter", "\t", "--header-row", "true");
 
-        assertEquals(222, parser.getNumberOfTrees());
-        assertEquals(123, parser.getSampleSize());
-        assertEquals(50, parser.getWindowSize());
-        assertEquals(0.02, parser.getLambda());
-        assertEquals(4, parser.getShingleSize());
-        assertTrue(parser.getShingleCyclic());
-        assertEquals("\t", parser.getDelimiter());
-        assertTrue(parser.getHeaderRow());
-    }
+		assertEquals(222, parser.getNumberOfTrees());
+		assertEquals(123, parser.getSampleSize());
+		assertEquals(50, parser.getWindowSize());
+		assertEquals(0.02, parser.getLambda());
+		assertEquals(4, parser.getShingleSize());
+		assertTrue(parser.getShingleCyclic());
+		assertEquals("\t", parser.getDelimiter());
+		assertTrue(parser.getHeaderRow());
+	}
 
-    @Test
-    public void testParseShortFlags() {
-        parser.parse(
-                "-n", "222",
-                "-s", "123",
-                "-w", "50",
-                "-g", "4",
-                "-c", "true",
-                "-d", "\t"
-        );
+	@Test
+	public void testParseShortFlags() {
+		parser.parse("-n", "222", "-s", "123", "-w", "50", "-g", "4", "-c", "true", "-d", "\t");
 
-        assertEquals(222, parser.getNumberOfTrees());
-        assertEquals(123, parser.getSampleSize());
-        assertEquals(50, parser.getWindowSize());
-        assertEquals(0.02, parser.getLambda());
-        assertEquals(4, parser.getShingleSize());
-        assertEquals("\t", parser.getDelimiter());
-    }
+		assertEquals(222, parser.getNumberOfTrees());
+		assertEquals(123, parser.getSampleSize());
+		assertEquals(50, parser.getWindowSize());
+		assertEquals(0.02, parser.getLambda());
+		assertEquals(4, parser.getShingleSize());
+		assertEquals("\t", parser.getDelimiter());
+	}
 }

@@ -21,34 +21,35 @@ import java.util.List;
 import com.amazon.randomcutforest.RandomCutForest;
 
 /**
- * A line transformer that updates its internal RandomCutForest instance but does not produce any output.
+ * A line transformer that updates its internal RandomCutForest instance but
+ * does not produce any output.
  */
 public class UpdateOnlyTransformer implements LineTransformer {
 
-    private final RandomCutForest forest;
+	private final RandomCutForest forest;
 
-    public UpdateOnlyTransformer(RandomCutForest forest) {
-        this.forest = forest;
-    }
+	public UpdateOnlyTransformer(RandomCutForest forest) {
+		this.forest = forest;
+	}
 
-    @Override
-    public List<String> getResultValues(double... point) {
-        forest.update(point);
-        return Collections.emptyList();
-    }
+	@Override
+	public List<String> getResultValues(double... point) {
+		forest.update(point);
+		return Collections.emptyList();
+	}
 
-    @Override
-    public List<String> getEmptyResultValue() {
-        return Collections.emptyList();
-    }
+	@Override
+	public List<String> getEmptyResultValue() {
+		return Collections.emptyList();
+	}
 
-    @Override
-    public List<String> getResultColumnNames() {
-        return Collections.emptyList();
-    }
+	@Override
+	public List<String> getResultColumnNames() {
+		return Collections.emptyList();
+	}
 
-    @Override
-    public RandomCutForest getForest() {
-        return forest;
-    }
+	@Override
+	public RandomCutForest getForest() {
+		return forest;
+	}
 }

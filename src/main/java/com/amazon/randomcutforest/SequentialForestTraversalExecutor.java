@@ -28,88 +28,74 @@ import com.amazon.randomcutforest.tree.RandomCutTree;
  */
 public class SequentialForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
-    public SequentialForestTraversalExecutor(ArrayList<TreeUpdater> treeUpdaters) {
-        super(treeUpdaters);
-    }
+	public SequentialForestTraversalExecutor(ArrayList<TreeUpdater> treeUpdaters) {
+		super(treeUpdaters);
+	}
 
-    @Override
-    protected void update(double[] pointCopy, long sequenceIndex) {
-        treeUpdaters.forEach(updater -> {
-            updater.update(pointCopy, sequenceIndex);
-        });
-    }
+	@Override
+	protected void update(double[] pointCopy, long sequenceIndex) {
+		treeUpdaters.forEach(updater -> {
+			updater.update(pointCopy, sequenceIndex);
+		});
+	}
 
-    @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   BinaryOperator<R> accumulator, Function<R, S> finisher) {
+	@Override
+	public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+			BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = treeUpdaters.stream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                Visitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTree(point, visitor);
-            })
-            .reduce(accumulator)
-            .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+		R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+			Visitor<R> visitor = visitorFactory.apply(tree);
+			return tree.traverseTree(point, visitor);
+		}).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
-        return finisher.apply(unnormalizedResult);
-    }
+		return finisher.apply(unnormalizedResult);
+	}
 
-    @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   Collector<R, ?, S> collector) {
+	@Override
+	public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+			Collector<R, ?, S> collector) {
 
-        return treeUpdaters.stream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                Visitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTree(point, visitor);
-            })
-            .collect(collector);
-    }
+		return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+			Visitor<R> visitor = visitorFactory.apply(tree);
+			return tree.traverseTree(point, visitor);
+		}).collect(collector);
+	}
 
-    @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+	@Override
+	public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+			ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
-        for (TreeUpdater treeUpdater : treeUpdaters) {
-            RandomCutTree tree = treeUpdater.getTree();
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            accumulator.accept(tree.traverseTree(point, visitor));
-            if (accumulator.isConverged()) {
-                break;
-            }
-        }
+		for (TreeUpdater treeUpdater : treeUpdaters) {
+			RandomCutTree tree = treeUpdater.getTree();
+			Visitor<R> visitor = visitorFactory.apply(tree);
+			accumulator.accept(tree.traverseTree(point, visitor));
+			if (accumulator.isConverged()) {
+				break;
+			}
+		}
 
-        return finisher.apply(accumulator.getAccumulatedValue());
-    }
+		return finisher.apply(accumulator.getAccumulatedValue());
+	}
 
-    @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        BinaryOperator<R> accumulator, Function<R, S> finisher) {
+	@Override
+	public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+			BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = treeUpdaters.stream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                MultiVisitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTreeMulti(point, visitor);
-            })
-            .reduce(accumulator)
-            .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+		R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+			MultiVisitor<R> visitor = visitorFactory.apply(tree);
+			return tree.traverseTreeMulti(point, visitor);
+		}).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
-        return finisher.apply(unnormalizedResult);
-    }
+		return finisher.apply(unnormalizedResult);
+	}
 
-    @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        Collector<R, ?, S> collector) {
+	@Override
+	public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+			Collector<R, ?, S> collector) {
 
-        return treeUpdaters.stream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                MultiVisitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTreeMulti(point, visitor);
-            })
-            .collect(collector);
-    }
+		return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+			MultiVisitor<R> visitor = visitorFactory.apply(tree);
+			return tree.traverseTreeMulti(point, visitor);
+		}).collect(collector);
+	}
 }

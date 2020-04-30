@@ -25,8 +25,8 @@ import com.google.gson.InstanceCreator;
  */
 public class RandomCutForestAdapter implements InstanceCreator<RandomCutForest> {
 
-    @Override
-    public RandomCutForest createInstance(Type type) {
-        return RandomCutForest.defaultForest(1);
-    }
+	@Override
+	public RandomCutForest createInstance(Type type) {
+		return RandomCutForest.defaultForest(1);
+	}
 }

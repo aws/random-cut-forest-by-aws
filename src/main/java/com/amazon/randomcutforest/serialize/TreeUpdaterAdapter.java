@@ -32,12 +32,12 @@ import com.amazon.randomcutforest.sampler.WeightedPoint;
  */
 public class TreeUpdaterAdapter implements JsonDeserializer<TreeUpdater> {
 
-    @Override
-    public TreeUpdater deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
-        TreeUpdater treeUpdater = new Gson().fromJson(json, TreeUpdater.class);
-        List<WeightedPoint> points = treeUpdater.getSampler().getWeightedSamples();
-        points.sort(Comparator.comparingLong(WeightedPoint::getSequenceIndex));
-        points.stream().forEachOrdered(point -> treeUpdater.getTree().addPoint(point));
-        return treeUpdater;
-    }
+	@Override
+	public TreeUpdater deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
+		TreeUpdater treeUpdater = new Gson().fromJson(json, TreeUpdater.class);
+		List<WeightedPoint> points = treeUpdater.getSampler().getWeightedSamples();
+		points.sort(Comparator.comparingLong(WeightedPoint::getSequenceIndex));
+		points.stream().forEachOrdered(point -> treeUpdater.getTree().addPoint(point));
+		return treeUpdater;
+	}
 }

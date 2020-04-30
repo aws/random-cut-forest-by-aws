@@ -26,17 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class NeighborTest {
-    @Test
-    public void testNew() {
-        double[] point = new double[] {1.0, -2.0, 3.3};
-        double distance = 1234.5;
-        List<Long> timestamps = new ArrayList<>();
-        timestamps.add(99999L);
-        timestamps.add(99L);
-        Neighbor neighbor = new Neighbor(point, distance, timestamps);
+	@Test
+	public void testNew() {
+		double[] point = new double[]{1.0, -2.0, 3.3};
+		double distance = 1234.5;
+		List<Long> timestamps = new ArrayList<>();
+		timestamps.add(99999L);
+		timestamps.add(99L);
+		Neighbor neighbor = new Neighbor(point, distance, timestamps);
 
-        assertArrayEquals(point, neighbor.point);
-        assertEquals(distance, neighbor.distance);
-        assertThat(neighbor.sequenceIndexes, containsInAnyOrder(timestamps.toArray()));
-    }
+		assertArrayEquals(point, neighbor.point);
+		assertEquals(distance, neighbor.distance);
+		assertThat(neighbor.sequenceIndexes, containsInAnyOrder(timestamps.toArray()));
+	}
 }

@@ -27,29 +27,29 @@ import static org.mockito.Mockito.verify;
 
 public class UpdateOnlyTransformerTest {
 
-    private RandomCutForest forest;
-    private UpdateOnlyTransformer transformer;
+	private RandomCutForest forest;
+	private UpdateOnlyTransformer transformer;
 
-    @BeforeEach
-    public void setUp() {
-        forest = mock(RandomCutForest.class);
-        transformer = new UpdateOnlyTransformer(forest);
-    }
+	@BeforeEach
+	public void setUp() {
+		forest = mock(RandomCutForest.class);
+		transformer = new UpdateOnlyTransformer(forest);
+	}
 
-    @Test
-    public void testGetResultValues() {
-        List<String> result = transformer.getResultValues(1.0, 2.0, 3.0);
-        assertTrue(result.isEmpty());
-        verify(forest).update(new double[] {1.0, 2.0, 3.0});
-    }
+	@Test
+	public void testGetResultValues() {
+		List<String> result = transformer.getResultValues(1.0, 2.0, 3.0);
+		assertTrue(result.isEmpty());
+		verify(forest).update(new double[]{1.0, 2.0, 3.0});
+	}
 
-    @Test
-    public void testGetEmptyResultValue() {
-        assertTrue(transformer.getEmptyResultValue().isEmpty());
-    }
+	@Test
+	public void testGetEmptyResultValue() {
+		assertTrue(transformer.getEmptyResultValue().isEmpty());
+	}
 
-    @Test
-    public void testGetResultColumnNames() {
-        assertTrue(transformer.getResultColumnNames().isEmpty());
-    }
+	@Test
+	public void testGetResultColumnNames() {
+		assertTrue(transformer.getResultColumnNames().isEmpty());
+	}
 }

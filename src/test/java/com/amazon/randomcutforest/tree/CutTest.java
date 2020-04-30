@@ -25,29 +25,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CutTest {
 
-    private int splitDimension;
-    private double splitValue;
-    private Cut cut;
+	private int splitDimension;
+	private double splitValue;
+	private Cut cut;
 
-    @BeforeEach
-    public void setUp() {
-        splitDimension = 2;
-        splitValue = 3.4;
-        cut = new Cut(splitDimension, splitValue);
-    }
+	@BeforeEach
+	public void setUp() {
+		splitDimension = 2;
+		splitValue = 3.4;
+		cut = new Cut(splitDimension, splitValue);
+	}
 
-    @Test
-    public void testNew() {
-        assertThat(cut.getDimension(), is(splitDimension));
-        assertThat(cut.getValue(), is(splitValue));
-    }
+	@Test
+	public void testNew() {
+		assertThat(cut.getDimension(), is(splitDimension));
+		assertThat(cut.getValue(), is(splitValue));
+	}
 
-    @Test
-    public void testIsLeftOf() {
-        double[] point = new double[] {1.0, 2.0, 3.0, 4.0};
-        assertTrue(Cut.isLeftOf(point, cut));
+	@Test
+	public void testIsLeftOf() {
+		double[] point = new double[]{1.0, 2.0, 3.0, 4.0};
+		assertTrue(Cut.isLeftOf(point, cut));
 
-        point[2] = 99.9;
-        assertFalse(Cut.isLeftOf(point, cut));
-    }
+		point[2] = 99.9;
+		assertFalse(Cut.isLeftOf(point, cut));
+	}
 }

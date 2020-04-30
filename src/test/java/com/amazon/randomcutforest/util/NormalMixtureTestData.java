@@ -18,96 +18,100 @@ package com.amazon.randomcutforest.util;
 import java.util.Random;
 
 /**
- * This class samples point from a mixture of 2 multi-variate normal distribution with covariance matrices of the form
- * sigma * I. One of the normal distributions is considered the base distribution, the second is considered the anomaly
- * distribution, and there are random transitions between the two.
+ * This class samples point from a mixture of 2 multi-variate normal
+ * distribution with covariance matrices of the form sigma * I. One of the
+ * normal distributions is considered the base distribution, the second is
+ * considered the anomaly distribution, and there are random transitions between
+ * the two.
  */
 public class NormalMixtureTestData {
 
-    private final double baseMu;
-    private final double baseSigma;
-    private final double anomalyMu;
-    private final double anomalySigma;
-    private final double transitionToAnomalyProbability;
-    private final double transitionToBaseProbability;
-    public NormalMixtureTestData(double baseMu, double baseSigma, double anomalyMu, double anomalySigma,
-                                 double transitionToAnomalyProbability, double transitionToBaseProbability) {
-        this.baseMu = baseMu;
-        this.baseSigma = baseSigma;
-        this.anomalyMu = anomalyMu;
-        this.anomalySigma = anomalySigma;
-        this.transitionToAnomalyProbability = transitionToAnomalyProbability;
-        this.transitionToBaseProbability = transitionToBaseProbability;
-    }
+	private final double baseMu;
+	private final double baseSigma;
+	private final double anomalyMu;
+	private final double anomalySigma;
+	private final double transitionToAnomalyProbability;
+	private final double transitionToBaseProbability;
+	public NormalMixtureTestData(double baseMu, double baseSigma, double anomalyMu, double anomalySigma,
+			double transitionToAnomalyProbability, double transitionToBaseProbability) {
+		this.baseMu = baseMu;
+		this.baseSigma = baseSigma;
+		this.anomalyMu = anomalyMu;
+		this.anomalySigma = anomalySigma;
+		this.transitionToAnomalyProbability = transitionToAnomalyProbability;
+		this.transitionToBaseProbability = transitionToBaseProbability;
+	}
 
-    public NormalMixtureTestData() {
-        this(0.0, 1.0, 4.0, 2.0, 0.01, 0.3);
-    }
+	public NormalMixtureTestData() {
+		this(0.0, 1.0, 4.0, 2.0, 0.01, 0.3);
+	}
 
-    public double[][] generateTestData(int numberOfRows, int numberOfColumns) {
-        return generateTestData(numberOfRows, numberOfColumns, 0);
-    }
+	public double[][] generateTestData(int numberOfRows, int numberOfColumns) {
+		return generateTestData(numberOfRows, numberOfColumns, 0);
+	}
 
-    public double[][] generateTestData(int numberOfRows, int numberOfColumns, int seed) {
-        double[][] result = new double[numberOfRows][numberOfColumns];
-        boolean anomaly = false;
+	public double[][] generateTestData(int numberOfRows, int numberOfColumns, int seed) {
+		double[][] result = new double[numberOfRows][numberOfColumns];
+		boolean anomaly = false;
 
-        NormalDistribution dist;
-        if (seed != 0) dist = new NormalDistribution(new Random(seed));
-        else dist = new NormalDistribution(new Random());
+		NormalDistribution dist;
+		if (seed != 0)
+			dist = new NormalDistribution(new Random(seed));
+		else
+			dist = new NormalDistribution(new Random());
 
-        for (int i = 0; i < numberOfRows; i++) {
-            if (!anomaly) {
-                fillRow(result[i], dist, baseMu, baseSigma);
-                if (Math.random() < transitionToAnomalyProbability) {
-                    anomaly = true;
-                }
-            } else {
-                fillRow(result[i], dist, anomalyMu, anomalySigma);
-                if (Math.random() < transitionToBaseProbability) {
-                    anomaly = false;
-                }
-            }
-        }
+		for (int i = 0; i < numberOfRows; i++) {
+			if (!anomaly) {
+				fillRow(result[i], dist, baseMu, baseSigma);
+				if (Math.random() < transitionToAnomalyProbability) {
+					anomaly = true;
+				}
+			} else {
+				fillRow(result[i], dist, anomalyMu, anomalySigma);
+				if (Math.random() < transitionToBaseProbability) {
+					anomaly = false;
+				}
+			}
+		}
 
-        return result;
-    }
+		return result;
+	}
 
-    private void fillRow(double[] row, NormalDistribution dist, double mu, double sigma) {
-        for (int j = 0; j < row.length; j++) {
-            row[j] = dist.nextDouble(mu, sigma);
-        }
-    }
+	private void fillRow(double[] row, NormalDistribution dist, double mu, double sigma) {
+		for (int j = 0; j < row.length; j++) {
+			row[j] = dist.nextDouble(mu, sigma);
+		}
+	}
 
-    static class NormalDistribution {
-        private final Random rng;
-        private final double[] buffer;
-        private int index;
+	static class NormalDistribution {
+		private final Random rng;
+		private final double[] buffer;
+		private int index;
 
-        NormalDistribution(Random rng) {
-            this.rng = rng;
-            buffer = new double[2];
-            index = 0;
-        }
+		NormalDistribution(Random rng) {
+			this.rng = rng;
+			buffer = new double[2];
+			index = 0;
+		}
 
-        double nextDouble() {
-            if (index == 0) {
-                // apply the Box-Muller transform to produce Normal variates
-                double u = rng.nextDouble();
-                double v = rng.nextDouble();
-                double r = Math.sqrt(-2 * Math.log(u));
-                buffer[0] = r * Math.cos(2 * Math.PI * v);
-                buffer[1] = r * Math.sin(2 * Math.PI * v);
-            }
+		double nextDouble() {
+			if (index == 0) {
+				// apply the Box-Muller transform to produce Normal variates
+				double u = rng.nextDouble();
+				double v = rng.nextDouble();
+				double r = Math.sqrt(-2 * Math.log(u));
+				buffer[0] = r * Math.cos(2 * Math.PI * v);
+				buffer[1] = r * Math.sin(2 * Math.PI * v);
+			}
 
-            double result = buffer[index];
-            index = (index + 1) % 2;
+			double result = buffer[index];
+			index = (index + 1) % 2;
 
-            return result;
-        }
+			return result;
+		}
 
-        double nextDouble(double mu, double sigma) {
-            return mu + sigma * nextDouble();
-        }
-    }
+		double nextDouble(double mu, double sigma) {
+			return mu + sigma * nextDouble();
+		}
+	}
 }

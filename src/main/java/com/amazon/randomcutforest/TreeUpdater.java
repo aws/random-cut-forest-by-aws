@@ -22,64 +22,69 @@ import com.amazon.randomcutforest.tree.RandomCutTree;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 /**
- * TreeUpdater is a utility class to facilitate updating a {@link SimpleStreamSampler} and a {@link RandomCutTree} in a
- * single step.
+ * TreeUpdater is a utility class to facilitate updating a
+ * {@link SimpleStreamSampler} and a {@link RandomCutTree} in a single step.
  */
 public class TreeUpdater {
 
-    private final SimpleStreamSampler sampler;
-    private final RandomCutTree tree;
+	private final SimpleStreamSampler sampler;
+	private final RandomCutTree tree;
 
-    /**
-     * Create a new TreeUpdater which links the given sampler and tree. In this TreeUpdater's {@link #update} method,
-     * a point is first submitted to the sampler. If the point is accepted by the sampler, then the point is then
-     * used to update the tree.
-     *
-     * @param sampler A stream sampler.
-     * @param tree    A Random Cut Tree.
-     */
-    public TreeUpdater(SimpleStreamSampler sampler, RandomCutTree tree) {
-        checkNotNull(sampler, "sampler must not be null");
-        checkNotNull(tree, "tree must not be null");
-        this.sampler = sampler;
-        this.tree = tree;
-    }
+	/**
+	 * Create a new TreeUpdater which links the given sampler and tree. In this
+	 * TreeUpdater's {@link #update} method, a point is first submitted to the
+	 * sampler. If the point is accepted by the sampler, then the point is then used
+	 * to update the tree.
+	 *
+	 * @param sampler
+	 *            A stream sampler.
+	 * @param tree
+	 *            A Random Cut Tree.
+	 */
+	public TreeUpdater(SimpleStreamSampler sampler, RandomCutTree tree) {
+		checkNotNull(sampler, "sampler must not be null");
+		checkNotNull(tree, "tree must not be null");
+		this.sampler = sampler;
+		this.tree = tree;
+	}
 
-    /**
-     * @return the sampler in this TreeUpdater.
-     */
-    public SimpleStreamSampler getSampler() {
-        return sampler;
-    }
+	/**
+	 * @return the sampler in this TreeUpdater.
+	 */
+	public SimpleStreamSampler getSampler() {
+		return sampler;
+	}
 
-    /**
-     * @return the Random Cut Tree in this TreeUpdater.
-     */
-    public RandomCutTree getTree() {
-        return tree;
-    }
+	/**
+	 * @return the Random Cut Tree in this TreeUpdater.
+	 */
+	public RandomCutTree getTree() {
+		return tree;
+	}
 
-    /**
-     * Update the TreeUpdater with the given point. The point is submitted to the sampler, and if it's accepted then
-     * the sampler's evicted point is removed from the tree and the new point is added.
-     *
-     * @param point         The point being used to updated the sampler and tree.
-     * @param sequenceIndex The ordinal when this point was added to the forest.
-     */
-    public void update(double[] point, long sequenceIndex) {
-        /*
-         * this execution should be sequential
-         * at the current moment the sequence indexes are not used by the trees
-         * but the trees can use both the sequence index and the sampling weight
-         * as parts of internal logic
-         */
-        WeightedPoint candidate = sampler.sample(point, sequenceIndex);
-        if (candidate != null) {
-            WeightedPoint evictedPoint = sampler.getEvictedPoint();
-            if (evictedPoint != null) {
-                tree.deletePoint(evictedPoint);
-            }
-            tree.addPoint(candidate);
-        }
-    }
+	/**
+	 * Update the TreeUpdater with the given point. The point is submitted to the
+	 * sampler, and if it's accepted then the sampler's evicted point is removed
+	 * from the tree and the new point is added.
+	 *
+	 * @param point
+	 *            The point being used to updated the sampler and tree.
+	 * @param sequenceIndex
+	 *            The ordinal when this point was added to the forest.
+	 */
+	public void update(double[] point, long sequenceIndex) {
+		/*
+		 * this execution should be sequential at the current moment the sequence
+		 * indexes are not used by the trees but the trees can use both the sequence
+		 * index and the sampling weight as parts of internal logic
+		 */
+		WeightedPoint candidate = sampler.sample(point, sequenceIndex);
+		if (candidate != null) {
+			WeightedPoint evictedPoint = sampler.getEvictedPoint();
+			if (evictedPoint != null) {
+				tree.deletePoint(evictedPoint);
+			}
+			tree.addPoint(candidate);
+		}
+	}
 }

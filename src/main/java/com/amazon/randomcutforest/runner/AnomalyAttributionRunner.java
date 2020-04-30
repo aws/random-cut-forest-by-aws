@@ -28,75 +28,72 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
 /**
- * A command-line application that computes anomaly attribution. Points are read from STDIN and output is written to
- * STDOUT. Output consists of the original input point with the anomaly attribution vector appended.
+ * A command-line application that computes anomaly attribution. Points are read
+ * from STDIN and output is written to STDOUT. Output consists of the original
+ * input point with the anomaly attribution vector appended.
  */
 public class AnomalyAttributionRunner extends SimpleRunner {
 
-    public AnomalyAttributionRunner() {
-        super(
-            AnomalyAttributionRunner.class.getName(),
-            "Compute directional anomaly scores from the input rows and append them to the output rows.",
-            AnomalyAttributionTransformer::new
-        );
-    }
+	public AnomalyAttributionRunner() {
+		super(AnomalyAttributionRunner.class.getName(),
+				"Compute directional anomaly scores from the input rows and append them to the output rows.",
+				AnomalyAttributionTransformer::new);
+	}
 
-    public static void main(String... args) throws IOException {
-        AnomalyAttributionRunner runner = new AnomalyAttributionRunner();
-        runner.parse(args);
-        System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(
-            new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
-            new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8))
-        );
-        System.out.println("Done.");
-    }
+	public static void main(String... args) throws IOException {
+		AnomalyAttributionRunner runner = new AnomalyAttributionRunner();
+		runner.parse(args);
+		System.out.println("Reading from stdin... (Ctrl-c to exit)");
+		runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+				new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
+		System.out.println("Done.");
+	}
 
-    public static class AnomalyAttributionTransformer implements LineTransformer {
-        private final RandomCutForest forest;
+	public static class AnomalyAttributionTransformer implements LineTransformer {
+		private final RandomCutForest forest;
 
-        public AnomalyAttributionTransformer(RandomCutForest forest) {
-            this.forest = forest;
-        }
+		public AnomalyAttributionTransformer(RandomCutForest forest) {
+			this.forest = forest;
+		}
 
-        @Override
-        public List<String> getResultValues(double... point) {
-            DiVector attribution = forest.getAnomalyAttribution(point);
-            forest.update(point);
+		@Override
+		public List<String> getResultValues(double... point) {
+			DiVector attribution = forest.getAnomalyAttribution(point);
+			forest.update(point);
 
-            List<String> result = new ArrayList<>(2 * forest.getDimensions());
-            for (int i = 0; i < attribution.getDimensions(); i++) {
-                result.add(Double.toString(attribution.low[i]));
-                result.add(Double.toString(attribution.high[i]));
-            }
+			List<String> result = new ArrayList<>(2 * forest.getDimensions());
+			for (int i = 0; i < attribution.getDimensions(); i++) {
+				result.add(Double.toString(attribution.low[i]));
+				result.add(Double.toString(attribution.high[i]));
+			}
 
-            return result;
-        }
+			return result;
+		}
 
-        @Override
-        public List<String> getEmptyResultValue() {
-            List<String> result = new ArrayList<>(2 * forest.getDimensions());
-            for (int i = 0; i < 2 * forest.getDimensions(); i++) {
-                result.add("NA");
-            }
-            return result;
-        }
+		@Override
+		public List<String> getEmptyResultValue() {
+			List<String> result = new ArrayList<>(2 * forest.getDimensions());
+			for (int i = 0; i < 2 * forest.getDimensions(); i++) {
+				result.add("NA");
+			}
+			return result;
+		}
 
-        @Override
-        public List<String> getResultColumnNames() {
-            List<String> result = new ArrayList<>(2 * forest.getDimensions());
-            for (int i = 0; i < forest.getDimensions(); i++) {
-                result.add("anomaly_low_" + i);
-                result.add("anomaly_high_" + i);
-            }
+		@Override
+		public List<String> getResultColumnNames() {
+			List<String> result = new ArrayList<>(2 * forest.getDimensions());
+			for (int i = 0; i < forest.getDimensions(); i++) {
+				result.add("anomaly_low_" + i);
+				result.add("anomaly_high_" + i);
+			}
 
-            return result;
-        }
+			return result;
+		}
 
-        @Override
-        public RandomCutForest getForest() {
-            return forest;
-        }
-    }
+		@Override
+		public RandomCutForest getForest() {
+			return forest;
+		}
+	}
 
 }

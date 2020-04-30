@@ -32,51 +32,57 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AbstractForestTraversalExecutorAdapterTests {
 
-    private AbstractForestTraversalExecutorAdapter adapter = new AbstractForestTraversalExecutorAdapter();
+	private AbstractForestTraversalExecutorAdapter adapter = new AbstractForestTraversalExecutorAdapter();
 
-    @Test
-    public void serialize_throw_onUnknownExecutor() {
-        assertThrows(RuntimeException.class, () -> {
-            adapter.serialize(new AbstractForestTraversalExecutor(null) {
+	@Test
+	public void serialize_throw_onUnknownExecutor() {
+		assertThrows(RuntimeException.class, () -> {
+			adapter.serialize(new AbstractForestTraversalExecutor(null) {
 
-                @Override
-                protected void update(double[] pointCopy, long entriesSeen) {
-                }
+				@Override
+				protected void update(double[] pointCopy, long entriesSeen) {
+				}
 
-                @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, BinaryOperator<R> accumulator, Function<R, S> finisher) {
-                    return null;
-                }
+				@Override
+				public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+						BinaryOperator<R> accumulator, Function<R, S> finisher) {
+					return null;
+				}
 
-                @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, Collector<R, ?, S> collector) {
-                    return null;
-                }
+				@Override
+				public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+						Collector<R, ?, S> collector) {
+					return null;
+				}
 
-                @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
-                    return null;
-                }
+				@Override
+				public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+						ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+					return null;
+				}
 
-                @Override
-                public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory, BinaryOperator<R> accumulator, Function<R, S> finisher) {
-                    return null;
-                }
+				@Override
+				public <R, S> S traverseForestMulti(double[] point,
+						Function<RandomCutTree, MultiVisitor<R>> visitorFactory, BinaryOperator<R> accumulator,
+						Function<R, S> finisher) {
+					return null;
+				}
 
-                @Override
-                public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector) {
-                    return null;
-                }
-            }, String.class, null);
-        });
-    }
+				@Override
+				public <R, S> S traverseForestMulti(double[] point,
+						Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector) {
+					return null;
+				}
+			}, String.class, null);
+		});
+	}
 
-    @Test
-    public void deserialize_throw_onUnknownExecutor() {
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty(AbstractForestTraversalExecutorAdapter.PROPERTY_EXECUTOR_TYPE, "Unsupported");
-        assertThrows(RuntimeException.class, () -> {
-            adapter.deserialize(jsonObject, String.class, null);
-        });
-    }
+	@Test
+	public void deserialize_throw_onUnknownExecutor() {
+		JsonObject jsonObject = new JsonObject();
+		jsonObject.addProperty(AbstractForestTraversalExecutorAdapter.PROPERTY_EXECUTOR_TYPE, "Unsupported");
+		assertThrows(RuntimeException.class, () -> {
+			adapter.deserialize(jsonObject, String.class, null);
+		});
+	}
 }

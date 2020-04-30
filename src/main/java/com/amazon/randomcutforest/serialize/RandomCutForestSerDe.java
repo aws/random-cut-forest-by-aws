@@ -37,53 +37,50 @@ import com.amazon.randomcutforest.tree.Node;
  */
 public class RandomCutForestSerDe {
 
-    private final Gson gson;
+	private final Gson gson;
 
-    /**
-     * Constructor instantiating objects for default serialization.
-     */
-    public RandomCutForestSerDe() {
-        Set<Class<?>> serializationSkipClasses = Stream
-            .of(BiFunction.class, Node.class, ForkJoinPool.class)
-            .collect(Collectors.toSet());
-        this.gson = new GsonBuilder()
-            .addSerializationExclusionStrategy(
-                new ExclusionStrategy() {
-                    @Override
-                    public boolean shouldSkipClass(Class<?> clazz) {
-                        return serializationSkipClasses.contains(clazz);
-                    }
+	/**
+	 * Constructor instantiating objects for default serialization.
+	 */
+	public RandomCutForestSerDe() {
+		Set<Class<?>> serializationSkipClasses = Stream.of(BiFunction.class, Node.class, ForkJoinPool.class)
+				.collect(Collectors.toSet());
+		this.gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
+			@Override
+			public boolean shouldSkipClass(Class<?> clazz) {
+				return serializationSkipClasses.contains(clazz);
+			}
 
-                    @Override
-                    public boolean shouldSkipField(FieldAttributes field) {
-                        return false;
-                    }
-                }
-            )
-            .registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
-            .registerTypeAdapter(AbstractForestTraversalExecutor.class, new AbstractForestTraversalExecutorAdapter())
-            .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
-            .registerTypeAdapter(Random.class, new RandomAdapter())
-            .create();
-    }
+			@Override
+			public boolean shouldSkipField(FieldAttributes field) {
+				return false;
+			}
+		}).registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
+				.registerTypeAdapter(AbstractForestTraversalExecutor.class,
+						new AbstractForestTraversalExecutorAdapter())
+				.registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
+				.registerTypeAdapter(Random.class, new RandomAdapter()).create();
+	}
 
-    /**
-     * Serializes a RCF object to a json string.
-     *
-     * @param rcf a RCF object
-     * @return a json string serialized from the RCF
-     */
-    public String toJson(RandomCutForest rcf) {
-        return gson.toJson(rcf);
-    }
+	/**
+	 * Serializes a RCF object to a json string.
+	 *
+	 * @param rcf
+	 *            a RCF object
+	 * @return a json string serialized from the RCF
+	 */
+	public String toJson(RandomCutForest rcf) {
+		return gson.toJson(rcf);
+	}
 
-    /**
-     * Deserializes a serialized RCF json string to a RCF object.
-     *
-     * @param json a json string serialized from a RCF
-     * @return a RCF deserialized from the string
-     */
-    public RandomCutForest fromJson(String json) {
-        return gson.fromJson(json, RandomCutForest.class);
-    }
+	/**
+	 * Deserializes a serialized RCF json string to a RCF object.
+	 *
+	 * @param json
+	 *            a json string serialized from a RCF
+	 * @return a RCF deserialized from the string
+	 */
+	public RandomCutForest fromJson(String json) {
+		return gson.fromJson(json, RandomCutForest.class);
+	}
 }

@@ -19,35 +19,44 @@ import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
- * This is the interface for a visitor which can be used to query a {@link RandomCutTree} to produce a result. A
- * visitor is submitted to {@link RandomCutTree#traverseTree(double[], Visitor)}, and during the
- * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in the traversal path.
+ * This is the interface for a visitor which can be used to query a
+ * {@link RandomCutTree} to produce a result. A visitor is submitted to
+ * {@link RandomCutTree#traverseTree(double[], Visitor)}, and during the
+ * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on
+ * the nodes in the traversal path.
  * <p>
- * See {@link RandomCutTree#traverseTree(double[], Visitor)} for details about the traversal path.
+ * See {@link RandomCutTree#traverseTree(double[], Visitor)} for details about
+ * the traversal path.
  */
 public interface Visitor<R> {
-    /**
-     * Visit a node in the traversal path.
-     *
-     * @param node        the node being visited
-     * @param depthOfNode the depth of the node being visited
-     */
-    void accept(Node node, int depthOfNode);
+	/**
+	 * Visit a node in the traversal path.
+	 *
+	 * @param node
+	 *            the node being visited
+	 * @param depthOfNode
+	 *            the depth of the node being visited
+	 */
+	void accept(Node node, int depthOfNode);
 
-    /**
-     * Visit the leaf node in the traversal path. By default this method proxies to {@link #accept(Node, int)}.
-     *
-     * @param leafNode    the leaf node being visited
-     * @param depthOfNode the depth of the leaf node
-     */
-    default void acceptLeaf(Node leafNode, final int depthOfNode) {
-        accept(leafNode, depthOfNode);
-    }
+	/**
+	 * Visit the leaf node in the traversal path. By default this method proxies to
+	 * {@link #accept(Node, int)}.
+	 *
+	 * @param leafNode
+	 *            the leaf node being visited
+	 * @param depthOfNode
+	 *            the depth of the leaf node
+	 */
+	default void acceptLeaf(Node leafNode, final int depthOfNode) {
+		accept(leafNode, depthOfNode);
+	}
 
-    /**
-     * At the end of the traversal, this method is called to obtain the result computed by the visitor.
-     *
-     * @return the result value computed by the visitor.
-     */
-    R getResult();
+	/**
+	 * At the end of the traversal, this method is called to obtain the result
+	 * computed by the visitor.
+	 *
+	 * @return the result value computed by the visitor.
+	 */
+	R getResult();
 }

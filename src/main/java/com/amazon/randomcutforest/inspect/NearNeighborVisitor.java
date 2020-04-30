@@ -24,83 +24,90 @@ import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * A visitor that returns the leaf node in a traversal if the distance between the leaf point and the query point is
- * less than a given threshold.
+ * A visitor that returns the leaf node in a traversal if the distance between
+ * the leaf point and the query point is less than a given threshold.
  */
 public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
 
-    private final double[] queryPoint;
-    private final double distanceThreshold;
-    private Neighbor neighbor;
+	private final double[] queryPoint;
+	private final double distanceThreshold;
+	private Neighbor neighbor;
 
-    /**
-     * Create a NearNeighborVisitor for the given query point.
-     *
-     * @param queryPoint        The point whose neighbors we are looking for.
-     * @param distanceThreshold Leaf points whose distance from the query point is less than this value are considered
-     *                          near neighbors.
-     */
-    public NearNeighborVisitor(double[] queryPoint, double distanceThreshold) {
-        this.queryPoint = queryPoint;
-        this.distanceThreshold = distanceThreshold;
-        neighbor = null;
-    }
+	/**
+	 * Create a NearNeighborVisitor for the given query point.
+	 *
+	 * @param queryPoint
+	 *            The point whose neighbors we are looking for.
+	 * @param distanceThreshold
+	 *            Leaf points whose distance from the query point is less than this
+	 *            value are considered near neighbors.
+	 */
+	public NearNeighborVisitor(double[] queryPoint, double distanceThreshold) {
+		this.queryPoint = queryPoint;
+		this.distanceThreshold = distanceThreshold;
+		neighbor = null;
+	}
 
-    /**
-     * Create a NearNeighborVisitor which always returns the leaf point in the traversal. The distance threshold is
-     * set to positive infinity.
-     *
-     * @param queryPoint The point whose neighbors we are looking for.
-     */
-    public NearNeighborVisitor(double[] queryPoint) {
-        this(queryPoint, Double.POSITIVE_INFINITY);
-    }
+	/**
+	 * Create a NearNeighborVisitor which always returns the leaf point in the
+	 * traversal. The distance threshold is set to positive infinity.
+	 *
+	 * @param queryPoint
+	 *            The point whose neighbors we are looking for.
+	 */
+	public NearNeighborVisitor(double[] queryPoint) {
+		this(queryPoint, Double.POSITIVE_INFINITY);
+	}
 
-    /**
-     * Near neighbors are identified in the {@link #acceptLeaf} method, hence this method does nothing.
-     *
-     * @param node        the node being visited
-     * @param depthOfNode the depth of the node being visited
-     */
-    @Override
-    public void accept(Node node, int depthOfNode) {
-    }
+	/**
+	 * Near neighbors are identified in the {@link #acceptLeaf} method, hence this
+	 * method does nothing.
+	 *
+	 * @param node
+	 *            the node being visited
+	 * @param depthOfNode
+	 *            the depth of the node being visited
+	 */
+	@Override
+	public void accept(Node node, int depthOfNode) {
+	}
 
-    /**
-     * Check to see whether the Euclidean distance between the leaf point and the query point is less than the distance
-     * threshold. If it is, then this visitor will return an {@link java.util.Optional} containing this leaf point
-     * (converted to a {@link Neighbor} object). Otherwise, this visitor will return an empty Optional.
-     *
-     * @param leafNode    the leaf node being visited
-     * @param depthOfNode the depth of the leaf node
-     */
-    @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
-        double[] leafPoint = leafNode.getLeafPoint();
-        double distanceSquared = 0.0;
-        for (int i = 0; i < leafPoint.length; i++) {
-            double diff = queryPoint[i] - leafPoint[i];
-            distanceSquared += diff * diff;
-        }
+	/**
+	 * Check to see whether the Euclidean distance between the leaf point and the
+	 * query point is less than the distance threshold. If it is, then this visitor
+	 * will return an {@link java.util.Optional} containing this leaf point
+	 * (converted to a {@link Neighbor} object). Otherwise, this visitor will return
+	 * an empty Optional.
+	 *
+	 * @param leafNode
+	 *            the leaf node being visited
+	 * @param depthOfNode
+	 *            the depth of the leaf node
+	 */
+	@Override
+	public void acceptLeaf(Node leafNode, int depthOfNode) {
+		double[] leafPoint = leafNode.getLeafPoint();
+		double distanceSquared = 0.0;
+		for (int i = 0; i < leafPoint.length; i++) {
+			double diff = queryPoint[i] - leafPoint[i];
+			distanceSquared += diff * diff;
+		}
 
-        if (Math.sqrt(distanceSquared) < distanceThreshold) {
-            List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes());
+		if (Math.sqrt(distanceSquared) < distanceThreshold) {
+			List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes());
 
-            neighbor = new Neighbor(
-                leafPoint,
-                Math.sqrt(distanceSquared),
-                sequenceIndexes
-            );
-        }
-    }
+			neighbor = new Neighbor(leafPoint, Math.sqrt(distanceSquared), sequenceIndexes);
+		}
+	}
 
-    /**
-     * @return an {@link Optional} containing the leaf point (converted to a {@link Neighbor} if the Euclidean distance
-     * between the leaf point and the query point is less than the distance threshold. Otherwise return an empty
-     * Optional.
-     */
-    @Override
-    public Optional<Neighbor> getResult() {
-        return Optional.ofNullable(neighbor);
-    }
+	/**
+	 * @return an {@link Optional} containing the leaf point (converted to a
+	 *         {@link Neighbor} if the Euclidean distance between the leaf point and
+	 *         the query point is less than the distance threshold. Otherwise return
+	 *         an empty Optional.
+	 */
+	@Override
+	public Optional<Neighbor> getResult() {
+		return Optional.ofNullable(neighbor);
+	}
 }

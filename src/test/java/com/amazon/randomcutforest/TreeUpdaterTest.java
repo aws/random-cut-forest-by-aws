@@ -32,60 +32,60 @@ import static org.mockito.Mockito.when;
 
 public class TreeUpdaterTest {
 
-    private SimpleStreamSampler sampler;
-    private RandomCutTree tree;
-    private int randomSeed;
-    private TreeUpdater updater;
+	private SimpleStreamSampler sampler;
+	private RandomCutTree tree;
+	private int randomSeed;
+	private TreeUpdater updater;
 
-    @BeforeEach
-    public void setUp() {
-        sampler = mock(SimpleStreamSampler.class);
-        tree = mock(RandomCutTree.class);
-        updater = new TreeUpdater(sampler, tree);
-    }
+	@BeforeEach
+	public void setUp() {
+		sampler = mock(SimpleStreamSampler.class);
+		tree = mock(RandomCutTree.class);
+		updater = new TreeUpdater(sampler, tree);
+	}
 
-    @Test
-    public void testNewUpdaterWithInvalidArgs() {
-        assertThrows(NullPointerException.class, () -> new TreeUpdater(null, tree));
-        assertThrows(NullPointerException.class, () -> new TreeUpdater(sampler, null));
-        assertThrows(NullPointerException.class, () -> new TreeUpdater(null, null));
-    }
+	@Test
+	public void testNewUpdaterWithInvalidArgs() {
+		assertThrows(NullPointerException.class, () -> new TreeUpdater(null, tree));
+		assertThrows(NullPointerException.class, () -> new TreeUpdater(sampler, null));
+		assertThrows(NullPointerException.class, () -> new TreeUpdater(null, null));
+	}
 
-    @Test
-    public void testUpdateRejected() {
-        when(sampler.sample(any(), anyInt())).thenReturn(null);
-        updater.update(new double[] {4.2, 8.4}, 1111L);
-        verify(tree, never()).addPoint(any());
-        verify(tree, never()).deletePoint(any());
-    }
+	@Test
+	public void testUpdateRejected() {
+		when(sampler.sample(any(), anyInt())).thenReturn(null);
+		updater.update(new double[]{4.2, 8.4}, 1111L);
+		verify(tree, never()).addPoint(any());
+		verify(tree, never()).deletePoint(any());
+	}
 
-    @Test
-    public void testUpdateRejectedWithoutEvictedPoint() {
-        double[] point = new double[] {4.2, 8.4};
-        long sequenceIndex = 1111L;
-        WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
-        when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
-        when(sampler.getEvictedPoint()).thenReturn(null);
+	@Test
+	public void testUpdateRejectedWithoutEvictedPoint() {
+		double[] point = new double[]{4.2, 8.4};
+		long sequenceIndex = 1111L;
+		WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
+		when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
+		when(sampler.getEvictedPoint()).thenReturn(null);
 
-        updater.update(point, sequenceIndex);
+		updater.update(point, sequenceIndex);
 
-        verify(tree, times(1)).addPoint(sampledPoint);
-        verify(tree, never()).deletePoint(any());
-    }
+		verify(tree, times(1)).addPoint(sampledPoint);
+		verify(tree, never()).deletePoint(any());
+	}
 
-    @Test
-    public void testUpdateRejectedWithEvictedPoint() {
-        double[] point = new double[] {4.2, 8.4};
-        long sequenceIndex = 1111L;
-        WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
-        WeightedPoint evictedPoint = new WeightedPoint(new double[] {-0.5, 2.222}, 1110L, 0.123);
+	@Test
+	public void testUpdateRejectedWithEvictedPoint() {
+		double[] point = new double[]{4.2, 8.4};
+		long sequenceIndex = 1111L;
+		WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
+		WeightedPoint evictedPoint = new WeightedPoint(new double[]{-0.5, 2.222}, 1110L, 0.123);
 
-        when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
-        when(sampler.getEvictedPoint()).thenReturn(evictedPoint);
+		when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
+		when(sampler.getEvictedPoint()).thenReturn(evictedPoint);
 
-        updater.update(point, sequenceIndex);
+		updater.update(point, sequenceIndex);
 
-        verify(tree, times(1)).addPoint(sampledPoint);
-        verify(tree, times(1)).deletePoint(evictedPoint);
-    }
+		verify(tree, times(1)).addPoint(sampledPoint);
+		verify(tree, times(1)).deletePoint(evictedPoint);
+	}
 }
