@@ -27,7 +27,6 @@ import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.powermock.reflect.Whitebox;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -69,17 +68,17 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             SimpleStreamSampler sampler = mock(SimpleStreamSampler.class);
             RandomCutTree tree = mock(RandomCutTree.class);
-            treeUpdaters.add(Mockito.spy(new TreeUpdater(sampler, tree)));
+            treeUpdaters.add(spy(new TreeUpdater(sampler, tree)));
         }
 
-        executor = Mockito.spy(new SequentialForestTraversalExecutor(treeUpdaters));
+        executor = spy(new SequentialForestTraversalExecutor(treeUpdaters));
 
         forest = RandomCutForest.builder()
                 .dimensions(dimensions)
                 .numberOfTrees(numberOfTrees)
                 .sampleSize(sampleSize)
                 .build();
-        forest = Mockito.spy(forest);
+        forest = spy(forest);
         Whitebox.setInternalState(forest, "executor", executor);
     }
 

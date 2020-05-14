@@ -26,7 +26,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.mockito.Mockito;
 
 import java.util.Random;
 import java.util.stream.Stream;
@@ -533,7 +532,7 @@ public class RandomCutForestFunctionalTest {
     @ParameterizedTest
     @ArgumentsSource(TestForestProvider.class)
     public void testSimpleDensityWhenSamplerNotFullThenDensityIsZero(RandomCutForest forest) {
-        RandomCutForest forestSpy = Mockito.spy(forest);
+        RandomCutForest forestSpy = spy(forest);
         when(forestSpy.samplersFull()).thenReturn(false);
 
         DensityOutput output = forestSpy.getSimpleDensity(new double[] {0.0, 0.0, 0.0});

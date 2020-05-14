@@ -23,8 +23,6 @@ import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
-import static com.amazon.randomcutforest.tree.Node.isLeftOf;
-
 /**
  * A Visitor which computes several geometric measures that related a given query point to the points stored in a
  * RandomCutTree.

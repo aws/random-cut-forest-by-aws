@@ -21,7 +21,6 @@ import com.amazon.randomcutforest.tree.Cut;
 import com.amazon.randomcutforest.tree.Node;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
@@ -72,7 +71,7 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = {queryPoint[0], 2.0, queryPoint[2]};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -89,7 +88,7 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafEqualsZeroDepth() {
         double[] point = {queryPoint[0], 2.0, queryPoint[2]};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 0;
         int leafMass = 10;
@@ -106,7 +105,7 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafNotEquals() {
         double[] point = {queryPoint[0], 2.0, -111.11};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -124,7 +123,7 @@ public class ImputeVisitorTest {
     public void testAccept() {
 
         double[] point = {queryPoint[0], 2.0, -111.11};
-        Node node = Mockito.spy(new Node(point));
+        Node node = spy(new Node(point));
 
         int depth = 100;
         int leafMass = 10;
@@ -139,7 +138,7 @@ public class ImputeVisitorTest {
 
         depth--;
         BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] {99.0, 4.0, -19.0});
-        node = Mockito.spy(new Node(null, null, null, boundingBox));
+        node = spy(new Node(null, null, null, boundingBox));
         when(node.getMass()).thenReturn(leafMass + 2);
 
         double oldRank = visitor.getRank();

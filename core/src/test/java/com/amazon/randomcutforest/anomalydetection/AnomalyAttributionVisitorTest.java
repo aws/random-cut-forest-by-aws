@@ -21,7 +21,6 @@ import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.Cut;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import static com.amazon.randomcutforest.CommonUtils.defaultScalarNormalizerFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
@@ -76,7 +75,7 @@ public class AnomalyAttributionVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = {1.1, -2.2, 3.3};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -101,7 +100,7 @@ public class AnomalyAttributionVisitorTest {
         double[] point = new double[] {1.1, -2.2, 3.3};
         double[] anotherPoint = new double[] {-4.0, 5.0, 6.0};
 
-        Node leafNode = Mockito.spy(new Node(anotherPoint));
+        Node leafNode = spy(new Node(anotherPoint));
         int leafDepth = 100;
         int leafMass = 4;
         when(leafNode.getMass()).thenReturn(leafMass);
@@ -169,10 +168,10 @@ public class AnomalyAttributionVisitorTest {
         // parent does not contain pointToScore
 
         depth--;
-        Node sibling = Mockito.spy(new Node(new double[] {2.0, -0.5}));
+        Node sibling = spy(new Node(new double[] {2.0, -0.5}));
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = Mockito.spy(new Node(leafNode, sibling, new Cut(0, 0.5),
+        Node parent = spy(new Node(leafNode, sibling, new Cut(0, 0.5),
                 leafNode.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
@@ -209,7 +208,7 @@ public class AnomalyAttributionVisitorTest {
         depth--;
         Node auntie = new Node(null, null, new Cut(1, 0.5),
                 new BoundingBox(new double[] {-1.0, 1.0}).getMergedBox(new double[] {-0.5, -1.5}));
-        Node grandparent = Mockito.spy(new Node(parent, auntie, new Cut(0, 0.1),
+        Node grandparent = spy(new Node(parent, auntie, new Cut(0, 0.1),
                 parent.getBoundingBox().getMergedBox(auntie.getBoundingBox())));
         when(grandparent.getMass()).thenReturn(parentMass + auntie.getMass());
         visitor.accept(grandparent, depth);

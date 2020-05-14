@@ -22,8 +22,6 @@ import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
-import static com.amazon.randomcutforest.tree.Node.isLeftOf;
-
 /**
  * This abstract visitor encodes a standard method for computing a scalar result value. The basic computation is as
  * follows:

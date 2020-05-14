@@ -19,7 +19,6 @@ import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.returntypes.Neighbor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -52,7 +51,7 @@ public class NearNeighborVisitorTest {
    @Test
    public void acceptLeafNear() {
       double[] leafPoint = new double[] {8.8, 9.9, -5.5};
-      Node leafNode = Mockito.spy(new Node(leafPoint));
+      Node leafNode = spy(new Node(leafPoint));
 
       Set<Long> sequenceIndexes = new HashSet<>();
       sequenceIndexes.add(1234L);
@@ -95,7 +94,7 @@ public class NearNeighborVisitorTest {
    @Test
    public void acceptLeafNotNear() {
       double[] leafPoint = new double[] {108.8, 209.9, -305.5};
-      Node leafNode = Mockito.spy(new Node(leafPoint));
+      Node leafNode = spy(new Node(leafPoint));
 
       Set<Long> sequenceIndexes = new HashSet<>();
       sequenceIndexes.add(1234L);

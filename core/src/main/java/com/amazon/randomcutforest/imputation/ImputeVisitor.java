@@ -23,7 +23,6 @@ import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.tree.Node;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.getProbabilityOfSeparation;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values are first imputed with the corresponding
@@ -55,7 +54,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         this.numberOfMissingValues = numberOfMissingValues;
 
         for (int i = 0; i < this.numberOfMissingValues; i++) {
-            CommonUtils.checkArgument(0 <= missingIndexes[i] && missingIndexes[i] < queryPoint.length,
+            checkArgument(0 <= missingIndexes[i] && missingIndexes[i] < queryPoint.length,
                 "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
 
             missing[missingIndexes[i]] = true;

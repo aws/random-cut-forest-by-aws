@@ -13,7 +13,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.mockito.Mockito;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,13 +41,13 @@ public class ForestTraversalExecutorTest {
             for (int i = 0; i < numberOfTrees; i++) {
                 SimpleStreamSampler sampler = mock(SimpleStreamSampler.class);
                 RandomCutTree tree = mock(RandomCutTree.class);
-                sequentialTreeUpdaters.add(Mockito.spy(new TreeUpdater(sampler, tree)));
+                sequentialTreeUpdaters.add(spy(new TreeUpdater(sampler, tree)));
             }
 
             for (int i = 0; i < numberOfTrees; i++) {
                 SimpleStreamSampler sampler = mock(SimpleStreamSampler.class);
                 RandomCutTree tree = mock(RandomCutTree.class);
-                parallelTreeUpdaters.add(Mockito.spy(new TreeUpdater(sampler, tree)));
+                parallelTreeUpdaters.add(spy(new TreeUpdater(sampler, tree)));
             }
 
             SequentialForestTraversalExecutor sequentialExecutor =

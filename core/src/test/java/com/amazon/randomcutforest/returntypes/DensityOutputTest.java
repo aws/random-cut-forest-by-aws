@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -126,7 +125,7 @@ public class DensityOutputTest {
             sumOfFactors += t;
         }
 
-        Assertions.assertEquals(sumOfPoints / (q*sumOfPoints+sumOfFactors), density, EPSILON);
+        assertEquals(sumOfPoints / (q*sumOfPoints+sumOfFactors), density, EPSILON);
 
         // for contrib, do not scale sum of points by sample size
         sumOfPoints = output.measure.getHighLowSum();

@@ -20,7 +20,6 @@ import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.Cut;
 import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Arrays;
 
@@ -63,7 +62,7 @@ public class SimpleInterpolationVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = {1.0, 2.0, 3.0};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -94,7 +93,7 @@ public class SimpleInterpolationVisitorTest {
         double[] point = {1.0, 9.0, 4.0};
         double[] anotherPoint = {4.0, 5.0, 6.0};
 
-        Node leafNode = Mockito.spy(new Node(anotherPoint));
+        Node leafNode = spy(new Node(anotherPoint));
         when(leafNode.getMass()).thenReturn(4);
         int leafDepth = 100;
         int sampleSize = 99;
@@ -158,10 +157,10 @@ public class SimpleInterpolationVisitorTest {
 
         depth--;
         double[] siblingPoint = {1.0, -2.0};
-        Node sibling = Mockito.spy(new Node(siblingPoint));
+        Node sibling = spy(new Node(siblingPoint));
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = Mockito.spy(new Node(node, sibling, new Cut(0, 0.5),
+        Node parent = spy(new Node(node, sibling, new Cut(0, 0.5),
                 node.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
         when(parent.getMass()).thenReturn(node.getMass() + siblingMass);
         visitor.accept(parent, depth);
@@ -210,7 +209,7 @@ public class SimpleInterpolationVisitorTest {
         int sampleSize = 50;
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize,1,false);
 
-        Node leafNode = Mockito.spy(new Node(new double[] {1.0, -2.0}));
+        Node leafNode = spy(new Node(new double[] {1.0, -2.0}));
         int leafMass = 3;
         when(leafNode.getMass()).thenReturn(leafMass);
         int depth = 4;
@@ -248,10 +247,10 @@ public class SimpleInterpolationVisitorTest {
         // parent does not contain pointToScore
 
         depth--;
-        Node sibling = Mockito.spy(new Node(new double[] {2.0, -0.5}));
+        Node sibling = spy(new Node(new double[] {2.0, -0.5}));
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = Mockito.spy(new Node(leafNode, sibling, new Cut(0, 0.5),
+        Node parent = spy(new Node(leafNode, sibling, new Cut(0, 0.5),
                 leafNode.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
@@ -289,7 +288,7 @@ public class SimpleInterpolationVisitorTest {
         depth--;
         Node aunt = new Node(null, null, new Cut(1, 0.5),
                 new BoundingBox(new double[] {-1.0, 1.0}).getMergedBox(new double[] {-0.5, -1.5}));
-        Node grandparent = Mockito.spy(new Node(parent, aunt, new Cut(0, 0.1),
+        Node grandparent = spy(new Node(parent, aunt, new Cut(0, 0.1),
                 parent.getBoundingBox().getMergedBox(aunt.getBoundingBox())));
         when(grandparent.getMass()).thenReturn(parentMass + aunt.getMass());
         visitor.accept(grandparent, depth);

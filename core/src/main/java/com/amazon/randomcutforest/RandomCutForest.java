@@ -47,7 +47,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 /**
  * The RandomCutForest class is the interface to the algorithms in this package, and includes methods for anomaly
- * detection, anomaly detection with attribution, density estimation, com.amazon.randomcutforest.imputation, and forecasting. A Random Cut Forest
+ * detection, anomaly detection with attribution, density estimation, imputation, and forecasting. A Random Cut Forest
  * is a collection of Random Cut Trees and stream samplers. When an update call is made to a Random Cut Forest, each
  * sampler is independently updated with the submitted (and if the point is accepted by the sampler, then the
  * corresponding Random Cut Tree is also updated. Similarly, when an algorithm method is called, the Random Cut Forest

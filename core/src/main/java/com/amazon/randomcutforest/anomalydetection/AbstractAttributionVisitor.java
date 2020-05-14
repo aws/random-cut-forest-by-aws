@@ -23,8 +23,6 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
-import static com.amazon.randomcutforest.tree.Node.isLeftOf;
-
 /**
  * Attribution exposes the attribution of scores produced by ScalarScoreVisitor corresponding to different attributes.
  * It allows a boolean ignoreClosestCandidate; which when true will compute the attribution as it that near neighbor

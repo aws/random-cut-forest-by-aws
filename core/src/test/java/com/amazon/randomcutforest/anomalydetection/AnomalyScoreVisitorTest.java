@@ -18,10 +18,7 @@ package com.amazon.randomcutforest.anomalydetection;
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Arrays;
 
@@ -73,7 +70,7 @@ public class AnomalyScoreVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = {1.0, 2.0, 3.0};
-        Node leafNode = Mockito.spy(new Node(point));
+        Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -183,7 +180,7 @@ public class AnomalyScoreVisitorTest {
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, sampleSize);
 
         double p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo(0.0, EPSILON));
+        assertThat(p, closeTo(0.0, EPSILON));
         assertTrue(visitor.coordInsideBox[0]);
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
@@ -191,7 +188,7 @@ public class AnomalyScoreVisitorTest {
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         visitor.coordInsideBox[1] = visitor.coordInsideBox[2] = true;
         p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo(0.0, EPSILON));
+        assertThat(p, closeTo(0.0, EPSILON));
         assertTrue(visitor.coordInsideBox[0]);
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
@@ -199,7 +196,7 @@ public class AnomalyScoreVisitorTest {
         point = new double[] {2.0, 0.5, 0.5};
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo(1.0 / (2.0 + 2.0 + 3.0), EPSILON));
+        assertThat(p, closeTo(1.0 / (2.0 + 2.0 + 3.0), EPSILON));
         assertFalse(visitor.coordInsideBox[0]);
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
@@ -207,7 +204,7 @@ public class AnomalyScoreVisitorTest {
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         visitor.coordInsideBox[1] = visitor.coordInsideBox[2] = true;
         p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo(1.0 / (2.0 + 2.0 + 3.0), EPSILON));
+        assertThat(p, closeTo(1.0 / (2.0 + 2.0 + 3.0), EPSILON));
         assertFalse(visitor.coordInsideBox[0]);
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
@@ -215,7 +212,7 @@ public class AnomalyScoreVisitorTest {
         point = new double[] {0.5, -3.0, 4.0};
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo((3.0 + 1.0) / (1.0 + 5.0 + 4.0), EPSILON));
+        assertThat(p, closeTo((3.0 + 1.0) / (1.0 + 5.0 + 4.0), EPSILON));
         assertTrue(visitor.coordInsideBox[0]);
         assertFalse(visitor.coordInsideBox[1]);
         assertFalse(visitor.coordInsideBox[2]);
@@ -223,7 +220,7 @@ public class AnomalyScoreVisitorTest {
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         visitor.coordInsideBox[0] = true;
         p = visitor.getProbabilityOfSeparation(boundingBox);
-        MatcherAssert.assertThat(p, Matchers.closeTo((3.0 + 1.0) / (1.0 + 5.0 + 4.0), EPSILON));
+        assertThat(p, closeTo((3.0 + 1.0) / (1.0 + 5.0 + 4.0), EPSILON));
         assertTrue(visitor.coordInsideBox[0]);
         assertFalse(visitor.coordInsideBox[1]);
         assertFalse(visitor.coordInsideBox[2]);
