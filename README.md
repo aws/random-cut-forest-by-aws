@@ -2,11 +2,11 @@
 
 This package is an implementation of the Random Cut Forest probabilistic data structure. Random Cut Forests (RCFs) were 
 originally developed at Amazon to use in a nonparametric anomaly detection algorithm for streaming data. Later new 
-algorithms based on RCFs were developed for density estimation, imputation, and forecasting. The goal of this library 
+algorithms based on RCFs were developed for density estimation, com.amazon.randomcutforest.imputation, and forecasting. The goal of this library 
 is to be easy to use and to strike a balance between efficiency and extensibility.
 
 The public interface to this package is the RandomCutForest class, which defines methods for anomaly detection, anomaly 
-detection with attribution, density estimation, imputation, and forecasting.
+detection with attribution, density estimation, com.amazon.randomcutforest.imputation, and forecasting.
 
 ## Limitations
 
