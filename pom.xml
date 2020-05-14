@@ -16,8 +16,8 @@
     <modules>
         <module>core</module>
         <module>benchmark</module>
-        <module>serialization</module>
-        <module>testdata</module>
+        <module>serialization-json</module>
+        <module>testutils</module>
     </modules>
 
     <dependencyManagement>

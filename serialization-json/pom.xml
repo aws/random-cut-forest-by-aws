@@ -9,8 +9,7 @@
     <version>1.0</version>
   </parent>
 
-  <artifactId>randomcutforest-serialization</artifactId>
-  <name>randomcutforest-serialization</name>
+  <artifactId>randomcutforest-serialization-json</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>

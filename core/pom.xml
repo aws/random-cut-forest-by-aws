@@ -10,7 +10,6 @@
   </parent>
 
   <artifactId>randomcutforest-core</artifactId>
-  <name>randomcutforest-core</name>
   <packaging>jar</packaging>
 
   <dependencies>

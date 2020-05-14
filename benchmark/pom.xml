@@ -10,7 +10,6 @@
   </parent>
 
   <artifactId>randomcutforest-benchmark</artifactId>
-  <name>randomcutforest-benchmark</name>
   <packaging>jar</packaging>
 
   <properties>
