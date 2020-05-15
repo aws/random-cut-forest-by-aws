@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.testdata;
+package com.amazon.randomcutforest.testutils;
 
 import java.util.Random;
 

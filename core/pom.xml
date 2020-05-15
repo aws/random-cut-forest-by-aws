@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.amazon</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-    <version>1.0</version>
+    <version>${revision}</version>
   </parent>
 
   <artifactId>randomcutforest-core</artifactId>
@@ -16,7 +16,7 @@
     <dependency>
       <groupId>com.amazon</groupId>
       <artifactId>randomcutforest-testutils</artifactId>
-      <version>1.0</version>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

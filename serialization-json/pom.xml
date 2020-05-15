@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.amazon</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-    <version>1.0</version>
+    <version>${revision}</version>
   </parent>
 
   <artifactId>randomcutforest-serialization-json</artifactId>
@@ -16,7 +16,7 @@
     <dependency>
       <groupId>com.amazon</groupId>
       <artifactId>randomcutforest-core</artifactId>
-      <version>1.0</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>

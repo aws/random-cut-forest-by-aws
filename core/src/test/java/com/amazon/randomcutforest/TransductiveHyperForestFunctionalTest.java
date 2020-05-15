@@ -1,7 +1,7 @@
 package com.amazon.randomcutforest;
 
 import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
-import com.amazon.randomcutforest.testdata.NormalMixtureTestData;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.HyperTree;
 import org.junit.jupiter.api.BeforeAll;

@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.testdata.NormalMixtureTestData;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;

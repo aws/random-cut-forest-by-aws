@@ -17,7 +17,7 @@ package com.amazon.randomcutforest;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.testdata.NormalMixtureTestData;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

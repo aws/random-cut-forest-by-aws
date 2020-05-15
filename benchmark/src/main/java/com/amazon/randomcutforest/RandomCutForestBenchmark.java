@@ -17,7 +17,7 @@ package com.amazon.randomcutforest;
 
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.testdata.NormalMixtureTestData;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
