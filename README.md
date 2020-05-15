@@ -5,14 +5,6 @@ originally developed at Amazon to use in a nonparametric anomaly detection algor
 algorithms based on RCFs were developed for density estimation, imputation, and forecasting. The goal of this library 
 is to be easy to use and to strike a balance between efficiency and extensibility.
 
-The public interface to this package is the RandomCutForest class, which defines methods for anomaly detection, anomaly 
-detection with attribution, density estimation, imputation, and forecasting.
-
-## Limitations
-
-* Update operations in a forest are *not thread-safe*. Running concurrent updates or running an update concurrently
-  with a traversal may result in errors.
-
 ## Basic operations
 
 To create a RandomCutForest instance with all parameters set to defaults:
@@ -37,8 +29,8 @@ RandomCutForest forest = RandomCutForest.builder()
     .build();
 ```
 
-Typical usage of a forest is to compute a statistic on an input data point and
-then update the forest with that point in a loop.
+Typical usage of a forest is to compute a statistic on an input data point and then update the forest with that point 
+in a loop.
 
 ```java
 Supplier<double[]> input = ...;
@@ -50,6 +42,12 @@ while (true) {
     System.out.println("Anomaly Score: " + score);
 }
 ```
+
+## Limitations
+
+* Update operations in a forest are *not thread-safe*. Running concurrent updates or running an update concurrently
+  with a traversal may result in errors.
+
 
 ## Forest Configuration
 
@@ -77,7 +75,7 @@ The following parameters can be configured in the RandomCutForest builder.
 
 ## Build
 
-Build this package and run the full test suite by running
+Build the modules in this package and run the full test suite by running
 
 ```text
 mvn package
@@ -97,16 +95,17 @@ delimited data, and as such are **not intended for production use**. Instead,
 use these applications as example code and as a way to learn about the
 algorithms and their hyperparameters.
 
-Build a local archive by running the Maven package command.
+Build a local archive of the core library by running the Maven package command in the randomcutforest-core module.
 
 ```text
+% cd core
 % mvn package -DexcludedGroups=functional
 ```
 
 You can then invoke an example CLI application by adding the resulting jar file to your classpath. For example:
 
 ```text
-% java -cp target/random-cut-forest-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+% java -cp target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
 Usage: java -cp RandomCutForest-1.0-super.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
@@ -126,12 +125,12 @@ Options:
 
 ## Testing
 
-Our test suite is divided into unit tests and "functional" tests. By "functional", we mean tests that verify the
-expected behavior of the algorithms defined in the package. For example, a functional test for the anomaly detection
-algorithm will first train a forest on a pre-defined distribution and then verify that the forest assigns a high
-anomaly score to anomalous points (where "anomalous" is with respect to the specified distribution). Functional tests
-are indicated both in the test class name (e.g., `RandomCutForestFunctionalTest`) and in a `@Tag` annotation on the
-test class.
+The core library test suite is divided into unit tests and "functional" tests. By "functional", we mean tests that 
+verify the expected behavior of the algorithms defined in the package. For example, a functional test for the anomaly 
+detection algorithm will first train a forest on a pre-defined distribution and then verify that the forest assigns a 
+high anomaly score to anomalous points (where "anomalous" is with respect to the specified distribution). Functional 
+tests are indicated both in the test class name (e.g., `RandomCutForestFunctionalTest`) and in a `@Tag` annotation on 
+the test class.
 
 The full test suite including functional tests currently takes over 10 minutes to complete. If you are contributing to
 this package, we recommend excluding the functional tests while actively developing, and only running the full test
@@ -152,24 +151,25 @@ Test dependencies will be downloaded automatically when invoking `mvn test` or `
 
 ## Benchmarks
 
-This package includes [JMH](https://openjdk.java.net/projects/code-tools/jmh/) microbenchmarks. Build an executable
-jar containing the benchmark code by running
+The benchmark modules defines microbenchmarks using the [JMH](https://openjdk.java.net/projects/code-tools/jmh/) 
+framework. Build an executable jar containing the benchmark code by running
 
 ```text
-% mvn package assembly:single -DexcludedGroups=functional
+% cd benchmark
+% mvn package assembly:single
 ```
 
 To invoke the full benchmark suite:
 
 ```text
-% java -jar target/random-cut-forest-1.0-benchmarks.jar
+% java -jar target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar
 ```
 
 The full benchmark suite takes a long time to run. You can also pass a regex at the command-line, then only matching
 benchmark methods will be executed.
 
 ```text
-% java -jar target/random-cut-forest-1.0-benchmarks.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
+% java -jar target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
 
 ## Documentation
