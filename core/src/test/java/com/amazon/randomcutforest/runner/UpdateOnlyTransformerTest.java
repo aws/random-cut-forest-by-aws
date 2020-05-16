@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.runner;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.RandomCutForest;
 
 public class UpdateOnlyTransformerTest {
 
@@ -40,7 +41,7 @@ public class UpdateOnlyTransformerTest {
     public void testGetResultValues() {
         List<String> result = transformer.getResultValues(1.0, 2.0, 3.0);
         assertTrue(result.isEmpty());
-        verify(forest).update(new double[] {1.0, 2.0, 3.0});
+        verify(forest).update(new double[] { 1.0, 2.0, 3.0 });
     }
 
     @Test

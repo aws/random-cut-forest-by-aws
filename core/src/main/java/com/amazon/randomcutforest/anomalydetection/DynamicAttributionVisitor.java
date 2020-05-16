@@ -15,31 +15,34 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
-
 import java.util.function.BiFunction;
+
+import com.amazon.randomcutforest.returntypes.DiVector;
 
 public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
 
     /**
-     * The function used to compute the base score in the case where the point being scored is equal to the leaf point
-     * (provided the ignoreLeafEquals and ignoreLeafMassThreshold variables indicate that we should use this method).
+     * The function used to compute the base score in the case where the point being
+     * scored is equal to the leaf point (provided the ignoreLeafEquals and
+     * ignoreLeafMassThreshold variables indicate that we should use this method).
      * <p>
      * Function arguments: leaf depth, leaf mass
      */
     private final BiFunction<Double, Double, Double> scoreSeen;
 
     /**
-     * A damping function used to dilute the impact of a point with a large number of duplicates on the base score.
+     * A damping function used to dilute the impact of a point with a large number
+     * of duplicates on the base score.
      * <p>
      * Function arguments: leaf mass, tree mass
      */
     private final BiFunction<Double, Double, Double> damp;
 
     /**
-     * The scoring function to use when the point being scored is not equal to the leaf point, or when the points are
-     * equal but the ignoreLeafEquals or ignoreLeafMassThreshold variable indicates that we should use the
-     * scoreUnseen method.
+     * The scoring function to use when the point being scored is not equal to the
+     * leaf point, or when the points are equal but the ignoreLeafEquals or
+     * ignoreLeafMassThreshold variable indicates that we should use the scoreUnseen
+     * method.
      * <p>
      * Function arguments: leaf depth, leaf mass
      */
@@ -47,16 +50,16 @@ public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
 
     /**
      *
-     * @param point to be scored
-     * @param treeMass mass of the tree
+     * @param point                   to be scored
+     * @param treeMass                mass of the tree
      * @param ignoreLeafMassThreshold threshold of mass for leaves to be ignored
-     * @param scoreSeen part of the score when point has been seen
-     * @param scoreUnseen part of the score for unseen point
-     * @param damp dampening function for seen points
+     * @param scoreSeen               part of the score when point has been seen
+     * @param scoreUnseen             part of the score for unseen point
+     * @param damp                    dampening function for seen points
      */
-    public DynamicAttributionVisitor(double[] point, int treeMass,
-            int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> scoreSeen,
-            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp) {
+    public DynamicAttributionVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
+            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
+            BiFunction<Double, Double, Double> damp) {
         super(point, treeMass, ignoreLeafMassThreshold);
         this.scoreSeen = scoreSeen;
         this.scoreUnseen = scoreUnseen;
@@ -65,22 +68,20 @@ public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
 
     /**
      * Same as above with a default non-dampening
-     * @param point to be scored
-     * @param treeMass mass of the tree
+     * 
+     * @param point                   to be scored
+     * @param treeMass                mass of the tree
      * @param ignoreLeafMassThreshold mass of the leaves to be ignored
-     * @param scoreSeen score when point has been seen
-     * @param scoreUnseen score when point has not been seen
-      */
-    public DynamicAttributionVisitor(double[] point, int treeMass,
-                                     int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> scoreSeen,
-                                     BiFunction<Double, Double, Double> scoreUnseen) {
+     * @param scoreSeen               score when point has been seen
+     * @param scoreUnseen             score when point has not been seen
+     */
+    public DynamicAttributionVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
+            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen) {
         super(point, treeMass, ignoreLeafMassThreshold);
         this.scoreSeen = scoreSeen;
         this.scoreUnseen = scoreUnseen;
         this.damp = (x, y) -> 1.0;
     }
-
-
 
     @Override
     protected double scoreSeen(int depth, int leafMass) {

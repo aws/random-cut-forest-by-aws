@@ -18,31 +18,37 @@ package com.amazon.randomcutforest;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * This is the interface for a visitor which can be used with {RandomCutTree::traversePathToLeafAndVisitNodesMulti}.
- * In this traversal method, we optionally choose to split the visitor into two copies when visiting nodes. Each copy
- * then visits one of the paths down from that node. The results from both visitors are combined
- * before returning back up the tree.
+ * This is the interface for a visitor which can be used with
+ * {RandomCutTree::traversePathToLeafAndVisitNodesMulti}. In this traversal
+ * method, we optionally choose to split the visitor into two copies when
+ * visiting nodes. Each copy then visits one of the paths down from that node.
+ * The results from both visitors are combined before returning back up the
+ * tree.
  */
 public interface MultiVisitor<R> extends Visitor<R> {
 
     /**
-     * Returns true of the traversal method should split the visitor (i.e., create a copy) at this node.
+     * Returns true of the traversal method should split the visitor (i.e., create a
+     * copy) at this node.
      *
      * @param node A node in the tree traversal
-     * @return true if the traversal should split the visitor into two copies at this node, false otherwise.
+     * @return true if the traversal should split the visitor into two copies at
+     *         this node, false otherwise.
      */
     boolean trigger(final Node node);
 
     /**
-     * Return a copy of this visitor. The original visitor plus the copy will each traverse one branch of the tree.
+     * Return a copy of this visitor. The original visitor plus the copy will each
+     * traverse one branch of the tree.
      *
      * @return a copy of this visitor
      */
     MultiVisitor<R> newCopy();
 
     /**
-     * Combine two visitors. The state of the argument visitor should be combined with the state of this instance.
-     * This method is called after both visitors have traversed one branch of the tree.
+     * Combine two visitors. The state of the argument visitor should be combined
+     * with the state of this instance. This method is called after both visitors
+     * have traversed one branch of the tree.
      *
      * @param other A second visitor
      */

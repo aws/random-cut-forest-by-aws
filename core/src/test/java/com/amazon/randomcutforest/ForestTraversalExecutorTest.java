@@ -1,19 +1,5 @@
 package com.amazon.randomcutforest;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Stream;
-
-import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.tree.RandomCutTree;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
-
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +11,21 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
+import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 
 public class ForestTraversalExecutorTest {
 
@@ -50,26 +51,25 @@ public class ForestTraversalExecutorTest {
                 parallelTreeUpdaters.add(spy(new TreeUpdater(sampler, tree)));
             }
 
-            SequentialForestTraversalExecutor sequentialExecutor =
-                    new SequentialForestTraversalExecutor(sequentialTreeUpdaters);
+            SequentialForestTraversalExecutor sequentialExecutor = new SequentialForestTraversalExecutor(
+                    sequentialTreeUpdaters);
 
-            ParallelForestTraversalExecutor parallelExecutor =
-                    new ParallelForestTraversalExecutor(parallelTreeUpdaters, threadPoolSize);
+            ParallelForestTraversalExecutor parallelExecutor = new ParallelForestTraversalExecutor(parallelTreeUpdaters,
+                    threadPoolSize);
 
             return Stream.of(sequentialExecutor, parallelExecutor).map(Arguments::of);
         }
     }
-
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testUpdate(AbstractForestTraversalExecutor executor) {
         int totalUpdates = 10;
         for (int i = 0; i < totalUpdates; i++) {
-            double[] point = new double[] {Math.sin(i), Math.cos(i)};
+            double[] point = new double[] { Math.sin(i), Math.cos(i) };
             executor.update(point);
 
-            for (TreeUpdater updater: executor.treeUpdaters) {
+            for (TreeUpdater updater : executor.treeUpdaters) {
                 verify(updater, times(1)).update(point, i + 1);
             }
         }
@@ -80,7 +80,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestBinaryAccumulator(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] {1.2, -3.4};
+        double[] point = new double[] { 1.2, -3.4 };
         double expectedResult = 0.0;
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -94,7 +94,7 @@ public class ForestTraversalExecutorTest {
 
         double result = executor.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY, Double::sum, x -> x / 10.0);
 
-        for (TreeUpdater updater: executor.treeUpdaters) {
+        for (TreeUpdater updater : executor.treeUpdaters) {
             verify(updater.getTree(), times(1)).traverseTree(aryEq(point), any());
         }
 
@@ -104,7 +104,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestCollector(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] {1.2, -3.4};
+        double[] point = new double[] { 1.2, -3.4 };
         double[] expectedResult = new double[numberOfTrees];
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -119,7 +119,7 @@ public class ForestTraversalExecutorTest {
         List<Double> result = executor.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY,
                 TestUtils.SORTED_LIST_COLLECTOR);
 
-        for (TreeUpdater updater: executor.treeUpdaters) {
+        for (TreeUpdater updater : executor.treeUpdaters) {
             verify(updater.getTree(), times(1)).traverseTree(aryEq(point), any());
         }
 
@@ -132,7 +132,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestConverging(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] {1.2, -3.4};
+        double[] point = new double[] { 1.2, -3.4 };
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
@@ -146,7 +146,7 @@ public class ForestTraversalExecutorTest {
         double result = executor.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY, accumulator,
                 x -> x / accumulator.getValuesAccepted());
 
-        for (TreeUpdater updater: executor.treeUpdaters) {
+        for (TreeUpdater updater : executor.treeUpdaters) {
             verify(updater.getTree(), atMost(1)).traverseTree(aryEq(point), any());
         }
 
@@ -158,7 +158,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestMultiBinaryAccumulator(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] {1.2, -3.4};
+        double[] point = new double[] { 1.2, -3.4 };
         double expectedResult = 0.0;
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -173,7 +173,7 @@ public class ForestTraversalExecutorTest {
         double result = executor.traverseForestMulti(point, TestUtils.DUMMY_MULTI_VISITOR_FACTORY, Double::sum,
                 x -> x / 10.0);
 
-        for (TreeUpdater updater: executor.treeUpdaters) {
+        for (TreeUpdater updater : executor.treeUpdaters) {
             verify(updater.getTree(), times(1)).traverseTreeMulti(aryEq(point), any());
         }
 
@@ -183,7 +183,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestMultiCollector(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] {1.2, -3.4};
+        double[] point = new double[] { 1.2, -3.4 };
         double[] expectedResult = new double[numberOfTrees];
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -198,7 +198,7 @@ public class ForestTraversalExecutorTest {
         List<Double> result = executor.traverseForestMulti(point, TestUtils.DUMMY_MULTI_VISITOR_FACTORY,
                 TestUtils.SORTED_LIST_COLLECTOR);
 
-        for (TreeUpdater updater: executor.treeUpdaters) {
+        for (TreeUpdater updater : executor.treeUpdaters) {
             verify(updater.getTree(), times(1)).traverseTreeMulti(aryEq(point), any());
         }
 

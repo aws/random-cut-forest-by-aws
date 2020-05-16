@@ -15,14 +15,15 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import java.util.stream.Collector;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+import java.util.stream.Collector;
+
 /**
- * An InterpolationMeasure is used by {@link com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor} to
- * store certain geometric quantities during a tree traversal.
+ * An InterpolationMeasure is used by
+ * {@link com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor}
+ * to store certain geometric quantities during a tree traversal.
  */
 public class InterpolationMeasure {
 
@@ -33,11 +34,12 @@ public class InterpolationMeasure {
     protected final int sampleSize;
 
     /**
-     * Create a new InterpolationMeasure object with the given number of spatial dimensions. Note that the number of
-     * half-dimensions will be 2 * dimensions.
+     * Create a new InterpolationMeasure object with the given number of spatial
+     * dimensions. Note that the number of half-dimensions will be 2 * dimensions.
      *
      * @param dimensions The number of spatial dimensions.
-     * @param sampleSize The samplesize of each tree in forest, which may be used for normalization.
+     * @param sampleSize The samplesize of each tree in forest, which may be used
+     *                   for normalization.
      */
     public InterpolationMeasure(int dimensions, int sampleSize) {
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
@@ -64,9 +66,9 @@ public class InterpolationMeasure {
     private InterpolationMeasure(int sampleSize, DiVector measure, DiVector distances, DiVector probMass) {
 
         checkArgument(measure.getDimensions() == distances.getDimensions(),
-            "measure.getDimensions() should be equal to distances.getDimensions()");
+                "measure.getDimensions() should be equal to distances.getDimensions()");
         checkArgument(measure.getDimensions() == probMass.getDimensions(),
-            "measure.getDimensions() should be equal to probMass.getDimensions()");
+                "measure.getDimensions() should be equal to probMass.getDimensions()");
 
         this.sampleSize = sampleSize;
         this.dimensions = measure.getDimensions();
@@ -76,15 +78,17 @@ public class InterpolationMeasure {
     }
 
     /**
-     * Add the values of {@link #measure}, {@link #distances}, and {@link #probMass} from the right InterpolationMeasure
-     * to the left InterpolationMeasure and return the left InterpolationMeasure. This method is used to accumulate
+     * Add the values of {@link #measure}, {@link #distances}, and {@link #probMass}
+     * from the right InterpolationMeasure to the left InterpolationMeasure and
+     * return the left InterpolationMeasure. This method is used to accumulate
      * InterpolationMeasure results.
      *
-     * @param left  The InterpolationMeasure we are modifying. After calling this method, fields in this
-     *              InterpolationMeasure will contain a sum of the previous values and the corresponding values from the
+     * @param left  The InterpolationMeasure we are modifying. After calling this
+     *              method, fields in this InterpolationMeasure will contain a sum
+     *              of the previous values and the corresponding values from the
      *              right InterpolationMeasure.
-     * @param right An InterpolationMeasure that we want to add to the left vector. This InterpolationMeasure is not
-     *              modified by the method.
+     * @param right An InterpolationMeasure that we want to add to the left vector.
+     *              This InterpolationMeasure is not modified by the method.
      * @return the modified left vector.
      */
     public static InterpolationMeasure addToLeft(InterpolationMeasure left, InterpolationMeasure right) {
@@ -100,22 +104,21 @@ public class InterpolationMeasure {
     }
 
     /**
-     * Return a {@link Collector} which can be used to the collect many InterpolationMeasure results into a single,
-     * final result.
+     * Return a {@link Collector} which can be used to the collect many
+     * InterpolationMeasure results into a single, final result.
      *
-     * @param dimensions    The number of spatial dimensions in the InterpolationMeasures being collected.
-     * @param sampleSize    The sample size of the Random Cut Trees that were measured.
-     * @param numberOfTrees The number of trees whose measures we are collecting into a final result. This value is
-     *                      used for scaling.
+     * @param dimensions    The number of spatial dimensions in the
+     *                      InterpolationMeasures being collected.
+     * @param sampleSize    The sample size of the Random Cut Trees that were
+     *                      measured.
+     * @param numberOfTrees The number of trees whose measures we are collecting
+     *                      into a final result. This value is used for scaling.
      * @return an interpolation measure containing the aggregated, scaled result.
      */
-    public static Collector<InterpolationMeasure, InterpolationMeasure, InterpolationMeasure> collector(int dimensions, int sampleSize, int numberOfTrees) {
-        return Collector.of(
-            () -> new InterpolationMeasure(dimensions, sampleSize),
-            InterpolationMeasure::addToLeft,
-            InterpolationMeasure::addToLeft,
-            result -> result.scale(1.0 / numberOfTrees)
-        );
+    public static Collector<InterpolationMeasure, InterpolationMeasure, InterpolationMeasure> collector(int dimensions,
+            int sampleSize, int numberOfTrees) {
+        return Collector.of(() -> new InterpolationMeasure(dimensions, sampleSize), InterpolationMeasure::addToLeft,
+                InterpolationMeasure::addToLeft, result -> result.scale(1.0 / numberOfTrees));
     }
 
     /**
@@ -136,7 +139,8 @@ public class InterpolationMeasure {
      * Return a new InterpolationMeasure will all values scaled by the given factor.
      *
      * @param z The scale factor.
-     * @return a new InterpolationMeasure will all values scaled by the given factor.
+     * @return a new InterpolationMeasure will all values scaled by the given
+     *         factor.
      */
     public InterpolationMeasure scale(double z) {
         return new InterpolationMeasure(sampleSize, measure.scale(z), distances.scale(z), probMass.scale(z));

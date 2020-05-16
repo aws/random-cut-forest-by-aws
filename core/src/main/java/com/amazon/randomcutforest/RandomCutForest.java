@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,27 +45,29 @@ import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-
 /**
- * The RandomCutForest class is the interface to the algorithms in this package, and includes methods for anomaly
- * detection, anomaly detection with attribution, density estimation, imputation, and forecasting. A Random Cut Forest
- * is a collection of Random Cut Trees and stream samplers. When an update call is made to a Random Cut Forest, each
- * sampler is independently updated with the submitted (and if the point is accepted by the sampler, then the
- * corresponding Random Cut Tree is also updated. Similarly, when an algorithm method is called, the Random Cut Forest
- * proxies to the trees which implement the actual scoring logic. The Random Cut Forest then combines partial results
- * into a final results.
+ * The RandomCutForest class is the interface to the algorithms in this package,
+ * and includes methods for anomaly detection, anomaly detection with
+ * attribution, density estimation, imputation, and forecasting. A Random Cut
+ * Forest is a collection of Random Cut Trees and stream samplers. When an
+ * update call is made to a Random Cut Forest, each sampler is independently
+ * updated with the submitted (and if the point is accepted by the sampler, then
+ * the corresponding Random Cut Tree is also updated. Similarly, when an
+ * algorithm method is called, the Random Cut Forest proxies to the trees which
+ * implement the actual scoring logic. The Random Cut Forest then combines
+ * partial results into a final results.
  */
 public class RandomCutForest {
 
     /**
-     * Default sample size. This is the number of points retained by the stream sampler.
+     * Default sample size. This is the number of points retained by the stream
+     * sampler.
      */
     public static final int DEFAULT_SAMPLE_SIZE = 256;
 
     /**
-     * Default fraction used to compute the amount of points required by stream samplers before results are returned.
+     * Default fraction used to compute the amount of points required by stream
+     * samplers before results are returned.
      */
     public static final double DEFAULT_OUTPUT_AFTER_FRACTION = 0.25;
 
@@ -151,8 +156,8 @@ public class RandomCutForest {
         });
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
         checkArgument(builder.lambda >= 0, "lambda must be greater than or equal to 0");
-        builder.threadPoolSize.ifPresent(n ->
-                checkArgument(n > 0, "threadPoolSize must be greater than 0. To disable thread pool, set parallel execution to 'false'."));
+        builder.threadPoolSize.ifPresent(n -> checkArgument(n > 0,
+                "threadPoolSize must be greater than 0. To disable thread pool, set parallel execution to 'false'."));
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
@@ -164,22 +169,21 @@ public class RandomCutForest {
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         ArrayList<TreeUpdater> treeUpdaters = new ArrayList<>(numberOfTrees);
 
-        // If a random seed was given, use it to create a new Random. Otherwise, call the 0-argument constructor
+        // If a random seed was given, use it to create a new Random. Otherwise, call
+        // the 0-argument constructor
         rng = builder.randomSeed.map(Random::new).orElseGet(Random::new);
 
         for (int i = 0; i < numberOfTrees; i++) {
             SimpleStreamSampler sampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong());
-            RandomCutTree tree = RandomCutTree.builder()
-                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .centerOfMassEnabled(centerOfMassEnabled)
-                    .randomSeed(rng.nextLong())
-                    .build();
+            RandomCutTree tree = RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
             TreeUpdater updater = new TreeUpdater(sampler, tree);
             treeUpdaters.add(updater);
         }
 
         if (parallelExecutionEnabled) {
-            // If the user specified a thread pool size, use it. Otherwise, use available processors - 1.
+            // If the user specified a thread pool size, use it. Otherwise, use available
+            // processors - 1.
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
             executor = new ParallelForestTraversalExecutor(treeUpdaters, threadPoolSize);
         } else {
@@ -199,7 +203,8 @@ public class RandomCutForest {
      * Create a new RandomCutForest with optional arguments set to default values.
      *
      * @param dimensions The number of dimension in the input data.
-     * @param randomSeed The random seed to use to create the forest random number generator
+     * @param randomSeed The random seed to use to create the forest random number
+     *                   generator
      * @return a new RandomCutForest with optional arguments set to default values.
      */
     public static RandomCutForest defaultForest(int dimensions, long randomSeed) {
@@ -231,7 +236,8 @@ public class RandomCutForest {
     }
 
     /**
-     * @return the number of points required by stream samplers before results are returned.
+     * @return the number of points required by stream samplers before results are
+     *         returned.
      */
     public int getOutputAfter() {
         return outputAfter;
@@ -245,7 +251,8 @@ public class RandomCutForest {
     }
 
     /**
-     * @return return the decay factor (lambda value) used by stream samplers in this forest.
+     * @return return the decay factor (lambda value) used by stream samplers in
+     *         this forest.
      */
     public double getLambda() {
         return lambda;
@@ -273,15 +280,17 @@ public class RandomCutForest {
     }
 
     /**
-     * @return the number of threads in the thread pool if parallel execution is enabled, 0 otherwise.
+     * @return the number of threads in the thread pool if parallel execution is
+     *         enabled, 0 otherwise.
      */
     public int getThreadPoolSize() {
         return threadPoolSize;
     }
 
     /**
-     * Update the forest with the given point. The point is submitted to each sampler in the forest. If the sampler
-     * accepts the point, the point is submitted to the update method in the corresponding Random Cut Tree.
+     * Update the forest with the given point. The point is submitted to each
+     * sampler in the forest. If the sampler accepts the point, the point is
+     * submitted to the update method in the corresponding Random Cut Tree.
      *
      * @param point The point used to update the forest.
      */
@@ -292,23 +301,30 @@ public class RandomCutForest {
     }
 
     /**
-     * Visit each of the trees in the forest and combine the individual results into an aggregate
-     * result. A visitor is constructed for each tree using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all the trees are
-     * combined using the accumulator and then transformed using the finisher before being returned. Trees are visited
-     * in parallel using {@link java.util.Collection#parallelStream()}.
+     * Visit each of the trees in the forest and combine the individual results into
+     * an aggregate result. A visitor is constructed for each tree using the visitor
+     * factory, and then submitted to
+     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
+     * the trees are combined using the accumulator and then transformed using the
+     * finisher before being returned. Trees are visited in parallel using
+     * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
-     * @param visitorFactory A factory method which is invoked for each tree to construct a vistor.
-     * @param accumulator    A function that combines the results from individual trees into an aggregate result.
-     * @param finisher       A function called on the aggregate result in order to produce the final result.
-     * @param <R>            The visitor result type. This is the type that will be returned after traversing each individual
-     *                       tree.
-     * @param <S>            The final type, after any final normalization at the forest level.
-     * @return The aggregated and finalized result after sending a visitor through each tree in the forest.
+     * @param visitorFactory A factory method which is invoked for each tree to
+     *                       construct a vistor.
+     * @param accumulator    A function that combines the results from individual
+     *                       trees into an aggregate result.
+     * @param finisher       A function called on the aggregate result in order to
+     *                       produce the final result.
+     * @param <R>            The visitor result type. This is the type that will be
+     *                       returned after traversing each individual tree.
+     * @param <S>            The final type, after any final normalization at the
+     *                       forest level.
+     * @return The aggregated and finalized result after sending a visitor through
+     *         each tree in the forest.
      */
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   BinaryOperator<R> accumulator, Function<R, S> finisher) {
+            BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -320,22 +336,28 @@ public class RandomCutForest {
     }
 
     /**
-     * Visit each of the trees in the forest and combine the individual results into an aggregate
-     * result. A visitor is constructed for each tree using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from individual trees are
-     * collected using the {@link java.util.stream.Collector} and returned. Trees are visited in parallel using
+     * Visit each of the trees in the forest and combine the individual results into
+     * an aggregate result. A visitor is constructed for each tree using the visitor
+     * factory, and then submitted to
+     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from
+     * individual trees are collected using the {@link java.util.stream.Collector}
+     * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
-     * @param visitorFactory A factory method which is invoked for each tree to construct a vistor.
-     * @param collector      A collector used to aggregate individual tree results into a final result.
-     * @param <R>            The visitor result type. This is the type that will be returned after traversing each individual
-     *                       tree.
-     * @param <S>            The final type, after any final normalization at the forest level.
-     * @return The aggregated and finalized result after sending a visitor through each tree in the forest.
+     * @param visitorFactory A factory method which is invoked for each tree to
+     *                       construct a vistor.
+     * @param collector      A collector used to aggregate individual tree results
+     *                       into a final result.
+     * @param <R>            The visitor result type. This is the type that will be
+     *                       returned after traversing each individual tree.
+     * @param <S>            The final type, after any final normalization at the
+     *                       forest level.
+     * @return The aggregated and finalized result after sending a visitor through
+     *         each tree in the forest.
      */
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   Collector<R, ?, S> collector) {
+            Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -346,24 +368,32 @@ public class RandomCutForest {
     }
 
     /**
-     * Visit each of the trees in the forest sequentially and combine the individual results into an aggregate
-     * result. A visitor is constructed for each tree using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all the trees are
-     * combined using the {@link ConvergingAccumulator}, and the method stops visiting trees after convergence is
-     * reached. The result is transformed using the finisher before being returned.
+     * Visit each of the trees in the forest sequentially and combine the individual
+     * results into an aggregate result. A visitor is constructed for each tree
+     * using the visitor factory, and then submitted to
+     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
+     * the trees are combined using the {@link ConvergingAccumulator}, and the
+     * method stops visiting trees after convergence is reached. The result is
+     * transformed using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
-     * @param visitorFactory A factory method which is invoked for each tree to construct a vistor.
-     * @param accumulator    An accumulator that combines the results from individual trees into an aggregate result and
-     *                       checks to see if the result can be returned without further processing.
-     * @param finisher       A function called on the aggregate result in order to produce the final result.
-     * @param <R>            The visitor result type. This is the type that will be returned after traversing each individual
-     *                       tree.
-     * @param <S>            The final type, after any final normalization at the forest level.
-     * @return The aggregated and finalized result after sending a visitor through each tree in the forest.
+     * @param visitorFactory A factory method which is invoked for each tree to
+     *                       construct a vistor.
+     * @param accumulator    An accumulator that combines the results from
+     *                       individual trees into an aggregate result and checks to
+     *                       see if the result can be returned without further
+     *                       processing.
+     * @param finisher       A function called on the aggregate result in order to
+     *                       produce the final result.
+     * @param <R>            The visitor result type. This is the type that will be
+     *                       returned after traversing each individual tree.
+     * @param <S>            The final type, after any final normalization at the
+     *                       forest level.
+     * @return The aggregated and finalized result after sending a visitor through
+     *         each tree in the forest.
      */
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+            ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -375,23 +405,29 @@ public class RandomCutForest {
     }
 
     /**
-     * Visit each of the trees in the forest and combine the individual results into an aggregate
-     * result. A multi-visitor is constructed for each tree using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results from all the
-     * trees are combined using the accumulator and then transformed using the finisher before being returned.
+     * Visit each of the trees in the forest and combine the individual results into
+     * an aggregate result. A multi-visitor is constructed for each tree using the
+     * visitor factory, and then submitted to
+     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
+     * from all the trees are combined using the accumulator and then transformed
+     * using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
-     * @param visitorFactory A factory method which is invoked for each tree to construct a multi-vistor.
-     * @param accumulator    A function that combines the results from individual trees into an aggregate result.
-     * @param finisher       A function called on the aggregate result in order to produce the final result.
-     * @param <R>            The visitor result type. This is the type that will be returned after traversing each individual
-     *                       tree.
-     * @param <S>            The final type, after any final normalization at the forest level.
-     * @return The aggregated and finalized result after sending a visitor through each tree in the forest.
+     * @param visitorFactory A factory method which is invoked for each tree to
+     *                       construct a multi-vistor.
+     * @param accumulator    A function that combines the results from individual
+     *                       trees into an aggregate result.
+     * @param finisher       A function called on the aggregate result in order to
+     *                       produce the final result.
+     * @param <R>            The visitor result type. This is the type that will be
+     *                       returned after traversing each individual tree.
+     * @param <S>            The final type, after any final normalization at the
+     *                       forest level.
+     * @return The aggregated and finalized result after sending a visitor through
+     *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point,
-                                        Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        BinaryOperator<R> accumulator, Function<R, S> finisher) {
+    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+            BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -403,23 +439,28 @@ public class RandomCutForest {
     }
 
     /**
-     * Visit each of the trees in the forest and combine the individual results into an aggregate
-     * result. A multi-visitor is constructed for each tree using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results from individual
-     * trees are collected using the {@link java.util.stream.Collector} and returned. Trees are visited in parallel
-     * using {@link java.util.Collection#parallelStream()}.
+     * Visit each of the trees in the forest and combine the individual results into
+     * an aggregate result. A multi-visitor is constructed for each tree using the
+     * visitor factory, and then submitted to
+     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
+     * from individual trees are collected using the
+     * {@link java.util.stream.Collector} and returned. Trees are visited in
+     * parallel using {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
-     * @param visitorFactory A factory method which is invoked for each tree to construct a vistor.
-     * @param collector      A collector used to aggregate individual tree results into a final result.
-     * @param <R>            The visitor result type. This is the type that will be returned after traversing each individual
-     *                       tree.
-     * @param <S>            The final type, after any final normalization at the forest level.
-     * @return The aggregated and finalized result after sending a visitor through each tree in the forest.
+     * @param visitorFactory A factory method which is invoked for each tree to
+     *                       construct a vistor.
+     * @param collector      A collector used to aggregate individual tree results
+     *                       into a final result.
+     * @param <R>            The visitor result type. This is the type that will be
+     *                       returned after traversing each individual tree.
+     * @param <S>            The final type, after any final normalization at the
+     *                       forest level.
+     * @return The aggregated and finalized result after sending a visitor through
+     *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point,
-                                        Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        Collector<R, ?, S> collector) {
+    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+            Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -430,12 +471,14 @@ public class RandomCutForest {
     }
 
     /**
-     * Compute an anomaly score for the given point. The point being scored is compared with the points in the sample
-     * to compute a measure of how anomalous it is. Scores are greater than 0, with higher scores corresponding to
-     * bing more anomalous. A threshold of 1.0 is commonly used to distinguish anomalous points from non-anomolous
-     * ones.
+     * Compute an anomaly score for the given point. The point being scored is
+     * compared with the points in the sample to compute a measure of how anomalous
+     * it is. Scores are greater than 0, with higher scores corresponding to bing
+     * more anomalous. A threshold of 1.0 is commonly used to distinguish anomalous
+     * points from non-anomolous ones.
      * <p>
-     * See {@link AnomalyScoreVisitor} for more details about the anomaly score algorithm.
+     * See {@link AnomalyScoreVisitor} for more details about the anomaly score
+     * algorithm.
      *
      * @param point The point being scored.
      * @return an anomaly score for the given point.
@@ -445,8 +488,8 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree ->
-                new AnomalyScoreVisitor(point, tree.getRoot().getMass());
+        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
+                tree.getRoot().getMass());
 
         BinaryOperator<Double> accumulator = Double::sum;
 
@@ -456,11 +499,14 @@ public class RandomCutForest {
     }
 
     /**
-     * Anomaly score evaluated sequentially with option of early stopping the early stopping parameter precision gives an
-     * approximate solution in the range (1-precision)*score(q)- precision, (1+precision)*score(q) + precision for the score of a point q.
-     * In this function z is hardcoded to 0.1. If this function is used, then not all the trees will be used in
-     * evaluation (but they have to be updated anyways, because they may be used for the next q). The advantage is that
-     * "almost certainly" anomalies/non-anomalies can be detected easily with few trees.
+     * Anomaly score evaluated sequentially with option of early stopping the early
+     * stopping parameter precision gives an approximate solution in the range
+     * (1-precision)*score(q)- precision, (1+precision)*score(q) + precision for the
+     * score of a point q. In this function z is hardcoded to 0.1. If this function
+     * is used, then not all the trees will be used in evaluation (but they have to
+     * be updated anyways, because they may be used for the next q). The advantage
+     * is that "almost certainly" anomalies/non-anomalies can be detected easily
+     * with few trees.
      *
      * @param point input point q
      * @return anomaly score with early stopping with z=0.1
@@ -471,14 +517,12 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree ->
-                new AnomalyScoreVisitor(point, tree.getRoot().getMass());
+        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
+                tree.getRoot().getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
-                DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL,
-                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
-                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED,
-                numberOfTrees);
+                DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
+                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
@@ -486,23 +530,26 @@ public class RandomCutForest {
     }
 
     /**
-     * Compute an anomaly score attribution DiVector for the given point. The point being scored is compared with the points in the
-     * sample to compute a measure of how anomalous it is. The result DiVector will contain an anomaly score in both
-     * the positive and negative directions for each dimension of the data.
+     * Compute an anomaly score attribution DiVector for the given point. The point
+     * being scored is compared with the points in the sample to compute a measure
+     * of how anomalous it is. The result DiVector will contain an anomaly score in
+     * both the positive and negative directions for each dimension of the data.
      * <p>
-     * See {@link AnomalyAttributionVisitor} for more details about the anomaly score algorithm.
+     * See {@link AnomalyAttributionVisitor} for more details about the anomaly
+     * score algorithm.
      *
      * @param point The point being scored.
      * @return an anomaly score for the given point.
      */
     public DiVector getAnomalyAttribution(double[] point) {
-        // this will return the same (modulo floating point summation) L1Norm as getAnomalyScore
+        // this will return the same (modulo floating point summation) L1Norm as
+        // getAnomalyScore
         if (!isOutputReady()) {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree ->
-                new AnomalyAttributionVisitor(point, tree.getRoot().getMass());
+        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+                tree.getRoot().getMass());
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
@@ -510,8 +557,9 @@ public class RandomCutForest {
     }
 
     /**
-     * Sequential version of attribution corresponding to getAnomalyScoreSequential; The high-low sum in the result
-     * should be the same as the scalar score computed by {@link #getAnomalyScore(double[])}.
+     * Sequential version of attribution corresponding to getAnomalyScoreSequential;
+     * The high-low sum in the result should be the same as the scalar score
+     * computed by {@link #getAnomalyScore(double[])}.
      *
      * @param point The point being scored.
      * @return anomaly attribution for the given point.
@@ -521,15 +569,12 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree ->
-                new AnomalyAttributionVisitor(point, tree.getRoot().getMass());
+        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+                tree.getRoot().getMass());
 
-        ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(
-                dimensions,
-                DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL,
-                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
-                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED,
-                numberOfTrees);
+        ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
+                DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
+                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
 
         Function<DiVector, DiVector> finisher = vector -> vector.scale(1.0 / accumulator.getValuesAccepted());
 
@@ -539,7 +584,8 @@ public class RandomCutForest {
     /**
      * Compute a density estimate at the given point.
      * <p>
-     * See {@link SimpleInterpolationVisitor} and {@link DensityOutput} for more details about the density computation.
+     * See {@link SimpleInterpolationVisitor} and {@link DensityOutput} for more
+     * details about the density computation.
      *
      * @param point The point where the density estimate is made.
      * @return A density estimate.
@@ -553,27 +599,34 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        Function<RandomCutTree, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(point, sampleSize, 1.0, centerOfMassEnabled); //self
-        Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions, sampleSize, numberOfTrees);
+        Function<RandomCutTree, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(
+                point, sampleSize, 1.0, centerOfMassEnabled); // self
+        Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
+                sampleSize, numberOfTrees);
 
         return new DensityOutput(traverseForest(point, visitorFactory, collector));
     }
 
     /**
-     * Given a point with missing values, return a new point with the missing values imputed. Each tree in the forest
-     * individual produces an imputed value. For 1-dimensional points, the median imputed value is returned. For
-     * points with more than 1 dimension, the imputed point with the 25th percentile anomaly score is returned.
+     * Given a point with missing values, return a new point with the missing values
+     * imputed. Each tree in the forest individual produces an imputed value. For
+     * 1-dimensional points, the median imputed value is returned. For points with
+     * more than 1 dimension, the imputed point with the 25th percentile anomaly
+     * score is returned.
      *
      * @param point                 A point with missing values.
      * @param numberOfMissingValues The number of missing values in the point.
-     * @param missingIndexes        An array containing the indexes of the missing values in the point. The length of the
-     *                              array should be greater than or equal to the number of missing values.
+     * @param missingIndexes        An array containing the indexes of the missing
+     *                              values in the point. The length of the array
+     *                              should be greater than or equal to the number of
+     *                              missing values.
      * @return A point with the missing values imputed.
      */
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
 
-        // We check this condition in traverseForest, but we need to check it here s wellin case we need to copy the
+        // We check this condition in traverseForest, but we need to check it here s
+        // wellin case we need to copy the
         // point in the next block
         checkNotNull(point, "point must not be null");
 
@@ -583,31 +636,28 @@ public class RandomCutForest {
 
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
-            "numberOfMissingValues must be less than or equal to missingIndexes.length");
+                "numberOfMissingValues must be less than or equal to missingIndexes.length");
 
         if (!isOutputReady()) {
             return new double[dimensions];
         }
 
-        Function<RandomCutTree, MultiVisitor<double[]>> visitorFactory = tree ->
-            new ImputeVisitor(point, numberOfMissingValues, missingIndexes);
+        Function<RandomCutTree, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
+                numberOfMissingValues, missingIndexes);
 
         if (numberOfMissingValues == 1) {
 
-            // when there is 1 missing value, we sort all the imputed values and return the median
+            // when there is 1 missing value, we sort all the imputed values and return the
+            // median
 
-            Collector<double[], ArrayList<Double>, ArrayList<Double>> collector = Collector.of(
-                ArrayList::new,
-                (list, array) -> list.add(array[missingIndexes[0]]),
-                (left, right) -> {
-                    left.addAll(right);
-                    return left;
-                },
-                list -> {
-                    list.sort(Comparator.comparing(Double::doubleValue));
-                    return list;
-                }
-            );
+            Collector<double[], ArrayList<Double>, ArrayList<Double>> collector = Collector.of(ArrayList::new,
+                    (list, array) -> list.add(array[missingIndexes[0]]), (left, right) -> {
+                        left.addAll(right);
+                        return left;
+                    }, list -> {
+                        list.sort(Comparator.comparing(Double::doubleValue));
+                        return list;
+                    });
 
             ArrayList<Double> imputedValues = traverseForestMulti(point, visitorFactory, collector);
             double[] returnPoint = Arrays.copyOf(point, dimensions);
@@ -615,21 +665,18 @@ public class RandomCutForest {
             return returnPoint;
         } else {
 
-            // when there is more than 1 missing value, we sort the imputed points by anomaly score and
+            // when there is more than 1 missing value, we sort the imputed points by
+            // anomaly score and
             // return the point with the 25th percentile anomaly score
 
-            Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(
-                ArrayList::new,
-                ArrayList::add,
-                (left, right) -> {
-                    left.addAll(right);
-                    return left;
-                },
-                list -> {
-                    list.sort(Comparator.comparing(this::getAnomalyScore));
-                    return list;
-                }
-            );
+            Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
+                    ArrayList::add, (left, right) -> {
+                        left.addAll(right);
+                        return left;
+                    }, list -> {
+                        list.sort(Comparator.comparing(this::getAnomalyScore));
+                        return list;
+                    });
 
             ArrayList<double[]> imputedPoints = traverseForestMulti(point, visitorFactory, collector);
             return imputedPoints.get(numberOfTrees / 4);
@@ -637,26 +684,28 @@ public class RandomCutForest {
     }
 
     /**
-     * Given an initial shingled point, extrapolate the stream into the future to produce a forecast. This method is
-     * intended to be called when the input data is being shingled, and it works by imputing forward one shingle
-     * block at a time.
+     * Given an initial shingled point, extrapolate the stream into the future to
+     * produce a forecast. This method is intended to be called when the input data
+     * is being shingled, and it works by imputing forward one shingle block at a
+     * time.
      *
      * @param point        The starting point for extrapolation.
      * @param horizon      The number of blocks to forecast.
-     * @param blockSize    The number of entries in a block. This should be the same as the size of a single input to
-     *                     the shingle.
-     * @param cyclic       If true then the shingling is cyclic, otherwise it's a sliding shingle.
-     * @param shingleIndex If cyclic is true, then this should be the current index in the shingle. That is, the index
-     *                     where the next point added to the shingle would be written. If cyclic is false then this
-     *                     value is not used.
+     * @param blockSize    The number of entries in a block. This should be the same
+     *                     as the size of a single input to the shingle.
+     * @param cyclic       If true then the shingling is cyclic, otherwise it's a
+     *                     sliding shingle.
+     * @param shingleIndex If cyclic is true, then this should be the current index
+     *                     in the shingle. That is, the index where the next point
+     *                     added to the shingle would be written. If cyclic is false
+     *                     then this value is not used.
      * @return a forecasted time series.
      */
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
         checkArgument(0 < blockSize && blockSize < dimensions,
                 "blockSize must be between 0 and dimensions (exclusive)");
-        checkArgument(dimensions % blockSize == 0,
-            "dimensions must be evenly divisible by blockSize");
-        checkArgument(0 <= shingleIndex && shingleIndex <  dimensions / blockSize,
+        checkArgument(dimensions % blockSize == 0, "dimensions must be evenly divisible by blockSize");
+        checkArgument(0 <= shingleIndex && shingleIndex < dimensions / blockSize,
                 "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
 
         double[] result = new double[blockSize * horizon];
@@ -673,15 +722,17 @@ public class RandomCutForest {
     }
 
     /**
-     * Given an initial shingled point, extrapolate the stream into the future to produce a forecast. This method is
-     * intended to be called when the input data is being shingled, and it works by imputing forward one shingle
-     * block at a time. If the shingle is cyclic, then this method uses 0 as the shingle index.
+     * Given an initial shingled point, extrapolate the stream into the future to
+     * produce a forecast. This method is intended to be called when the input data
+     * is being shingled, and it works by imputing forward one shingle block at a
+     * time. If the shingle is cyclic, then this method uses 0 as the shingle index.
      *
      * @param point     The starting point for extrapolation.
      * @param horizon   The number of blocks to forecast.
-     * @param blockSize The number of entries in a block. This should be the same as the size of a single input to
-     *                  the shingle.
-     * @param cyclic    If true then the shingling is cyclic, otherwise it's a sliding shingle.
+     * @param blockSize The number of entries in a block. This should be the same as
+     *                  the size of a single input to the shingle.
+     * @param cyclic    If true then the shingling is cyclic, otherwise it's a
+     *                  sliding shingle.
      * @return a forecasted time series.
      */
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic) {
@@ -689,20 +740,22 @@ public class RandomCutForest {
     }
 
     /**
-     * Given a shingle builder, extrapolate the stream into the future to produce a forecast. This method assumes you
-     * are passing in the shingle builder used to preprocess points before adding them to this forest.
+     * Given a shingle builder, extrapolate the stream into the future to produce a
+     * forecast. This method assumes you are passing in the shingle builder used to
+     * preprocess points before adding them to this forest.
      *
-     * @param builder The shingle builder used to process points before adding them to the forest.
+     * @param builder The shingle builder used to process points before adding them
+     *                to the forest.
      * @param horizon The number of blocks to forecast.
      * @return a forecasted time series.
      */
     public double[] extrapolateBasic(ShingleBuilder builder, int horizon) {
         return extrapolateBasic(builder.getShingle(), horizon, builder.getInputPointSize(), builder.isCyclic(),
-            builder.getShingleIndex());
+                builder.getShingleIndex());
     }
 
     void extrapolateBasicSliding(double[] result, int horizon, int blockSize, double[] queryPoint,
-                                 int[] missingIndexes) {
+            int[] missingIndexes) {
         int resultIndex = 0;
 
         Arrays.fill(missingIndexes, 0);
@@ -716,13 +769,14 @@ public class RandomCutForest {
 
             double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
             for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize + y];
+                result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize
+                        + y];
             }
         }
     }
 
     void extrapolateBasicCyclic(double[] result, int horizon, int blockSize, int shingleIndex, double[] queryPoint,
-                                int[] missingIndexes) {
+            int[] missingIndexes) {
 
         int resultIndex = 0;
         int currentPosition = shingleIndex;
@@ -736,8 +790,8 @@ public class RandomCutForest {
             double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
 
             for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[(currentPosition + y) % dimensions] =
-                    imputedPoint[(currentPosition + y) % dimensions];
+                result[resultIndex++] = queryPoint[(currentPosition + y)
+                        % dimensions] = imputedPoint[(currentPosition + y) % dimensions];
             }
 
             currentPosition = (currentPosition + blockSize) % dimensions;
@@ -745,17 +799,20 @@ public class RandomCutForest {
     }
 
     /**
-     * For each tree in the forest, follow the tree traversal path and return the leaf node if the standard Euclidean
-     * distance between the query point and the leaf point is smaller than the given threshold. Note that this will not
-     * necessarily be the nearest point in the tree, because the traversal path is determined by the random cuts in the
-     * tree. If the same leaf point is found in multiple trees, those results will be combined into a single Neighbor
-     * in the result.
+     * For each tree in the forest, follow the tree traversal path and return the
+     * leaf node if the standard Euclidean distance between the query point and the
+     * leaf point is smaller than the given threshold. Note that this will not
+     * necessarily be the nearest point in the tree, because the traversal path is
+     * determined by the random cuts in the tree. If the same leaf point is found in
+     * multiple trees, those results will be combined into a single Neighbor in the
+     * result.
      *
-     * If sequence indexes are disabled for this forest, then the list of sequence indexes will be empty in returned
-     * Neighbors.
+     * If sequence indexes are disabled for this forest, then the list of sequence
+     * indexes will be empty in returned Neighbors.
      *
      * @param point             A point whose neighbors we want to find.
-     * @param distanceThreshold The maximum Euclidean distance for a point to be considered a neighbor.
+     * @param distanceThreshold The maximum Euclidean distance for a point to be
+     *                          considered a neighbor.
      * @return a list of Neighbors, ordered from closest to furthest.
      */
     public List<Neighbor> getNearNeighborsInSample(double[] point, double distanceThreshold) {
@@ -766,20 +823,21 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        Function<RandomCutTree, Visitor<Optional<Neighbor>>> visitorFactory = tree ->
-            new NearNeighborVisitor(point, distanceThreshold);
+        Function<RandomCutTree, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
+                distanceThreshold);
 
         return traverseForest(point, visitorFactory, Neighbor.collector());
     }
 
     /**
-     * For each tree in the forest, follow the tree traversal path and return the leaf node. Note that this will not
-     * necessarily be the nearest point in the tree, because the traversal path is determined by the random cuts in the
-     * tree. If the same leaf point is found in multiple trees, those results will be combined into a single Neighbor
-     * in the result.
+     * For each tree in the forest, follow the tree traversal path and return the
+     * leaf node. Note that this will not necessarily be the nearest point in the
+     * tree, because the traversal path is determined by the random cuts in the
+     * tree. If the same leaf point is found in multiple trees, those results will
+     * be combined into a single Neighbor in the result.
      *
-     * If sequence indexes are disabled for this forest, then sequenceIndexes will be empty in the returned
-     * Neighbors.
+     * If sequence indexes are disabled for this forest, then sequenceIndexes will
+     * be empty in the returned Neighbors.
      *
      * @param point A point whose neighbors we want to find.
      * @return a list of Neighbors, ordered from closest to furthest.
@@ -815,7 +873,8 @@ public class RandomCutForest {
 
     public static class Builder<T extends Builder<T>> {
 
-        // We use Optional types for optional primitive fields when it doesn't make sense to use a constant default.
+        // We use Optional types for optional primitive fields when it doesn't make
+        // sense to use a constant default.
 
         private int dimensions;
         private int sampleSize = DEFAULT_SAMPLE_SIZE;

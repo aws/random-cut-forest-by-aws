@@ -16,23 +16,28 @@
 package com.amazon.randomcutforest.returntypes;
 
 /**
- * This accumulator checks to see if a result is converging by testing the sample mean and standard deviation of a
- * scalar value computed from the result. As the name implies, the accumulator performs a one-sided check, comparing
- * the new value the current sample mean and updating its converged status only if the difference is positive (or
- * negative, if highIsCritical is set to false. This accumulator is intended to be used with values where we care more
- * about outliers in one direction. For example, if our statistic is anomaly score, we are normally more concerned with
- * high anomaly scores than low ones.
+ * This accumulator checks to see if a result is converging by testing the
+ * sample mean and standard deviation of a scalar value computed from the
+ * result. As the name implies, the accumulator performs a one-sided check,
+ * comparing the new value the current sample mean and updating its converged
+ * status only if the difference is positive (or negative, if highIsCritical is
+ * set to false. This accumulator is intended to be used with values where we
+ * care more about outliers in one direction. For example, if our statistic is
+ * anomaly score, we are normally more concerned with high anomaly scores than
+ * low ones.
  *
  * @param <R> The type of the value being accumulated.
  */
 public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulator<R> {
 
     /**
-     * When testing for convergence, we use ALPHA times the sample standard deviation to define our interval.
+     * When testing for convergence, we use ALPHA times the sample standard
+     * deviation to define our interval.
      */
     private static final double ALPHA = 0.5;
     /**
-     * The minimum number of values that have to be accepted by this accumulator before we start testing for convergence.
+     * The minimum number of values that have to be accepted by this accumulator
+     * before we start testing for convergence.
      */
     private final int minValuesAccepted;
     /**
@@ -40,13 +45,13 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
      */
     private final int convergenceThreshold;
     /**
-     * Set to 'true' if we care more about high values of the converging scalar than low values. Set to 'false' if
-     * the opposite is true.
+     * Set to 'true' if we care more about high values of the converging scalar than
+     * low values. Set to 'false' if the opposite is true.
      */
     private final boolean highIsCritical;
     /**
-     * This value is +1 if highIsCritical is 'true', and -1 if highIsCritical is fault. It is used in the converegence
-     * test.
+     * This value is +1 if highIsCritical is 'true', and -1 if highIsCritical is
+     * fault. It is used in the converegence test.
      */
     private final int sign;
     /**
@@ -58,30 +63,39 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
      */
     private int valuesAccepted;
     /**
-     * The number of values that are 'witnesses' to convergence until now. See {@link #accept}.
+     * The number of values that are 'witnesses' to convergence until now. See
+     * {@link #accept}.
      */
     private int witnesses;
     /**
-     * The current sum of the converging scalar value. Used to compute the sample mean.
+     * The current sum of the converging scalar value. Used to compute the sample
+     * mean.
      */
     private double sumConvergeVal;
     /**
-     * The current sum of squares of the converging scalar value. Used to compute the sample standard deviation.
+     * The current sum of squares of the converging scalar value. Used to compute
+     * the sample standard deviation.
      */
     private double sumSqConvergeVal;
 
     /**
-     * Create a new converging accumulator that uses a one-sided standard deviation test.
+     * Create a new converging accumulator that uses a one-sided standard deviation
+     * test.
      *
-     * @param highIsCritical    Set to 'true' if we care more about high values of the converging scalar than low values.
-     *                          Set to 'false' if the opposite is true.
-     * @param precision         The number of witnesses required before declaring convergence will be at least 1.0 / precision.
-     * @param minValuesAccepted The user-specified minimum number of values visited before returning a result. Note that
-     *                          {@link #isConverged()} may return true before accepting this number of results if the
-     * @param maxValuesAccepted The maximum number of values that will be accepted by this accumulator.
+     * @param highIsCritical    Set to 'true' if we care more about high values of
+     *                          the converging scalar than low values. Set to
+     *                          'false' if the opposite is true.
+     * @param precision         The number of witnesses required before declaring
+     *                          convergence will be at least 1.0 / precision.
+     * @param minValuesAccepted The user-specified minimum number of values visited
+     *                          before returning a result. Note that
+     *                          {@link #isConverged()} may return true before
+     *                          accepting this number of results if the
+     * @param maxValuesAccepted The maximum number of values that will be accepted
+     *                          by this accumulator.
      */
     public OneSidedStDevAccumulator(boolean highIsCritical, double precision, int minValuesAccepted,
-                                    int maxValuesAccepted) {
+            int maxValuesAccepted) {
 
         this.highIsCritical = highIsCritical;
         this.convergenceThreshold = precision < 1.0 / maxValuesAccepted ? maxValuesAccepted : (int) (1.0 / precision);
@@ -95,7 +109,8 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
     }
 
     /**
-     * Given a new result value, add it to the accumulated value and update convergence statistics.
+     * Given a new result value, add it to the accumulated value and update
+     * convergence statistics.
      *
      * @param result The new value being accumulated.
      */

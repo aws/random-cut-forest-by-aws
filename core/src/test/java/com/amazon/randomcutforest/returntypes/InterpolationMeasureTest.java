@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class InterpolationMeasureTest {
 
@@ -52,7 +52,7 @@ public class InterpolationMeasureTest {
 
         for (int i = 0; i < dimensions; i++) {
             output.probMass.high[i] = 2 * i;
-            output.probMass.low[i] =2 * i + 1;
+            output.probMass.low[i] = 2 * i + 1;
             output.distances.high[i] = 4 * i;
             output.distances.low[i] = 4 * i + 2;
             output.measure.high[i] = 6 * i;
@@ -75,7 +75,6 @@ public class InterpolationMeasureTest {
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
 
-
         InterpolationMeasure.addToLeft(output, other1);
 
         for (int i = 0; i < dimensions; i++) {
@@ -93,7 +92,6 @@ public class InterpolationMeasureTest {
         assertArrayEquals(other1.probMass.low, other2.probMass.low);
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
-
 
     }
 
@@ -126,19 +124,16 @@ public class InterpolationMeasureTest {
         assertArrayEquals(copy.distances.high, output.distances.high);
         assertArrayEquals(copy.measure.high, output.measure.high);
 
-
         for (int i = 0; i < dimensions; i++) {
             assertEquals(2 * i * 0.9, result.probMass.high[i]);
             assertEquals(4 * i * 0.9, result.distances.high[i]);
             assertEquals(6 * i * 0.9, result.measure.high[i]);
-            assertEquals((2 * i + 1 )* 0.9, result.probMass.low[i]);
+            assertEquals((2 * i + 1) * 0.9, result.probMass.low[i]);
             assertEquals((4 * i + 2) * 0.9, result.distances.low[i]);
             assertEquals((6 * i + 3) * 0.9, result.measure.low[i]);
 
         }
 
     }
-
-
 
 }

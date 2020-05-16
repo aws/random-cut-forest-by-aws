@@ -20,24 +20,27 @@ import java.util.function.BiFunction;
 public class DynamicScoreVisitor extends AbstractScalarScoreVisitor {
 
     /**
-     * The function used to compute the base score in the case where the point being scored is equal to the leaf point
-     * (provided the ignoreLeafEquals and ignoreLeafMassThreshold variables indicate that we should use this method).
+     * The function used to compute the base score in the case where the point being
+     * scored is equal to the leaf point (provided the ignoreLeafEquals and
+     * ignoreLeafMassThreshold variables indicate that we should use this method).
      * <p>
      * Function arguments: leaf depth, leaf mass
      */
     protected final BiFunction<Double, Double, Double> scoreSeen;
 
     /**
-     * A damping function used to dilute the impact of a point with a large number of duplicates on the base score.
+     * A damping function used to dilute the impact of a point with a large number
+     * of duplicates on the base score.
      * <p>
      * Function arguments: leaf mass, tree mass
      */
     protected final BiFunction<Double, Double, Double> damp;
 
     /**
-     * The scoring function to use when the point being scored is not equal to the leaf point, or when the points are
-     * equal but the ignoreLeafEquals or ignoreLeafMassThreshold variable indicates that we should use the
-     * scoreUnseen method.
+     * The scoring function to use when the point being scored is not equal to the
+     * leaf point, or when the points are equal but the ignoreLeafEquals or
+     * ignoreLeafMassThreshold variable indicates that we should use the scoreUnseen
+     * method.
      * <p>
      * Function arguments: leaf depth, leaf mass
      */
@@ -45,12 +48,14 @@ public class DynamicScoreVisitor extends AbstractScalarScoreVisitor {
 
     /**
      * Constructor
-     * @param point being scored
-     * @param treeMass mass of the tree
+     * 
+     * @param point                   being scored
+     * @param treeMass                mass of the tree
      * @param ignoreLeafMassThreshold the threshold for ignoring leaf nodes
-     * @param scoreSeen the part of score function for previously seen values
-     * @param scoreUnseen part of the score for unseen values
-     * @param damp dampening function for seen points
+     * @param scoreSeen               the part of score function for previously seen
+     *                                values
+     * @param scoreUnseen             part of the score for unseen values
+     * @param damp                    dampening function for seen points
      */
     public DynamicScoreVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
@@ -60,7 +65,6 @@ public class DynamicScoreVisitor extends AbstractScalarScoreVisitor {
         this.scoreUnseen = scoreUnseen;
         this.damp = damp;
     }
-
 
     @Override
     protected double scoreSeen(int depth, int leafMass) {
@@ -78,8 +82,8 @@ public class DynamicScoreVisitor extends AbstractScalarScoreVisitor {
     }
 
     /**
-     * normalization is turned off for dynamic scoring because the function
-     * ranges are unknown
+     * normalization is turned off for dynamic scoring because the function ranges
+     * are unknown
      */
 
     @Override

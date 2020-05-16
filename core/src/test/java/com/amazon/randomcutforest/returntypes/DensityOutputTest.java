@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class DensityOutputTest {
 
@@ -55,7 +55,7 @@ public class DensityOutputTest {
             output.probMass.high[i] = 2 * i;
             output.probMass.low[i] = 2 * i + 1;
             output.distances.high[i] = 4 * i;
-            output.distances.low[i] = 4 * i +2;
+            output.distances.low[i] = 4 * i + 2;
             output.measure.high[i] = 6 * i;
             output.measure.low[i] = 6 * i + 3;
 
@@ -76,7 +76,6 @@ public class DensityOutputTest {
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
 
-
         DensityOutput.addToLeft(output, other1);
 
         for (int i = 0; i < dimensions; i++) {
@@ -95,10 +94,7 @@ public class DensityOutputTest {
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
 
-
     }
-
-
 
     @Test
     public void testGetDensity() {
@@ -112,8 +108,8 @@ public class DensityOutputTest {
         }
 
         double q = 0.5;
-        double density = output.getDensity(q,3);
-        DiVector densityVector = output.getDirectionalDensity(q,3);
+        double density = output.getDensity(q, 3);
+        DiVector densityVector = output.getDirectionalDensity(q, 3);
 
         double sumOfPoints = output.measure.getHighLowSum() / sampleSize;
         double sumOfFactors = 0.0;
@@ -125,11 +121,10 @@ public class DensityOutputTest {
             sumOfFactors += t;
         }
 
-        assertEquals(sumOfPoints / (q*sumOfPoints+sumOfFactors), density, EPSILON);
+        assertEquals(sumOfPoints / (q * sumOfPoints + sumOfFactors), density, EPSILON);
 
         // for contrib, do not scale sum of points by sample size
         sumOfPoints = output.measure.getHighLowSum();
-
 
         for (int i = 0; i < dimensions; i++) {
             assertEquals(output.measure.high[i] * density / sumOfPoints, densityVector.high[i], EPSILON);

@@ -23,25 +23,26 @@ import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * This abstract visitor encodes a standard method for computing a scalar result value. The basic computation is as
- * follows:
+ * This abstract visitor encodes a standard method for computing a scalar result
+ * value. The basic computation is as follows:
  *
  * <ol>
- *     <li>After following the traversal path to a leaf, compute a base score at the leaf node.</li>
- *     <li>
- *         For each node in the traversal path from the leaf to the root, compute the probability that a random cut
- *         would separate the query point from the node. The updated score uses this probability to create a weighted
- *         combination between the current score and a score contribution from the current node.
- *     </li>
+ * <li>After following the traversal path to a leaf, compute a base score at the
+ * leaf node.</li>
+ * <li>For each node in the traversal path from the leaf to the root, compute
+ * the probability that a random cut would separate the query point from the
+ * node. The updated score uses this probability to create a weighted
+ * combination between the current score and a score contribution from the
+ * current node.</li>
  * </ol>
  * <p>
- * While this basic algorithm produces good results when all the points in the sample are distinct, it can produce
- * unexpected results when a significant portion of the points in the sample are duplicates. Therefore this class
- * supports different optional features for modifying the score produced when the point being scored is equal to the
- * leaf node in the traversal.
+ * While this basic algorithm produces good results when all the points in the
+ * sample are distinct, it can produce unexpected results when a significant
+ * portion of the points in the sample are duplicates. Therefore this class
+ * supports different optional features for modifying the score produced when
+ * the point being scored is equal to the leaf node in the traversal.
  */
 public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
-
 
     public static final int DEFAULT_IGNORE_LEAF_MASS_THRESHOLD = 0;
 
@@ -51,20 +52,23 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     protected final double[] pointToScore;
 
     /**
-     * The mass of the tree being visited. This value is used to normalize the final result.
+     * The mass of the tree being visited. This value is used to normalize the final
+     * result.
      */
     protected final int treeMass;
 
     /**
-     * This flag is set to 'true' if the point being scored is found to be contained by a bounding box in the traversal
-     * path, allowing us to short-circuit further computation.
+     * This flag is set to 'true' if the point being scored is found to be contained
+     * by a bounding box in the traversal path, allowing us to short-circuit further
+     * computation.
      */
     protected boolean pointInsideBox;
 
     /**
-     * Similar to pointInsideBox, the array coordInsideBox keeps track of whether each coordinate is contained in the
-     * corresponding bounding box projection for a bounding box in the traversal path. This field is used to skip
-     * unnecessary steps in the probability computation.
+     * Similar to pointInsideBox, the array coordInsideBox keeps track of whether
+     * each coordinate is contained in the corresponding bounding box projection for
+     * a bounding box in the traversal path. This field is used to skip unnecessary
+     * steps in the probability computation.
      */
     protected boolean[] coordInsideBox;
 
@@ -74,21 +78,24 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     protected BoundingBox shadowBox = null;
 
     /**
-     * The function used to compute the base score in the case where the point being scored is equal to the leaf point
-     * (provided the ignoreLeafEquals and ignoreLeafMassThreshold variables indicate that we should use this method).
+     * The function used to compute the base score in the case where the point being
+     * scored is equal to the leaf point (provided the ignoreLeafEquals and
+     * ignoreLeafMassThreshold variables indicate that we should use this method).
      *
      * Function arguments: leaf depth, leaf mass
      */
     protected double score;
 
     /**
-     * If true, then the scoreUnseen method will be used to score a point equal to a leaf point in {@link #acceptLeaf(Node, int)}.
+     * If true, then the scoreUnseen method will be used to score a point equal to a
+     * leaf point in {@link #acceptLeaf(Node, int)}.
      */
     protected boolean ignoreLeafEquals;
 
     /**
-     * If the point being scored is equal to the leaf point but the leaf mass is smaller than this value, then the
-     * scoreUnseen method will be used to score the point in {@link #accept(Node, int)}.
+     * If the point being scored is equal to the leaf point but the leaf mass is
+     * smaller than this value, then the scoreUnseen method will be used to score
+     * the point in {@link #accept(Node, int)}.
      */
     protected int ignoreLeafMassThreshold;
 
@@ -96,15 +103,17 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * Construct a new ScalarScoreVisitor
      *
      * @param pointToScore            The point whose anomaly score we are computing
-     * @param treeMass                The total mass of the RandomCutTree that is scoring the point
-     * @param ignoreLeafMassThreshold Is the maximum mass of the leaf which can be ignored
+     * @param treeMass                The total mass of the RandomCutTree that is
+     *                                scoring the point
+     * @param ignoreLeafMassThreshold Is the maximum mass of the leaf which can be
+     *                                ignored
      */
     public AbstractScalarScoreVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
         this.pointToScore = Arrays.copyOf(pointToScore, pointToScore.length);
         this.treeMass = treeMass;
         pointInsideBox = false;
         score = 0.0;
-        this.ignoreLeafEquals =  (ignoreLeafMassThreshold > DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
+        this.ignoreLeafEquals = (ignoreLeafMassThreshold > DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
         this.ignoreLeafMassThreshold = ignoreLeafMassThreshold;
 
         // will be initialized to an array of false values
@@ -114,8 +123,9 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     /**
      * Construct a new AbstractScalarScoreVisitor using default leaf options.
      *
-     * @param pointToScore            The point whose anomaly score we are computing
-     * @param treeMass                The total mass of the RandomCutTree that is scoring the point
+     * @param pointToScore The point whose anomaly score we are computing
+     * @param treeMass     The total mass of the RandomCutTree that is scoring the
+     *                     point
      */
     public AbstractScalarScoreVisitor(double[] pointToScore, int treeMass) {
         this(pointToScore, treeMass, DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
@@ -149,12 +159,13 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
             }
         } else {
             Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            shadowBox = (shadowBox == null) ? sibling.getBoundingBox() :
-                    shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = (shadowBox == null) ? sibling.getBoundingBox()
+                    : shadowBox.getMergedBox(sibling.getBoundingBox());
             probabilityOfSeparation = (shadowBox.getRangeSum() <= 0) ? 1.0 : getProbabilityOfSeparation(shadowBox);
         }
 
-        score = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass()) + (1 - probabilityOfSeparation) * score;
+        score = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
+                + (1 - probabilityOfSeparation) * score;
     }
 
     /**
@@ -165,7 +176,8 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      */
     @Override
     public void acceptLeaf(Node leafNode, int depthOfNode) {
-        if (leafNode.leafPointEquals(pointToScore) && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
+        if (leafNode.leafPointEquals(pointToScore)
+                && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             pointInsideBox = true;
             score = damp(leafNode.getMass(), treeMass) * scoreSeen(depthOfNode, leafNode.getMass());
 
@@ -175,7 +187,9 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     }
 
     /**
-     * A scoring function which is applied when the leaf node visited is equal to the point being scored.
+     * A scoring function which is applied when the leaf node visited is equal to
+     * the point being scored.
+     * 
      * @param depth The depth of the node being visited
      * @param mass  The mass of the node being visited
      * @return an anomaly score contribution for a given node
@@ -183,8 +197,10 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     protected abstract double scoreSeen(int depth, int mass);
 
     /**
-     * A scoring function which is applied when the leaf node visited is not equal to the point being scored. This
-     * function is also used to compute the contribution to the anomaly score from non-leaf nodes.
+     * A scoring function which is applied when the leaf node visited is not equal
+     * to the point being scored. This function is also used to compute the
+     * contribution to the anomaly score from non-leaf nodes.
+     * 
      * @param depth The depth of the node being visited.
      * @param mass  The mass of the node being visited.
      * @return an anomaly score contribution for a given node.
@@ -192,20 +208,24 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     protected abstract double scoreUnseen(int depth, int mass);
 
     /**
-     * This function produces a scaling factor which can be used to reduce the influence of leaf nodes with mass
-     * greater than 1.
+     * This function produces a scaling factor which can be used to reduce the
+     * influence of leaf nodes with mass greater than 1.
+     * 
      * @param leafMass The mass of the leaf node visited
      * @param treeMass The mass of the tree being visited
-     * @return a scaling factor to apply to the result from {@link #scoreSeen(int, int)}.
+     * @return a scaling factor to apply to the result from
+     *         {@link #scoreSeen(int, int)}.
      */
     protected abstract double damp(int leafMass, int treeMass);
 
     /**
-     * Compute the probability that a random cut would separate the point from the rest of the bounding box.
-     * This method is intended to compute the probability for a non-leaf Node, and will throw an exception
-     * if a leaf-node bounding box is detected.
+     * Compute the probability that a random cut would separate the point from the
+     * rest of the bounding box. This method is intended to compute the probability
+     * for a non-leaf Node, and will throw an exception if a leaf-node bounding box
+     * is detected.
      *
-     * @param boundingBox The bounding box that we are computing the probability of separation from.
+     * @param boundingBox The bounding box that we are computing the probability of
+     *                    separation from.
      * @return is the probability
      */
     protected double getProbabilityOfSeparation(final BoundingBox boundingBox) {
@@ -223,10 +243,10 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
                 } else if (minVal > pointToScore[i]) {
                     minVal = pointToScore[i];
                 } else if (!ignoreLeafEquals) {
-                        // optimization turned on for ignoreLeafEquals==false
-                        sumOfNewRange += oldRange;
-                        coordInsideBox[i] = true;
-                        continue;
+                    // optimization turned on for ignoreLeafEquals==false
+                    sumOfNewRange += oldRange;
+                    coordInsideBox[i] = true;
+                    continue;
                 }
 
                 double newRange = maxVal - minVal;
@@ -238,10 +258,11 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
         }
 
         if (sumOfNewRange <= 0) {
-            //Sum of range across dimensions should only be 0 at leaf nodes as non-leaf nodes always contain
-            //more than one distinct point
-            throw new IllegalStateException("Sum of new range of merged box in scoring function is smaller than 0 " +
-                "for a non-leaf node. The sum of range of new bounding box is: " + sumOfNewRange);
+            // Sum of range across dimensions should only be 0 at leaf nodes as non-leaf
+            // nodes always contain
+            // more than one distinct point
+            throw new IllegalStateException("Sum of new range of merged box in scoring function is smaller than 0 "
+                    + "for a non-leaf node. The sum of range of new bounding box is: " + sumOfNewRange);
         }
 
         return sumOfDifferenceInRange / sumOfNewRange;

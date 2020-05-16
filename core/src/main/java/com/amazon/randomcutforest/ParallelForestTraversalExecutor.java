@@ -28,7 +28,8 @@ import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
- * An implementation of forest traversal methods that uses a private thread pool to visit trees in parallel.
+ * An implementation of forest traversal methods that uses a private thread pool
+ * to visit trees in parallel.
  */
 public class ParallelForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
@@ -44,57 +45,45 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     @Override
     protected void update(double[] pointCopy, long sequenceIndex) {
         submitAndJoin(() -> {
-            treeUpdaters.parallelStream()
-                .forEach(updater -> updater.update(pointCopy, sequenceIndex));
+            treeUpdaters.parallelStream().forEach(updater -> updater.update(pointCopy, sequenceIndex));
             return null;
         });
     }
 
     @Override
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   BinaryOperator<R> accumulator, Function<R, S> finisher) {
+            BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        return submitAndJoin(() -> treeUpdaters.parallelStream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                Visitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTree(point, visitor);
-            })
-            .reduce(accumulator)
-            .map(finisher)
-        ).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
+            Visitor<R> visitor = visitorFactory.apply(tree);
+            return tree.traverseTree(point, visitor);
+        }).reduce(accumulator).map(finisher))
+                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   Collector<R, ?, S> collector) {
+            Collector<R, ?, S> collector) {
 
-        return submitAndJoin(() -> treeUpdaters.parallelStream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                Visitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTree(point, visitor);
-            })
-            .collect(collector)
-        );
+        return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
+            Visitor<R> visitor = visitorFactory.apply(tree);
+            return tree.traverseTree(point, visitor);
+        }).collect(collector));
     }
 
     @Override
     public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-                                   ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+            ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         for (int i = 0; i < treeUpdaters.size(); i += threadPoolSize) {
             final int start = i;
             final int end = Math.min(start + threadPoolSize, treeUpdaters.size());
 
-            List<R> results = submitAndJoin(() -> treeUpdaters.subList(start, end).parallelStream()
-                .map(TreeUpdater::getTree)
-                .map(tree -> {
-                    Visitor<R> visitor = visitorFactory.apply(tree);
-                    return tree.traverseTree(point, visitor);
-                })
-                .collect(Collectors.toList())
-            );
+            List<R> results = submitAndJoin(
+                    () -> treeUpdaters.subList(start, end).parallelStream().map(TreeUpdater::getTree).map(tree -> {
+                        Visitor<R> visitor = visitorFactory.apply(tree);
+                        return tree.traverseTree(point, visitor);
+                    }).collect(Collectors.toList()));
 
             results.forEach(accumulator::accept);
 
@@ -108,31 +97,23 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
 
     @Override
     public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        BinaryOperator<R> accumulator, Function<R, S> finisher) {
+            BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        return submitAndJoin(() -> treeUpdaters.parallelStream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                MultiVisitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTreeMulti(point, visitor);
-            })
-            .reduce(accumulator)
-            .map(finisher)
-        ).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
+            MultiVisitor<R> visitor = visitorFactory.apply(tree);
+            return tree.traverseTreeMulti(point, visitor);
+        }).reduce(accumulator).map(finisher))
+                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
     public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
-                                        Collector<R, ?, S> collector) {
+            Collector<R, ?, S> collector) {
 
-        return submitAndJoin(() -> treeUpdaters.parallelStream()
-            .map(TreeUpdater::getTree)
-            .map(tree -> {
-                MultiVisitor<R> visitor = visitorFactory.apply(tree);
-                return tree.traverseTreeMulti(point, visitor);
-            })
-            .collect(collector)
-        );
+        return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
+            MultiVisitor<R> visitor = visitorFactory.apply(tree);
+            return tree.traverseTreeMulti(point, visitor);
+        }).collect(collector));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

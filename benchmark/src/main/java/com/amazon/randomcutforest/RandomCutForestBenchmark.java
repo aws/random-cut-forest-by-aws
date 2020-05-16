@@ -15,9 +15,6 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -30,6 +27,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(value = 1)
@@ -40,13 +41,13 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({"1", "16", "256"})
+        @Param({ "1", "16", "256" })
         int dimensions;
 
-        @Param({"50", "100"})
+        @Param({ "50", "100" })
         int numberOfTrees;
 
-        @Param({"false", "true"})
+        @Param({ "false", "true" })
         boolean parallelExecutionEnabled;
 
         double[][] data;
@@ -60,12 +61,8 @@ public class RandomCutForestBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpForest() {
-            forest = RandomCutForest.builder()
-                    .numberOfTrees(numberOfTrees)
-                    .dimensions(dimensions)
-                    .parallelExecutionEnabled(parallelExecutionEnabled)
-                    .randomSeed(99)
-                    .build();
+            forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).dimensions(dimensions)
+                    .parallelExecutionEnabled(parallelExecutionEnabled).randomSeed(99).build();
         }
     }
 

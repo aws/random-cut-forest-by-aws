@@ -25,12 +25,11 @@ import java.util.stream.Stream;
 import com.amazon.randomcutforest.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.TreeUpdater;
+import com.amazon.randomcutforest.tree.Node;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
-import com.amazon.randomcutforest.tree.Node;
 
 /**
  * {@link RandomCutForest} serialization.
@@ -43,28 +42,23 @@ public class RandomCutForestSerDe {
      * Constructor instantiating objects for default serialization.
      */
     public RandomCutForestSerDe() {
-        Set<Class<?>> serializationSkipClasses = Stream
-            .of(BiFunction.class, Node.class, ForkJoinPool.class)
-            .collect(Collectors.toSet());
-        this.gson = new GsonBuilder()
-            .addSerializationExclusionStrategy(
-                new ExclusionStrategy() {
-                    @Override
-                    public boolean shouldSkipClass(Class<?> clazz) {
-                        return serializationSkipClasses.contains(clazz);
-                    }
+        Set<Class<?>> serializationSkipClasses = Stream.of(BiFunction.class, Node.class, ForkJoinPool.class)
+                .collect(Collectors.toSet());
+        this.gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
+            @Override
+            public boolean shouldSkipClass(Class<?> clazz) {
+                return serializationSkipClasses.contains(clazz);
+            }
 
-                    @Override
-                    public boolean shouldSkipField(FieldAttributes field) {
-                        return false;
-                    }
-                }
-            )
-            .registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
-            .registerTypeAdapter(AbstractForestTraversalExecutor.class, new AbstractForestTraversalExecutorAdapter())
-            .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
-            .registerTypeAdapter(Random.class, new RandomAdapter())
-            .create();
+            @Override
+            public boolean shouldSkipField(FieldAttributes field) {
+                return false;
+            }
+        }).registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
+                .registerTypeAdapter(AbstractForestTraversalExecutor.class,
+                        new AbstractForestTraversalExecutorAdapter())
+                .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
+                .registerTypeAdapter(Random.class, new RandomAdapter()).create();
     }
 
     /**

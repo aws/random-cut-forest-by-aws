@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.tree;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class CutTest {
 
@@ -44,7 +44,7 @@ public class CutTest {
 
     @Test
     public void testIsLeftOf() {
-        double[] point = new double[] {1.0, 2.0, 3.0, 4.0};
+        double[] point = new double[] { 1.0, 2.0, 3.0, 4.0 };
         assertTrue(Cut.isLeftOf(point, cut));
 
         point[2] = 99.9;
