@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.amazon</groupId>
+    <groupId>software.amazon.randomcutforest</groupId>
     <artifactId>randomcutforest-parent</artifactId>
     <version>${revision}</version>
   </parent>
@@ -14,7 +14,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.amazon</groupId>
+      <groupId>software.amazon.randomcutforest</groupId>
       <artifactId>randomcutforest-core</artifactId>
       <version>${project.version}</version>
     </dependency>
