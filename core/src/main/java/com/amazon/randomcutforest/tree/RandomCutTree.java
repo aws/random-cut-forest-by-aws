@@ -15,6 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.tree.Node.isLeftOf;
+
 import java.util.Arrays;
 import java.util.Random;
 
@@ -22,19 +27,16 @@ import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.WeightedPoint;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.tree.Node.isLeftOf;
-
 /**
- * A Random Cut Tree is a tree data structure whose leaves represent points inserted into the tree and whose
- * interior nodes represent regions of space defined by Bounding Boxes and Cuts. New nodes and leaves are added to
- * the tree by making random cuts. See {@link #addPoint} for details.
+ * A Random Cut Tree is a tree data structure whose leaves represent points
+ * inserted into the tree and whose interior nodes represent regions of space
+ * defined by Bounding Boxes and Cuts. New nodes and leaves are added to the
+ * tree by making random cuts. See {@link #addPoint} for details.
  *
- * The main use of this class is to be updated with points sampled from a stream, and to define traversal methods.
- * Users can then implement a {@link Visitor} which can be submitted to a traversal method in order to compute a
- * statistic from the tree.
+ * The main use of this class is to be updated with points sampled from a
+ * stream, and to define traversal methods. Users can then implement a
+ * {@link Visitor} which can be submitted to a traversal method in order to
+ * compute a statistic from the tree.
  */
 public class RandomCutTree {
 
@@ -87,7 +89,8 @@ public class RandomCutTree {
     /**
      * Create a new RandomCutTree with optional arguments set to default values.
      *
-     * @param randomSeed The random seed used to create the random number generator for this tree.
+     * @param randomSeed The random seed used to create the random number generator
+     *                   for this tree.
      * @return a new RandomCutTree with optional arguments set to default values.
      */
     public static RandomCutTree defaultTree(long randomSeed) {
@@ -102,21 +105,24 @@ public class RandomCutTree {
     }
 
     /**
-     * @return true if nodes in this tree retain the center of mass, false otherwise.
+     * @return true if nodes in this tree retain the center of mass, false
+     *         otherwise.
      */
     public boolean centerOfMassEnabled() {
         return centerOfMassEnabled;
     }
 
     /**
-     * @return true if points in this tree are saved with sequence indexes, false otherwise.
+     * @return true if points in this tree are saved with sequence indexes, false
+     *         otherwise.
      */
     public boolean storeSequenceIndexesEnabled() {
         return storeSequenceIndexesEnabled;
     }
 
     /**
-     * Return a new {@link Cut}, which is chosen uniformly over the space of possible cuts for the given bounding box.
+     * Return a new {@link Cut}, which is chosen uniformly over the space of
+     * possible cuts for the given bounding box.
      *
      * @param random A random number generator
      * @param box    A bounding box that we want to find a random cut for.
@@ -133,7 +139,8 @@ public class RandomCutTree {
             if (breakPoint <= range) {
                 double cutValue = box.getMinValue(i) + breakPoint;
 
-                // Random cuts have to take a value in the half-open interval [minValue, maxValue) to ensure that a
+                // Random cuts have to take a value in the half-open interval [minValue,
+                // maxValue) to ensure that a
                 // Node has a valid left child and right child.
                 if ((cutValue == box.getMaxValue(i)) && (box.getMinValue(i) < box.getMaxValue(i))) {
                     cutValue = Math.nextAfter(box.getMaxValue(i), box.getMinValue(i));
@@ -148,7 +155,8 @@ public class RandomCutTree {
     }
 
     /**
-     * Replace a Node in the tree structure. This method replaces oldNode with newNode as a child of oldNode.getParent().
+     * Replace a Node in the tree structure. This method replaces oldNode with
+     * newNode as a child of oldNode.getParent().
      *
      * @param oldNode The node we are replacing.
      * @param newNode The new node we are inserting into the tree.
@@ -167,7 +175,8 @@ public class RandomCutTree {
     }
 
     /**
-     * Return the sibling of a non-root node. Note that every non-leaf node in a Random Cut Tree has two children.
+     * Return the sibling of a non-root node. Note that every non-leaf node in a
+     * Random Cut Tree has two children.
      *
      * @param node The node whose sibling we are requesting.
      * @return the sibling of node in the tree.
@@ -196,13 +205,15 @@ public class RandomCutTree {
     }
 
     /**
-     * This function deletes the point from the tree recursively. We traverse the tree based on the cut stored in
-     * each interior node until we reach a leaf node. We then delete the leaf node if the mass of the node is 1,
-     * otherwise we reduce the mass by 1.
+     * This function deletes the point from the tree recursively. We traverse the
+     * tree based on the cut stored in each interior node until we reach a leaf
+     * node. We then delete the leaf node if the mass of the node is 1, otherwise we
+     * reduce the mass by 1.
      *
-     * @param node  node that we are visiting in the tree.
-     * @param point the point that is being deleted from the tree.
-     * @param sequenceIndex the insertion index of the point being deleted from the tree.
+     * @param node          node that we are visiting in the tree.
+     * @param point         the point that is being deleted from the tree.
+     * @param sequenceIndex the insertion index of the point being deleted from the
+     *                      tree.
      */
     void deletePoint(Node node, double[] point, long sequenceIndex) {
         if (node.isLeaf()) {
@@ -216,7 +227,10 @@ public class RandomCutTree {
                 }
             }
 
-            /* the above assumes that sequence indexes are unique ... which is true for the specific sampler used */
+            /*
+             * the above assumes that sequence indexes are unique ... which is true for the
+             * specific sampler used
+             */
 
             if (node.getMass() > 1) {
                 node.decrementMass();
@@ -274,24 +288,24 @@ public class RandomCutTree {
     }
 
     /**
-     * This function adds a point to the tree recursively. The algorithm for adding a point is as follows:
+     * This function adds a point to the tree recursively. The algorithm for adding
+     * a point is as follows:
      * <ol>
-     *   <li>At the current node we create a new bounding box by merging the point with the existing box.</li>
-     *   <li>We pick a dimension and a value of cut.</li>
-     *   <li>
-     *       If the cut falls outside the existing box we create a new node and replace the current node with the new
-     *       node. We then add the current node as the child node to the new node. We create another leaf node
-     *       containing the point that we want to insert and add it as the other child of the node that we have created
-     *       earlier.
-     *       </li>
-     *   <li>
-     *       If the cut falls inside the existing box. We follow the cut of the existing box and move to right or left
-     *       child of the current node based on the existing cut.
-     *       </li>
+     * <li>At the current node we create a new bounding box by merging the point
+     * with the existing box.</li>
+     * <li>We pick a dimension and a value of cut.</li>
+     * <li>If the cut falls outside the existing box we create a new node and
+     * replace the current node with the new node. We then add the current node as
+     * the child node to the new node. We create another leaf node containing the
+     * point that we want to insert and add it as the other child of the node that
+     * we have created earlier.</li>
+     * <li>If the cut falls inside the existing box. We follow the cut of the
+     * existing box and move to right or left child of the current node based on the
+     * existing cut.</li>
      * </ol>
      *
-     * @param node  the current node in the tree we are on
-     * @param point the point that we want to add to the tree
+     * @param node          the current node in the tree we are on
+     * @param point         the point that we want to add to the tree
      * @param sequenceIndex the insertion index of the point being added to the tree
      */
 
@@ -305,7 +319,8 @@ public class RandomCutTree {
             return;
         }
 
-        // either the node is not a leaf, or else it's a leaf node containing a different point
+        // either the node is not a leaf, or else it's a leaf node containing a
+        // different point
 
         BoundingBox existingBox = node.getBoundingBox();
         BoundingBox mergedBox = existingBox.getMergedBox(point);
@@ -323,13 +338,13 @@ public class RandomCutTree {
             // if the proposed cut separates the new point from the existing bounding box:
             // * create a new leaf node for the point
             // * make it a sibling of the existing bounding box
-            // * make the new leaf node and the existing node children of a new node with the merged bounding box
+            // * make the new leaf node and the existing node children of a new node with
+            // the merged bounding box
 
             if (minValue > splitValue || maxValue <= splitValue) {
                 Node leaf = newLeafNode(point, sequenceIndex);
-                Node mergedNode = minValue > splitValue ?
-                    newNode(leaf, node, cut, mergedBox) :
-                    newNode(node, leaf, cut, mergedBox);
+                Node mergedNode = minValue > splitValue ? newNode(leaf, node, cut, mergedBox)
+                        : newNode(node, leaf, cut, mergedBox);
                 if (node.getParent() == null) {
                     root = mergedNode;
                 } else {
@@ -342,7 +357,8 @@ public class RandomCutTree {
             }
         }
 
-        // Either the new point is contained in this node's bounding box, or else the proposed cut did not separate
+        // Either the new point is contained in this node's bounding box, or else the
+        // proposed cut did not separate
         // it from the existing bounding box. Try again at the next level.
 
         if (isLeftOf(point, node)) {
@@ -358,24 +374,32 @@ public class RandomCutTree {
         }
     }
 
-    /* In the method below, the newCopy() operator is invoked after traversing the left side by design.
-       It is not currently being used; but in theory this allows inorder traversal which can simulate more functions
-       in comparison to post-order traversal. One can (but would not be advised to) use the properties of the
-       left traversal to inform the right traversal. Such a strategy may be useful in correcting known biases
-       (for example, the algorithm is biased lower etc.) but in most cases the newCopy() should just use the
-       size information of the data structure and copy the information that has been passed to it from its parent.
+    /*
+     * In the method below, the newCopy() operator is invoked after traversing the
+     * left side by design. It is not currently being used; but in theory this
+     * allows inorder traversal which can simulate more functions in comparison to
+     * post-order traversal. One can (but would not be advised to) use the
+     * properties of the left traversal to inform the right traversal. Such a
+     * strategy may be useful in correcting known biases (for example, the algorithm
+     * is biased lower etc.) but in most cases the newCopy() should just use the
+     * size information of the data structure and copy the information that has been
+     * passed to it from its parent.
      */
 
     /**
-     * Starting from the root, traverse the canonical path to a leaf node and visit the nodes along the path. The
-     * canonical path is determined by the input point: at each interior node, we select the child node by comparing
-     * the node's {@link Cut} to the corresponding coordinate value in the input point. The method recursively
-     * traverses to the leaf node first and then invokes the visitor on each node in reverse order. That is, if the
-     * path to the leaf node determined by the input point is root, node1, node2, ..., node(N-1), nodeN, leaf; then we
-     * will first invoke visitor::acceptLeaf on the leaf node, and then we will invoke visitor::accept on the
-     * remaining nodes in the following order: nodeN, node(N-1), ..., node2, node1, and root.
+     * Starting from the root, traverse the canonical path to a leaf node and visit
+     * the nodes along the path. The canonical path is determined by the input
+     * point: at each interior node, we select the child node by comparing the
+     * node's {@link Cut} to the corresponding coordinate value in the input point.
+     * The method recursively traverses to the leaf node first and then invokes the
+     * visitor on each node in reverse order. That is, if the path to the leaf node
+     * determined by the input point is root, node1, node2, ..., node(N-1), nodeN,
+     * leaf; then we will first invoke visitor::acceptLeaf on the leaf node, and
+     * then we will invoke visitor::accept on the remaining nodes in the following
+     * order: nodeN, node(N-1), ..., node2, node1, and root.
      *
-     * @param point   A point which determines the traversal path from the root to a leaf node.
+     * @param point   A point which determines the traversal path from the root to a
+     *                leaf node.
      * @param visitor A visitor that will be invoked for each node on the path.
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
@@ -386,24 +410,26 @@ public class RandomCutTree {
         return visitor.getResult();
     }
 
-    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, Node currentNode, int depthOfNode) {
+    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, Node currentNode,
+            int depthOfNode) {
         if (currentNode.isLeaf()) {
             visitor.acceptLeaf(currentNode, depthOfNode);
         } else {
-            Node childNode = isLeftOf(point, currentNode) ?
-                currentNode.getLeftChild() :
-                currentNode.getRightChild();
+            Node childNode = isLeftOf(point, currentNode) ? currentNode.getLeftChild() : currentNode.getRightChild();
             traversePathToLeafAndVisitNodes(point, visitor, childNode, depthOfNode + 1);
             visitor.accept(currentNode, depthOfNode);
         }
     }
 
     /**
-     * This is a traversal method which follows the standard traveral path (defined in {@link #traverseTree(double[], Visitor)})
-     * but at Node in checks to see whether the visitor should split. If a split is triggered, then independent copies
-     * of the visitor are sent down each branch of the tree and then merged before propogating the result.
+     * This is a traversal method which follows the standard traveral path (defined
+     * in {@link #traverseTree(double[], Visitor)}) but at Node in checks to see
+     * whether the visitor should split. If a split is triggered, then independent
+     * copies of the visitor are sent down each branch of the tree and then merged
+     * before propogating the result.
      *
-     * @param point   A point which determines the traversal path from the root to a leaf node.
+     * @param point   A point which determines the traversal path from the root to a
+     *                leaf node.
      * @param visitor A visitor that will be invoked for each node on the path.
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
@@ -426,9 +452,7 @@ public class RandomCutTree {
             visitor.combine(newVisitor);
             visitor.accept(currentNode, depthOfNode);
         } else {
-            Node childNode = isLeftOf(point, currentNode) ?
-                currentNode.getLeftChild() :
-                currentNode.getRightChild();
+            Node childNode = isLeftOf(point, currentNode) ? currentNode.getLeftChild() : currentNode.getRightChild();
             traverseTreeMulti(point, visitor, childNode, depthOfNode + 1);
             visitor.accept(currentNode, depthOfNode);
         }

@@ -15,14 +15,6 @@
 
 package com.amazon.randomcutforest.interpolation;
 
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
-import com.amazon.randomcutforest.tree.Cut;
-import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
-import org.junit.jupiter.api.Test;
-
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,15 +22,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
+
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
+import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.Cut;
+import com.amazon.randomcutforest.tree.Node;
+
 public class SimpleInterpolationVisitorTest {
 
     private static final int SEED = 1002;
 
     @Test
     public void testNew() {
-        double[] point = {1.0, 2.0};
+        double[] point = { 1.0, 2.0 };
         int sampleSize = 9;
-        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize,1,false);
+        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize, 1, false);
 
         assertFalse(visitor.pointInsideBox);
         assertEquals(2, visitor.coordInsideBox.length);
@@ -61,7 +62,7 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = {1.0, 2.0, 3.0};
+        double[] point = { 1.0, 2.0, 3.0 };
         Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
@@ -69,7 +70,7 @@ public class SimpleInterpolationVisitorTest {
         when(leafNode.getMass()).thenReturn(leafMass);
 
         int sampleSize = 21;
-        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize,1,false);
+        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize, 1, false);
         visitor.acceptLeaf(leafNode, leafDepth);
 
         InterpolationMeasure result = visitor.getResult();
@@ -90,23 +91,22 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = {1.0, 9.0, 4.0};
-        double[] anotherPoint = {4.0, 5.0, 6.0};
+        double[] point = { 1.0, 9.0, 4.0 };
+        double[] anotherPoint = { 4.0, 5.0, 6.0 };
 
         Node leafNode = spy(new Node(anotherPoint));
         when(leafNode.getMass()).thenReturn(4);
         int leafDepth = 100;
         int sampleSize = 99;
 
-        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize,1,false);
+        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize, 1, false);
         visitor.acceptLeaf(leafNode, leafDepth);
 
         InterpolationMeasure result = visitor.getResult();
 
         double expectedSumOfNewRange = 3.0 + 4.0 + 2.0;
-        double[] expectedDifferenceInRangeVector = {0.0, 3.0, 4.0, 0.0, 0.0, 2.0};
-        double[] expectedProbVector = Arrays.stream(expectedDifferenceInRangeVector)
-                .map(x -> x / expectedSumOfNewRange)
+        double[] expectedDifferenceInRangeVector = { 0.0, 3.0, 4.0, 0.0, 0.0, 2.0 };
+        double[] expectedProbVector = Arrays.stream(expectedDifferenceInRangeVector).map(x -> x / expectedSumOfNewRange)
                 .toArray();
         double[] expectedmeasure = Arrays.stream(expectedProbVector).toArray();
 
@@ -115,26 +115,26 @@ public class SimpleInterpolationVisitorTest {
             expectedDistances[i] = expectedProbVector[i] * expectedDifferenceInRangeVector[i];
         }
         for (int i = 0; i < 2 * point.length; i++) {
-            expectedmeasure[i]=expectedmeasure[i]*5;
+            expectedmeasure[i] = expectedmeasure[i] * 5;
         }
-        for(int i=0;i<point.length;i++) {
-            assertEquals(expectedProbVector[2*i], result.probMass.high[i]);
-            assertEquals(expectedProbVector[2*i+1], result.probMass.low[i]);
+        for (int i = 0; i < point.length; i++) {
+            assertEquals(expectedProbVector[2 * i], result.probMass.high[i]);
+            assertEquals(expectedProbVector[2 * i + 1], result.probMass.low[i]);
 
-            assertEquals(expectedmeasure[2*i], result.measure.high[i]);
-            assertEquals(expectedmeasure[2*i+1], result.measure.low[i]);
+            assertEquals(expectedmeasure[2 * i], result.measure.high[i]);
+            assertEquals(expectedmeasure[2 * i + 1], result.measure.low[i]);
 
-            assertEquals(expectedDistances[2*i], result.distances.high[i]);
-            assertEquals(expectedDistances[2*i+1], result.distances.low[i]);
+            assertEquals(expectedDistances[2 * i], result.distances.high[i]);
+            assertEquals(expectedDistances[2 * i + 1], result.distances.low[i]);
         }
 
     }
 
     @Test
     public void testAcceptEqualsLeafPoint() {
-        double[] pointToScore = {0.0, 0.0};
+        double[] pointToScore = { 0.0, 0.0 };
         int sampleSize = 50;
-        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize,1,false);
+        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
         double[] point = Arrays.copyOf(pointToScore, pointToScore.length);
         Node node = new Node(point);
@@ -156,60 +156,58 @@ public class SimpleInterpolationVisitorTest {
         assertArrayEquals(expected, result.distances.low);
 
         depth--;
-        double[] siblingPoint = {1.0, -2.0};
+        double[] siblingPoint = { 1.0, -2.0 };
         Node sibling = spy(new Node(siblingPoint));
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = spy(new Node(node, sibling, new Cut(0, 0.5),
-                node.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
+        Node parent = spy(
+                new Node(node, sibling, new Cut(0, 0.5), node.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
         when(parent.getMass()).thenReturn(node.getMass() + siblingMass);
         visitor.accept(parent, depth);
         result = visitor.getResult();
 
-        // compute using shadow box (sibling leaf node at {1.0, -2.0} and parent bounding box
+        // compute using shadow box (sibling leaf node at {1.0, -2.0} and parent
+        // bounding box
 
-        double[] directionalDistance = {0.0, 1.0, 2.0, 0.0};
-        double[] differenceInRange = {0.0, 1.0, 2.0, 0.0};
+        double[] directionalDistance = { 0.0, 1.0, 2.0, 0.0 };
+        double[] differenceInRange = { 0.0, 1.0, 2.0, 0.0 };
         double sumOfNewRange = 1.0 + 2.0;
-        double[] probVector = Arrays.stream(differenceInRange)
-                .map(x -> x / sumOfNewRange)
-                .toArray();
-        expected=new double [2*pointToScore.length];
+        double[] probVector = Arrays.stream(differenceInRange).map(x -> x / sumOfNewRange).toArray();
+        expected = new double[2 * pointToScore.length];
         for (int i = 0; i < expected.length; i++) {
             expected[i] = probVector[i] * (1 + node.getMass() + parent.getMass());
         }
         for (int i = 0; i < pointToScore.length; i++) {
-            assertEquals(expected[2*i], result.measure.high[i]);
-            assertEquals(expected[2*i+1], result.measure.low[i]);
+            assertEquals(expected[2 * i], result.measure.high[i]);
+            assertEquals(expected[2 * i + 1], result.measure.low[i]);
         }
-
 
         for (int i = 0; i < expected.length; i++) {
             expected[i] = probVector[i];
         }
 
         for (int i = 0; i < pointToScore.length; i++) {
-            assertEquals(expected[2*i], result.probMass.high[i]);
-            assertEquals(expected[2*i+1], result.probMass.low[i]);
+            assertEquals(expected[2 * i], result.probMass.high[i]);
+            assertEquals(expected[2 * i + 1], result.probMass.low[i]);
         }
 
         for (int i = 0; i < expected.length; i++) {
             expected[i] = probVector[i] * directionalDistance[i];
         }
         for (int i = 0; i < pointToScore.length; i++) {
-            assertEquals(expected[2*i], result.distances.high[i]);
-            assertEquals(expected[2*i+1], result.distances.low[i]);
+            assertEquals(expected[2 * i], result.distances.high[i]);
+            assertEquals(expected[2 * i + 1], result.distances.low[i]);
         }
 
     }
 
     @Test
     public void testAccept() {
-        double[] pointToScore = {0.0, 0.0};
+        double[] pointToScore = { 0.0, 0.0 };
         int sampleSize = 50;
-        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize,1,false);
+        SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
-        Node leafNode = spy(new Node(new double[] {1.0, -2.0}));
+        Node leafNode = spy(new Node(new double[] { 1.0, -2.0 }));
         int leafMass = 3;
         when(leafNode.getMass()).thenReturn(leafMass);
         int depth = 4;
@@ -217,12 +215,10 @@ public class SimpleInterpolationVisitorTest {
         InterpolationMeasure result = visitor.getResult();
 
         double expectedSumOfNewRange = 1.0 + 2.0;
-        double[] expectedDifferenceInRangeVector = {0.0, 1.0, 2.0, 0.0};
-        double[] expectedProbVector = Arrays.stream(expectedDifferenceInRangeVector)
-                .map(x -> x / expectedSumOfNewRange)
+        double[] expectedDifferenceInRangeVector = { 0.0, 1.0, 2.0, 0.0 };
+        double[] expectedProbVector = Arrays.stream(expectedDifferenceInRangeVector).map(x -> x / expectedSumOfNewRange)
                 .toArray();
-        double[] expectedNumPts = Arrays.stream(expectedProbVector)
-                .toArray();
+        double[] expectedNumPts = Arrays.stream(expectedProbVector).toArray();
 
         double[] expectedDistances = new double[2 * pointToScore.length];
         for (int i = 0; i < 2 * pointToScore.length; i++) {
@@ -233,21 +229,21 @@ public class SimpleInterpolationVisitorTest {
             expectedNumPts[i] = expectedNumPts[i] * 4;
         }
 
-        for(int i=0;i<pointToScore.length;i++) {
-            assertEquals(expectedProbVector[2*i], result.probMass.high[i]);
-            assertEquals(expectedProbVector[2*i+1], result.probMass.low[i]);
+        for (int i = 0; i < pointToScore.length; i++) {
+            assertEquals(expectedProbVector[2 * i], result.probMass.high[i]);
+            assertEquals(expectedProbVector[2 * i + 1], result.probMass.low[i]);
 
-            assertEquals(expectedNumPts[2*i], result.measure.high[i]);
-            assertEquals(expectedNumPts[2*i+1], result.measure.low[i]);
+            assertEquals(expectedNumPts[2 * i], result.measure.high[i]);
+            assertEquals(expectedNumPts[2 * i + 1], result.measure.low[i]);
 
-            assertEquals(expectedDistances[2*i], result.distances.high[i]);
-            assertEquals(expectedDistances[2*i+1], result.distances.low[i]);
+            assertEquals(expectedDistances[2 * i], result.distances.high[i]);
+            assertEquals(expectedDistances[2 * i + 1], result.distances.low[i]);
         }
 
         // parent does not contain pointToScore
 
         depth--;
-        Node sibling = spy(new Node(new double[] {2.0, -0.5}));
+        Node sibling = spy(new Node(new double[] { 2.0, -0.5 }));
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
         Node parent = spy(new Node(leafNode, sibling, new Cut(0, 0.5),
@@ -259,8 +255,8 @@ public class SimpleInterpolationVisitorTest {
 
         double expectedSumOfNewRange2 = 2.0 + 2.0;
         double expectedProbOfCut2 = (1.0 + 0.5) / expectedSumOfNewRange2;
-        double[] expectedDifferenceInRangeVector2 = {0.0, 1.0, 0.5, 0.0};
-        double[] expectedDirectionalDistanceVector2 = {0.0, 2.0, 2.0, 0.0};
+        double[] expectedDifferenceInRangeVector2 = { 0.0, 1.0, 0.5, 0.0 };
+        double[] expectedDirectionalDistanceVector2 = { 0.0, 2.0, 2.0, 0.0 };
 
         for (int i = 0; i < 2 * pointToScore.length; i++) {
             double prob = expectedDifferenceInRangeVector2[i] / expectedSumOfNewRange2;
@@ -270,15 +266,15 @@ public class SimpleInterpolationVisitorTest {
                     + (1 - expectedProbOfCut2) * expectedDistances[i];
         }
 
-        for(int i=0;i<pointToScore.length;i++) {
-            assertEquals(expectedProbVector[2*i], result.probMass.high[i]);
-            assertEquals(expectedProbVector[2*i+1], result.probMass.low[i]);
+        for (int i = 0; i < pointToScore.length; i++) {
+            assertEquals(expectedProbVector[2 * i], result.probMass.high[i]);
+            assertEquals(expectedProbVector[2 * i + 1], result.probMass.low[i]);
 
-            assertEquals(expectedNumPts[2*i], result.measure.high[i]);
-            assertEquals(expectedNumPts[2*i+1], result.measure.low[i]);
+            assertEquals(expectedNumPts[2 * i], result.measure.high[i]);
+            assertEquals(expectedNumPts[2 * i + 1], result.measure.low[i]);
 
-            assertEquals(expectedDistances[2*i], result.distances.high[i]);
-            assertEquals(expectedDistances[2*i+1], result.distances.low[i]);
+            assertEquals(expectedDistances[2 * i], result.distances.high[i]);
+            assertEquals(expectedDistances[2 * i + 1], result.distances.low[i]);
         }
 
         // grandparent contains pointToScore
@@ -287,22 +283,22 @@ public class SimpleInterpolationVisitorTest {
 
         depth--;
         Node aunt = new Node(null, null, new Cut(1, 0.5),
-                new BoundingBox(new double[] {-1.0, 1.0}).getMergedBox(new double[] {-0.5, -1.5}));
-        Node grandparent = spy(new Node(parent, aunt, new Cut(0, 0.1),
-                parent.getBoundingBox().getMergedBox(aunt.getBoundingBox())));
+                new BoundingBox(new double[] { -1.0, 1.0 }).getMergedBox(new double[] { -0.5, -1.5 }));
+        Node grandparent = spy(
+                new Node(parent, aunt, new Cut(0, 0.1), parent.getBoundingBox().getMergedBox(aunt.getBoundingBox())));
         when(grandparent.getMass()).thenReturn(parentMass + aunt.getMass());
         visitor.accept(grandparent, depth);
         result = visitor.getResult();
 
-        for(int i=0;i<pointToScore.length;i++) {
-            assertEquals(expectedProbVector[2*i], result.probMass.high[i]);
-            assertEquals(expectedProbVector[2*i+1], result.probMass.low[i]);
+        for (int i = 0; i < pointToScore.length; i++) {
+            assertEquals(expectedProbVector[2 * i], result.probMass.high[i]);
+            assertEquals(expectedProbVector[2 * i + 1], result.probMass.low[i]);
 
-            assertEquals(expectedNumPts[2*i], result.measure.high[i]);
-            assertEquals(expectedNumPts[2*i+1], result.measure.low[i]);
+            assertEquals(expectedNumPts[2 * i], result.measure.high[i]);
+            assertEquals(expectedNumPts[2 * i + 1], result.measure.low[i]);
 
-            assertEquals(expectedDistances[2*i], result.distances.high[i]);
-            assertEquals(expectedDistances[2*i+1], result.distances.low[i]);
+            assertEquals(expectedDistances[2 * i], result.distances.high[i]);
+            assertEquals(expectedDistances[2 * i + 1], result.distances.low[i]);
         }
 
         assertTrue(visitor.pointInsideBox);

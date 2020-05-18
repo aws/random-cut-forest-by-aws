@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.tree;
 
 /**
- * A Cut represents a division of space into two half-spaces. Cuts are used to define the tree structure in
- * {@link RandomCutTree}, and they determine the standard tree traversal path defined
- * in {@link RandomCutTree#traverseTree}.
+ * A Cut represents a division of space into two half-spaces. Cuts are used to
+ * define the tree structure in {@link RandomCutTree}, and they determine the
+ * standard tree traversal path defined in {@link RandomCutTree#traverseTree}.
  */
 public class Cut {
 
@@ -37,16 +37,17 @@ public class Cut {
     }
 
     /**
-     * For the given point, this method compares the value of that point in the cut dimension to the cut value. If
-     * the point's value in the cut dimension is less than or equal to the cut value this method returns true,
-     * otherwise it returns false. The name of this method is a mnemonic: if we are working in a one-dimensional
-     * space, then this method will return 'true' if the point value is to the left of the cut value on the standard
-     * number line.
+     * For the given point, this method compares the value of that point in the cut
+     * dimension to the cut value. If the point's value in the cut dimension is less
+     * than or equal to the cut value this method returns true, otherwise it returns
+     * false. The name of this method is a mnemonic: if we are working in a
+     * one-dimensional space, then this method will return 'true' if the point value
+     * is to the left of the cut value on the standard number line.
      *
      * @param point A point that we are testing in relation to the cut
      * @param cut   A Cut instance.
-     * @return true if the value of the point coordinate corresponding to the cut dimension is less than or equal to
-     * the cut value, false otherwise.
+     * @return true if the value of the point coordinate corresponding to the cut
+     *         dimension is less than or equal to the cut value, false otherwise.
      */
     public static boolean isLeftOf(double[] point, Cut cut) {
         return point[cut.getDimension()] <= cut.getValue();
@@ -62,9 +63,10 @@ public class Cut {
     }
 
     /**
-     * Return the value of the cut. This value separates space into two half-spaces: the set of points whose
-     * coordinate in the cut dimension is less than the cut value, and the set of points whose coordinate in the cut
-     * dimension is greater than the cut value.
+     * Return the value of the cut. This value separates space into two half-spaces:
+     * the set of points whose coordinate in the cut dimension is less than the cut
+     * value, and the set of points whose coordinate in the cut dimension is greater
+     * than the cut value.
      *
      * @return the value of the cut.
      */

@@ -24,8 +24,8 @@ import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * A Visitor which computes several geometric measures that related a given query point to the points stored in a
- * RandomCutTree.
+ * A Visitor which computes several geometric measures that related a given
+ * query point to the points stored in a RandomCutTree.
  **/
 public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure> {
 
@@ -38,13 +38,15 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     double[] directionalDistanceVector;
     double[] differenceInRangeVector;
     /**
-     * A flag that states whether the point to score is known to be contained inside the bounding box of Nodes being
-     * accepted. Assumes nodes are accepted in leaf-to-root order.
+     * A flag that states whether the point to score is known to be contained inside
+     * the bounding box of Nodes being accepted. Assumes nodes are accepted in
+     * leaf-to-root order.
      */
     boolean pointInsideBox;
     /**
-     * An array that keeps track of whether each margin of the point being scored is outside inside the box considered
-     * during the recursive call to compute the score. Assumes nodes are accepted in leaf-to-root order.
+     * An array that keeps track of whether each margin of the point being scored is
+     * outside inside the box considered during the recursive call to compute the
+     * score. Assumes nodes are accepted in leaf-to-root order.
      */
     boolean[] coordInsideBox;
     private boolean pointEqualsLeaf;
@@ -56,7 +58,8 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      * Construct a new Visitor
      *
      * @param pointToScore The point whose anomaly score we are computing
-     * @param sampleSize   The sub-sample size used by the RandomCutTree that is scoring the point
+     * @param sampleSize   The sub-sample size used by the RandomCutTree that is
+     *                     scoring the point
      * @param pointMass    indicates the mass/duplicity of the current point
      * @param centerOfMass indicates if the tree has centerOfMass
      */
@@ -65,7 +68,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
         this.sampleSize = sampleSize;
         // the samplesize may be useful to scale
         pointInsideBox = false;
-        this.pointMass = pointMass;    // this corresponds to the mass/duplicity of the query
+        this.pointMass = pointMass; // this corresponds to the mass/duplicity of the query
         stored = new DensityOutput(pointToScore.length, sampleSize);
         directionalDistanceVector = new double[2 * pointToScore.length];
         differenceInRangeVector = new double[2 * pointToScore.length];
@@ -94,11 +97,12 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
         if (pointEqualsLeaf) {
             largeBox = node.getBoundingBox();
 
-            // use the sibling bounding box to represent counterfactual "what if point & the candidate near neighbor
+            // use the sibling bounding box to represent counterfactual "what if point & the
+            // candidate near neighbor
             // had not been inserted in the tree"
             Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            theShadowBox = theShadowBox == null ? sibling.getBoundingBox() :
-                theShadowBox.getMergedBox(sibling.getBoundingBox());
+            theShadowBox = theShadowBox == null ? sibling.getBoundingBox()
+                    : theShadowBox.getMergedBox(sibling.getBoundingBox());
             smallBox = theShadowBox;
         } else {
             smallBox = node.getBoundingBox();
@@ -113,24 +117,23 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
         } else {
             double fieldVal = fieldExt(node, centerOfMass, savedMass, pointToScore);
             double influenceVal = influenceExt(node, centerOfMass, savedMass, pointToScore);
-            // if center of mass has been enabled, then those can be used in a similar situation
+            // if center of mass has been enabled, then those can be used in a similar
+            // situation
             // otherwise the center of mass is the 0 vector
             for (int i = 0; i < pointToScore.length; i++) {
                 double prob = differenceInRangeVector[2 * i] / sumOfNewRange;
                 stored.probMass.high[i] = prob * influenceVal + (1 - probOfCut) * stored.probMass.high[i];
-                stored.measure.high[i] = prob * fieldVal
-                    + (1 - probOfCut) * stored.measure.high[i];
+                stored.measure.high[i] = prob * fieldVal + (1 - probOfCut) * stored.measure.high[i];
                 stored.distances.high[i] = prob * directionalDistanceVector[2 * i] * influenceVal
-                    + (1 - probOfCut) * stored.distances.high[i];
+                        + (1 - probOfCut) * stored.distances.high[i];
 
             }
             for (int i = 0; i < pointToScore.length; i++) {
                 double prob = differenceInRangeVector[2 * i + 1] / sumOfNewRange;
                 stored.probMass.low[i] = prob * influenceVal + (1 - probOfCut) * stored.probMass.low[i];
-                stored.measure.low[i] = prob * fieldVal
-                    + (1 - probOfCut) * stored.measure.low[i];
+                stored.measure.low[i] = prob * fieldVal + (1 - probOfCut) * stored.measure.low[i];
                 stored.distances.low[i] = prob * directionalDistanceVector[2 * i + 1] * influenceVal
-                    + (1 - probOfCut) * stored.distances.low[i];
+                        + (1 - probOfCut) * stored.distances.low[i];
 
             }
 
@@ -145,8 +148,10 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
             savedMass = pointMass + leafNode.getMass();
             pointEqualsLeaf = true;
             for (int i = 0; i < pointToScore.length; i++) {
-                stored.measure.high[i] = stored.measure.low[i] = 0.5 * selfField(leafNode, savedMass) / pointToScore.length;
-                stored.probMass.high[i] = stored.probMass.low[i] = 0.5 * selfInfluence(leafNode, savedMass) / pointToScore.length;
+                stored.measure.high[i] = stored.measure.low[i] = 0.5 * selfField(leafNode, savedMass)
+                        / pointToScore.length;
+                stored.probMass.high[i] = stored.probMass.low[i] = 0.5 * selfInfluence(leafNode, savedMass)
+                        / pointToScore.length;
             }
             Arrays.fill(coordInsideBox, false);
         } else {
@@ -169,8 +174,9 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     }
 
     /**
-     * Update instance variables based on the difference between the large box and small box. The values set by this
-     * method are used in {@link #accept} and {@link #acceptLeaf} to update the stored density.
+     * Update instance variables based on the difference between the large box and
+     * small box. The values set by this method are used in {@link #accept} and
+     * {@link #acceptLeaf} to update the stored density.
      *
      * @param smallBox
      * @param largeBox
@@ -209,14 +215,17 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     /**
      * The functions below can be changed for arbitrary interpolations.
      *
-     * @param node/leafNode corresponds to the node in the tree influencing the current point
-     * @param centerOfMass  feature flag describing if the center of mass is enabled in tree
-     *                      in general this can be used for arbitrary extensions of the node class
-     *                      with additional information.
+     * @param node/leafNode corresponds to the node in the tree influencing the
+     *                      current point
+     * @param centerOfMass  feature flag describing if the center of mass is enabled
+     *                      in tree in general this can be used for arbitrary
+     *                      extensions of the node class with additional
+     *                      information.
      * @param thisMass      duplicity of query
      * @param thislocation  location of query
-     * @return is the value or a 0/1 function -- the functions can be thresholded based of geometric
-     * coordinates of the query and the node. Many different Kernels can be expressed in this decomposed manner.
+     * @return is the value or a 0/1 function -- the functions can be thresholded
+     *         based of geometric coordinates of the query and the node. Many
+     *         different Kernels can be expressed in this decomposed manner.
      */
 
     double fieldExt(Node node, boolean centerOfMass, double thisMass, double[] thislocation) {

@@ -15,20 +15,20 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
 public class NeighborTest {
     @Test
     public void testNew() {
-        double[] point = new double[] {1.0, -2.0, 3.3};
+        double[] point = new double[] { 1.0, -2.0, 3.3 };
         double distance = 1234.5;
         List<Long> timestamps = new ArrayList<>();
         timestamps.add(99999L);

@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.runner;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ArgumentParserTest {
 
@@ -45,15 +45,8 @@ public class ArgumentParserTest {
 
     @Test
     public void testParse() {
-        parser.parse(
-                "--number-of-trees", "222",
-                "--sample-size", "123",
-                "--window-size", "50",
-                "--shingle-size", "4",
-                "--shingle-cyclic", "true",
-                "--delimiter", "\t",
-                "--header-row", "true"
-        );
+        parser.parse("--number-of-trees", "222", "--sample-size", "123", "--window-size", "50", "--shingle-size", "4",
+                "--shingle-cyclic", "true", "--delimiter", "\t", "--header-row", "true");
 
         assertEquals(222, parser.getNumberOfTrees());
         assertEquals(123, parser.getSampleSize());
@@ -67,14 +60,7 @@ public class ArgumentParserTest {
 
     @Test
     public void testParseShortFlags() {
-        parser.parse(
-                "-n", "222",
-                "-s", "123",
-                "-w", "50",
-                "-g", "4",
-                "-c", "true",
-                "-d", "\t"
-        );
+        parser.parse("-n", "222", "-s", "123", "-w", "50", "-g", "4", "-c", "true", "-d", "\t");
 
         assertEquals(222, parser.getNumberOfTrees());
         assertEquals(123, parser.getSampleSize());

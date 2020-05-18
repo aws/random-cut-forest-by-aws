@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.imputation;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import java.util.Arrays;
 
 import com.amazon.randomcutforest.CommonUtils;
@@ -22,12 +24,12 @@ import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.tree.Node;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 /**
- * A MultiVisitor which imputes missing values in a point. The missing values are first imputed with the corresponding
- * values in the leaf node in the traversal path. Then, when this MultiVisitor is merged with another MultiVisitor,
- * we keep the imputed values with a lower rank, where the rank value is the anomaly score for the imputed point.
+ * A MultiVisitor which imputes missing values in a point. The missing values
+ * are first imputed with the corresponding values in the leaf node in the
+ * traversal path. Then, when this MultiVisitor is merged with another
+ * MultiVisitor, we keep the imputed values with a lower rank, where the rank
+ * value is the anomaly score for the imputed point.
  */
 public class ImputeVisitor implements MultiVisitor<double[]> {
     private final boolean[] missing;
@@ -38,9 +40,11 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     /**
      * Create a new ImputeVisitor.
      *
-     * @param queryPoint            The point with missing values that we want to impute.
+     * @param queryPoint            The point with missing values that we want to
+     *                              impute.
      * @param numberOfMissingValues The number of missing values in the query point.
-     * @param missingIndexes        The indexes of the missing values in the query point.
+     * @param missingIndexes        The indexes of the missing values in the query
+     *                              point.
      */
     public ImputeVisitor(double[] queryPoint, int numberOfMissingValues, int[] missingIndexes) {
 
@@ -55,7 +59,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
 
         for (int i = 0; i < this.numberOfMissingValues; i++) {
             checkArgument(0 <= missingIndexes[i] && missingIndexes[i] < queryPoint.length,
-                "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
+                    "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
 
             missing[missingIndexes[i]] = true;
         }
@@ -84,8 +88,9 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     }
 
     /**
-     * Update the rank value using the probability that the imputed query point is separated from this bounding box in
-     * a random cut. This step is conceptually the same as * {@link AnomalyScoreVisitor#accept}.
+     * Update the rank value using the probability that the imputed query point is
+     * separated from this bounding box in a random cut. This step is conceptually
+     * the same as * {@link AnomalyScoreVisitor#accept}.
      *
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
@@ -98,12 +103,14 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
             return;
         }
 
-        rank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass()) + (1 - probabilityOfSeparation) * rank;
+        rank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
+                + (1 - probabilityOfSeparation) * rank;
     }
 
     /**
-     * Impute the missing values in the query point with the corresponding values in the leaf point. Set the rank to
-     * the score function evaluated at the leaf node.
+     * Impute the missing values in the query point with the corresponding values in
+     * the leaf point. Set the rank to the score function evaluated at the leaf
+     * node.
      *
      * @param leafNode    the leaf node being visited
      * @param depthOfNode the depth of the leaf node
@@ -136,12 +143,12 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     }
 
     /**
-     * An ImputeVisitor should split whenever the cut dimension in a node corresponds to a missing value in the
-     * query point.
+     * An ImputeVisitor should split whenever the cut dimension in a node
+     * corresponds to a missing value in the query point.
      *
      * @param node A node in the tree traversal
-     * @return true if the cut dimension in the node corresponds to a missing value in the query point, false
-     * otherwise.
+     * @return true if the cut dimension in the node corresponds to a missing value
+     *         in the query point, false otherwise.
      */
     @Override
     public boolean trigger(final Node node) {
@@ -157,8 +164,9 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     }
 
     /**
-     * If this visitor as a lower rank than the second visitor, do nothing. Otherwise, overwrite this visitor's imputed
-     * values withe the valuse from the second visitor.
+     * If this visitor as a lower rank than the second visitor, do nothing.
+     * Otherwise, overwrite this visitor's imputed values withe the valuse from the
+     * second visitor.
      *
      * @param other A second visitor
      */

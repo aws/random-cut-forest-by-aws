@@ -16,29 +16,37 @@
 package com.amazon.randomcutforest.returntypes;
 
 /**
- * A converging accumulator using a one-sided standard deviation tests. The accumulator tests the submitted values for
- * convergence and returns the sum of all submitted values.
+ * A converging accumulator using a one-sided standard deviation tests. The
+ * accumulator tests the submitted values for convergence and returns the sum of
+ * all submitted values.
  */
 public class OneSidedConvergingDoubleAccumulator extends OneSidedStDevAccumulator<Double> {
 
     /**
-     * Create a new converging accumulator that uses a one-sided standard deviation test.
+     * Create a new converging accumulator that uses a one-sided standard deviation
+     * test.
      *
-     * @param highIsCritical    Set to 'true' if we care more about high values of the converging scalar than low values.
-     *                          Set to 'false' if the opposite is true.
-     * @param precision         The number of witnesses required before declaring convergence will be at least 1.0 / precision.
-     * @param minValuesAccepted The user-specified minimum number of values visited before returning a result. Note that
-     *                          {@link #isConverged()} may return true before accepting this number of results if the
-     * @param maxValuesAccepted The maximum number of values that will be accepted by this accumulator.
+     * @param highIsCritical    Set to 'true' if we care more about high values of
+     *                          the converging scalar than low values. Set to
+     *                          'false' if the opposite is true.
+     * @param precision         The number of witnesses required before declaring
+     *                          convergence will be at least 1.0 / precision.
+     * @param minValuesAccepted The user-specified minimum number of values visited
+     *                          before returning a result. Note that
+     *                          {@link #isConverged()} may return true before
+     *                          accepting this number of results if the
+     * @param maxValuesAccepted The maximum number of values that will be accepted
+     *                          by this accumulator.
      */
     public OneSidedConvergingDoubleAccumulator(boolean highIsCritical, double precision, int minValuesAccepted,
-                                               int maxValuesAccepted) {
+            int maxValuesAccepted) {
         super(highIsCritical, precision, minValuesAccepted, maxValuesAccepted);
         accumulatedValue = 0.0;
     }
 
     /**
-     * We are testing for convergence directly on the submitted double values, hence we just return the argument as-is.
+     * We are testing for convergence directly on the submitted double values, hence
+     * we just return the argument as-is.
      *
      * @param result A new result value computed by a Random Cut Tree.
      * @return the result value.

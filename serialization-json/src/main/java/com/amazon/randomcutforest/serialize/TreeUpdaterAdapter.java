@@ -20,12 +20,11 @@ import java.util.Comparator;
 import java.util.List;
 
 import com.amazon.randomcutforest.TreeUpdater;
+import com.amazon.randomcutforest.sampler.WeightedPoint;
 import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
-
-import com.amazon.randomcutforest.sampler.WeightedPoint;
 
 /**
  * Adapter for customizing {@link TreeUpdater} serialization.

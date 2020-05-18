@@ -15,14 +15,15 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.ShingleBuilder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.ShingleBuilder;
 
 @Tag("functional")
 public class RandomCutForestShingledFunctionalTest {
@@ -52,14 +53,9 @@ public class RandomCutForestShingledFunctionalTest {
 
         shingleBuilder = new ShingleBuilder(dimensions, shingleSize);
 
-        forest = RandomCutForest.builder()
-                .numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize)
-                .dimensions(shingleBuilder.getShingledPointSize())
-                .randomSeed(randomSeed)
-                .centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true)
-                .build();
+        forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(shingleBuilder.getShingledPointSize()).randomSeed(randomSeed).centerOfMassEnabled(true)
+                .storeSequenceIndexesEnabled(true).build();
 
         dataSize = 10_000;
 

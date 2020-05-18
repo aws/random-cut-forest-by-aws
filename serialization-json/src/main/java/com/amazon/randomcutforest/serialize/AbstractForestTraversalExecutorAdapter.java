@@ -17,6 +17,9 @@ package com.amazon.randomcutforest.serialize;
 
 import java.lang.reflect.Type;
 
+import com.amazon.randomcutforest.AbstractForestTraversalExecutor;
+import com.amazon.randomcutforest.ParallelForestTraversalExecutor;
+import com.amazon.randomcutforest.SequentialForestTraversalExecutor;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -24,15 +27,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
-import com.amazon.randomcutforest.AbstractForestTraversalExecutor;
-import com.amazon.randomcutforest.ParallelForestTraversalExecutor;
-import com.amazon.randomcutforest.SequentialForestTraversalExecutor;
-
 /**
- * Adapter for serializing {@link AbstractForestTraversalExecutor} implementations.
+ * Adapter for serializing {@link AbstractForestTraversalExecutor}
+ * implementations.
  */
-public class AbstractForestTraversalExecutorAdapter implements JsonSerializer<AbstractForestTraversalExecutor>,
-    JsonDeserializer<AbstractForestTraversalExecutor> {
+public class AbstractForestTraversalExecutorAdapter
+        implements JsonSerializer<AbstractForestTraversalExecutor>, JsonDeserializer<AbstractForestTraversalExecutor> {
 
     public static final String PROPERTY_EXECUTOR_TYPE = "executor_type";
     public static final String PROPERTY_EXECUTOR = "executor";
@@ -60,8 +60,7 @@ public class AbstractForestTraversalExecutorAdapter implements JsonSerializer<Ab
         if (SequentialForestTraversalExecutor.class.getSimpleName().equals(executorType)) {
             executor = ctx.deserialize(executorJson.get(PROPERTY_EXECUTOR), SequentialForestTraversalExecutor.class);
         } else if (ParallelForestTraversalExecutor.class.getSimpleName().equals(executorType)) {
-            executor = ctx.deserialize(
-                executorJson.get(PROPERTY_EXECUTOR), ParallelForestTraversalExecutor.class);
+            executor = ctx.deserialize(executorJson.get(PROPERTY_EXECUTOR), ParallelForestTraversalExecutor.class);
         } else {
             throw new IllegalArgumentException("Unsupported executor type " + type.getTypeName());
         }

@@ -24,17 +24,20 @@ import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * Attribution exposes the attribution of scores produced by ScalarScoreVisitor corresponding to different attributes.
- * It allows a boolean ignoreClosestCandidate; which when true will compute the attribution as it that near neighbor
- * was not present in RCF. This is turned on by default for duplicate points seen by the forest, so that the attribution
- * does not change is a sequence of duplicate points are seen. For non-duplicate points, if the boolean turned on,
- * reduces effects of masking (when anomalous points are included in the forest (which will be true with a
- * few samples or when the samples are not refreshed appropriately). It is worth remembering that disallowing
- * anomalous points from being included in the forest forest explicitly will render the algorithm incapable of adjusting
- * to a new normal -- which is a strength of this algorithm.
+ * Attribution exposes the attribution of scores produced by ScalarScoreVisitor
+ * corresponding to different attributes. It allows a boolean
+ * ignoreClosestCandidate; which when true will compute the attribution as it
+ * that near neighbor was not present in RCF. This is turned on by default for
+ * duplicate points seen by the forest, so that the attribution does not change
+ * is a sequence of duplicate points are seen. For non-duplicate points, if the
+ * boolean turned on, reduces effects of masking (when anomalous points are
+ * included in the forest (which will be true with a few samples or when the
+ * samples are not refreshed appropriately). It is worth remembering that
+ * disallowing anomalous points from being included in the forest forest
+ * explicitly will render the algorithm incapable of adjusting to a new normal
+ * -- which is a strength of this algorithm.
  **/
 public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
-
 
     public static final int DEFAULT_IGNORE_LEAF_MASS_THRESHOLD = 0;
 
@@ -50,18 +53,19 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     protected int ignoreLeafMassThreshold;
 
     /**
-     * A flag that states whether the point to score is known to be contained inside the bounding box of Nodes being
-     * accepted. Assumes nodes are accepted in leaf-to-root order.
+     * A flag that states whether the point to score is known to be contained inside
+     * the bounding box of Nodes being accepted. Assumes nodes are accepted in
+     * leaf-to-root order.
      */
     protected boolean pointInsideBox;
 
     /**
-     * An array that keeps track of whether each margin of the point being scored is outside inside the box considered
-     * during the recursive call to compute the score. Assumes nodes are accepted in leaf-to-root order.
+     * An array that keeps track of whether each margin of the point being scored is
+     * outside inside the box considered during the recursive call to compute the
+     * score. Assumes nodes are accepted in leaf-to-root order.
      */
     protected boolean[] coordInsideBox;
     protected BoundingBox shadowBox;
-
 
     public AbstractAttributionVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
 
@@ -84,10 +88,12 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
         this(pointToScore, treeMass, DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
     }
 
-    /** Take the normalization function applied to the corresponding scoring
-     * visitor and apply that to each coordinate of the DiVector to modify the
-     * data in place. The function has to be associative in its first parameter;
-     * that is, fn (x1, y) + fn (x2, y) = fn (x1 + x2, y)
+    /**
+     * Take the normalization function applied to the corresponding scoring visitor
+     * and apply that to each coordinate of the DiVector to modify the data in
+     * place. The function has to be associative in its first parameter; that is, fn
+     * (x1, y) + fn (x2, y) = fn (x1 + x2, y)
+     * 
      * @return The modified data.
      */
     @Override
@@ -112,12 +118,12 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
         BoundingBox smallBox;
 
         if (hitDuplicates || ignoreLeaf) {
-            // use the sibling bounding box to represent counterfactual "what if point & the candidate near neighbor
+            // use the sibling bounding box to represent counterfactual "what if point & the
+            // candidate near neighbor
             // had not been inserted in the tree"
             Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
 
-            shadowBox = shadowBox == null ? sibling.getBoundingBox() :
-                shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = shadowBox == null ? sibling.getBoundingBox() : shadowBox.getMergedBox(sibling.getBoundingBox());
 
             smallBox = shadowBox;
         } else {
@@ -135,28 +141,26 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
         }
 
         if (probOfCut <= 0) {
-                pointInsideBox = true;
+            pointInsideBox = true;
         } else {
             double newScore = scoreUnseen(depthOfNode, node.getMass());
 
             for (int i = 0; i < pointToScore.length; i++) {
                 double probOfCutInSpikeDirection = differenceInRangeVector[2 * i] / sumOfNewRange;
-                directionalAttribution.high[i] =
-                    probOfCutInSpikeDirection * newScore +
-                        (1 - probOfCut) * directionalAttribution.high[i];
+                directionalAttribution.high[i] = probOfCutInSpikeDirection * newScore
+                        + (1 - probOfCut) * directionalAttribution.high[i];
 
                 double probOfCutInDipDirection = differenceInRangeVector[2 * i + 1] / sumOfNewRange;
-                directionalAttribution.low[i] =
-                    probOfCutInDipDirection * newScore +
-                        (1 - probOfCut) * directionalAttribution.low[i];
+                directionalAttribution.low[i] = probOfCutInDipDirection * newScore
+                        + (1 - probOfCut) * directionalAttribution.low[i];
             }
         }
 
-
         if ((hitDuplicates || ignoreLeaf) && (pointInsideBox || depthOfNode == 0)) {
-                // final rescaling; this ensures agreement with the ScalarScoreVector
-                // the scoreUnseen/scoreSeen should be the same as scoring; other uses need caution.
-                directionalAttribution.renormalize(savedScore);
+            // final rescaling; this ensures agreement with the ScalarScoreVector
+            // the scoreUnseen/scoreSeen should be the same as scoring; other uses need
+            // caution.
+            directionalAttribution.renormalize(savedScore);
 
         }
     }
@@ -191,7 +195,9 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     }
 
     /**
-     * A scoring function which is applied when the leaf node visited is equal to the point being scored.
+     * A scoring function which is applied when the leaf node visited is equal to
+     * the point being scored.
+     * 
      * @param depth The depth of the node being visited
      * @param mass  The mass of the node being visited
      * @return an anomaly score contribution for a given node
@@ -199,8 +205,10 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     protected abstract double scoreSeen(int depth, int mass);
 
     /**
-     * A scoring function which is applied when the leaf node visited is not equal to the point being scored. This
-     * function is also used to compute the contribution to the anomaly score from non-leaf nodes.
+     * A scoring function which is applied when the leaf node visited is not equal
+     * to the point being scored. This function is also used to compute the
+     * contribution to the anomaly score from non-leaf nodes.
+     * 
      * @param depth The depth of the node being visited.
      * @param mass  The mass of the node being visited.
      * @return an anomaly score contribution for a given node.
@@ -208,22 +216,26 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     protected abstract double scoreUnseen(int depth, int mass);
 
     /**
-     * This function produces a scaling factor which can be used to reduce the influence of leaf nodes with mass
-     * greater than 1.
+     * This function produces a scaling factor which can be used to reduce the
+     * influence of leaf nodes with mass greater than 1.
+     * 
      * @param leafMass The mass of the leaf node visited
      * @param treeMass The mass of the tree being visited
-     * @return a scaling factor to apply to the result from {@link #scoreSeen(int, int)}.
+     * @return a scaling factor to apply to the result from
+     *         {@link #scoreSeen(int, int)}.
      */
     protected abstract double damp(int leafMass, int treeMass);
 
     /**
-     * When updating the score for a node, we compare the node's bounding box to the merged bounding box that would be
-     * created by adding the point to be scored. This method updates local instance variables sumOfDifferenceInRange
-     * and differenceInRange vector to reflect the total difference in side length and the difference in side length
-     * in each dimension, respectively.
+     * When updating the score for a node, we compare the node's bounding box to the
+     * merged bounding box that would be created by adding the point to be scored.
+     * This method updates local instance variables sumOfDifferenceInRange and
+     * differenceInRange vector to reflect the total difference in side length and
+     * the difference in side length in each dimension, respectively.
      *
      * @param smallBox The bounding box corresponding to a Node being visited.
-     * @param largeBox The merged bounding box containing smallBox and the point being scored.
+     * @param largeBox The merged bounding box containing smallBox and the point
+     *                 being scored.
      */
     protected void updateRangesForScoring(BoundingBox smallBox, BoundingBox largeBox) {
         sumOfDifferenceInRange = 0.0;
@@ -233,7 +245,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
 
             sumOfNewRange += largeBox.getRange(i);
 
-            //optimization turned off for ignoreLeaf
+            // optimization turned off for ignoreLeaf
             if (coordInsideBox[i] && !ignoreLeaf) {
 
                 continue;

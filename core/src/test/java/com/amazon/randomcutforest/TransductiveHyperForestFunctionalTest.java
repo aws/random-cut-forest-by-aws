@@ -1,12 +1,6 @@
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.HyperTree;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +9,14 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.HyperTree;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
@@ -36,10 +37,8 @@ public class TransductiveHyperForestFunctionalTest {
     private static double transitionToBaseProbability;
     private static int dataSize;
     private static NormalMixtureTestData generator;
-    private static int numTrials=10;
-    private static int numTest=10;
-
-
+    private static int numTrials = 10;
+    private static int numTest = 10;
 
     public static Function<BoundingBox, double[]> LAlphaSeparation(final double alpha) {
 
@@ -52,8 +51,10 @@ public class TransductiveHyperForestFunctionalTest {
                 double oldRange = maxVal - minVal;
 
                 if (oldRange > 0) {
-                    if (alpha == 0) answer[i] = 1.0;
-                    else answer[i] = Math.pow(oldRange, alpha);
+                    if (alpha == 0)
+                        answer[i] = 1.0;
+                    else
+                        answer[i] = Math.pow(oldRange, alpha);
                 }
             }
 
@@ -80,9 +81,6 @@ public class TransductiveHyperForestFunctionalTest {
         };
     }
 
-
-
-
     class HyperForest {
         int dimensions;
         int seed;
@@ -92,19 +90,21 @@ public class TransductiveHyperForestFunctionalTest {
 
         ArrayList<HyperTree> trees;
 
-        public HyperForest(int dimensions, int numberOfTrees, int sampleSize, int seed, Function<BoundingBox, double[]> vecSeparation) {
+        public HyperForest(int dimensions, int numberOfTrees, int sampleSize, int seed,
+                Function<BoundingBox, double[]> vecSeparation) {
             this.numberOfTrees = numberOfTrees;
             this.seed = seed;
             this.sampleSize = sampleSize;
             this.dimensions = dimensions;
             trees = new ArrayList<>();
-            random = new Random (seed);
+            random = new Random(seed);
             for (int i = 0; i < numberOfTrees; i++) {
                 trees.add(new HyperTree.Builder().buildGVec(vecSeparation).randomSeed(random.nextInt()).build());
             }
         }
 
-        // displacement scoring (multiplied by the normalizer log_2(treesize)) on the fly !!
+        // displacement scoring (multiplied by the normalizer log_2(treesize)) on the
+        // fly !!
         // as introduced in Robust Random Cut Forest Based Anomaly Detection in Streams
         // @ICML 2016. This does not address co-displacement (duplicity).
         // seen function is (x,y) -> 1 which basically ignores everything
@@ -115,12 +115,13 @@ public class TransductiveHyperForestFunctionalTest {
             return getDynamicScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
         }
         /*
-        public double getDisplacementScore(double[] point) {
-            return getDynamicScoreSim(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
-        }
-        */
-        // Expected height (multiplied by the normalizer log_2(treesize) ) scoring on the fly !!
-        // seen function is (x,y) -> x+log(Y)/log(2) which depth + duplicity converted to depth
+         * public double getDisplacementScore(double[] point) { return
+         * getDynamicScoreSim(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0); }
+         */
+        // Expected height (multiplied by the normalizer log_2(treesize) ) scoring on
+        // the fly !!
+        // seen function is (x,y) -> x+log(Y)/log(2) which depth + duplicity converted
+        // to depth
         // unseen function is (x,y) -> x which is depth
         // damp function is (x,y) -> 1 which is no dampening
         // note that this is *NOT* anything like the expected height in
@@ -134,29 +135,25 @@ public class TransductiveHyperForestFunctionalTest {
         }
 
         public double getAnomalyScore(double[] point) {
-            return getDynamicScore(point, CommonUtils::defaultScoreSeenFunction, CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+            return getDynamicScore(point, CommonUtils::defaultScoreSeenFunction,
+                    CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
         }
 
-        public double getDynamicScore(double[] point,
-                                      BiFunction<Double, Double, Double> seen, BiFunction<Double, Double, Double> unseen,
-                                      BiFunction<Double, Double, Double> newDamp) {
+        public double getDynamicScore(double[] point, BiFunction<Double, Double, Double> seen,
+                BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> newDamp) {
 
-            checkArgument(dimensions==point.length,"incorrect dimensions");
+            checkArgument(dimensions == point.length, "incorrect dimensions");
 
-            Function<HyperTree, Visitor<Double>> visitorFactory = tree ->
-                    new TransductiveScalarScoreVisitor(point, tree.getRoot().getMass(), seen, unseen, newDamp, tree.getgVec());
+            Function<HyperTree, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
+                    tree.getRoot().getMass(), seen, unseen, newDamp, tree.getgVec());
             BinaryOperator<Double> accumulator = Double::sum;
 
             Function<Double, Double> finisher = sum -> sum / numberOfTrees;
 
-
-            return trees.parallelStream()
-                    .map(tree -> {
-                        Visitor<Double> visitor = visitorFactory.apply(tree);
-                        return tree.traverseTree(point, visitor);
-                    })
-                    .reduce(accumulator)
-                    .map(finisher)
+            return trees.parallelStream().map(tree -> {
+                Visitor<Double> visitor = visitorFactory.apply(tree);
+                return tree.traverseTree(point, visitor);
+            }).reduce(accumulator).map(finisher)
                     .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         }
@@ -171,7 +168,7 @@ public class TransductiveHyperForestFunctionalTest {
                     int z = random.nextInt(prefix);
                     if (!status[z]) {
                         status[z] = true;
-                        if (pointList[z].length==dimensions) {
+                        if (pointList[z].length == dimensions) {
                             samples.add(pointList[z]);
                         } else {
                             throw new IllegalArgumentException("Points have incorrect dimensions");
@@ -183,41 +180,33 @@ public class TransductiveHyperForestFunctionalTest {
             }
         }
 
-
     }
-    //===========================================================
+    // ===========================================================
 
-
-    public static double getSimulatedAnomalyScore(DynamicScoringRandomCutForest forest,double[] point,
-                                                 Function<BoundingBox, double[]> gVec){
-       return forest.getDynamicSimulatedScore(point,CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction,
-                CommonUtils::defaultDampFunction, gVec);
+    public static double getSimulatedAnomalyScore(DynamicScoringRandomCutForest forest, double[] point,
+            Function<BoundingBox, double[]> gVec) {
+        return forest.getDynamicSimulatedScore(point, CommonUtils::defaultScoreSeenFunction,
+                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction, gVec);
     }
 
-    public static double getSimulatedHeightScore(DynamicScoringRandomCutForest forest,double[] point,
-                                                 Function<BoundingBox, double[]> gvec){
-        return forest.getDynamicSimulatedScore(point,(x,y)->1.0*(x+Math.log(y)),(x,y)->1.0*x,(x,y)->1.0, gvec);
+    public static double getSimulatedHeightScore(DynamicScoringRandomCutForest forest, double[] point,
+            Function<BoundingBox, double[]> gvec) {
+        return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x,
+                (x, y) -> 1.0, gvec);
     }
 
     public static double getSimulatedDisplacementScore(DynamicScoringRandomCutForest forest, double[] point,
-                                                       Function<BoundingBox, double[]> gvec) {
-       return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0, gvec);
+            Function<BoundingBox, double[]> gvec) {
+        return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0, gvec);
     }
 
-
-
-
-
-
-
-    //===========================================================
+    // ===========================================================
     @BeforeAll
-    public static void setup(){
+    public static void setup() {
         dataSize = 2000;
-        numberOfTrees=100;
-        sampleSize=256;
-        dimensions=30;
+        numberOfTrees = 100;
+        sampleSize = 256;
+        dimensions = 30;
 
         baseMu = 0.0;
         baseSigma = 1.0;
@@ -230,11 +219,10 @@ public class TransductiveHyperForestFunctionalTest {
                 transitionToAnomalyProbability, transitionToBaseProbability);
     }
 
-
     private class TestScores {
-        double sumCenterScore=0;
-        double sumCenterDisp=0;
-        double sumCenterHeight=0;
+        double sumCenterScore = 0;
+        double sumCenterDisp = 0;
+        double sumCenterHeight = 0;
         double sumLeftScore = 0;
         double sumRightScore = 0;
         double sumLeftDisp = 0;
@@ -243,24 +231,21 @@ public class TransductiveHyperForestFunctionalTest {
         double sumRightHeight = 0;
     }
 
-
-    public static void runRCF(TestScores testScore, Function<BoundingBox, double[]> gVec){
+    public static void runRCF(TestScores testScore, Function<BoundingBox, double[]> gVec) {
         Random prg = new Random(randomSeed);
         for (int trials = 0; trials < numTrials; trials++) {
-            double[][] data = generator.generateTestData(dataSize+numTest, dimensions, 100 + trials);
-            DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder()
-                    .dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees)
-                    .sampleSize(sampleSize)
-                    .randomSeed(prg.nextInt())
-                    .build();
+            double[][] data = generator.generateTestData(dataSize + numTest, dimensions, 100 + trials);
+            DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().dimensions(dimensions)
+                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).randomSeed(prg.nextInt()).build();
 
             for (int i = 0; i < dataSize; i++) {
-                //shrink, shift at random
+                // shrink, shift at random
                 for (int j = 0; j < dimensions; j++)
                     data[i][j] *= 0.01;
-                if (prg.nextDouble() < 0.5) data[i][0] += 5.0;
-                else data[i][0] -= 5.0;
+                if (prg.nextDouble() < 0.5)
+                    data[i][0] += 5.0;
+                else
+                    data[i][0] -= 5.0;
                 newForest.update(data[i]);
                 // the points are streamed
             }
@@ -268,44 +253,46 @@ public class TransductiveHyperForestFunctionalTest {
             for (int i = dataSize; i < dataSize + numTest; i++) {
                 for (int j = 0; j < dimensions; j++)
                     data[i][j] *= 0.01;
-                testScore.sumCenterScore += getSimulatedAnomalyScore(newForest,data[i],gVec);
-                testScore.sumCenterHeight += getSimulatedHeightScore(newForest, data[i],gVec);
-                testScore.sumCenterDisp += getSimulatedDisplacementScore(newForest, data[i],gVec);
+                testScore.sumCenterScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
+                testScore.sumCenterHeight += getSimulatedHeightScore(newForest, data[i], gVec);
+                testScore.sumCenterDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
 
+                data[i][0] += 5; // move to right cluster
 
-                data[i][0] += 5; //move to right cluster
+                testScore.sumRightScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
+                testScore.sumRightHeight += getSimulatedHeightScore(newForest, data[i], gVec);
+                testScore.sumRightDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
 
-                testScore.sumRightScore += getSimulatedAnomalyScore(newForest,data[i],gVec);
-                testScore.sumRightHeight += getSimulatedHeightScore(newForest, data[i],gVec);
-                testScore.sumRightDisp += getSimulatedDisplacementScore(newForest, data[i],gVec);
+                data[i][0] -= 10; // move to left cluster
 
-                data[i][0] -= 10; //move to left cluster
-
-                testScore.sumLeftScore += getSimulatedAnomalyScore(newForest,data[i],gVec);
-                testScore.sumLeftHeight += getSimulatedHeightScore(newForest, data[i],gVec);
-                testScore.sumLeftDisp += getSimulatedDisplacementScore(newForest, data[i],gVec);
+                testScore.sumLeftScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
+                testScore.sumLeftHeight += getSimulatedHeightScore(newForest, data[i], gVec);
+                testScore.sumLeftDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
             }
         }
     }
 
-
-    public void runGTFLAlpha(TestScores testScore, boolean flag, double gaugeOrAlpha){
+    public void runGTFLAlpha(TestScores testScore, boolean flag, double gaugeOrAlpha) {
         Random prg = new Random(randomSeed);
         for (int trials = 0; trials < numTrials; trials++) {
-            double[][] data = generator.generateTestData(dataSize+numTest, dimensions, 100 + trials);
+            double[][] data = generator.generateTestData(dataSize + numTest, dimensions, 100 + trials);
 
             HyperForest newForest;
-            if (flag) newForest = new HyperForest(dimensions,numberOfTrees,sampleSize, prg.nextInt(), GTFSeparation(gaugeOrAlpha));
-            else newForest = new HyperForest(dimensions,numberOfTrees,sampleSize, prg.nextInt(), LAlphaSeparation(gaugeOrAlpha));
-
-
+            if (flag)
+                newForest = new HyperForest(dimensions, numberOfTrees, sampleSize, prg.nextInt(),
+                        GTFSeparation(gaugeOrAlpha));
+            else
+                newForest = new HyperForest(dimensions, numberOfTrees, sampleSize, prg.nextInt(),
+                        LAlphaSeparation(gaugeOrAlpha));
 
             for (int i = 0; i < dataSize; i++) {
-                //shrink, shift at random
+                // shrink, shift at random
                 for (int j = 0; j < dimensions; j++)
                     data[i][j] *= 0.01;
-                if (prg.nextDouble() < 0.5) data[i][0] += 5.0;
-                else data[i][0] -= 5.0;
+                if (prg.nextDouble() < 0.5)
+                    data[i][0] += 5.0;
+                else
+                    data[i][0] -= 5.0;
             }
             newForest.makeForest(data, dataSize);
 
@@ -316,35 +303,31 @@ public class TransductiveHyperForestFunctionalTest {
                 testScore.sumCenterHeight += newForest.getHeightScore(data[i]);
                 testScore.sumCenterDisp += newForest.getDisplacementScore(data[i]);
 
-
-                data[i][0] += 5; //move to right cluster
+                data[i][0] += 5; // move to right cluster
 
                 testScore.sumRightScore += newForest.getAnomalyScore(data[i]);
                 testScore.sumRightHeight += newForest.getHeightScore(data[i]);
                 testScore.sumRightDisp += newForest.getDisplacementScore(data[i]);
 
-
-                data[i][0] -= 10; //move to left cluster
+                data[i][0] -= 10; // move to left cluster
 
                 testScore.sumLeftScore += newForest.getAnomalyScore(data[i]);
                 testScore.sumLeftHeight += newForest.getHeightScore(data[i]);
-                testScore.sumLeftDisp +=  newForest.getDisplacementScore(data[i]);
+                testScore.sumLeftDisp += newForest.getDisplacementScore(data[i]);
 
             }
         }
     }
 
-
-
-    public void simulateGTFLAlpha(TestScores testScore, boolean flag, double gaugeOrAlpha){
-        Function<BoundingBox, double []> gVec=LAlphaSeparation(gaugeOrAlpha);
-        if (flag) gVec=GTFSeparation(gaugeOrAlpha);
-        runRCF(testScore,gVec);
+    public void simulateGTFLAlpha(TestScores testScore, boolean flag, double gaugeOrAlpha) {
+        Function<BoundingBox, double[]> gVec = LAlphaSeparation(gaugeOrAlpha);
+        if (flag)
+            gVec = GTFSeparation(gaugeOrAlpha);
+        runRCF(testScore, gVec);
     }
 
     @Test
     public void GaugeTransductiveForestTest() {
-
 
         for (double gauge = 256; gauge >= 1.0 / 1024; gauge /= 4) {
             TestScores testScore = new TestScores();
@@ -369,22 +352,23 @@ public class TransductiveHyperForestFunctionalTest {
             System.out.println(" GTF_Gauge RCF Sim =" + gauge + "  ========= (not choosing dim) ");
             printInfo(testScore, testScoreB);
 
-
         }
     }
 
     @Test
     public void LAlphaForestTest() {
 
-        double alpha=0;
-        for (int i=0; i <= 20; i++) {
+        double alpha = 0;
+        for (int i = 0; i <= 20; i++) {
 
-            if (i>0) {
-                if (alpha < 0.9) alpha += 0.1;
-                else alpha = Math.round(alpha + 1);
+            if (i > 0) {
+                if (alpha < 0.9)
+                    alpha += 0.1;
+                else
+                    alpha = Math.round(alpha + 1);
             }
             TestScores testScore = new TestScores();
-            runGTFLAlpha(testScore,false, alpha);
+            runGTFLAlpha(testScore, false, alpha);
 
             System.out.println();
             System.out.println(" L_ALPHA = " + alpha + " ========= ");
@@ -399,12 +383,11 @@ public class TransductiveHyperForestFunctionalTest {
             System.out.println("Right Disp:    " + testScore.sumRightDisp / (numTest * numTrials));
 
             TestScores testScoreB = new TestScores();
-            simulateGTFLAlpha(testScoreB, false, alpha );
+            simulateGTFLAlpha(testScoreB, false, alpha);
 
             System.out.println();
             System.out.println(" L_ALPHA RCF Sim = " + alpha + " ========= (not choosing dim)");
-            printInfo(testScore,testScoreB);
-
+            printInfo(testScore, testScoreB);
 
         }
         // large values signify a larger gap
@@ -422,51 +405,47 @@ public class TransductiveHyperForestFunctionalTest {
         System.out.println("Center Disp:   " + testScoreB.sumCenterDisp / (numTest * numTrials));
         System.out.println("Right Disp:    " + testScoreB.sumRightDisp / (numTest * numTrials));
 
-        double scoreGap = (testScoreB.sumLeftScore + testScoreB.sumRightScore)/
-                (testScore.sumLeftScore + testScore.sumRightScore);
+        double scoreGap = (testScoreB.sumLeftScore + testScoreB.sumRightScore)
+                / (testScore.sumLeftScore + testScore.sumRightScore);
 
         System.out.println("Score Gap      " + scoreGap);
-        System.out.println("Diff Gap       " + (testScore.sumLeftScore - testScore.sumRightScore)
-                / (testScore.sumLeftScore+ testScore.sumRightScore) + " " +
-                (testScoreB.sumLeftScore - testScoreB.sumRightScore)/
-                        (testScoreB.sumLeftScore + testScoreB.sumRightScore));
+        System.out.println("Diff Gap       "
+                + (testScore.sumLeftScore - testScore.sumRightScore)
+                        / (testScore.sumLeftScore + testScore.sumRightScore)
+                + " " + (testScoreB.sumLeftScore - testScoreB.sumRightScore)
+                        / (testScoreB.sumLeftScore + testScoreB.sumRightScore));
 
-        System.out.println("Center Gap     " + testScoreB.sumCenterScore /
-                (testScore.sumCenterScore * scoreGap));
+        System.out.println("Center Gap     " + testScoreB.sumCenterScore / (testScore.sumCenterScore * scoreGap));
 
-        double heightGap = (testScoreB.sumLeftHeight + testScoreB.sumRightHeight)/
-                (testScore.sumLeftHeight + testScore.sumRightHeight);
+        double heightGap = (testScoreB.sumLeftHeight + testScoreB.sumRightHeight)
+                / (testScore.sumLeftHeight + testScore.sumRightHeight);
 
         System.out.println("Height Gap     " + heightGap);
-        System.out.println("Diff Gap       " + (testScore.sumLeftHeight - testScore.sumRightHeight)
-                / (testScore.sumLeftHeight + testScore.sumRightHeight) + " " +
-                (testScoreB.sumLeftHeight - testScoreB.sumRightHeight)/
-                        (testScoreB.sumLeftHeight+ testScoreB.sumRightHeight));
+        System.out.println("Diff Gap       "
+                + (testScore.sumLeftHeight - testScore.sumRightHeight)
+                        / (testScore.sumLeftHeight + testScore.sumRightHeight)
+                + " " + (testScoreB.sumLeftHeight - testScoreB.sumRightHeight)
+                        / (testScoreB.sumLeftHeight + testScoreB.sumRightHeight));
 
-        System.out.println("Center Gap     " + testScoreB.sumCenterHeight /
-                (testScore.sumCenterHeight * heightGap));
+        System.out.println("Center Gap     " + testScoreB.sumCenterHeight / (testScore.sumCenterHeight * heightGap));
 
-        double dispGap = (testScoreB.sumLeftDisp + testScoreB.sumRightDisp)/
-                (testScore.sumLeftDisp + testScore.sumRightDisp);
+        double dispGap = (testScoreB.sumLeftDisp + testScoreB.sumRightDisp)
+                / (testScore.sumLeftDisp + testScore.sumRightDisp);
 
         System.out.println("Disp Gap       " + dispGap);
-        System.out.println("Diff Gap       " + (testScore.sumLeftDisp - testScore.sumRightDisp)
-                / (testScore.sumLeftDisp + testScore.sumRightDisp) + " " +
-                (testScoreB.sumLeftDisp - testScoreB.sumRightDisp)/
-                        (testScoreB.sumLeftDisp + testScoreB.sumRightDisp));
+        System.out.println("Diff Gap       "
+                + (testScore.sumLeftDisp - testScore.sumRightDisp) / (testScore.sumLeftDisp + testScore.sumRightDisp)
+                + " " + (testScoreB.sumLeftDisp - testScoreB.sumRightDisp)
+                        / (testScoreB.sumLeftDisp + testScoreB.sumRightDisp));
 
-        System.out.println("Center Gap     " + testScoreB.sumCenterDisp /
-                (testScore.sumCenterDisp * dispGap));
+        System.out.println("Center Gap     " + testScoreB.sumCenterDisp / (testScore.sumCenterDisp * dispGap));
     }
-
-
-
 
     @Test
     public void RandomCutForestTest() {
 
         TestScores testScore = new TestScores();
-        runRCF(testScore,LAlphaSeparation(1.0));
+        runRCF(testScore, LAlphaSeparation(1.0));
 
         System.out.println();
         System.out.println(" RCF  ========= ");
@@ -481,7 +460,5 @@ public class TransductiveHyperForestFunctionalTest {
         System.out.println("Right Disp:    " + testScore.sumRightDisp / (numTest * numTrials));
 
     }
-
-
 
 }

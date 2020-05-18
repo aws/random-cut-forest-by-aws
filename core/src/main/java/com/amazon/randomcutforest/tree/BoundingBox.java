@@ -18,12 +18,14 @@ package com.amazon.randomcutforest.tree;
 import java.util.Arrays;
 
 /**
- * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n there are min and max values a_i and b_i,
- * with a_i less than or equal to b_i, such that the bounding box is equal to the set of points x whose ith coordinate
- * is between a_i and b_i.
+ * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n
+ * there are min and max values a_i and b_i, with a_i less than or equal to b_i,
+ * such that the bounding box is equal to the set of points x whose ith
+ * coordinate is between a_i and b_i.
  *
- * {@link Node}s in a {@link RandomCutTree} contain a BoundingBox, which is always the smallest BoundingBox that
- * contains all leaf points which are descendents of the Node.
+ * {@link Node}s in a {@link RandomCutTree} contain a BoundingBox, which is
+ * always the smallest BoundingBox that contains all leaf points which are
+ * descendents of the Node.
  */
 public class BoundingBox {
 
@@ -82,11 +84,12 @@ public class BoundingBox {
     }
 
     /**
-     * Return a new bounding box which is the smallest bounding box that contains this bounding box and
-     * otherBoundingBox.
+     * Return a new bounding box which is the smallest bounding box that contains
+     * this bounding box and otherBoundingBox.
      *
      * @param otherBoundingBox the bounding box being merged with this box
-     * @return the smallest bounding box that contains this bounding box and otherBoundingBox;
+     * @return the smallest bounding box that contains this bounding box and
+     *         otherBoundingBox;
      */
     public BoundingBox getMergedBox(final BoundingBox otherBoundingBox) {
         double[] minValuesMerged = new double[dimensions];
@@ -101,11 +104,12 @@ public class BoundingBox {
     }
 
     /**
-     * Return a new bounding box which is the smallest bounding box that contains this bounding box and the given
-     * point.
+     * Return a new bounding box which is the smallest bounding box that contains
+     * this bounding box and the given point.
      *
      * @param point the new point being added to the box
-     * @return the smallest bounding box that contains this bounding box and the given point.
+     * @return the smallest bounding box that contains this bounding box and the
+     *         given point.
      */
     public BoundingBox getMergedBox(double[] point) {
         double[] minValuesMerged = new double[dimensions];
@@ -147,8 +151,9 @@ public class BoundingBox {
     }
 
     /**
-     * Returns true if the given point is contained in this bounding box. This is equivalent to the point being a
-     * member of the set defined by this bounding box.
+     * Returns true if the given point is contained in this bounding box. This is
+     * equivalent to the point being a member of the set defined by this bounding
+     * box.
      *
      * @param point with which we're performing the comparison
      * @return whether the point is contained by the bounding box
@@ -164,11 +169,12 @@ public class BoundingBox {
     }
 
     /**
-     * Returns true if the given bounding box is contained inside this bounding box. Equivalently, if the given
-     * bounding box is a subset of this bounding box.
+     * Returns true if the given bounding box is contained inside this bounding box.
+     * Equivalently, if the given bounding box is a subset of this bounding box.
      *
      * @param other Another bounding box that we are comparing to this bounding box.
-     * @return true if the given bounding box is contained inside this bounding box, false otherwise.
+     * @return true if the given bounding box is contained inside this bounding box,
+     *         false otherwise.
      */
     public boolean contains(BoundingBox other) {
         for (int i = 0; i < dimensions; i++) {
@@ -181,10 +187,11 @@ public class BoundingBox {
     }
 
     /**
-     * Test whether a given scalar value falls between the min and max values in the given dimension.
+     * Test whether a given scalar value falls between the min and max values in the
+     * given dimension.
      *
-     * @return whether the value of a point is between the minimum or maximum value of the bounding box for the given
-     * dimension
+     * @return whether the value of a point is between the minimum or maximum value
+     *         of the bounding box for the given dimension
      */
     private boolean contains(int dimension, double value) {
         return maxValues[dimension] >= value && value >= minValues[dimension];
@@ -206,9 +213,10 @@ public class BoundingBox {
     }
 
     /**
-     * Two bounding boxes are considered equal if they have the same dimensions and all their min values and max
-     * values are the same. Min and max values are compared as primitive doubles using ==, so two bounding boxes
-     * are not equal if their min and max values are merely very close.
+     * Two bounding boxes are considered equal if they have the same dimensions and
+     * all their min values and max values are the same. Min and max values are
+     * compared as primitive doubles using ==, so two bounding boxes are not equal
+     * if their min and max values are merely very close.
      *
      * @param other An object to test for equality
      * @return true if other is a bounding box with the same min and max values
@@ -220,8 +228,7 @@ public class BoundingBox {
         }
 
         BoundingBox otherBox = (BoundingBox) other;
-        return Arrays.equals(minValues, otherBox.minValues)
-            && Arrays.equals(maxValues, otherBox.maxValues);
+        return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 
     @Override
@@ -229,4 +236,3 @@ public class BoundingBox {
         return Arrays.hashCode(minValues) + 31 * Arrays.hashCode(maxValues);
     }
 }
-

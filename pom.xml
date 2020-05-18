@@ -86,6 +86,22 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>1.31.0</version>
+                <configuration>
+                    <java>
+                        <eclipse>
+                            <file>${maven.multiModuleProjectDirectory}/spotless-eclipse.xml</file>
+                        </eclipse>
+                        <removeUnusedImports/>
+                        <importOrder>
+                            <order>java,javax,org,com</order>
+                        </importOrder>
+                    </java>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

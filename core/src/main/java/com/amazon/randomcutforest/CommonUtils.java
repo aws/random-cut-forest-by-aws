@@ -17,7 +17,6 @@ package com.amazon.randomcutforest;
 
 import java.util.Objects;
 
-
 import com.amazon.randomcutforest.tree.BoundingBox;
 
 /**
@@ -29,11 +28,12 @@ public class CommonUtils {
     }
 
     /**
-     * Throws an {@link IllegalArgumentException} with the specified message if the specified input
-     * is false.
+     * Throws an {@link IllegalArgumentException} with the specified message if the
+     * specified input is false.
      *
      * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not met
+     * @param message   the error message that will be used if the condition is not
+     *                  met
      */
     public static void checkArgument(boolean condition, String message) {
         if (!condition) {
@@ -42,11 +42,12 @@ public class CommonUtils {
     }
 
     /**
-     * Throws an {@link IllegalStateException} with the specified message if the specified input
-     * is false.
+     * Throws an {@link IllegalStateException} with the specified message if the
+     * specified input is false.
      *
      * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not met
+     * @param message   the error message that will be used if the condition is not
+     *                  met
      */
     public static void checkState(boolean condition, String message) {
         if (!condition) {
@@ -55,21 +56,22 @@ public class CommonUtils {
     }
 
     /**
-     * Throws a {@link NullPointerException} with the specified message if the specified input
-     * is null.
+     * Throws a {@link NullPointerException} with the specified message if the
+     * specified input is null.
      *
      * @param object  a condition to test
-     * @param message the error message that will be used if the condition is not met
+     * @param message the error message that will be used if the condition is not
+     *                met
      */
     public static void checkNotNull(Object object, String message) {
         Objects.requireNonNull(object, message);
     }
 
-
     /**
-     * Compute the probability of separation for a bounding box adn a point. This method considers the bounding box
-     * created by merging the query point into the existing bounding box, and computes the probability that a random
-     * cut would separate the query point from the merged bounding box.
+     * Compute the probability of separation for a bounding box adn a point. This
+     * method considers the bounding box created by merging the query point into the
+     * existing bounding box, and computes the probability that a random cut would
+     * separate the query point from the merged bounding box.
      *
      * @param boundingBox is the bounding box used in RandomCutTree
      * @param queryPoint  is the multidimensional point
@@ -101,7 +103,8 @@ public class CommonUtils {
 
         if (sumOfNewRange <= 0) {
             return 0;
-        } else return sumOfDifferenceInRange / sumOfNewRange;
+        } else
+            return sumOfDifferenceInRange / sumOfNewRange;
     }
 
     /**
@@ -116,7 +119,8 @@ public class CommonUtils {
     }
 
     /**
-     * The default anomaly scoring function for points not already contained in a tree.
+     * The default anomaly scoring function for points not already contained in a
+     * tree.
      *
      * @param depth The depth of the leaf node where this method is invoked
      * @param mass  The number of times the point has been seen before
@@ -131,10 +135,12 @@ public class CommonUtils {
     }
 
     /**
-     * Some algorithms which return a scalar value need to scale that value by tree mass for consistency. This is the
-     * default method for computing the scale factor in these cases.
-     * The function has to be associative in its first argument (when the second is fixed)
-     * That is, fn (x1, y) + fn (x2, y) = fn (x1 + x2, y)
+     * Some algorithms which return a scalar value need to scale that value by tree
+     * mass for consistency. This is the default method for computing the scale
+     * factor in these cases. The function has to be associative in its first
+     * argument (when the second is fixed) That is, fn (x1, y) + fn (x2, y) = fn (x1
+     * + x2, y)
+     * 
      * @param scalarValue The value being scaled
      * @param mass        The mass of the tree where this method is invoked
      * @return The original value scaled appropriately for this tree
@@ -147,26 +153,27 @@ public class CommonUtils {
      * The following function forms the core of RCFs, given a BoundingBox it
      * produces the probability of cutting in different dimensions. While this
      * function is absorbed in the logic of the different simpler scoring methods,
-     * the scoring methods that are mode advanced (for example, trying to simulate an
-     * Transductive Isolation Forest with streaming) require this function. A different
-     * function can be used to simulate via non-RCFs.
+     * the scoring methods that are mode advanced (for example, trying to simulate
+     * an Transductive Isolation Forest with streaming) require this function. A
+     * different function can be used to simulate via non-RCFs.
+     * 
      * @param boundingBox bounding box of a set of points
      * @return array of probabilities of cutting in that specific dimension
      */
 
     public static double[] defaultRCFgVecFunction(BoundingBox boundingBox) {
-            double[] answer = new double[boundingBox.getDimensions()];
+        double[] answer = new double[boundingBox.getDimensions()];
 
-            for (int i = 0; i < boundingBox.getDimensions(); ++i) {
-                double maxVal = boundingBox.getMaxValue(i);
-                double minVal = boundingBox.getMinValue(i);
-                double oldRange = maxVal - minVal;
+        for (int i = 0; i < boundingBox.getDimensions(); ++i) {
+            double maxVal = boundingBox.getMaxValue(i);
+            double minVal = boundingBox.getMinValue(i);
+            double oldRange = maxVal - minVal;
 
-                if (oldRange > 0) {
-                    answer[i] = oldRange;
-                }
+            if (oldRange > 0) {
+                answer[i] = oldRange;
             }
-            return answer;
+        }
+        return answer;
 
     };
 

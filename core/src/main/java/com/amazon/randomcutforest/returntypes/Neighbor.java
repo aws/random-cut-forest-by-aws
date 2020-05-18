@@ -31,9 +31,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 
 /**
- * A Neighbor represents a point together with a distance, where the distance is with respect to some query point.
- * That is, we think of this point as being a neighbor of the query point. If the feature is enabled in the forest,
- * a Neighbor will also contain a set of sequence indexes containing the times this point was added to the forest.
+ * A Neighbor represents a point together with a distance, where the distance is
+ * with respect to some query point. That is, we think of this point as being a
+ * neighbor of the query point. If the feature is enabled in the forest, a
+ * Neighbor will also contain a set of sequence indexes containing the times
+ * this point was added to the forest.
  */
 public class Neighbor {
 
@@ -43,13 +45,15 @@ public class Neighbor {
     public final double[] point;
 
     /**
-     * The distance between the neighbor point and the query point it was created from.
+     * The distance between the neighbor point and the query point it was created
+     * from.
      */
     public final double distance;
 
     /**
-     * A list of sequence indexes corresponding to the times when this neighbor point was added to the forest.
-     * If sequence indexes are not enabled for the forest, then this list will be empty.
+     * A list of sequence indexes corresponding to the times when this neighbor
+     * point was added to the forest. If sequence indexes are not enabled for the
+     * forest, then this list will be empty.
      */
     public final List<Long> sequenceIndexes;
 
@@ -57,9 +61,10 @@ public class Neighbor {
      * Create a new Neighbor.
      *
      * @param point           The neighbor point.
-     * @param distance        The distance between the neighbor point and the query point is was created from.
-     * @param sequenceIndexes A list of sequence indexes corresponding to the times when this neighbor point was added
-     *                        to the forest.
+     * @param distance        The distance between the neighbor point and the query
+     *                        point is was created from.
+     * @param sequenceIndexes A list of sequence indexes corresponding to the times
+     *                        when this neighbor point was added to the forest.
      */
     public Neighbor(double[] point, double distance, List<Long> sequenceIndexes) {
         this.point = point;
@@ -68,12 +73,12 @@ public class Neighbor {
     }
 
     /**
-     * Get Neighbor collector which merges duplicate Neighbors and sorts them in ascending order of distance
+     * Get Neighbor collector which merges duplicate Neighbors and sorts them in
+     * ascending order of distance
      *
      * @return Neighbor collector
      */
-    public static Collector<Optional<Neighbor>,
-        Map<Integer, Neighbor>, List<Neighbor>> collector() {
+    public static Collector<Optional<Neighbor>, Map<Integer, Neighbor>, List<Neighbor>> collector() {
         return new CollectorImpl();
     }
 
@@ -95,8 +100,8 @@ public class Neighbor {
         return Arrays.hashCode(point);
     }
 
-    private static class CollectorImpl implements Collector<Optional<Neighbor>,
-        Map<Integer, Neighbor>, List<Neighbor>> {
+    private static class CollectorImpl
+            implements Collector<Optional<Neighbor>, Map<Integer, Neighbor>, List<Neighbor>> {
 
         @Override
         public Supplier<Map<Integer, Neighbor>> supplier() {

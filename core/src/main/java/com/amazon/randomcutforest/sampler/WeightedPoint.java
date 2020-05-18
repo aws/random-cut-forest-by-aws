@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.sampler;
 
 /**
- * This container class stores a point along with a weight value and a sequence index. This class is used by
- * SimpleStreamSampler, where the weight value determines which points in the sample are evicted when new points are
- * added.
+ * This container class stores a point along with a weight value and a sequence
+ * index. This class is used by SimpleStreamSampler, where the weight value
+ * determines which points in the sample are evicted when new points are added.
  */
 public final class WeightedPoint {
 
@@ -41,7 +41,8 @@ public final class WeightedPoint {
      * Construct a new WeightedPoint.
      *
      * @param point         The point values.
-     * @param sequenceIndex An ordinal value corresponding to when this point was added to the forest.
+     * @param sequenceIndex An ordinal value corresponding to when this point was
+     *                      added to the forest.
      * @param weight        A weight value.
      */
     public WeightedPoint(double[] point, final long sequenceIndex, final double weight) {
@@ -65,10 +66,10 @@ public final class WeightedPoint {
     }
 
     /**
-     * @return the sequence index, an ordinal value corresponding to when this point was added to the forest.
+     * @return the sequence index, an ordinal value corresponding to when this point
+     *         was added to the forest.
      */
     public long getSequenceIndex() {
         return sequenceIndex;
     }
 }
-

@@ -19,11 +19,14 @@ import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
- * This is the interface for a visitor which can be used to query a {@link RandomCutTree} to produce a result. A
- * visitor is submitted to {@link RandomCutTree#traverseTree(double[], Visitor)}, and during the
- * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in the traversal path.
+ * This is the interface for a visitor which can be used to query a
+ * {@link RandomCutTree} to produce a result. A visitor is submitted to
+ * {@link RandomCutTree#traverseTree(double[], Visitor)}, and during the
+ * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on
+ * the nodes in the traversal path.
  * <p>
- * See {@link RandomCutTree#traverseTree(double[], Visitor)} for details about the traversal path.
+ * See {@link RandomCutTree#traverseTree(double[], Visitor)} for details about
+ * the traversal path.
  */
 public interface Visitor<R> {
     /**
@@ -35,7 +38,8 @@ public interface Visitor<R> {
     void accept(Node node, int depthOfNode);
 
     /**
-     * Visit the leaf node in the traversal path. By default this method proxies to {@link #accept(Node, int)}.
+     * Visit the leaf node in the traversal path. By default this method proxies to
+     * {@link #accept(Node, int)}.
      *
      * @param leafNode    the leaf node being visited
      * @param depthOfNode the depth of the leaf node
@@ -45,7 +49,8 @@ public interface Visitor<R> {
     }
 
     /**
-     * At the end of the traversal, this method is called to obtain the result computed by the visitor.
+     * At the end of the traversal, this method is called to obtain the result
+     * computed by the visitor.
      *
      * @return the result value computed by the visitor.
      */

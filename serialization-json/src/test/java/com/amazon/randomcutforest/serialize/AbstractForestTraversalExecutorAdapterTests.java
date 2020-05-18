@@ -15,11 +15,12 @@
 
 package com.amazon.randomcutforest.serialize;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
-import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.AbstractForestTraversalExecutor;
@@ -27,8 +28,7 @@ import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.google.gson.JsonObject;
 
 public class AbstractForestTraversalExecutorAdapterTests {
 
@@ -44,27 +44,33 @@ public class AbstractForestTraversalExecutorAdapterTests {
                 }
 
                 @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, BinaryOperator<R> accumulator, Function<R, S> finisher) {
+                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+                        BinaryOperator<R> accumulator, Function<R, S> finisher) {
                     return null;
                 }
 
                 @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, Collector<R, ?, S> collector) {
+                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+                        Collector<R, ?, S> collector) {
                     return null;
                 }
 
                 @Override
-                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory, ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+                public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+                        ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
                     return null;
                 }
 
                 @Override
-                public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory, BinaryOperator<R> accumulator, Function<R, S> finisher) {
+                public <R, S> S traverseForestMulti(double[] point,
+                        Function<RandomCutTree, MultiVisitor<R>> visitorFactory, BinaryOperator<R> accumulator,
+                        Function<R, S> finisher) {
                     return null;
                 }
 
                 @Override
-                public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector) {
+                public <R, S> S traverseForestMulti(double[] point,
+                        Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector) {
                     return null;
                 }
             }, String.class, null);
