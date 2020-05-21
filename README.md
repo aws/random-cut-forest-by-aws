@@ -95,17 +95,11 @@ delimited data, and as such are **not intended for production use**. Instead,
 use these applications as example code and as a way to learn about the
 algorithms and their hyperparameters.
 
-Build a local archive of the core library by running the Maven package command in the randomcutforest-core module.
+After building the project (described in the previous section), you can invoke an example CLI application by adding the
+core jar file to your classpath. For example:
 
 ```text
-% cd core
-% mvn package -DexcludedGroups=functional
-```
-
-You can then invoke an example CLI application by adding the resulting jar file to your classpath. For example:
-
-```text
-% java -cp target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+% java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
 Usage: java -cp RandomCutForest-1.0-super.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
@@ -155,7 +149,11 @@ The benchmark modules defines microbenchmarks using the [JMH](https://openjdk.ja
 framework. Build an executable jar containing the benchmark code by running
 
 ```text
-% cd benchmark
+% # (Optional) To benchmark the code in your local repository, build and install to your local Maven repository
+% # Otherwise, benchmark dependencies will be pulled from Maven central
+% mvn package install -DexcludedGroups=functional
+% 
+$ cd benchmark
 % mvn package assembly:single
 ```
 
