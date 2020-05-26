@@ -65,7 +65,7 @@ public class RandomCutForestSerDeTests {
     }
 
     private double[][] generate(int numSamples, int numDimensions) {
-        return IntStream.range(0, numSamples).mapToObj(i -> new Random().doubles(numDimensions).toArray())
+        return IntStream.range(0, numSamples).mapToObj(i -> new Random(0L).doubles(numDimensions).toArray())
                 .toArray(double[][]::new);
     }
 }
