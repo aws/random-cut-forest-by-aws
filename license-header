@@ -13,20 +13,4 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.serialize;
 
-import java.lang.reflect.Type;
-
-import com.amazon.randomcutforest.RandomCutForest;
-import com.google.gson.InstanceCreator;
-
-/**
- * Adapter for customizing {@link RandomCutForest} serialization.
- */
-public class RandomCutForestAdapter implements InstanceCreator<RandomCutForest> {
-
-    @Override
-    public RandomCutForest createInstance(Type type) {
-        return RandomCutForest.defaultForest(1);
-    }
-}
