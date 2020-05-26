@@ -91,6 +91,9 @@
                 <version>1.31.0</version>
                 <configuration>
                     <java>
+                        <licenseHeader>
+                            <file>${maven.multiModuleProjectDirectory}/license-header</file>
+                        </licenseHeader>
                         <eclipse>
                             <file>${maven.multiModuleProjectDirectory}/spotless-eclipse.xml</file>
                         </eclipse>
