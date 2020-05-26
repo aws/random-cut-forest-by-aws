@@ -94,7 +94,7 @@ public class RandomCutForest {
     /**
      * Parallel execution is enabled by default.
      */
-    public static final boolean DEFAULT_PARALLEL_EXECUTION_ENABLED = true;
+    public static final boolean DEFAULT_PARALLEL_EXECUTION_ENABLED = false;
 
     public static final boolean DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL = true;
 

@@ -27,6 +27,6 @@ public class RandomCutForestAdapter implements InstanceCreator<RandomCutForest> 
 
     @Override
     public RandomCutForest createInstance(Type type) {
-        return RandomCutForest.defaultForest(1);
+        return RandomCutForest.builder().dimensions(1).numberOfTrees(1).build();
     }
 }
