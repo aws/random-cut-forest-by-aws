@@ -9,7 +9,7 @@ is to be easy to use and to strike a balance between efficiency and extensibilit
 To create a RandomCutForest instance with all parameters set to defaults:
 
 ```java
-int dimensions = 1; // The number of dimensions in the input data, required
+int dimensions = 5; // The number of dimensions in the input data, required
 RandomCutForest forest = RandomCutForest.defaultForest(dimensions);
 ```
 
@@ -134,10 +134,10 @@ suite before creating a pull request. Functional tests can be excluded from Mave
 % mvn test -DexcludedGroups=functional
 ```
 
-We currently have 90% line coverage with the full test suite, and 80% line coverage when running the unit tests only
-(i.e., when excluding functional tests). Our goal is to reach 100% unit test coverage, and we welcome (and encourage!)
-test contributions. After running tests with Maven, you can see the test coverage broken out by class by opening
-`target/site/jacoco/index.html` in a web browser.
+In the core library we have 90% line coverage with the full test suite, and 80% line coverage when running the unit 
+tests only (i.e., when excluding functional tests). Our goal is to reach 100% unit test coverage, and we welcome (and 
+encourage!) test contributions. After running tests with Maven, you can see the test coverage broken out by class by 
+opening `target/site/jacoco/index.html` in a web browser.
 
 Our tests are implemented in [JUnit 5](https://junit.org/junit5/) with [Mockito](https://site.mockito.org/), [Powermock](https://github.com/powermock/powermock), and [Hamcrest](http://hamcrest.org/) for testing. 
 Test dependencies will be downloaded automatically when invoking `mvn test` or `mvn package`.
@@ -165,5 +165,5 @@ The full benchmark suite takes a long time to run. You can also pass a regex at 
 benchmark methods will be executed.
 
 ```text
-% java -jar target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
+% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
