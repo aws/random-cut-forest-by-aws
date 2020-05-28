@@ -73,8 +73,8 @@ public class RandomCutForestBuilderTest {
         assertEquals(256 / DEFAULT_OUTPUT_AFTER_FRACTION, f.getOutputAfter());
         assertFalse(f.storeSequenceIndexesEnabled());
         assertFalse(f.centerOfMassEnabled());
-        assertTrue(f.parallelExecutionEnabled());
-        assertEquals(Runtime.getRuntime().availableProcessors() - 1, f.getThreadPoolSize());
+        assertFalse(f.parallelExecutionEnabled());
+        assertEquals(0, f.getThreadPoolSize());
     }
 
     @Test
@@ -85,8 +85,8 @@ public class RandomCutForestBuilderTest {
         assertEquals(256 / DEFAULT_OUTPUT_AFTER_FRACTION, f.getOutputAfter());
         assertFalse(f.storeSequenceIndexesEnabled());
         assertFalse(f.centerOfMassEnabled());
-        assertTrue(f.parallelExecutionEnabled());
-        assertEquals(Runtime.getRuntime().availableProcessors() - 1, f.getThreadPoolSize());
+        assertFalse(f.parallelExecutionEnabled());
+        assertEquals(0, f.getThreadPoolSize());
     }
 
     @Test
@@ -97,8 +97,24 @@ public class RandomCutForestBuilderTest {
         assertEquals(256 / DEFAULT_OUTPUT_AFTER_FRACTION, f.getOutputAfter());
         assertFalse(f.storeSequenceIndexesEnabled());
         assertFalse(f.centerOfMassEnabled());
-        assertTrue(f.parallelExecutionEnabled());
-        assertEquals(Runtime.getRuntime().availableProcessors() - 1, f.getThreadPoolSize());
+        assertFalse(f.parallelExecutionEnabled());
+        assertEquals(0, f.getThreadPoolSize());
+    }
+
+    @Test
+    public void testForestBuilderWithDefaultParallelExecutionThreadPoolSize() {
+        RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .outputAfter(outputAfter).dimensions(dimensions).lambda(lambda).randomSeed(randomSeed)
+                .storeSequenceIndexesEnabled(true).centerOfMassEnabled(true).parallelExecutionEnabled(true).build();
+        assertEquals(numberOfTrees, forest.getNumberOfTrees());
+        assertEquals(sampleSize, forest.getSampleSize());
+        assertEquals(outputAfter, forest.getOutputAfter());
+        assertEquals(dimensions, forest.getDimensions());
+        assertEquals(lambda, forest.getLambda());
+        assertTrue(forest.storeSequenceIndexesEnabled());
+        assertTrue(forest.centerOfMassEnabled());
+        assertTrue(forest.parallelExecutionEnabled());
+        assertEquals(Runtime.getRuntime().availableProcessors() - 1, forest.getThreadPoolSize());
     }
 
     @Test
