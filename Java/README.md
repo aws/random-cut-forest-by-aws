@@ -59,7 +59,7 @@ The following parameters can be configured in the RandomCutForest builder.
 | lambda | double | The decay factor (lambda value) used by stream samplers in this forest. | 1e-5 |
 | numberOfTrees | int | The number of trees in this forest. | 100 |
 | outputAfter | int | The number of points required by stream samplers before results are returned. | 0.25 * sampleSize |
-| parallelExecutionEnabled | boolean | If true, then the forest will create an internal threadpool. Forest updates and traversals will be submitted to this threadpool, and individual trees will be updated or traversed in parallel. | true |
+| parallelExecutionEnabled | boolean | If true, then the forest will create an internal threadpool. Forest updates and traversals will be submitted to this threadpool, and individual trees will be updated or traversed in parallel. For larger shingle sizes, dimensions, and number of trees, parallelization may improve throughput. We recommend users benchmark against their target use case. | false |
 | randomSeed | long | A seed value used to initialize the random number generators in this forest. | |
 | sampleSize | int | The sample size used by stream samplers in this forest | 256 |
 | storeSequenceIndexesEnabled | boolean | If true, then sequence indexes (ordinals indicating when a point was added to a tree) will be stored in the forest along with poitn values. | false |
