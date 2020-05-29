@@ -56,15 +56,29 @@ The following parameters can be configured in the RandomCutForest builder.
 | --- | --- | --- | --- |
 | centerOfMassEnabled | boolean | If true, then tree nodes in the forest will compute their center of mass as part of tree update operations. | false |
 | dimensions | int | The number of dimensions in the input data. | Required, no default value |
-| lambda | double | The decay factor (lambda value) used by stream samplers in this forest. | 1e-5 |
-| numberOfTrees | int | The number of trees in this forest. | 100 |
+| lambda | double | The decay factor used by stream samplers in this forest. See the next section for guidance. | 1 / (10 * sampleSize) |
+| numberOfTrees | int | The number of trees in this forest. | 50 |
 | outputAfter | int | The number of points required by stream samplers before results are returned. | 0.25 * sampleSize |
 | parallelExecutionEnabled | boolean | If true, then the forest will create an internal threadpool. Forest updates and traversals will be submitted to this threadpool, and individual trees will be updated or traversed in parallel. For larger shingle sizes, dimensions, and number of trees, parallelization may improve throughput. We recommend users benchmark against their target use case. | false |
 | randomSeed | long | A seed value used to initialize the random number generators in this forest. | |
 | sampleSize | int | The sample size used by stream samplers in this forest | 256 |
 | storeSequenceIndexesEnabled | boolean | If true, then sequence indexes (ordinals indicating when a point was added to a tree) will be stored in the forest along with poitn values. | false |
 | threadPoolSize | int | The number of threads to use in the internal threadpool. | Number of available processors - 1 |
-| windowSize | int | An alternate way of specifying the lambda value. Using this parameter will set lambda to 1 / windowSize. | |
+
+## Choosing a `lambda` value for your application
+
+When we submit a point to the sampler, it is included into the sample with some probability, and 
+it will remain in the for some number of steps before being replaced. Call the number of steps that
+a point is included in the sample the "lifetime" of the point (which may be 0). Over a finite time
+window, the distribution of the lifetime of a point is approximately exponential with parameter
+`lambda`. Thus, `1 / lambda` is approximately the average number of steps that a point will be included
+in the sample. By default, we set `lambda` equal to `1 / (10 * sampleSize)`.
+
+Alternatively, if you want the probability that a point survives longer than n steps to be 0.05,
+you can solve for `lambda` in the equation `exp(-lambda * n) = 0.05`.
+
+We note again that this is heuristic and not mathematically rigorous. We refer the interested reader
+to [Weighted Random Sampling (2005;  Efraimidis, Spirakis)](http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=BEB1FE0AB3C0129B822D2CE5EABBFD42?doi=10.1.1.591.4194&rep=rep1&type=pdf).
 
 ## Setup
 

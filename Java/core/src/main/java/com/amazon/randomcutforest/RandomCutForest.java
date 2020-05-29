@@ -72,14 +72,15 @@ public class RandomCutForest {
     public static final double DEFAULT_OUTPUT_AFTER_FRACTION = 0.25;
 
     /**
-     * Default decay value to use in the stream sampler.
+     * If the user doesn't specify an explicit lambda value, then we set it to the
+     * inverse of this coefficient times sample size.
      */
-    public static final double DEFAULT_LAMBDA = 1e-5;
+    public static final double DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA = 10.0;
 
     /**
      * Default number of trees to use in the forest.
      */
-    public static final int DEFAULT_NUMBER_OF_TREES = 100;
+    public static final int DEFAULT_NUMBER_OF_TREES = 50;
 
     /**
      * By default, trees will not store sequence indexes.
@@ -155,7 +156,9 @@ public class RandomCutForest {
             checkArgument(n <= builder.sampleSize, "outputAfter must be smaller or equal to sampleSize");
         });
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(builder.lambda >= 0, "lambda must be greater than or equal to 0");
+        builder.lambda.ifPresent(lambda -> {
+            checkArgument(lambda >= 0, "lambda must be greater than or equal to 0");
+        });
         builder.threadPoolSize.ifPresent(n -> checkArgument(n > 0,
                 "threadPoolSize must be greater than 0. To disable thread pool, set parallel execution to 'false'."));
 
@@ -163,7 +166,7 @@ public class RandomCutForest {
         sampleSize = builder.sampleSize;
         outputAfter = builder.outputAfter.orElse((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
         dimensions = builder.dimensions;
-        lambda = builder.lambda;
+        lambda = builder.lambda.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA * sampleSize));
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
@@ -880,7 +883,7 @@ public class RandomCutForest {
         private int sampleSize = DEFAULT_SAMPLE_SIZE;
         private Optional<Integer> outputAfter = Optional.empty();
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
-        private double lambda = DEFAULT_LAMBDA;
+        private Optional<Double> lambda = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
@@ -908,17 +911,12 @@ public class RandomCutForest {
         }
 
         public T lambda(double lambda) {
-            this.lambda = lambda;
+            this.lambda = Optional.of(lambda);
             return (T) this;
         }
 
         public T randomSeed(long randomSeed) {
             this.randomSeed = Optional.of(randomSeed);
-            return (T) this;
-        }
-
-        public T windowSize(int windowSize) {
-            this.lambda = 1.0 / windowSize;
             return (T) this;
         }
 
