@@ -118,6 +118,13 @@ public class RandomCutForestBuilderTest {
     }
 
     @Test
+    public void testForestBuilderWithDefaultLambdaValue() {
+        RandomCutForest forest = RandomCutForest.builder().dimensions(4).sampleSize(sampleSize).build();
+        assertEquals(1.0 / (RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA * sampleSize),
+                forest.getLambda());
+    }
+
+    @Test
     public void testIllegalExceptionIsThrownWhenNumberOfTreesIsZero() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(0)
                 .sampleSize(sampleSize).dimensions(dimensions).lambda(lambda).build());
