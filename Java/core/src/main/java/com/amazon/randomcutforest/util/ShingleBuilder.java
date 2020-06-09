@@ -32,8 +32,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
  * we add new points e and f.
  * 
  * <pre>
- *     abcd => bcde
- *     bcde => cdef
+ *     abcd =&gt; bcde
+ *     bcde =&gt; cdef
  * </pre>
  *
  * With cycling shingling, when a new point is added to a shingle it overwrites
@@ -41,8 +41,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
  * shingle would be updated as follows:
  * 
  * <pre>
- *     abcd => ebcd
- *     ebcd => efcd
+ *     abcd =&gt; ebcd
+ *     ebcd =&gt; efcd
  * </pre>
  */
 public class ShingleBuilder {

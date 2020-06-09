@@ -38,8 +38,8 @@ import java.util.stream.Collectors;
  *
  * <ol>
  * <li>For each item i choose a random number u(i) uniformly from the interval
- * (0, 1) and compute the weight function <tt>-(1 / c(i)) * log u(i)</tt>, for a
- * given coefficient function c(i).</li>
+ * (0, 1) and compute the weight function <code>-(1 / c(i)) * log u(i)</code>,
+ * for a given coefficient function c(i).</li>
  * <li>For a sample size of N, maintain a list of the N items with the smallest
  * weights.</li>
  * <li>When a new item is submitted to sampler, compute its weight. If it is
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
  * </ol>
  * <p>
  * The SimpleStreamSampler creates a time-decayed sample by using the
- * coefficient function: <tt>c(i) = exp(lambda * sequenceIndex(i))</tt>.
+ * coefficient function: <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
  */
 public class SimpleStreamSampler {
 
@@ -219,11 +219,11 @@ public class SimpleStreamSampler {
     }
 
     /**
-     * Score is computed as <tt>-log(w(i)) + log(-log(u(i))</tt>, where
+     * Score is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
      *
      * <ul>
-     * <li><tt>w(i) = exp(lambda * sequenceIndex)</tt></li>
-     * <li><tt>u(i)</tt> is chosen uniformly from (0, 1)</li>
+     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
+     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
      * </ul>
      * <p>
      * A higher score means lower priority. So the points with the lower score have
