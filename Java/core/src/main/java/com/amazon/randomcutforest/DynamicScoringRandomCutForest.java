@@ -119,7 +119,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
      * @param seen   the score function for seen point
      * @param unseen score function for unseen points
      * @param damp   dampening the score for duplicates
-     * @param vecSep the function of (BoundingBox) -> array of probabilities
+     * @param vecSep the function of (BoundingBox) -&gt; array of probabilities
      * @return the simuated score
      */
 
