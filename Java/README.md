@@ -83,7 +83,7 @@ to [Weighted Random Sampling (2005;  Efraimidis, Spirakis)](http://citeseerx.ist
 ## Setup
 
 1. Checkout this package from our GitHub repository.
-1. Install [Apache Maven](https://maven.apache.org/) by following the direcitons on that site.
+1. Install [Apache Maven](https://maven.apache.org/) by following the directions on that site.
 1. Set your `JAVA_HOME` environment variable to a JDK version 8 or greater.
 
 ## Build
