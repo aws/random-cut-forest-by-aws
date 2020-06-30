@@ -112,8 +112,8 @@ After building the project (described in the previous section), you can invoke a
 core jar file to your classpath. For example:
 
 ```text
-% java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
-Usage: java -cp RandomCutForest-1.0-super.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
+% java -cp core/target/randomcutforest-core-1.0-alpha.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+Usage: java -cp randomcutforest-core-1.0-alpha.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
 
