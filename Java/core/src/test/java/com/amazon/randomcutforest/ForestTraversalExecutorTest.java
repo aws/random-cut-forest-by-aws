@@ -94,6 +94,23 @@ public class ForestTraversalExecutorTest {
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
+    public void testUpdateWithSignedZero(AbstractForestTraversalExecutor executor) {
+        double[] negativeZero = new double[] { -0.0, 0.0, 5.0 };
+        double[] positiveZero = new double[] { 0.0, 0.0, 5.0 };
+
+        executor.update(negativeZero);
+        for (TreeUpdater updater : executor.treeUpdaters) {
+            verify(updater, times(1)).update(positiveZero, 1);
+        }
+
+        executor.update(positiveZero);
+        for (TreeUpdater updater : executor.treeUpdaters) {
+            verify(updater, times(1)).update(positiveZero, 2);
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestBinaryAccumulator(AbstractForestTraversalExecutor executor) {
         double[] point = new double[] { 1.2, -3.4 };
         double expectedResult = 0.0;

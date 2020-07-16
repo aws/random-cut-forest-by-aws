@@ -418,6 +418,20 @@ public class RandomCutForestFunctionalTest {
     }
 
     @Test
+    public void testUpdateWithSignedZeros() {
+        RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(2).dimensions(1)
+                .randomSeed(randomSeed).centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).build();
+
+        forest.update(new double[] { 0.0 });
+        forest.getAnomalyScore(new double[] { 0.0 });
+        forest.getAnomalyScore(new double[] { -0.0 });
+
+        forest.update(new double[] { -0.0 });
+        forest.getAnomalyScore(new double[] { 0.0 });
+        forest.getAnomalyScore(new double[] { -0.0 });
+    }
+
+    @Test
     public void testShadowBuffer() {
         /**
          * This test checks that the attribution *DOES NOT* change as a ratio as more
