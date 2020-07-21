@@ -47,7 +47,7 @@ public abstract class AbstractForestTraversalExecutor {
      */
     public void update(double[] point) {
         totalUpdates++;
-        double[] pointCopy = Arrays.copyOf(point, point.length);
+        double[] pointCopy = cleanCopy(point);
         update(pointCopy, totalUpdates);
     }
 
@@ -192,4 +192,22 @@ public abstract class AbstractForestTraversalExecutor {
      */
     public abstract <R, S> S traverseForestMulti(double[] point,
             Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector);
+
+    /**
+     * Returns a clean deep copy of the point.
+     *
+     * Current clean-ups include changing negative zero -0.0 to positive zero 0.0.
+     *
+     * @param point The original data point.
+     * @return a clean deep copy of the original point.
+     */
+    protected double[] cleanCopy(double[] point) {
+        double[] pointCopy = Arrays.copyOf(point, point.length);
+        for (int i = 0; i < point.length; i++) {
+            if (pointCopy[i] == 0.0) {
+                pointCopy[i] = 0.0;
+            }
+        }
+        return pointCopy;
+    }
 }
