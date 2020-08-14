@@ -21,7 +21,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 
 /**
- * PointStore is a fixed size repository of points, where each point is a double
+ * PointStore is a fixed size repository of points, where each point is a float
  * array of a specified length. A PointStore counts references to points that
  * are added, and frees space internally when a given point is no longer in use.
  * The primary use of this store is to enable compression since the points in
@@ -33,7 +33,7 @@ import java.util.Arrays;
  */
 public class PointStore {
 
-    private final double[] store;
+    private final float[] store;
     private final int[] refCount;
     private final int[] freeBlockStack;
     private int freeBlockPointer;
@@ -52,7 +52,7 @@ public class PointStore {
 
         this.capacity = capacity;
         this.dimensions = dimensions;
-        store = new double[capacity * dimensions];
+        store = new float[capacity * dimensions];
         refCount = new int[capacity];
         freeBlockStack = new int[capacity];
 
@@ -102,7 +102,7 @@ public class PointStore {
      *                                  the point store's dimensions.
      * @throws IllegalStateException    if the point store is full.
      */
-    public int add(double[] point) {
+    public int add(float[] point) {
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
         checkState(freeBlockPointer >= 0, "point store is full");
 
@@ -164,7 +164,7 @@ public class PointStore {
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
-    public boolean pointEquals(int index, double[] point) {
+    public boolean pointEquals(int index, float[] point) {
         checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
@@ -187,7 +187,7 @@ public class PointStore {
      * @throws IllegalArgumentException if the current reference count for this
      *                                  index is nonpositive.
      */
-    public double[] get(int index) {
+    public float[] get(int index) {
         checkValidIndex(index);
         return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
     }
