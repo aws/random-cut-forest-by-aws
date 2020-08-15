@@ -31,14 +31,11 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore {
+public class PointStore extends StoreCommon {
 
     private final float[] store;
     private final int[] refCount;
-    private final int[] freeBlockStack;
-    private int freeBlockPointer;
     private final int dimensions;
-    private final int capacity;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -47,20 +44,12 @@ public class PointStore {
      * @param capacity   The maximum number of points that can be stored.
      */
     public PointStore(int dimensions, int capacity) {
+        super(capacity);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(capacity > 0, "capacity must be greater than 0");
 
-        this.capacity = capacity;
         this.dimensions = dimensions;
         store = new float[capacity * dimensions];
         refCount = new int[capacity];
-        freeBlockStack = new int[capacity];
-
-        for (int j = 0; j < capacity; j++) {
-            freeBlockStack[j] = capacity - j - 1; // reverse order
-        }
-
-        freeBlockPointer = capacity - 1;
     }
 
     /**
@@ -71,26 +60,12 @@ public class PointStore {
     }
 
     /**
-     * @return the maximum number of points that can be stored.
-     */
-    public int getCapacity() {
-        return capacity;
-    }
-
-    /**
      * @param index The index value.
      * @return the reference count for the given index. The value 0 indicates that
      *         there is no point stored at that index.
      */
     public int getRefCount(int index) {
         return refCount[index];
-    }
-
-    /**
-     * @return the number of points currently stored in this point store.
-     */
-    public int size() {
-        return capacity - freeBlockPointer - 1;
     }
 
     /**
@@ -104,9 +79,8 @@ public class PointStore {
      */
     public int add(float[] point) {
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
-        checkState(freeBlockPointer >= 0, "point store is full");
 
-        int nextIndex = freeBlockStack[freeBlockPointer--];
+        int nextIndex = takeIndex();
         System.arraycopy(point, 0, store, nextIndex * dimensions, dimensions);
 
         refCount[nextIndex] = 1;
@@ -139,15 +113,11 @@ public class PointStore {
     public void decrementRefCount(int index) {
         checkValidIndex(index);
 
-        // TODO these should be unreachable states and we should remove these checks in
-        // a future revision
-        checkState(size() > 0, "tried to decrement reference count while size is nonpositive");
-        checkState(freeBlockPointer > -2, String.format("invalid value in free block index: %d", freeBlockPointer));
+        if (refCount[index] == 1) {
+            releaseIndex(index);
+        }
 
         refCount[index]--;
-        if (refCount[index] == 0) {
-            freeBlockStack[++freeBlockPointer] = index;
-        }
     }
 
     /**
@@ -192,8 +162,9 @@ public class PointStore {
         return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
     }
 
-    private void checkValidIndex(int index) {
-        checkArgument(index >= 0 && index < capacity, "index must be between 0 (inclusive) and capacity (exclusive)");
-        checkArgument(refCount[index] > 0, String.format("index value %d is not in use", index));
+    @Override
+    protected void checkValidIndex(int index) {
+        super.checkValidIndex(index);
+        checkState(refCount[index] > 0, "ref count at occupied index is 0");
     }
 }
