@@ -70,6 +70,7 @@ public class SmallStoreCommon {
     protected short takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
         short index = freeIndexes[freeIndexPointer--];
+        checkState(!occupied.get(index), "store tried to return an index marked occupied");
         occupied.set(index);
         return index;
     }

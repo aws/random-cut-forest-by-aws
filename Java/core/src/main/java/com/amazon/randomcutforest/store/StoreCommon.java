@@ -71,6 +71,7 @@ public class StoreCommon {
     protected int takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
         int index = freeIndexes[freeIndexPointer--];
+        checkState(!occupied.get(index), "store tried to return an index marked occupied");
         occupied.set(index);
         return index;
     }

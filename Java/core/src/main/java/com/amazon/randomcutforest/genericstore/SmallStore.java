@@ -18,9 +18,8 @@ package com.amazon.randomcutforest.genericstore;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
+import java.lang.reflect.Array;
 import java.util.BitSet;
-import java.util.List;
 
 /**
  * This class provides a fixed amount of storage slots for a given type. When an
@@ -29,7 +28,7 @@ import java.util.List;
  * memory footprint of an applicaiton by allowing classes to keep index values
  * instead of pointers. The index values used in this class are shorts, which
  * occupy 2 bytes (Java pointers occupy 8 bytes). Using shorts as index values,
- * this class has a maximum capacity of 32,767. If more capacity is neede, see
+ * this class has a maximum capacity of 32,767. If more capacity is needed, see
  * the {@link Store} class which uses 4 byte ints as index values.
  *
  * @param <T> The type of value being stored.
@@ -37,7 +36,7 @@ import java.util.List;
 public class SmallStore<T> {
 
     private final short capacity;
-    private final List<T> store;
+    private final T[] store;
     private final short[] freeBlockStack;
     private short freeBlockPointer;
     private final BitSet occupied;
@@ -48,10 +47,13 @@ public class SmallStore<T> {
      * @param capacity The maximum number of objects that can be added to this
      *                 store.
      */
-    public SmallStore(short capacity) {
+    public SmallStore(Class<T> clazz, short capacity) {
         checkArgument(capacity > 0, "capacity must be greater than 0");
         this.capacity = capacity;
-        store = new ArrayList<>(capacity);
+
+        @SuppressWarnings("unchecked")
+        final T[] temp = (T[]) Array.newInstance(clazz, capacity);
+        store = temp;
 
         freeBlockStack = new short[capacity];
         for (short j = 0; j < capacity; j++) {
@@ -71,8 +73,8 @@ public class SmallStore<T> {
     /**
      * @return the number of objects currently being stored.
      */
-    public int size() {
-        return capacity - freeBlockPointer - 1;
+    public short size() {
+        return (short) (capacity - freeBlockPointer - 1);
     }
 
     /**
@@ -85,8 +87,9 @@ public class SmallStore<T> {
     public short add(T t) {
         checkState(freeBlockPointer >= 0, "store is full");
         short index = freeBlockStack[freeBlockPointer--];
+        checkState(!occupied.get(index), "store tried to return an index marked occupied");
         occupied.set(index);
-        store.set(index, t);
+        store[index] = t;
         return index;
     }
 
@@ -98,7 +101,7 @@ public class SmallStore<T> {
      */
     public T get(short index) {
         checkValidIndex(index);
-        return store.get(index);
+        return store[index];
     }
 
     /**

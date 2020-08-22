@@ -18,9 +18,8 @@ package com.amazon.randomcutforest.genericstore;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
+import java.lang.reflect.Array;
 import java.util.BitSet;
-import java.util.List;
 
 /**
  * This class provides a fixed amount of storage slots for a given type. When an
@@ -37,7 +36,7 @@ import java.util.List;
 public class Store<T> {
 
     private final int capacity;
-    private final List<T> store;
+    private final T[] store;
     private final int[] freeBlockStack;
     private int freeBlockPointer;
     private final BitSet occupied;
@@ -48,9 +47,13 @@ public class Store<T> {
      * @param capacity The maximum number of objects that can be added to this
      *                 store.
      */
-    public Store(int capacity) {
+    public Store(Class<T> clazz, int capacity) {
+        checkArgument(capacity > 0, "capacity must be greater than 0");
         this.capacity = capacity;
-        store = new ArrayList<>(capacity);
+
+        @SuppressWarnings("unchecked")
+        final T[] temp = (T[]) Array.newInstance(clazz, capacity);
+        store = temp;
 
         freeBlockStack = new int[capacity];
         for (int j = 0; j < capacity; j++) {
@@ -84,8 +87,9 @@ public class Store<T> {
     public int add(T t) {
         checkState(freeBlockPointer >= 0, "store is full");
         int index = freeBlockStack[freeBlockPointer--];
+        checkState(!occupied.get(index), "store tried to return an index marked occupied");
         occupied.set(index);
-        store.set(index, t);
+        store[index] = t;
         return index;
     }
 
@@ -97,7 +101,7 @@ public class Store<T> {
      */
     public T get(int index) {
         checkValidIndex(index);
-        return store.get(index);
+        return store[index];
     }
 
     /**

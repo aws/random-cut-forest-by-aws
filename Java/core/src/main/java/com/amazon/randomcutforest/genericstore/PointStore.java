@@ -22,7 +22,7 @@ public class PointStore extends RCStore<double[]> {
     private final int dimensions;
 
     public PointStore(int dimensions, int capacity) {
-        super(capacity);
+        super(double[].class, capacity);
         this.dimensions = dimensions;
     }
 

@@ -26,8 +26,8 @@ public class RCStore<T> extends Store<T> {
 
     private final int[] refCount;
 
-    public RCStore(int capacity) {
-        super(capacity);
+    public RCStore(Class<T> clazz, int capacity) {
+        super(clazz, capacity);
         refCount = new int[capacity];
     }
 
