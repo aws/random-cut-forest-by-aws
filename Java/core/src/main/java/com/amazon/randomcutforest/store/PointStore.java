@@ -31,7 +31,7 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore extends StoreCommon {
+public class PointStore extends IndexManager {
 
     private final float[] store;
     private final int[] refCount;

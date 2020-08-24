@@ -24,7 +24,7 @@ import java.util.BitSet;
  * This class defines common functionality for Store classes, including
  * maintaining the stack of free pointers.
  */
-public class SmallStoreCommon {
+public class SmallIndexManager {
 
     private final short capacity;
     private final short[] freeIndexes;
@@ -36,7 +36,7 @@ public class SmallStoreCommon {
      * 
      * @param capacity The total number of values that can be saved in this store.
      */
-    public SmallStoreCommon(short capacity) {
+    public SmallIndexManager(short capacity) {
         this.capacity = capacity;
         freeIndexes = new short[capacity];
 

@@ -165,7 +165,7 @@ public class NodeStoreTest {
 
         short index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
 
-        store.removeNode(index1);
+        store.releaseIndex(index1);
         assertEquals(1, store.size());
 
         // validate that the values at index2 did not change
@@ -187,14 +187,14 @@ public class NodeStoreTest {
         float cutValue1 = 5.5f;
 
         short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
-        store.removeNode(index1);
+        store.releaseIndex(index1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.removeNode(index1));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex(index1));
     }
 
     @Test
     public void testRemoveFromEmptyStore() {
-        assertThrows(IllegalArgumentException.class, () -> store.removeNode((short) 0));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) 0));
     }
 
     @Test
@@ -208,6 +208,6 @@ public class NodeStoreTest {
 
         short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.removeNode((short) -1));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) -1));
     }
 }

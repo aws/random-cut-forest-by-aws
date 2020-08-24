@@ -44,7 +44,7 @@ public class LeafStoreTest {
         short parentIndex1 = 1;
         int pointIndex1 = 2;
 
-        short index1 = store.addLeaf(parentIndex1, pointIndex1, mass1);
+        short index1 = store.add(parentIndex1, pointIndex1, mass1);
         assertEquals(1, store.size());
         assertEquals(mass1, store.mass[index1]);
         assertEquals(parentIndex1, store.parentIndex[index1]);
@@ -54,7 +54,7 @@ public class LeafStoreTest {
         short parentIndex2 = 11;
         int pointIndex2 = 12;
 
-        short index2 = store.addLeaf(parentIndex2, pointIndex2, mass2);
+        short index2 = store.add(parentIndex2, pointIndex2, mass2);
         assertEquals(2, store.size());
         assertEquals(mass2, store.mass[index2]);
         assertEquals(parentIndex2, store.parentIndex[index2]);
@@ -73,10 +73,10 @@ public class LeafStoreTest {
         int pointIndex1 = 2;
 
         for (int i = 0; i < capacity; i++) {
-            store.addLeaf(parentIndex1, pointIndex1, mass1);
+            store.add(parentIndex1, pointIndex1, mass1);
         }
 
-        assertThrows(IllegalStateException.class, () -> store.addLeaf(parentIndex1, pointIndex1, mass1));
+        assertThrows(IllegalStateException.class, () -> store.add(parentIndex1, pointIndex1, mass1));
     }
 
     @Test
@@ -85,15 +85,15 @@ public class LeafStoreTest {
         short parentIndex1 = 1;
         int pointIndex1 = 2;
 
-        short index1 = store.addLeaf(parentIndex1, pointIndex1, mass1);
+        short index1 = store.add(parentIndex1, pointIndex1, mass1);
 
         int mass2 = 11;
         short parentIndex2 = 11;
         int pointIndex2 = 12;
 
-        short index2 = store.addLeaf(parentIndex2, pointIndex2, mass2);
+        short index2 = store.add(parentIndex2, pointIndex2, mass2);
 
-        store.removeLeaf(index1);
+        store.releaseIndex(index1);
         assertEquals(1, store.size());
 
         // validate that the values at index2 did not change
@@ -108,15 +108,15 @@ public class LeafStoreTest {
         short parentIndex1 = 1;
         int pointIndex1 = 2;
 
-        short index1 = store.addLeaf(parentIndex1, pointIndex1, mass1);
-        store.removeLeaf(index1);
+        short index1 = store.add(parentIndex1, pointIndex1, mass1);
+        store.releaseIndex(index1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.removeLeaf(index1));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex(index1));
     }
 
     @Test
     public void testRemoveFromEmptyStore() {
-        assertThrows(IllegalArgumentException.class, () -> store.removeLeaf((short) 0));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) 0));
     }
 
     @Test
@@ -125,8 +125,8 @@ public class LeafStoreTest {
         short parentIndex1 = 1;
         int pointIndex1 = 2;
 
-        short index1 = store.addLeaf(parentIndex1, pointIndex1, mass1);
+        short index1 = store.add(parentIndex1, pointIndex1, mass1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.removeLeaf((short) -1));
+        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) -1));
     }
 }

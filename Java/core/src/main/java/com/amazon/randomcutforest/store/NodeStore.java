@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.tree.BoundingBox;
  * Note that a NodeStore does not store instances of the
  * {@link com.amazon.randomcutforest.tree.Node} class.
  */
-public class NodeStore extends SmallStoreCommon {
+public class NodeStore extends SmallIndexManager {
 
     public final short[] parentIndex;
     public final short[] leftIndex;
@@ -78,17 +78,6 @@ public class NodeStore extends SmallStoreCommon {
         this.parentIndex[index] = parentIndex;
         this.mass[index] = mass;
         return index;
-    }
-
-    /**
-     * Remove the node at the given index. Note that this does not change the data
-     * stored at this index, it only marks this index as being available to store a
-     * new node.
-     *
-     * @param index The index of the node to be removed.
-     */
-    public void removeNode(short index) {
-        releaseIndex(index);
     }
 
     public StagedNode stageNode() {

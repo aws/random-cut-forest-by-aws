@@ -24,7 +24,7 @@ import java.util.BitSet;
  * This class defines common functionality for Store classes, including
  * maintaining the stack of free pointers.
  */
-public class StoreCommon {
+public class IndexManager {
 
     private final int capacity;
     private final int[] freeIndexes;
@@ -36,7 +36,7 @@ public class StoreCommon {
      * 
      * @param capacity The total number of values that can be saved in this store.
      */
-    public StoreCommon(int capacity) {
+    public IndexManager(int capacity) {
         checkArgument(capacity > 0, "capacity must be greater than 0");
         this.capacity = capacity;
         freeIndexes = new int[capacity];

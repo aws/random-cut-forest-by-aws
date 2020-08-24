@@ -27,14 +27,14 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class SmallStoreCommonTest {
-    private short capacity;
-    private SmallStoreCommon store;
+public class IndexManagerTest {
+    private int capacity;
+    private IndexManager store;
 
     @BeforeEach
     public void setUp() {
         capacity = 4;
-        store = new SmallStoreCommon(capacity);
+        store = new IndexManager(capacity);
     }
 
     @Test
@@ -45,15 +45,14 @@ public class SmallStoreCommonTest {
 
     @Test
     public void testTakeIndex() {
-        Set<Short> indexes = new HashSet<>();
+        Set<Integer> indexes = new HashSet<>();
         for (int i = 0; i < capacity; i++) {
             indexes.add(store.takeIndex());
             assertEquals(i + 1, store.size());
         }
 
         // should have returned index 0, 1, 2, and 3
-        assertIterableEquals(Arrays.asList((short) 0, (short) 1, (short) 2, (short) 3),
-                indexes.stream().sorted().collect(Collectors.toList()));
+        assertIterableEquals(Arrays.asList(0, 1, 2, 3), indexes.stream().sorted().collect(Collectors.toList()));
 
         // store is full
         assertThrows(IllegalStateException.class, () -> store.takeIndex());
@@ -61,8 +60,8 @@ public class SmallStoreCommonTest {
 
     @Test
     public void testReleaseIndex() {
-        short index1 = store.takeIndex();
-        short index2 = store.takeIndex();
+        int index1 = store.takeIndex();
+        int index2 = store.takeIndex();
 
         assertEquals(2, store.size());
 
@@ -72,8 +71,8 @@ public class SmallStoreCommonTest {
 
     @Test
     public void testCheckValidIndex() {
-        short index1 = store.takeIndex();
-        short index2 = store.takeIndex();
+        int index1 = store.takeIndex();
+        int index2 = store.takeIndex();
 
         // these calls should succeed because the indexes are occupied
         store.checkValidIndex(index1);

@@ -25,7 +25,7 @@ package com.amazon.randomcutforest.store;
  * is a Node), then this class is analogous to a column-oriented database of
  * leaf Nodes.
  */
-public class LeafStore extends SmallStoreCommon {
+public class LeafStore extends SmallIndexManager {
 
     public final int[] pointIndex;
     public final short[] parentIndex;
@@ -38,15 +38,11 @@ public class LeafStore extends SmallStoreCommon {
         mass = new int[capacity];
     }
 
-    public short addLeaf(short parentIndex, int pointIndex, int mass) {
+    public short add(short parentIndex, int pointIndex, int mass) {
         short index = takeIndex();
         this.parentIndex[index] = parentIndex;
         this.mass[index] = mass;
         this.pointIndex[index] = pointIndex;
         return index;
-    }
-
-    public void removeLeaf(short index) {
-        releaseIndex(index);
     }
 }
