@@ -58,8 +58,8 @@ public class SmallIndexManager {
     /**
      * @return the number of nodes whose data is currently stored.
      */
-    public int size() {
-        return capacity - freeIndexPointer - 1;
+    public short size() {
+        return (short) (capacity - freeIndexPointer - 1);
     }
 
     /**
