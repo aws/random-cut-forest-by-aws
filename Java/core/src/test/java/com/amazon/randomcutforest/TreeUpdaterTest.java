@@ -16,8 +16,9 @@
 package com.amazon.randomcutforest;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -35,6 +36,7 @@ public class TreeUpdaterTest {
 
     private SimpleStreamSampler sampler;
     private RandomCutTree tree;
+    private int randomSeed;
     private TreeUpdater updater;
 
     @BeforeEach
@@ -53,14 +55,14 @@ public class TreeUpdaterTest {
 
     @Test
     public void testUpdateRejected() {
-        when(sampler.sample(any(), anyLong())).thenReturn(null);
+        when(sampler.sample(any(), anyInt())).thenReturn(null);
         updater.update(new double[] { 4.2, 8.4 }, 1111L);
-        verify(tree, never()).addPoint(any());
-        verify(tree, never()).deletePoint(any());
+        verify(tree, never()).addPoint(any(WeightedPoint.class));
+        verify(tree, never()).deletePoint(any(WeightedPoint.class));
     }
 
     @Test
-    public void testUpdateWithoutEvictedPoint() {
+    public void testUpdateRejectedWithoutEvictedPoint() {
         double[] point = new double[] { 4.2, 8.4 };
         long sequenceIndex = 1111L;
         WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
@@ -70,11 +72,11 @@ public class TreeUpdaterTest {
         updater.update(point, sequenceIndex);
 
         verify(tree, times(1)).addPoint(sampledPoint);
-        verify(tree, never()).deletePoint(any());
+        verify(tree, never()).deletePoint(any(WeightedPoint.class));
     }
 
     @Test
-    public void testUpdateWithEvictedPoint() {
+    public void testUpdateRejectedWithEvictedPoint() {
         double[] point = new double[] { 4.2, 8.4 };
         long sequenceIndex = 1111L;
         WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
