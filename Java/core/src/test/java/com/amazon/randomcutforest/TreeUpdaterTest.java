@@ -16,8 +16,8 @@
 package com.amazon.randomcutforest;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -35,7 +35,6 @@ public class TreeUpdaterTest {
 
     private SimpleStreamSampler sampler;
     private RandomCutTree tree;
-    private int randomSeed;
     private TreeUpdater updater;
 
     @BeforeEach
@@ -54,18 +53,18 @@ public class TreeUpdaterTest {
 
     @Test
     public void testUpdateRejected() {
-        when(sampler.sample(any(), anyInt())).thenReturn(null);
+        when(sampler.sample(any(), anyLong())).thenReturn(null);
         updater.update(new double[] { 4.2, 8.4 }, 1111L);
         verify(tree, never()).addPoint(any());
         verify(tree, never()).deletePoint(any());
     }
 
     @Test
-    public void testUpdateRejectedWithoutEvictedPoint() {
+    public void testUpdateWithoutEvictedPoint() {
         double[] point = new double[] { 4.2, 8.4 };
         long sequenceIndex = 1111L;
         WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
-        when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
+        when(sampler.sample(any(), anyLong())).thenReturn(sampledPoint);
         when(sampler.getEvictedPoint()).thenReturn(null);
 
         updater.update(point, sequenceIndex);
@@ -75,13 +74,13 @@ public class TreeUpdaterTest {
     }
 
     @Test
-    public void testUpdateRejectedWithEvictedPoint() {
+    public void testUpdateWithEvictedPoint() {
         double[] point = new double[] { 4.2, 8.4 };
         long sequenceIndex = 1111L;
         WeightedPoint sampledPoint = new WeightedPoint(point, sequenceIndex, 0.001);
         WeightedPoint evictedPoint = new WeightedPoint(new double[] { -0.5, 2.222 }, 1110L, 0.123);
 
-        when(sampler.sample(any(), anyInt())).thenReturn(sampledPoint);
+        when(sampler.sample(any(), anyLong())).thenReturn(sampledPoint);
         when(sampler.getEvictedPoint()).thenReturn(evictedPoint);
 
         updater.update(point, sequenceIndex);
