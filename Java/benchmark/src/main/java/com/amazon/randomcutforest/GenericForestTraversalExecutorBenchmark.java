@@ -17,8 +17,6 @@ package com.amazon.randomcutforest;
 
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,11 +30,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.sampler.SimpleStreamSamplerV2;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.IUpdatableTree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.tree.SamplingTree;
 
@@ -60,7 +55,7 @@ public class GenericForestTraversalExecutorBenchmark {
         boolean parallelExecutionEnabled;
 
         double[][] data;
-        GenericForestTraversalExecutor<Sequential<double[]>> executor;
+        AbstractForestUpdateExecutor<Sequential<double[]>> executor;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -71,7 +66,7 @@ public class GenericForestTraversalExecutorBenchmark {
         @Setup(Level.Invocation)
         public void setUpExecutor() {
             IUpdateCoordinator<Sequential<double[]>> updateCoordinator = new PointSequencer();
-            ArrayList<IUpdatableTree<Sequential<double[]>>> trees = new ArrayList<>();
+            ArrayList<IUpdatable<Sequential<double[]>>> trees = new ArrayList<>();
             Random random = new Random();
             for (int i = 0; i < numberOfTrees; i++) {
                 RandomCutTree tree = RandomCutTree.builder().build();
@@ -85,18 +80,18 @@ public class GenericForestTraversalExecutorBenchmark {
             }
 
             if (parallelExecutionEnabled) {
-                executor = new ParallelForestTraversalExecutorV2<>(updateCoordinator, trees, 4);
+                executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, 4);
             } else {
-                executor = new SequentialForestTraversalExecutorV2<>(updateCoordinator, trees);
+                executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
             }
         }
     }
 
-    private GenericForestTraversalExecutor<?> executor;
+    private AbstractForestUpdateExecutor<?> executor;
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public GenericForestTraversalExecutor<?> updateOnly(BenchmarkState state) {
+    public AbstractForestUpdateExecutor<?> updateOnly(BenchmarkState state) {
         double[][] data = state.data;
         executor = state.executor;
 
@@ -109,7 +104,7 @@ public class GenericForestTraversalExecutorBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public GenericForestTraversalExecutor<?> updateAndGetAnomalyScore(BenchmarkState state, Blackhole blackhole) {
+    public AbstractForestUpdateExecutor<?> updateAndGetAnomalyScore(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         executor = state.executor;
         double score = 0.0;
@@ -120,15 +115,7 @@ public class GenericForestTraversalExecutorBenchmark {
         }
 
         for (; i < data.length; i++) {
-            final double[] point = data[i];
-            Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
-
-            BinaryOperator<Double> accumulator = Double::sum;
-
-            Function<Double, Double> finisher = sum -> sum / state.numberOfTrees;
-
-            score = executor.traverseForest(data[i], visitorFactory, accumulator, finisher);
-            executor.update(point);
+            executor.update(data[i]);
         }
 
         blackhole.consume(score);

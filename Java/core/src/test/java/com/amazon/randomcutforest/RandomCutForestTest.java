@@ -115,7 +115,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY, accumulator, finisher);
@@ -129,7 +129,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -148,7 +148,7 @@ public class RandomCutForestTest {
         double[] point = { 2.2, -1.1 };
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR);
@@ -161,7 +161,7 @@ public class RandomCutForestTest {
         double[] point = { 2.2, -1.1 };
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -184,7 +184,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_VISITOR_FACTORY, accumulator, finisher);
@@ -201,7 +201,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -222,7 +222,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTreeMulti(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
         });
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_MULTI_VISITOR_FACTORY, accumulator, finisher);
@@ -237,7 +237,7 @@ public class RandomCutForestTest {
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTreeMulti(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -256,7 +256,7 @@ public class RandomCutForestTest {
         double[] point = { 2.2, -1.1 };
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTreeMulti(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
         });
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_MULTI_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR);
@@ -269,7 +269,7 @@ public class RandomCutForestTest {
         double[] point = { 2.2, -1.1 };
 
         treeUpdaters.stream().map(TreeUpdater::getTree).forEach(tree -> {
-            when(tree.traverseTree(aryEq(point), any())).thenReturn(0.0);
+            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
@@ -295,7 +295,7 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             RandomCutTree tree = treeUpdaters.get(i).getTree();
             double treeResult = Math.random();
-            when(tree.traverseTree(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
 
             Node root = mock(Node.class);
             when(root.getMass()).thenReturn(256);
@@ -325,7 +325,7 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             RandomCutTree tree = treeUpdaters.get(i).getTree();
             double treeResult = Math.random();
-            when(tree.traverseTree(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
 
             Node root = mock(Node.class);
             when(root.getMass()).thenReturn(256);
@@ -361,7 +361,7 @@ public class RandomCutForestTest {
             }
 
             RandomCutTree tree = treeUpdaters.get(i).getTree();
-            when(tree.traverseTree(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
 
             Node root = mock(Node.class);
             when(root.getMass()).thenReturn(256);
@@ -402,7 +402,7 @@ public class RandomCutForestTest {
                 treeResult.low[j] = Math.random();
             }
 
-            when(tree.traverseTree(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
 
             Node root = mock(Node.class);
             when(root.getMass()).thenReturn(256);
@@ -442,7 +442,7 @@ public class RandomCutForestTest {
             }
 
             RandomCutTree tree = treeUpdaters.get(i).getTree();
-            when(tree.traverseTree(aryEq(point), any(SimpleInterpolationVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(SimpleInterpolationVisitor.class))).thenReturn(treeResult);
             intermediateResults.add(treeResult);
         }
 
@@ -508,7 +508,7 @@ public class RandomCutForestTest {
             RandomCutTree tree = treeUpdaters.get(i).getTree();
             double[] treeResult = Arrays.copyOf(point, point.length);
             treeResult[missingIndexes[0]] = returnValues.get(i);
-            when(tree.traverseTreeMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
         }
 
         doReturn(true).when(forest).isOutputReady();
@@ -542,7 +542,7 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             RandomCutTree tree = treeUpdaters.get(i).getTree();
             double[] treeResult = { Math.random(), Math.random() };
-            when(tree.traverseTreeMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
 
             double anomalyScore = anomalyScores.get(i);
             doReturn(anomalyScore).when(forest).getAnomalyScore(aryEq(treeResult));
@@ -690,26 +690,26 @@ public class RandomCutForestTest {
         indexes5.add(4L);
 
         Neighbor neighbor1 = new Neighbor(new double[] { 1, 2 }, 5, indexes1);
-        when(treeUpdaters.get(0).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+        when(treeUpdaters.get(0).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                 .thenReturn(Optional.of(neighbor1));
 
         Neighbor neighbor2 = new Neighbor(new double[] { 1, 2 }, 5, indexes2);
-        when(treeUpdaters.get(1).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+        when(treeUpdaters.get(1).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                 .thenReturn(Optional.of(neighbor2));
 
-        when(treeUpdaters.get(2).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+        when(treeUpdaters.get(2).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                 .thenReturn(Optional.empty());
 
         Neighbor neighbor4 = new Neighbor(new double[] { 2, 3 }, 4, indexes4);
-        when(treeUpdaters.get(3).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+        when(treeUpdaters.get(3).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                 .thenReturn(Optional.of(neighbor4));
 
         Neighbor neighbor5 = new Neighbor(new double[] { 2, 3 }, 4, indexes5);
-        when(treeUpdaters.get(4).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+        when(treeUpdaters.get(4).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                 .thenReturn(Optional.of(neighbor5));
 
         for (int i = 5; i < treeUpdaters.size(); i++) {
-            when(treeUpdaters.get(i).getTree().traverseTree(any(double[].class), any(NearNeighborVisitor.class)))
+            when(treeUpdaters.get(i).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
                     .thenReturn(Optional.empty());
         }
 

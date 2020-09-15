@@ -13,14 +13,15 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest.store;
 
-import com.amazon.randomcutforest.ITraversable;
+/**
+ * A read-only point store interface.
+ */
+public interface IPointStore {
+    int getDimensions();
 
-public interface ITree<P> extends ITraversable {
-    int getMass();
+    boolean pointEquals(int index, float[] point);
 
-    void addPoint(P point);
-
-    void deletePoint(P point);
+    float[] get(int index);
 }

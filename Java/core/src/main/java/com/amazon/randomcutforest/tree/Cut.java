@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.tree;
 /**
  * A Cut represents a division of space into two half-spaces. Cuts are used to
  * define the tree structure in {@link RandomCutTree}, and they determine the
- * standard tree traversal path defined in {@link RandomCutTree#traverseTree}.
+ * standard tree traversal path defined in {@link RandomCutTree#traverse}.
  */
 public class Cut {
 

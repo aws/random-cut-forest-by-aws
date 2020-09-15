@@ -13,14 +13,10 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.ITraversable;
+public interface ITraversable {
+    <R> R traverse(double[] point, Visitor<R> visitor);
 
-public interface ITree<P> extends ITraversable {
-    int getMass();
-
-    void addPoint(P point);
-
-    void deletePoint(P point);
+    <R> R traverseMulti(double[] point, MultiVisitor<R> visitor);
 }

@@ -16,17 +16,16 @@
 package com.amazon.randomcutforest;
 
 import com.amazon.randomcutforest.tree.Node;
-import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
  * This is the interface for a visitor which can be used to query a
- * {@link RandomCutTree} to produce a result. A visitor is submitted to
- * {@link RandomCutTree#traverseTree(double[], Visitor)}, and during the
- * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on
- * the nodes in the traversal path.
+ * {@link ITraversable} to produce a result. A visitor is submitted to
+ * {@link ITraversable#traverse(double[], Visitor)}, and during the traversal
+ * the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes
+ * in the traversal path.
  * <p>
- * See {@link RandomCutTree#traverseTree(double[], Visitor)} for details about
- * the traversal path.
+ * See {@link ITraversable#traverse(double[], Visitor)} for details about the
+ * traversal path.
  */
 public interface Visitor<R> {
     /**

@@ -59,7 +59,8 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      * in-sample points. We want the head of the queue to be the element with the
      * least priority, so we reverse the natural defined by the weight.
      *
-     * @param <T> The point type used by this comparator.
+     * @param <T>   The point type used by this comparator.
+     * @param clazz The point type used by this comparator.
      */
     protected static <T> Comparator<Weighted<T>> getComparator(Class<T> clazz) {
         return Comparator.comparingDouble(Weighted<T>::getWeight).reversed();

@@ -70,8 +70,8 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
-     * the trees are combined using the accumulator and then transformed using the
+     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from all the
+     * trees are combined using the accumulator and then transformed using the
      * finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
@@ -95,7 +95,7 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from
+     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from
      * individual trees are collected using the {@link java.util.stream.Collector}
      * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -119,10 +119,10 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
      * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
-     * the trees are combined using the {@link ConvergingAccumulator}, and the
-     * method stops visiting trees after convergence is reached. The result is
-     * transformed using the finisher before being returned.
+     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from all the
+     * trees are combined using the {@link ConvergingAccumulator}, and the method
+     * stops visiting trees after convergence is reached. The result is transformed
+     * using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
@@ -147,9 +147,9 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
-     * from all the trees are combined using the accumulator and then transformed
-     * using the finisher before being returned.
+     * {@link RandomCutTree#traverseMulti(double[], MultiVisitor)}. The results from
+     * all the trees are combined using the accumulator and then transformed using
+     * the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
@@ -173,10 +173,10 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
-     * from individual trees are collected using the
-     * {@link java.util.stream.Collector} and returned. Trees are visited in
-     * parallel using {@link java.util.Collection#parallelStream()}.
+     * {@link RandomCutTree#traverseMulti(double[], MultiVisitor)}. The results from
+     * individual trees are collected using the {@link java.util.stream.Collector}
+     * and returned. Trees are visited in parallel using
+     * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to

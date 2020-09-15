@@ -13,25 +13,23 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest;
 
-/**
- * An extension of the {@link ITree} interface that supports an update method.
- * 
- * @param <P>
- */
-public interface IUpdatableTree<P> extends ITree<P> {
+import com.amazon.randomcutforest.tree.SamplingTree;
+
+public interface IUpdatable<P> {
     /**
-     * Update the tree with the given point. If a point is removed from the tree as
-     * part of the update, then it is returned. Otherwise the return value is null.
+     * Update the model with the given point. If a point is removed from the model
+     * as part of the update, then it is returned. Otherwise the return value is
+     * null.
      *
-     * Note that the tree may choose not to do anything * with the point (and
-     * therefore the state of the tree may not change). For example, in a
+     * A given call to `update` may choose not to do anything with the point (and
+     * therefore the model state may not change). For example, in a
      * {@link SamplingTree} the tree is only modified if the point is accepted by
      * the sampler.
      *
-     * @param point The point submitted to the tree
-     * @return the point that was removed from the tree as part of the update, or
+     * @param point The point submitted to the model
+     * @return the point that was removed from the model as part of the update, or
      *         null if no point was removed.
      */
     P update(P point);

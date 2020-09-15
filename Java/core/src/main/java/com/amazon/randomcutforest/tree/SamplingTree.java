@@ -17,12 +17,13 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+import com.amazon.randomcutforest.IUpdatable;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Sequential;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 
-public class SamplingTree<P> implements IUpdatableTree<Sequential<P>> {
+public class SamplingTree<P> implements ITree<Sequential<P>>, IUpdatable<Sequential<P>> {
 
     private final ITree<Sequential<P>> tree;
     private final IStreamSampler<P> sampler;
@@ -63,12 +64,12 @@ public class SamplingTree<P> implements IUpdatableTree<Sequential<P>> {
     }
 
     @Override
-    public <R> R traverseTree(double[] point, Visitor<R> visitor) {
-        return tree.traverseTree(point, visitor);
+    public <R> R traverse(double[] point, Visitor<R> visitor) {
+        return tree.traverse(point, visitor);
     }
 
     @Override
-    public <R> R traverseTreeMulti(double[] point, MultiVisitor<R> visitor) {
-        return tree.traverseTreeMulti(point, visitor);
+    public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
+        return tree.traverseMulti(point, visitor);
     }
 }

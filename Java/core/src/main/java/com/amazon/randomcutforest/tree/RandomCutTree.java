@@ -430,7 +430,8 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
-    public <R> R traverseTree(double[] point, Visitor<R> visitor) {
+    @Override
+    public <R> R traverse(double[] point, Visitor<R> visitor) {
         checkState(root != null, "this tree doesn't contain any nodes");
         traversePathToLeafAndVisitNodes(point, visitor, root, 0);
         return visitor.getResult();
@@ -449,10 +450,10 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
 
     /**
      * This is a traversal method which follows the standard traveral path (defined
-     * in {@link #traverseTree(double[], Visitor)}) but at Node in checks to see
-     * whether the visitor should split. If a split is triggered, then independent
-     * copies of the visitor are sent down each branch of the tree and then merged
-     * before propogating the result.
+     * in {@link #traverse(double[], Visitor)}) but at Node in checks to see whether
+     * the visitor should split. If a split is triggered, then independent copies of
+     * the visitor are sent down each branch of the tree and then merged before
+     * propogating the result.
      *
      * @param point   A point which determines the traversal path from the root to a
      *                leaf node.
@@ -460,7 +461,8 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
-    public <R> R traverseTreeMulti(double[] point, MultiVisitor<R> visitor) {
+    @Override
+    public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitor, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");

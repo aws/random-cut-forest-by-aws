@@ -56,7 +56,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
 
         return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTree(point, visitor);
+            return tree.traverse(point, visitor);
         }).reduce(accumulator).map(finisher))
                 .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
@@ -67,7 +67,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
 
         return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTree(point, visitor);
+            return tree.traverse(point, visitor);
         }).collect(collector));
     }
 
@@ -82,7 +82,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
             List<R> results = submitAndJoin(
                     () -> treeUpdaters.subList(start, end).parallelStream().map(TreeUpdater::getTree).map(tree -> {
                         Visitor<R> visitor = visitorFactory.apply(tree);
-                        return tree.traverseTree(point, visitor);
+                        return tree.traverse(point, visitor);
                     }).collect(Collectors.toList()));
 
             results.forEach(accumulator::accept);
@@ -101,7 +101,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
 
         return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTreeMulti(point, visitor);
+            return tree.traverseMulti(point, visitor);
         }).reduce(accumulator).map(finisher))
                 .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
@@ -112,7 +112,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
 
         return submitAndJoin(() -> treeUpdaters.parallelStream().map(TreeUpdater::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTreeMulti(point, visitor);
+            return tree.traverseMulti(point, visitor);
         }).collect(collector));
     }
 

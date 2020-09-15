@@ -45,4 +45,8 @@ public class LeafStore extends SmallIndexManager {
         this.pointIndex[index] = pointIndex;
         return index;
     }
+
+    public void delete(short index) {
+        releaseIndex(index);
+    }
 }
