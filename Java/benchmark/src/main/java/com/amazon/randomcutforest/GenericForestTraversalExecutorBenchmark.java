@@ -31,7 +31,9 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.amazon.randomcutforest.sampler.SimpleStreamSamplerV2;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.CompactRandomCutTree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.tree.SamplingTree;
 
@@ -54,8 +56,11 @@ public class GenericForestTraversalExecutorBenchmark {
         @Param({ "false", "true" })
         boolean parallelExecutionEnabled;
 
+        @Param({ "false", "true" })
+        boolean compactEnabled;
+
         double[][] data;
-        AbstractForestUpdateExecutor<Sequential<double[]>> executor;
+        AbstractForestUpdateExecutor<?> executor;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -65,24 +70,45 @@ public class GenericForestTraversalExecutorBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpExecutor() {
-            IUpdateCoordinator<Sequential<double[]>> updateCoordinator = new PointSequencer();
-            ArrayList<IUpdatable<Sequential<double[]>>> trees = new ArrayList<>();
-            Random random = new Random();
-            for (int i = 0; i < numberOfTrees; i++) {
-                RandomCutTree tree = RandomCutTree.builder().build();
-                SimpleStreamSamplerV2<double[]> sampler = new SimpleStreamSamplerV2<>(double[].class,
-                        RandomCutForest.DEFAULT_SAMPLE_SIZE,
-                        1.0 / (RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA
-                                * RandomCutForest.DEFAULT_SAMPLE_SIZE),
-                        random.nextLong());
-                SamplingTree<double[]> samplingTree = new SamplingTree<>(sampler, tree);
-                trees.add(samplingTree);
-            }
 
-            if (parallelExecutionEnabled) {
-                executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, 4);
+            int sampleSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
+            double lambda = 1.0 / (sampleSize * RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA);
+            int threadPoolSize = 4;
+            Random random = new Random();
+
+            if (!compactEnabled) {
+                IUpdateCoordinator<Sequential<double[]>> updateCoordinator = new PointSequencer();
+                ArrayList<IUpdatable<Sequential<double[]>>> trees = new ArrayList<>();
+                for (int i = 0; i < numberOfTrees; i++) {
+                    RandomCutTree tree = RandomCutTree.builder().build();
+                    SimpleStreamSamplerV2<double[]> sampler = new SimpleStreamSamplerV2<>(double[].class, sampleSize,
+                            lambda, random.nextLong());
+                    SamplingTree<double[]> samplingTree = new SamplingTree<>(sampler, tree);
+                    trees.add(samplingTree);
+                }
+
+                if (parallelExecutionEnabled) {
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                } else {
+                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
+                }
             } else {
-                executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
+                PointStore store = new PointStore(dimensions, numberOfTrees * sampleSize);
+                IUpdateCoordinator<Sequential<Integer>> updateCoordinator = new PointStoreCoordinator(store);
+                ArrayList<IUpdatable<Sequential<Integer>>> trees = new ArrayList<>();
+                for (int i = 0; i < numberOfTrees; i++) {
+                    CompactRandomCutTree tree = new CompactRandomCutTree(sampleSize, random.nextLong(), store);
+                    SimpleStreamSamplerV2<Integer> sampler = new SimpleStreamSamplerV2<>(Integer.class, sampleSize,
+                            lambda, random.nextLong());
+                    SamplingTree<Integer> samplingTree = new SamplingTree<>(sampler, tree);
+                    trees.add(samplingTree);
+                }
+
+                if (parallelExecutionEnabled) {
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                } else {
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                }
             }
         }
     }
