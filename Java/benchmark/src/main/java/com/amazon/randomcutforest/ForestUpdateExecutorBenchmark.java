@@ -41,7 +41,7 @@ import com.amazon.randomcutforest.tree.SamplingTree;
 @Measurement(iterations = 10)
 @Fork(value = 1)
 @State(Scope.Thread)
-public class GenericForestTraversalExecutorBenchmark {
+public class ForestUpdateExecutorBenchmark {
 
     public final static int DATA_SIZE = 50_000;
 
@@ -107,7 +107,7 @@ public class GenericForestTraversalExecutorBenchmark {
                 if (parallelExecutionEnabled) {
                     executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
                 } else {
-                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
                 }
             }
         }
