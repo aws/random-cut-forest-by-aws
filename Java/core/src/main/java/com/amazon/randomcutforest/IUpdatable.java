@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest;
 
+import java.util.Optional;
+
 import com.amazon.randomcutforest.tree.SamplingTree;
 
 public interface IUpdatable<P> {
@@ -30,7 +32,7 @@ public interface IUpdatable<P> {
      *
      * @param point The point submitted to the model
      * @return the point that was removed from the model as part of the update, or
-     *         null if no point was removed.
+     *         {@code Option.empty()} if no point was removed.
      */
-    P update(P point);
+    Optional<P> update(P point);
 }

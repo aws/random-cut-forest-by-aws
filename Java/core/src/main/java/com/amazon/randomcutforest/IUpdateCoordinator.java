@@ -17,10 +17,37 @@ package com.amazon.randomcutforest;
 
 import java.util.List;
 
+/**
+ * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
+ * instances. The coordinator transforms the input point into the form expected
+ * by the updatable models, and processes the list of deleted points if needed.
+ * An IUpdateCoordinator can be used to manage shared state.
+ *
+ * @param <P> An internal point representation.
+ */
 public interface IUpdateCoordinator<P> {
+    /**
+     * Transform the input point into a value that can be submitted to IUpdatable
+     * instances.
+     * 
+     * @param point The input point.
+     * @return The point transformed into the representation expected by an
+     *         IUpdatable instance.
+     */
     P initUpdate(double[] point);
 
+    /**
+     * Complete the update. This method is called by IUpdateCoordinator after all
+     * IUpdabale instances have completed their individual updates. This method
+     * receives the list of points that were deleted IUpdatable instances for
+     * further processing if needed.
+     * 
+     * @param updateResults A list of points that were deleted.
+     */
     void completeUpdate(List<P> updateResults);
 
+    /**
+     * @return the total number of times that an update was completed.
+     */
     long getTotalUpdates();
 }

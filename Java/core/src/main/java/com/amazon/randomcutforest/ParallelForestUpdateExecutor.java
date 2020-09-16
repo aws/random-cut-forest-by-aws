@@ -17,7 +17,7 @@ package com.amazon.randomcutforest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
@@ -40,8 +40,8 @@ public class ParallelForestUpdateExecutor<P> extends AbstractForestUpdateExecuto
 
     @Override
     protected List<P> update(P point) {
-        return submitAndJoin(() -> models.parallelStream().map(t -> t.update(point)).filter(Objects::nonNull)
-                .collect(Collectors.toList()));
+        return submitAndJoin(() -> models.parallelStream().map(t -> t.update(point)).filter(Optional::isPresent)
+                .map(Optional::get).collect(Collectors.toList()));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

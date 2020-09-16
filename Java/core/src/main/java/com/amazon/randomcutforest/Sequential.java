@@ -62,14 +62,4 @@ public class Sequential<T> {
     public long getSequenceIndex() {
         return sequenceIndex;
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Sequential)) {
-            return false;
-        }
-
-        Sequential<?> other = (Sequential<?>) o;
-        return other.value.equals(value) && other.sequenceIndex == sequenceIndex;
-    }
 }

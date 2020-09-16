@@ -19,16 +19,33 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * The class transforms input points into the form expected by internal models,
+ * and submits transformed points to individual models for updating.
+ *
+ * @param <P> The point representation used by model data structures.
+ */
 public abstract class AbstractForestUpdateExecutor<P> {
 
     protected final IUpdateCoordinator<P> updateCoordinator;
     protected final ArrayList<IUpdatable<P>> models;
 
+    /**
+     * Create a new AbstractForestUpdateExecutor.
+     * 
+     * @param updateCoordinator The update coordinater that will be used to
+     *                          transform points and process deleted points if
+     *                          needed.
+     * @param models            A list of models to update.
+     */
     protected AbstractForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models) {
         this.updateCoordinator = updateCoordinator;
         this.models = models;
     }
 
+    /**
+     * @return the total number of times that an update has been completed.
+     */
     public long getTotalUpdates() {
         return updateCoordinator.getTotalUpdates();
     }

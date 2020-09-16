@@ -17,6 +17,8 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+import java.util.Optional;
+
 import com.amazon.randomcutforest.IUpdatable;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Sequential;
@@ -36,7 +38,7 @@ public class SamplingTree<P> implements ITree<Sequential<P>>, IUpdatable<Sequent
     }
 
     @Override
-    public Sequential<P> update(Sequential<P> point) {
+    public Optional<Sequential<P>> update(Sequential<P> point) {
         Sequential<P> evictedPoint = null;
         if (sampler.sample(point)) {
             evictedPoint = sampler.getEvictedPoint();
@@ -45,7 +47,7 @@ public class SamplingTree<P> implements ITree<Sequential<P>>, IUpdatable<Sequent
             }
             addPoint(point);
         }
-        return evictedPoint;
+        return Optional.ofNullable(evictedPoint);
     }
 
     @Override
