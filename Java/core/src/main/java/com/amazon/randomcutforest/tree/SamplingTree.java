@@ -39,15 +39,13 @@ public class SamplingTree<P> implements ITree<Sequential<P>>, IUpdatable<Sequent
 
     @Override
     public Optional<Sequential<P>> update(Sequential<P> point) {
-        Sequential<P> evictedPoint = null;
         if (sampler.sample(point)) {
-            evictedPoint = sampler.getEvictedPoint();
-            if (evictedPoint != null) {
-                deletePoint(evictedPoint);
-            }
+            Optional<Sequential<P>> evictedPoint = sampler.getEvictedPoint();
+            evictedPoint.ifPresent(this::deletePoint);
             addPoint(point);
+            return evictedPoint;
         }
-        return Optional.ofNullable(evictedPoint);
+        return Optional.empty();
     }
 
     @Override

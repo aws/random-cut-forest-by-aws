@@ -23,6 +23,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +68,7 @@ public class SamplingTreeTest {
         double[] point = new double[] { 4.2, 8.4 };
         long sequenceIndex = 1111L;
         when(sampler.sample(any())).thenReturn(true);
-        when(sampler.getEvictedPoint()).thenReturn(null);
+        when(sampler.getEvictedPoint()).thenReturn(Optional.empty());
 
         Sequential<double[]> seqPoint = new Sequential<>(point, sequenceIndex);
         samplingTree.update(seqPoint);
@@ -83,7 +85,7 @@ public class SamplingTreeTest {
         Sequential<double[]> evictedPoint = new Sequential<>(new double[] { -0.5, 2.222 }, 1110L);
 
         when(sampler.sample(any())).thenReturn(true);
-        when(sampler.getEvictedPoint()).thenReturn(evictedPoint);
+        when(sampler.getEvictedPoint()).thenReturn(Optional.of(evictedPoint));
 
         samplingTree.update(seqPoint);
 

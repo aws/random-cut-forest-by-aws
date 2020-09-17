@@ -44,7 +44,7 @@ public interface IUpdateCoordinator<P> {
      * 
      * @param updateResults A list of points that were deleted.
      */
-    void completeUpdate(List<P> updateResults);
+    void completeUpdate(P updateInput, List<P> updateResults);
 
     /**
      * @return the total number of times that an update was completed.

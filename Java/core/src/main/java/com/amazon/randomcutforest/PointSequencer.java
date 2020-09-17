@@ -30,7 +30,7 @@ public class PointSequencer implements IUpdateCoordinator<Sequential<double[]>> 
     }
 
     @Override
-    public void completeUpdate(List<Sequential<double[]>> updateResults) {
+    public void completeUpdate(Sequential<double[]> updateInput, List<Sequential<double[]>> updateResults) {
         currentIndex++;
     }
 

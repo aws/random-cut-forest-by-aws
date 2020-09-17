@@ -47,7 +47,14 @@ import com.amazon.randomcutforest.store.NodeStore;
  */
 public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
 
-    private Random random;
+    /**
+     * The index value used to represent the absence of a node. For example, when
+     * the tree is created the root node index will be NULL. After a point is added
+     * and a root node is created, the root node's parent will be NULL, and so on.
+     */
+    public static final short NULL = -1;
+
+    private final Random random;
     private final int maxSize;
     protected final NodeStore internalNodes;
     protected final LeafStore leafNodes;
@@ -62,7 +69,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
         internalNodes = new NodeStore((short) (this.maxSize - 1));
         leafNodes = new LeafStore((short) this.maxSize);
         random = new Random(seed);
-        rootIndex = -1;
+        rootIndex = NULL;
     }
 
     protected boolean isLeaf(short index) {
@@ -135,7 +142,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
             parent = internalNodes.parentIndex[oldNodeOffset];
         }
 
-        if (parent != -1) {
+        if (parent != NULL) {
             checkState(parent < maxSize, "incorrect");
             if (internalNodes.leftIndex[parent] == oldNodeOffset) {
                 internalNodes.leftIndex[parent] = newNodeOffset;
@@ -162,12 +169,13 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
     short getSibling(short nodeOffset) {
         checkArgument(nodeOffset >= 0, " cannotbe negative");
         int parent;
-        if (isLeaf(nodeOffset))
+        if (isLeaf(nodeOffset)) {
             parent = leafNodes.parentIndex[nodeOffset - maxSize];
-        else
+        } else {
             parent = internalNodes.parentIndex[nodeOffset];
+        }
 
-        if (parent != -1) {
+        if (parent != NULL) {
             checkArgument(parent < maxSize, "incorrect");
             if (internalNodes.leftIndex[parent] == nodeOffset) {
                 return internalNodes.rightIndex[parent];
@@ -177,14 +185,14 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
                 throw new IllegalArgumentException("node parent does not link back to node");
             }
         } else
-            return -1; // root is leaf
+            return NULL; // root is leaf
     }
 
-    public boolean leftOf(float[] point, short nodeOffset) {
+    protected boolean leftOf(float[] point, short nodeOffset) {
         return leftOf(CommonUtils.toDoubleArray(point), nodeOffset);
     }
 
-    public boolean leftOf(double[] point, short nodeOffset) {
+    protected boolean leftOf(double[] point, short nodeOffset) {
         checkArgument(!isLeaf(nodeOffset), " error ");
         return (point[internalNodes.cutDimension[nodeOffset]] <= internalNodes.cutValue[nodeOffset]);
     }
@@ -194,14 +202,9 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
      *
      * @param sequential An offset of the point in the tree that we wish to delete.
      */
-    /*
-     * public void deletePoint(WeightedPoint weightedPoint) { checkState(root !=
-     * null, "root must not be null"); deletePoint(root, weightedPoint.getPoint(),
-     * weightedPoint.getSequenceIndex()); }
-     */
     @Override
     public void deletePoint(Sequential<Integer> sequential) {
-        checkState(rootIndex != -1, "root must not be null");
+        checkState(rootIndex != NULL, "root must not be null");
         deletePoint(rootIndex, pointStore.get(sequential.getValue()), 0);
     }
 
@@ -213,6 +216,9 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
      *
      * @param nodeOffset node that we are visiting in the tree.
      * @param point      the point that is being deleted from the tree.
+     * @param level      the level (i.e., the length of the path to the root) of the
+     *                   node being evaluated.
+     * @return the index of the deleted node.
      */
     private int deletePoint(short nodeOffset, float[] point, int level) {
 
@@ -237,19 +243,20 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
 
             short parent = leafNodes.parentIndex[leafOffset];
             int saved = leafNodes.pointIndex[leafOffset];
-            if (parent == -1) {
-                rootIndex = -1;
+            if (parent == NULL) {
+                rootIndex = NULL;
                 leafNodes.delete(leafOffset);
                 return saved;
             }
 
             int grandParent = internalNodes.parentIndex[parent];
-            if (grandParent == -1) {
+            if (grandParent == NULL) {
                 rootIndex = getSibling(nodeOffset);
-                if (isLeaf(rootIndex))
-                    leafNodes.parentIndex[rootIndex - maxSize] = -1;
-                else
-                    internalNodes.parentIndex[rootIndex] = -1;
+                if (isLeaf(rootIndex)) {
+                    leafNodes.parentIndex[rootIndex - maxSize] = NULL;
+                } else {
+                    internalNodes.parentIndex[rootIndex] = NULL;
+                }
             } else {
                 short sibling = getSibling(nodeOffset);
                 replaceNode(parent, sibling);
@@ -291,8 +298,8 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
     public void addPoint(Sequential<Integer> seq) {
         int pointIndex = seq.getValue();
         float[] pointValue = pointStore.get(pointIndex);
-        if (rootIndex == -1) {
-            rootIndex = (short) (leafNodes.add((short) -1, pointIndex, 1) + maxSize);
+        if (rootIndex == NULL) {
+            rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
         } else {
             addPoint(rootIndex, pointValue, pointIndex);
         }
@@ -357,13 +364,11 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
             if (minValue > splitValue || maxValue <= splitValue) {
                 int oldmass = (isLeaf(nodeOffset)) ? leafNodes.mass[nodeOffset - maxSize]
                         : internalNodes.mass[nodeOffset];
-                short leafOffset = (short) (leafNodes.add((short) -1, pointIndex, 1) + maxSize); // parent pointIndex
-                                                                                                 // needs to be fixed
+                short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
+                                                                                           // needs to be fixed
                 short mergedNode = (minValue > splitValue)
-                        ? internalNodes.addNode((short) -1, leafOffset, nodeOffset, splitDimension, splitValue,
-                                oldmass + 1)
-                        : internalNodes.addNode((short) -1, nodeOffset, leafOffset, splitDimension, splitValue,
-                                oldmass + 1);
+                        ? internalNodes.addNode(NULL, leafOffset, nodeOffset, splitDimension, splitValue, oldmass + 1)
+                        : internalNodes.addNode(NULL, nodeOffset, leafOffset, splitDimension, splitValue, oldmass + 1);
 
                 int parent;
                 if (isLeaf(nodeOffset))
@@ -371,7 +376,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
                 else
                     parent = internalNodes.parentIndex[nodeOffset];
 
-                if (parent == -1) {
+                if (parent == NULL) {
                     rootIndex = mergedNode;
                 } else {
                     replaceNode(nodeOffset, mergedNode);
@@ -424,7 +429,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
      */
     @Override
     public <R> R traverse(double[] point, Visitor<R> visitor) {
-        checkState(rootIndex != -1, "this tree doesn't contain any nodes");
+        checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
         traversePathToLeafAndVisitNodes(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }
@@ -466,7 +471,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
     public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitor, "visitor must not be null");
-        checkState(rootIndex != -1, "this tree doesn't contain any nodes");
+        checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
         traverseTreeMulti(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }
@@ -489,7 +494,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
     }
 
     public Node getRoot() {
-        if (rootIndex == -1)
+        if (rootIndex == NULL)
             return null;
         else if (isLeaf(rootIndex))
             return getLeafNode(rootIndex);
@@ -499,7 +504,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
 
     @Override
     public int getMass() {
-        if (rootIndex == -1)
+        if (rootIndex == NULL)
             return 0;
         else if (isLeaf(rootIndex))
             return leafNodes.mass[rootIndex - maxSize];
@@ -521,7 +526,7 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
     }
 
     public void reflateTree() {
-        if ((rootIndex == -1) || (rootIndex >= maxSize))
+        if ((rootIndex == NULL) || (rootIndex >= maxSize))
             return;
         reflateNode(rootIndex);
     }

@@ -61,7 +61,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
         double[] pointCopy = cleanCopy(point);
         P updateInput = updateCoordinator.initUpdate(pointCopy);
         List<P> results = update(updateInput);
-        updateCoordinator.completeUpdate(results);
+        updateCoordinator.completeUpdate(updateInput, results);
     }
 
     /**

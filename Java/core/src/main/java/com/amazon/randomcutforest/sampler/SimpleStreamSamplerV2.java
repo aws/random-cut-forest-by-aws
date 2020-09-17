@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
@@ -188,8 +189,8 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      *         if no point was evicted.
      */
     @Override
-    public Sequential<P> getEvictedPoint() {
-        return evictedPoint;
+    public Optional<Sequential<P>> getEvictedPoint() {
+        return Optional.ofNullable(evictedPoint);
     }
 
     /**

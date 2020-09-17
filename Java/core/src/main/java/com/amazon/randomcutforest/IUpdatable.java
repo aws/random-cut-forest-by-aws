@@ -23,7 +23,7 @@ public interface IUpdatable<P> {
     /**
      * Update the model with the given point. If a point is removed from the model
      * as part of the update, then it is returned. Otherwise the return value is
-     * null.
+     * {@code Optional.empty()}.
      *
      * A given call to `update` may choose not to do anything with the point (and
      * therefore the model state may not change). For example, in a

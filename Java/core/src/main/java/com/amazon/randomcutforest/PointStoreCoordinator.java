@@ -25,7 +25,6 @@ public class PointStoreCoordinator implements IUpdateCoordinator<Sequential<Inte
 
     private final PointStore store;
     private long currentIndex;
-    private Integer updateInput;
 
     public PointStoreCoordinator(PointStore store) {
         checkNotNull(store, "store must not be null");
@@ -35,17 +34,17 @@ public class PointStoreCoordinator implements IUpdateCoordinator<Sequential<Inte
 
     @Override
     public Sequential<Integer> initUpdate(double[] point) {
-        updateInput = store.add(CommonUtils.toFloatArray(point));
-        return new Sequential<>(updateInput, currentIndex);
+        int pointIndex = store.add(CommonUtils.toFloatArray(point));
+        return new Sequential<>(pointIndex, currentIndex);
     }
 
     @Override
-    public void completeUpdate(List<Sequential<Integer>> updateResults) {
+    public void completeUpdate(Sequential<Integer> updateInput, List<Sequential<Integer>> updateResults) {
         updateResults.stream().map(Sequential::getValue).forEach(deletedIndex -> {
-            store.incrementRefCount(updateInput);
+            store.incrementRefCount(updateInput.getValue());
             store.decrementRefCount(deletedIndex);
         });
-        store.decrementRefCount(updateInput);
+        store.decrementRefCount(updateInput.getValue());
         currentIndex++;
     }
 

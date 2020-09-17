@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.sampler;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.amazon.randomcutforest.Sequential;
 
@@ -42,7 +43,7 @@ public interface IStreamSampler<P> {
 
     /**
      * @return the point that was evicted from the sample in the most recent call to
-     *         {@link #sample}, or null if no point was evicted.
+     *         {@link #sample}, or {@code Optional.empty()} if no point was evicted.
      */
-    Sequential<P> getEvictedPoint();
+    Optional<Sequential<P>> getEvictedPoint();
 }
