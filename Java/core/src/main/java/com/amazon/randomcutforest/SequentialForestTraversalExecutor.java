@@ -45,7 +45,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
 
         R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTree(point, visitor);
+            return tree.traverse(point, visitor);
         }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         return finisher.apply(unnormalizedResult);
@@ -57,7 +57,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
 
         return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTree(point, visitor);
+            return tree.traverse(point, visitor);
         }).collect(collector);
     }
 
@@ -68,7 +68,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
         for (TreeUpdater treeUpdater : treeUpdaters) {
             RandomCutTree tree = treeUpdater.getTree();
             Visitor<R> visitor = visitorFactory.apply(tree);
-            accumulator.accept(tree.traverseTree(point, visitor));
+            accumulator.accept(tree.traverse(point, visitor));
             if (accumulator.isConverged()) {
                 break;
             }
@@ -83,7 +83,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
 
         R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTreeMulti(point, visitor);
+            return tree.traverseMulti(point, visitor);
         }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         return finisher.apply(unnormalizedResult);
@@ -95,7 +95,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
 
         return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseTreeMulti(point, visitor);
+            return tree.traverseMulti(point, visitor);
         }).collect(collector);
     }
 }

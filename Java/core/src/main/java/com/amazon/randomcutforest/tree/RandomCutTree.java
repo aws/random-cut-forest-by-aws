@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Sequential;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.WeightedPoint;
 
@@ -38,7 +39,7 @@ import com.amazon.randomcutforest.sampler.WeightedPoint;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public class RandomCutTree {
+public class RandomCutTree implements ITree<Sequential<double[]>> {
 
     /**
      * By default, trees will not store sequence indexes.
@@ -197,6 +198,17 @@ public class RandomCutTree {
     /**
      * Delete the given point from this tree.
      *
+     * @param point A point in the tree that we wish to delete.
+     */
+    @Override
+    public void deletePoint(Sequential<double[]> point) {
+        checkState(root != null, "root must not be null");
+        deletePoint(root, point.getValue(), point.getSequenceIndex());
+    }
+
+    /**
+     * Delete the given point from this tree.
+     *
      * @param weightedPoint A point in the tree that we wish to delete.
      */
     public void deletePoint(WeightedPoint weightedPoint) {
@@ -271,6 +283,20 @@ public class RandomCutTree {
         node.decrementMass();
         if (centerOfMassEnabled) {
             node.subtractFromPointSum(point);
+        }
+    }
+
+    /**
+     * Add a new point to the tree.
+     *
+     * @param point The point to add to the tree.
+     */
+    @Override
+    public void addPoint(Sequential<double[]> point) {
+        if (root == null) {
+            root = newLeafNode(point.getValue(), point.getSequenceIndex());
+        } else {
+            addPoint(root, point.getValue(), point.getSequenceIndex());
         }
     }
 
@@ -404,7 +430,8 @@ public class RandomCutTree {
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
-    public <R> R traverseTree(double[] point, Visitor<R> visitor) {
+    @Override
+    public <R> R traverse(double[] point, Visitor<R> visitor) {
         checkState(root != null, "this tree doesn't contain any nodes");
         traversePathToLeafAndVisitNodes(point, visitor, root, 0);
         return visitor.getResult();
@@ -423,10 +450,10 @@ public class RandomCutTree {
 
     /**
      * This is a traversal method which follows the standard traveral path (defined
-     * in {@link #traverseTree(double[], Visitor)}) but at Node in checks to see
-     * whether the visitor should split. If a split is triggered, then independent
-     * copies of the visitor are sent down each branch of the tree and then merged
-     * before propogating the result.
+     * in {@link #traverse(double[], Visitor)}) but at Node in checks to see whether
+     * the visitor should split. If a split is triggered, then independent copies of
+     * the visitor are sent down each branch of the tree and then merged before
+     * propogating the result.
      *
      * @param point   A point which determines the traversal path from the root to a
      *                leaf node.
@@ -434,7 +461,8 @@ public class RandomCutTree {
      * @param <R>     The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
-    public <R> R traverseTreeMulti(double[] point, MultiVisitor<R> visitor) {
+    @Override
+    public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitor, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");
@@ -492,6 +520,14 @@ public class RandomCutTree {
      */
     public Node getRoot() {
         return root;
+    }
+
+    /**
+     * @return the total mass in the tree.
+     */
+    @Override
+    public int getMass() {
+        return root == null ? 0 : root.getMass();
     }
 
     public static class Builder<T extends Builder<T>> {

@@ -80,6 +80,10 @@ public class NodeStore extends SmallIndexManager {
         return index;
     }
 
+    public void delete(short index) {
+        releaseIndex(index);
+    }
+
     public StagedNode stageNode() {
         return this.new StagedNode();
     }

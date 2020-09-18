@@ -167,7 +167,7 @@ public class TransductiveHyperForestFunctionalTest {
 
             return trees.parallelStream().map(tree -> {
                 Visitor<Double> visitor = visitorFactory.apply(tree);
-                return tree.traverseTree(point, visitor);
+                return tree.traverse(point, visitor);
             }).reduce(accumulator).map(finisher)
                     .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 

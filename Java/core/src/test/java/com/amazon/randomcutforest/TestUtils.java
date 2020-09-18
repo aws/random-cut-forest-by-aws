@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
+import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
@@ -31,6 +32,20 @@ public class TestUtils {
      * Return a visitor that does nothing.
      */
     public static final Function<RandomCutTree, Visitor<Double>> DUMMY_VISITOR_FACTORY = tree -> new Visitor<Double>() {
+        @Override
+        public void accept(Node node, int depthOfNode) {
+        }
+
+        @Override
+        public Double getResult() {
+            return Double.NaN;
+        }
+    };
+
+    /**
+     * Return a visitor that does nothing.
+     */
+    public static final Function<ITree<?>, Visitor<Double>> DUMMY_GENERIC_VISITOR_FACTORY = tree -> new Visitor<Double>() {
         @Override
         public void accept(Node node, int depthOfNode) {
         }
@@ -117,4 +132,32 @@ public class TestUtils {
             }
         };
     }
+
+    /**
+     * Return a multi-visitor that does nothing.
+     */
+    public static final Function<ITree<?>, MultiVisitor<Double>> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
+        @Override
+        public void accept(Node node, int depthOfNode) {
+        }
+
+        @Override
+        public Double getResult() {
+            return Double.NaN;
+        }
+
+        @Override
+        public boolean trigger(Node node) {
+            return false;
+        }
+
+        @Override
+        public MultiVisitor<Double> newCopy() {
+            return null;
+        }
+
+        @Override
+        public void combine(MultiVisitor<Double> other) {
+        }
+    };
 }

@@ -31,7 +31,7 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore extends IndexManager {
+public class PointStore extends IndexManager implements IPointStore {
 
     private final float[] store;
     private final int[] refCount;
@@ -55,6 +55,7 @@ public class PointStore extends IndexManager {
     /**
      * @return the number of dimensions in stored points for this PointStore.
      */
+    @Override
     public int getDimensions() {
         return dimensions;
     }
@@ -134,6 +135,7 @@ public class PointStore extends IndexManager {
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
+    @Override
     public boolean pointEquals(int index, float[] point) {
         checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
@@ -157,6 +159,7 @@ public class PointStore extends IndexManager {
      * @throws IllegalArgumentException if the current reference count for this
      *                                  index is nonpositive.
      */
+    @Override
     public float[] get(int index) {
         checkValidIndex(index);
         return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);

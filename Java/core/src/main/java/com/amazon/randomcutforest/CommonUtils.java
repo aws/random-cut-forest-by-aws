@@ -177,4 +177,21 @@ public class CommonUtils {
 
     };
 
+    public static double[] toDoubleArray(float[] point) {
+        checkNotNull(point, "point must not be null");
+        double[] result = new double[point.length];
+        for (int i = 0; i < point.length; i++) {
+            result[i] = point[i];
+        }
+        return result;
+    }
+
+    public static float[] toFloatArray(double[] point) {
+        checkNotNull(point, "point must not be null");
+        float[] result = new float[point.length];
+        for (int i = 0; i < point.length; i++) {
+            result[i] = (float) point[i];
+        }
+        return result;
+    }
 }
