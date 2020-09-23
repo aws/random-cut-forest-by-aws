@@ -16,55 +16,22 @@
 package com.amazon.randomcutforest;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
+import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.tree.SamplerPlusTree;
 
 public abstract class AbstractForestTraversalExecutor {
 
-    protected final ArrayList<TreeUpdater> treeUpdaters;
-    protected long totalUpdates;
+    protected final ArrayList<SamplerPlusTree> components;
 
-    protected AbstractForestTraversalExecutor(ArrayList<TreeUpdater> treeUpdaters) {
-        this.treeUpdaters = treeUpdaters;
-        totalUpdates = 0;
+    protected AbstractForestTraversalExecutor(ArrayList<SamplerPlusTree> treeExecutors) {
+        this.components = treeExecutors;
     }
-
-    public long getTotalUpdates() {
-        return totalUpdates;
-    }
-
-    /**
-     * Update the forest with the given point. The point is submitted to each
-     * sampler in the forest. If the sampler accepts the point, the point is
-     * submitted to the update method in the corresponding Random Cut Tree.
-     *
-     * @param point The point used to update the forest.
-     */
-    public void update(double[] point) {
-        totalUpdates++;
-        double[] pointCopy = cleanCopy(point);
-        update(pointCopy, totalUpdates);
-    }
-
-    /**
-     * Internal update method which submits the given point and sequence index to
-     * {@link TreeUpdater#update(double[], long)} for each TreeUpdater managed by
-     * this executor.
-     *
-     * @param pointCopy     The point values that were are using the update the
-     *                      forest. The name of this parameter is a reminder that we
-     *                      should update the forest with a copy of the point that
-     *                      was passed in, since the original point may be modified
-     *                      later.
-     * @param sequenceIndex The sequence index to assign to this point. This should
-     *                      be a unique value for every point submitted.
-     */
-    protected abstract void update(double[] pointCopy, long sequenceIndex);
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
@@ -88,7 +55,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -112,7 +79,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector);
 
     /**
@@ -140,7 +107,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -165,9 +132,8 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point,
-            Function<RandomCutTree, MultiVisitor<R>> visitorFactory, BinaryOperator<R> accumulator,
-            Function<R, S> finisher);
+    public abstract <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+            BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
@@ -190,24 +156,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point,
-            Function<RandomCutTree, MultiVisitor<R>> visitorFactory, Collector<R, ?, S> collector);
+    public abstract <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+            Collector<R, ?, S> collector);
 
-    /**
-     * Returns a clean deep copy of the point.
-     *
-     * Current clean-ups include changing negative zero -0.0 to positive zero 0.0.
-     *
-     * @param point The original data point.
-     * @return a clean deep copy of the original point.
-     */
-    protected double[] cleanCopy(double[] point) {
-        double[] pointCopy = Arrays.copyOf(point, point.length);
-        for (int i = 0; i < point.length; i++) {
-            if (pointCopy[i] == 0.0) {
-                pointCopy[i] = 0.0;
-            }
-        }
-        return pointCopy;
-    }
 }

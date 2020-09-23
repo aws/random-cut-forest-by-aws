@@ -39,7 +39,7 @@ import com.amazon.randomcutforest.sampler.WeightedPoint;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public class RandomCutTree implements ITree<Sequential<double[]>> {
+public class RandomCutTree implements ITree<double[]> {
 
     /**
      * By default, trees will not store sequence indexes.
@@ -292,12 +292,13 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
      * @param point The point to add to the tree.
      */
     @Override
-    public void addPoint(Sequential<double[]> point) {
+    public double[] addPoint(Sequential<double[]> point) {
         if (root == null) {
             root = newLeafNode(point.getValue(), point.getSequenceIndex());
         } else {
             addPoint(root, point.getValue(), point.getSequenceIndex());
         }
+        return point.getValue();
     }
 
     /**

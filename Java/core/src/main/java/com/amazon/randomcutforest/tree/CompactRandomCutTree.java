@@ -45,7 +45,7 @@ import com.amazon.randomcutforest.store.NodeStore;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
+public class CompactRandomCutTree implements ITree<Integer> {
 
     /**
      * The index value used to represent the absence of a node. For example, when
@@ -295,13 +295,14 @@ public class CompactRandomCutTree implements ITree<Sequential<Integer>> {
         return ret;
     }
 
-    public void addPoint(Sequential<Integer> seq) {
+    public Integer addPoint(Sequential<Integer> seq) {
         int pointIndex = seq.getValue();
         float[] pointValue = pointStore.get(pointIndex);
         if (rootIndex == NULL) {
             rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
+            return pointIndex;
         } else {
-            addPoint(rootIndex, pointValue, pointIndex);
+            return addPoint(rootIndex, pointValue, pointIndex);
         }
     }
 

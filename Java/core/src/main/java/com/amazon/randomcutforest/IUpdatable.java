@@ -15,24 +15,32 @@
 
 package com.amazon.randomcutforest;
 
+import java.util.List;
 import java.util.Optional;
-
-import com.amazon.randomcutforest.tree.SamplingTree;
 
 public interface IUpdatable<P> {
     /**
-     * Update the model with the given point. If a point is removed from the model
-     * as part of the update, then it is returned. Otherwise the return value is
-     * {@code Optional.empty()}.
-     *
-     * A given call to `update` may choose not to do anything with the point (and
-     * therefore the model state may not change). For example, in a
-     * {@link SamplingTree} the tree is only modified if the point is accepted by
-     * the sampler.
-     *
-     * @param point The point submitted to the model
-     * @return the point that was removed from the model as part of the update, or
-     *         {@code Option.empty()} if no point was removed.
+     * result of an update on a sampler plus tree
+     * 
+     * @param point  to be considered for updating the sampler plus tree
+     * @param seqNum timestamp
+     * @return the (inserted,deleted) pair of handles in the tree for eventual
+     *         bookkeeping
      */
-    Optional<P> update(P point);
+    Optional<UpdateReturn<P>> update(P point, long seqNum);
+
+    /**
+     * returns the sampler's queue
+     * 
+     * @return
+     */
+    List<Sequential<P>> getWeightedSamples();
+
+    /**
+     * Initialise the sampler plus tree using the samples.
+     * 
+     * @param samples to recreate the pair (functionally)
+     */
+    void initialize(List<Sequential<P>> samples);
+
 }

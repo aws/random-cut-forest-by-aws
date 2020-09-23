@@ -15,40 +15,37 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import com.amazon.randomcutforest.Sequential;
-
 /**
  * A container class representing a weighted sequential value. This generic type
- * is used by {@link SimpleStreamSamplerV2} to store weighted points of
- * arbitrary type.
+ * is used by {@link SimpleStreamSampler} to store weighted points of arbitrary
+ * type.
  * 
  * @param <P> The representation of the point value.
  */
-public class Weighted<P> extends Sequential<P> {
+public class Weighted<P> {
 
-    private final double weight;
+    public P value;
+    private double weight;
 
     /**
-     * Create a new weighted value from a sequential value.
+     * Create a new weighted value from a point value of type P.
      * 
-     * @param seqPoint A sequential value.
-     * @param weight   The weight value.
+     * @param point  A value.
+     * @param weight The weight value.
      */
-    public Weighted(Sequential<P> seqPoint, double weight) {
-        super(seqPoint);
+    public Weighted(P point, double weight) {
+        this.value = point;
         this.weight = weight;
     }
 
     /**
-     * Create a new weighted value.
+     * copy constructor
      * 
-     * @param point         The point value.
-     * @param sequenceIndex The sequence index for this weighted value.
-     * @param weight        The weight value.
+     * @param other weighted point being copied
      */
-    public Weighted(P point, long sequenceIndex, double weight) {
-        super(point, sequenceIndex);
-        this.weight = weight;
+    public Weighted(Weighted<P> other) {
+        this.value = other.getValue();
+        this.weight = other.getWeight();
     }
 
     /**
@@ -57,4 +54,31 @@ public class Weighted<P> extends Sequential<P> {
     public double getWeight() {
         return weight;
     }
+
+    /**
+     *
+     * @return the value
+     */
+    public P getValue() {
+        return value;
+    }
+
+    /**
+     * copy operation
+     * 
+     * @param other is another point
+     */
+    public void setValue(P other) {
+        value = other;
+    }
+
+    /**
+     * sets the weight
+     * 
+     * @param otherWeight new weight
+     */
+    public void setWeight(double otherWeight) {
+        this.weight = otherWeight;
+    }
+
 }

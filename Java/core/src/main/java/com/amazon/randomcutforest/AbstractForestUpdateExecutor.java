@@ -18,6 +18,7 @@ package com.amazon.randomcutforest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -29,6 +30,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
 
     protected final IUpdateCoordinator<P> updateCoordinator;
     protected final ArrayList<IUpdatable<P>> models;
+    protected long currentIndex;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
@@ -41,13 +43,22 @@ public abstract class AbstractForestUpdateExecutor<P> {
     protected AbstractForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models) {
         this.updateCoordinator = updateCoordinator;
         this.models = models;
+        currentIndex = 1L;
     }
 
     /**
      * @return the total number of times that an update has been completed.
      */
     public long getTotalUpdates() {
-        return updateCoordinator.getTotalUpdates();
+        return currentIndex - 1;
+    }
+
+    /**
+     * @param seen sets the "clock" of the updater needed for time dependent
+     *             sampling
+     */
+    public void setTotalUpdates(long seen) {
+        currentIndex = seen + 1;
     }
 
     /**
@@ -59,9 +70,9 @@ public abstract class AbstractForestUpdateExecutor<P> {
      */
     public void update(double[] point) {
         double[] pointCopy = cleanCopy(point);
-        P updateInput = updateCoordinator.initUpdate(pointCopy);
-        List<P> results = update(updateInput);
-        updateCoordinator.completeUpdate(updateInput, results);
+        P updateInput = updateCoordinator.initUpdate(pointCopy, currentIndex);
+        List<Optional<UpdateReturn<P>>> results = update(updateInput, currentIndex);
+        currentIndex++;
     }
 
     /**
@@ -73,7 +84,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * @return a list of points that were deleted from the model as part of the
      *         update.
      */
-    protected abstract List<P> update(P updateInput);
+    protected abstract List<Optional<UpdateReturn<P>>> update(P updateInput, long currentIndex);
 
     /**
      * Returns a clean deep copy of the point.

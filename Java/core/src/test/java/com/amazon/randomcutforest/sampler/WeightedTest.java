@@ -20,11 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.amazon.randomcutforest.Sequential;
+
 public class WeightedTest {
 
     @Test
     public void testNew() {
-        Weighted<double[]> point = new Weighted<>(new double[] { 0.99, -55.2 }, 999L, 1.23);
+        Sequential<double[]> point = new Sequential(new double[] { 0.99, -55.2 }, 1.23, 999L);
         assertEquals(1.23, point.getWeight());
         assertEquals(999L, point.getSequenceIndex());
         assertArrayEquals(new double[] { 0.99, -55.2 }, point.getValue());

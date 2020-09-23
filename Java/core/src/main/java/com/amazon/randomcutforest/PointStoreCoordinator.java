@@ -18,10 +18,11 @@ package com.amazon.randomcutforest;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.amazon.randomcutforest.store.PointStore;
 
-public class PointStoreCoordinator implements IUpdateCoordinator<Sequential<Integer>> {
+public class PointStoreCoordinator implements IUpdateCoordinator<Integer> {
 
     private final PointStore store;
     private long currentIndex;
@@ -33,23 +34,18 @@ public class PointStoreCoordinator implements IUpdateCoordinator<Sequential<Inte
     }
 
     @Override
-    public Sequential<Integer> initUpdate(double[] point) {
+    public Integer initUpdate(double[] point, long seqNum) {
         int pointIndex = store.add(CommonUtils.toFloatArray(point));
-        return new Sequential<>(pointIndex, currentIndex);
+        return pointIndex;
     }
 
     @Override
-    public void completeUpdate(Sequential<Integer> updateInput, List<Sequential<Integer>> updateResults) {
-        updateResults.stream().map(Sequential::getValue).forEach(deletedIndex -> {
-            store.incrementRefCount(updateInput.getValue());
-            store.decrementRefCount(deletedIndex);
+    public void completeUpdate(List<Optional<UpdateReturn<Integer>>> updateResults) {
+        updateResults.stream().filter(Optional::isPresent).map(Optional::get).forEach(result -> {
+            store.incrementRefCount(result.getFirst());
+            result.getSecond().ifPresent(index -> store.decrementRefCount(index));
         });
-        store.decrementRefCount(updateInput.getValue());
         currentIndex++;
     }
 
-    @Override
-    public long getTotalUpdates() {
-        return currentIndex;
-    }
 }

@@ -42,7 +42,9 @@ import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.tree.SamplerPlusTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
 /**
@@ -146,7 +148,12 @@ public class RandomCutForest {
     /**
      * An implementation of forest traversal algorithms.
      */
-    protected final AbstractForestTraversalExecutor executor;
+    protected final AbstractForestTraversalExecutor traversalExecutor;
+
+    /**
+     * An implementation of forest update algorithms.
+     */
+    protected AbstractForestUpdateExecutor updateExecutor;
 
     protected RandomCutForest(Builder<?> builder) {
         checkArgument(builder.numberOfTrees > 0, "numberOfTrees must be greater than 0");
@@ -170,28 +177,32 @@ public class RandomCutForest {
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
-        ArrayList<TreeUpdater> treeUpdaters = new ArrayList<>(numberOfTrees);
+        ArrayList<SamplerPlusTree> components = new ArrayList<>(numberOfTrees);
+        IUpdateCoordinator<double[]> coordinator = new PointSequencer();
 
         // If a random seed was given, use it to create a new Random. Otherwise, call
         // the 0-argument constructor
         rng = builder.randomSeed.map(Random::new).orElseGet(Random::new);
 
         for (int i = 0; i < numberOfTrees; i++) {
-            SimpleStreamSampler sampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong());
             RandomCutTree tree = RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
                     .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
-            TreeUpdater updater = new TreeUpdater(sampler, tree);
-            treeUpdaters.add(updater);
+            SimpleStreamSampler newSampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong(),
+                    storeSequenceIndexesEnabled);
+            components.add(new SamplerPlusTree(newSampler, tree));
+
         }
 
         if (parallelExecutionEnabled) {
             // If the user specified a thread pool size, use it. Otherwise, use available
             // processors - 1.
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
-            executor = new ParallelForestTraversalExecutor(treeUpdaters, threadPoolSize);
+            traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
+            updateExecutor = new ParallelForestUpdateExecutor(coordinator, components, threadPoolSize);
         } else {
             threadPoolSize = 0;
-            executor = new SequentialForestTraversalExecutor(treeUpdaters);
+            traversalExecutor = new SequentialForestTraversalExecutor(components);
+            updateExecutor = new SequentialForestUpdateExecutor(coordinator, components);
         }
     }
 
@@ -300,7 +311,7 @@ public class RandomCutForest {
     public void update(double[] point) {
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
-        executor.update(point);
+        updateExecutor.update(point);
     }
 
     /**
@@ -326,7 +337,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -335,7 +346,7 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForest(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForest(point, visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -359,7 +370,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -367,7 +378,7 @@ public class RandomCutForest {
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
-        return executor.traverseForest(point, visitorFactory, collector);
+        return traversalExecutor.traverseForest(point, visitorFactory, collector);
     }
 
     /**
@@ -395,7 +406,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -404,7 +415,7 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForest(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForest(point, visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -429,7 +440,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -438,7 +449,7 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForestMulti(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForestMulti(point, visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -462,7 +473,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -470,7 +481,7 @@ public class RandomCutForest {
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
-        return executor.traverseForestMulti(point, visitorFactory, collector);
+        return traversalExecutor.traverseForestMulti(point, visitorFactory, collector);
     }
 
     /**
@@ -491,8 +502,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
-                tree.getRoot().getMass());
+        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         BinaryOperator<Double> accumulator = Double::sum;
 
@@ -520,8 +530,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
-                tree.getRoot().getMass());
+        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -551,8 +560,8 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getRoot().getMass());
+        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+                tree.getMass());
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
@@ -572,8 +581,8 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getRoot().getMass());
+        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+                tree.getMass());
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -602,8 +611,8 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        Function<RandomCutTree, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(
-                point, sampleSize, 1.0, centerOfMassEnabled); // self
+        Function<ITree<?>, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(point,
+                sampleSize, 1.0, centerOfMassEnabled); // self
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
                 sampleSize, numberOfTrees);
 
@@ -645,7 +654,7 @@ public class RandomCutForest {
             return new double[dimensions];
         }
 
-        Function<RandomCutTree, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
+        Function<ITree<?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
                 numberOfMissingValues, missingIndexes);
 
         if (numberOfMissingValues == 1) {
@@ -826,7 +835,7 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        Function<RandomCutTree, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
+        Function<ITree<?>, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
                 distanceThreshold);
 
         return traverseForest(point, visitorFactory, Neighbor.collector());
@@ -853,14 +862,14 @@ public class RandomCutForest {
      * @return true if all samplers are ready to output results.
      */
     public boolean isOutputReady() {
-        return executor.getTotalUpdates() >= outputAfter;
+        return updateExecutor.getTotalUpdates() >= outputAfter;
     }
 
     /**
      * @return true if all samplers in the forest are full.
      */
     public boolean samplersFull() {
-        return executor.getTotalUpdates() >= sampleSize;
+        return updateExecutor.getTotalUpdates() >= sampleSize;
     }
 
     /**
@@ -871,7 +880,7 @@ public class RandomCutForest {
      * @return the total number of updates to the forest.
      */
     public long getTotalUpdates() {
-        return executor.getTotalUpdates();
+        return updateExecutor.getTotalUpdates();
     }
 
     public static class Builder<T extends Builder<T>> {

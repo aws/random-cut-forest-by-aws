@@ -35,7 +35,7 @@ public class AbstractForestTraversalExecutorAdapter
         implements JsonSerializer<AbstractForestTraversalExecutor>, JsonDeserializer<AbstractForestTraversalExecutor> {
 
     public static final String PROPERTY_EXECUTOR_TYPE = "executor_type";
-    public static final String PROPERTY_EXECUTOR = "executor";
+    public static final String PROPERTY_EXECUTOR = "traversalExecutor";
 
     @Override
     public JsonElement serialize(AbstractForestTraversalExecutor src, Type type, JsonSerializationContext context) {

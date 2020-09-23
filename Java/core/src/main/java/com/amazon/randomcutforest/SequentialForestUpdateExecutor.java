@@ -30,8 +30,7 @@ public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecu
     }
 
     @Override
-    protected List<P> update(P point) {
-        return models.stream().map(t -> t.update(point)).filter(Optional::isPresent).map(Optional::get)
-                .collect(Collectors.toList());
+    protected List<Optional<UpdateReturn<P>>> update(P point, long seqNum) {
+        return models.stream().map(t -> t.update(point, seqNum)).collect(Collectors.toList());
     }
 }

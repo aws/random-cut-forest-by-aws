@@ -15,23 +15,15 @@
 
 package com.amazon.randomcutforest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -43,7 +35,7 @@ public class ForestUpdateExecutorTest {
     private static final int threadPoolSize = 2;
 
     @Captor
-    private ArgumentCaptor<Sequential<double[]>> captor;
+    private ArgumentCaptor<double[]> captor;
 
     private static class TestExecutorProvider implements ArgumentsProvider {
         @Override
@@ -57,63 +49,16 @@ public class ForestUpdateExecutorTest {
                 parallelTrees.add(mock(IUpdatable.class));
             }
 
-            IUpdateCoordinator<Sequential<double[]>> sequentialUpdateCoordinator = new PointSequencer();
-            AbstractForestUpdateExecutor<Sequential<double[]>> sequentialExecutor = new SequentialForestUpdateExecutor<>(
+            IUpdateCoordinator<double[]> sequentialUpdateCoordinator = new PointSequencer();
+            AbstractForestUpdateExecutor<Sequential<double[]>> sequentialExecutor = new SequentialForestUpdateExecutor(
                     sequentialUpdateCoordinator, sequentialTrees);
 
-            IUpdateCoordinator<Sequential<double[]>> parallelUpdateCoordinator = new PointSequencer();
-            AbstractForestUpdateExecutor<Sequential<double[]>> parallelExecutor = new ParallelForestUpdateExecutor<>(
+            IUpdateCoordinator<double[]> parallelUpdateCoordinator = new PointSequencer();
+            AbstractForestUpdateExecutor<Sequential<double[]>> parallelExecutor = new ParallelForestUpdateExecutor(
                     parallelUpdateCoordinator, parallelTrees, threadPoolSize);
 
             return Stream.of(sequentialExecutor, parallelExecutor).map(Arguments::of);
         }
     }
 
-    @ParameterizedTest
-    @ArgumentsSource(TestExecutorProvider.class)
-    public void testUpdate(AbstractForestUpdateExecutor<Sequential<double[]>> executor) {
-        int totalUpdates = 10;
-        List<double[]> expectedPoints = new ArrayList<>();
-
-        for (int i = 0; i < totalUpdates; i++) {
-            double[] point = new double[] { Math.sin(i), Math.cos(i) };
-            executor.update(point);
-            expectedPoints.add(point);
-        }
-
-        for (IUpdatable<Sequential<double[]>> tree : executor.models) {
-            verify(tree, times(totalUpdates)).update(captor.capture());
-            List<Sequential<double[]>> actualArguments = new ArrayList<>(captor.getAllValues());
-            for (int i = 0; i < totalUpdates; i++) {
-                Sequential<double[]> actual = actualArguments.get(i);
-                assertEquals(i + 1, actual.getSequenceIndex());
-                assertTrue(Arrays.equals(expectedPoints.get(i), actual.getValue()));
-            }
-        }
-
-        assertEquals(totalUpdates, executor.getTotalUpdates());
-    }
-
-    @ParameterizedTest
-    @ArgumentsSource(TestExecutorProvider.class)
-    public void testUpdateWithSignedZero(AbstractForestUpdateExecutor<Sequential<double[]>> executor) {
-        double[] negativeZero = new double[] { -0.0, 0.0, 5.0 };
-        double[] positiveZero = new double[] { 0.0, 0.0, 5.0 };
-
-        executor.update(negativeZero);
-        executor.update(positiveZero);
-
-        for (IUpdatable<Sequential<double[]>> tree : executor.models) {
-            verify(tree, times(2)).update(captor.capture());
-            List<Sequential<double[]>> arguments = captor.getAllValues();
-
-            Sequential<double[]> actual = arguments.get(0);
-            assertEquals(1, actual.getSequenceIndex());
-            assertTrue(Arrays.equals(positiveZero, actual.getValue()));
-
-            actual = arguments.get(1);
-            assertEquals(2, actual.getSequenceIndex());
-            assertTrue(Arrays.equals(positiveZero, actual.getValue()));
-        }
-    }
 }

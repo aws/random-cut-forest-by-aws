@@ -22,12 +22,12 @@ import java.util.List;
 import java.util.Optional;
 
 import com.amazon.randomcutforest.*;
-import com.amazon.randomcutforest.sampler.IStreamSamplerNew;
+import com.amazon.randomcutforest.sampler.IStreamSampler;
 
 public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
 
     private ITree<P> tree;
-    private IStreamSamplerNew<P> sampler;
+    private IStreamSampler<P> sampler;
 
     /**
      * Constructor of a pair of sampler + tree. The sampler is the driver's seat
@@ -37,7 +37,7 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
      * @param sampler the sampler
      * @param tree    the corresponding tree
      */
-    public SamplerPlusTree(IStreamSamplerNew<P> sampler, ITree<P> tree) {
+    public SamplerPlusTree(IStreamSampler<P> sampler, ITree<P> tree) {
         checkNotNull(sampler, "sampler must not be null");
         checkNotNull(tree, "tree must not be null");
         this.sampler = sampler;
@@ -70,7 +70,7 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
                 tree.deletePoint(deletedPoint.get());
                 deleteRef = deletedPoint.get().getValue();
             }
-            P newRef = tree.addPoint(deletedPoint.get());
+            P newRef = (P) tree.addPoint(new Sequential(point, presampleResult.get(), seqNum));
             sampler.addSample(newRef, presampleResult.get(), seqNum);
             return Optional.ofNullable(new UpdateReturn(newRef, Optional.ofNullable(deleteRef)));
         }
@@ -137,7 +137,7 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
      *
      * @return the sampler
      */
-    public IStreamSamplerNew<P> getSampler() {
+    public IStreamSampler<P> getSampler() {
         return sampler;
     }
 

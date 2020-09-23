@@ -16,26 +16,20 @@
 package com.amazon.randomcutforest;
 
 import java.util.List;
+import java.util.Optional;
 
-public class PointSequencer implements IUpdateCoordinator<Sequential<double[]>> {
-    private long currentIndex;
+public class PointSequencer implements IUpdateCoordinator<double[]> {
 
     public PointSequencer() {
-        currentIndex = 1L;
     }
 
     @Override
-    public Sequential<double[]> initUpdate(double[] point) {
-        return new Sequential<>(point, currentIndex);
+    public double[] initUpdate(double[] point, long seqNum) {
+        return point;
     }
 
     @Override
-    public void completeUpdate(Sequential<double[]> updateInput, List<Sequential<double[]>> updateResults) {
-        currentIndex++;
+    public void completeUpdate(List<Optional<UpdateReturn<double[]>>> updateResults) {
     }
 
-    @Override
-    public long getTotalUpdates() {
-        return currentIndex - 1;
-    }
 }

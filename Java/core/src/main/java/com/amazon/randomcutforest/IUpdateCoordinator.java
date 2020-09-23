@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
@@ -30,11 +31,12 @@ public interface IUpdateCoordinator<P> {
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.
      * 
-     * @param point The input point.
+     * @param point  The input point.
+     * @param seqNum the sequence number; for future use
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    P initUpdate(double[] point);
+    P initUpdate(double[] point, long seqNum);
 
     /**
      * Complete the update. This method is called by IUpdateCoordinator after all
@@ -44,10 +46,6 @@ public interface IUpdateCoordinator<P> {
      * 
      * @param updateResults A list of points that were deleted.
      */
-    void completeUpdate(P updateInput, List<P> updateResults);
+    void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults);
 
-    /**
-     * @return the total number of times that an update was completed.
-     */
-    long getTotalUpdates();
 }
