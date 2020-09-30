@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.Sequential;
 
 public class WeightedTest {
 

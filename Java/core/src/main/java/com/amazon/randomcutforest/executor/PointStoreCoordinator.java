@@ -13,39 +13,61 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.List;
 import java.util.Optional;
 
 import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreDoubleData;
 
 public class PointStoreCoordinator implements IUpdateCoordinator<Integer> {
 
+    private final PointStoreDouble doubleStore;
     private final PointStore store;
-    private long currentIndex;
+
+    public PointStoreCoordinator(PointStoreDouble store) {
+        checkNotNull(store, "store must not be null");
+        this.doubleStore = store;
+        this.store = null;
+    }
 
     public PointStoreCoordinator(PointStore store) {
         checkNotNull(store, "store must not be null");
+        this.doubleStore = null;
         this.store = store;
-        currentIndex = 1L;
     }
 
     @Override
     public Integer initUpdate(double[] point, long seqNum) {
-        int pointIndex = store.add(CommonUtils.toFloatArray(point));
-        return pointIndex;
+        if (doubleStore != null) {
+            int pointIndex = doubleStore.add(point);
+            return pointIndex;
+        } else {
+            int pointIndex = store.add((toFloatArray(point)));
+            return pointIndex;
+        }
     }
 
     @Override
-    public void completeUpdate(List<Optional<UpdateReturn<Integer>>> updateResults) {
+    public void completeUpdate(List<Optional<UpdateReturn<Integer>>> updateResults, Integer updateInput) {
         updateResults.stream().filter(Optional::isPresent).map(Optional::get).forEach(result -> {
-            store.incrementRefCount(result.getFirst());
-            result.getSecond().ifPresent(index -> store.decrementRefCount(index));
+            doubleStore.incrementRefCount(result.getFirst());
+            result.getSecond().ifPresent(index -> doubleStore.decrementRefCount(index));
         });
-        currentIndex++;
+        doubleStore.decrementRefCount(updateInput);
     }
 
+    @Override
+    public PointStoreDoubleData getPointStoreData() {
+        if (doubleStore != null) {
+            return new PointStoreDoubleData(doubleStore);
+        } else { // To be filled in
+            return null;
+        }
+    }
 }

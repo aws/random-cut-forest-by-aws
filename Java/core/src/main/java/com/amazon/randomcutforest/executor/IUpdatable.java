@@ -13,10 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.List;
 import java.util.Optional;
+
+import com.amazon.randomcutforest.sampler.Weighted;
 
 public interface IUpdatable<P> {
     /**
@@ -32,15 +34,24 @@ public interface IUpdatable<P> {
     /**
      * returns the sampler's queue
      * 
-     * @return
+     * @return the list of weighted samples, without the sequence information
      */
-    List<Sequential<P>> getWeightedSamples();
+    List<Weighted<P>> getWeightedSamples();
 
     /**
-     * Initialise the sampler plus tree using the samples.
-     * 
-     * @param samples to recreate the pair (functionally)
+     *
+     * @return the list of sequential samples
      */
-    void initialize(List<Sequential<P>> samples);
+    List<Sequential<P>> getSequentialSamples();
+
+    /**
+     * initialize the models
+     * 
+     * @param samples    samples without sequence information
+     * @param seqSamples samples with sequence information exactly one of these
+     *                   should be non-null
+     */
+
+    void initialize(List<Weighted<P>> samples, List<Sequential<P>> seqSamples);
 
 }

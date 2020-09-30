@@ -13,17 +13,18 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.ArrayList;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 
 public abstract class AbstractForestTraversalExecutor {
 
@@ -36,10 +37,9 @@ public abstract class AbstractForestTraversalExecutor {
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
-     * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from all the
-     * trees are combined using the accumulator and then transformed using the
-     * finisher before being returned.
+     * factory, and then submitted to a tree. The results from all the trees are
+     * combined using the accumulator and then transformed using the finisher before
+     * being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
@@ -113,10 +113,9 @@ public abstract class AbstractForestTraversalExecutor {
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
-     * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], MultiVisitor)}. The results from
-     * all the trees are combined using the accumulator and then transformed using
-     * the finisher before being returned.
+     * visitor factory, and then submitted to a tree. The results from all the trees
+     * are combined using the accumulator and then transformed using the finisher
+     * before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
@@ -138,10 +137,9 @@ public abstract class AbstractForestTraversalExecutor {
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
-     * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], MultiVisitor)}. The results from
-     * individual trees are collected using the {@link java.util.stream.Collector}
-     * and returned. Trees are visited in parallel using
+     * visitor factory, and then submitted to a tree. The results from individual
+     * trees are collected using the {@link java.util.stream.Collector} and
+     * returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.

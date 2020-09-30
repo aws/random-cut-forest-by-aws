@@ -13,16 +13,17 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.ArrayList;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 
 /**
  * Traverse the trees in a forest sequentially.

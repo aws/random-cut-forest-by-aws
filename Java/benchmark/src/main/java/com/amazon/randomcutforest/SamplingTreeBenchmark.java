@@ -26,10 +26,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)

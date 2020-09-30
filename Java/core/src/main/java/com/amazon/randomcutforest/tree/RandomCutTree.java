@@ -15,18 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.*;
 import static com.amazon.randomcutforest.tree.Node.isLeftOf;
 
 import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Sequential;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.sampler.WeightedPoint;
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
  * A Random Cut Tree is a tree data structure whose leaves represent points
@@ -207,16 +204,6 @@ public class RandomCutTree implements ITree<double[]> {
     }
 
     /**
-     * Delete the given point from this tree.
-     *
-     * @param weightedPoint A point in the tree that we wish to delete.
-     */
-    public void deletePoint(WeightedPoint weightedPoint) {
-        checkState(root != null, "root must not be null");
-        deletePoint(root, weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-    }
-
-    /**
      * This function deletes the point from the tree recursively. We traverse the
      * tree based on the cut stored in each interior node until we reach a leaf
      * node. We then delete the leaf node if the mass of the node is 1, otherwise we
@@ -299,19 +286,6 @@ public class RandomCutTree implements ITree<double[]> {
             addPoint(root, point.getValue(), point.getSequenceIndex());
         }
         return point.getValue();
-    }
-
-    /**
-     * Add a new point to the tree.
-     *
-     * @param weightedPoint The point to add to the tree.
-     */
-    public void addPoint(WeightedPoint weightedPoint) {
-        if (root == null) {
-            root = newLeafNode(weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-        } else {
-            addPoint(root, weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-        }
     }
 
     /**

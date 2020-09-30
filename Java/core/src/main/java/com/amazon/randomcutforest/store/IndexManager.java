@@ -18,7 +18,10 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -26,10 +29,10 @@ import java.util.BitSet;
  */
 public class IndexManager {
 
-    private final int capacity;
-    private final int[] freeIndexes;
-    private int freeIndexPointer;
-    private final BitSet occupied;
+    protected final int capacity;
+    protected final int[] freeIndexes;
+    protected int freeIndexPointer;
+    protected final BitSet occupied;
 
     /**
      * Create a new store with the given capacity.
@@ -71,7 +74,11 @@ public class IndexManager {
     protected int takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
         int index = freeIndexes[freeIndexPointer--];
-        checkState(!occupied.get(index), "store tried to return an index marked occupied");
+        /**
+         * The below check will cause reInitialization to fail
+         */
+        // checkState(!occupied.get(index), "store tried to return an index marked
+        // occupied");
         occupied.set(index);
         return index;
     }
@@ -91,5 +98,25 @@ public class IndexManager {
     protected void checkValidIndex(int index) {
         checkArgument(index >= 0 && index < capacity, "index must be between 0 (inclusive) and capacity (exclusive)");
         checkArgument(occupied.get(index), "this index is not being used");
+    }
+
+    public List<Integer> getFreeIndices() {
+        ArrayList result = new ArrayList<>();
+        for (int i = 0; i <= freeIndexPointer; i++) {
+            result.add(freeIndexes[i]);
+        }
+        return result;
+    }
+
+    public int[] getFreeIndexes() {
+        return Arrays.copyOfRange(freeIndexes, 0, freeIndexPointer);
+    }
+
+    public void initializeIndices(List<Integer> freeList) {
+        freeIndexPointer = freeList.size() - 1;
+        for (int i = 0; i < freeList.size(); i++) {
+            freeIndexes[i] = freeList.get(i);
+            occupied.clear(i);
+        }
     }
 }

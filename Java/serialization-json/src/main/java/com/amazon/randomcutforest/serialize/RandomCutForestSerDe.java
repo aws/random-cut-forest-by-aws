@@ -15,16 +15,14 @@
 
 package com.amazon.randomcutforest.serialize;
 
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.amazon.randomcutforest.AbstractForestTraversalExecutor;
+import com.amazon.randomcutforest.ForestState;
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.TreeUpdater;
 import com.amazon.randomcutforest.tree.Node;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
@@ -54,21 +52,25 @@ public class RandomCutForestSerDe {
             public boolean shouldSkipField(FieldAttributes field) {
                 return false;
             }
-        }).registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
-                .registerTypeAdapter(AbstractForestTraversalExecutor.class,
-                        new AbstractForestTraversalExecutorAdapter())
-                .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
-                .registerTypeAdapter(Random.class, new RandomAdapter()).create();
+        }).create();
+        /*
+         * registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
+         * .registerTypeAdapter(AbstractForestTraversalExecutor.class, new
+         * AbstractForestTraversalExecutorAdapter())
+         * .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
+         * .registerTypeAdapter(Random.class, new RandomAdapter()).create();
+         * 
+         */
     }
 
     /**
      * Serializes a RCF object to a json string.
      *
-     * @param rcf a RCF object
+     * @param forestState a RCF ForestState object
      * @return a json string serialized from the RCF
      */
-    public String toJson(RandomCutForest rcf) {
-        return gson.toJson(rcf);
+    public String toJson(ForestState forestState) {
+        return gson.toJson(forestState);
     }
 
     /**
@@ -77,7 +79,7 @@ public class RandomCutForestSerDe {
      * @param json a json string serialized from a RCF
      * @return a RCF deserialized from the string
      */
-    public RandomCutForest fromJson(String json) {
-        return gson.fromJson(json, RandomCutForest.class);
+    public ForestState fromJson(String json) {
+        return gson.fromJson(json, ForestState.class);
     }
 }

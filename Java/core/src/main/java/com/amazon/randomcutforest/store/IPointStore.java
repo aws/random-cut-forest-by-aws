@@ -15,13 +15,22 @@
 
 package com.amazon.randomcutforest.store;
 
+import java.util.List;
+
 /**
  * A read-only point store interface.
  */
-public interface IPointStore {
+public interface IPointStore<P> {
     int getDimensions();
 
-    boolean pointEquals(int index, float[] point);
+    int getCapacity();
 
-    float[] get(int index);
+    boolean pointEquals(int index, P point);
+
+    P get(int index);
+
+    List<?> getData();
+
+    List<Short> getRef();
+
 }

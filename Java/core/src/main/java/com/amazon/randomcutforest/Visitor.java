@@ -18,14 +18,14 @@ package com.amazon.randomcutforest;
 import com.amazon.randomcutforest.tree.Node;
 
 /**
- * This is the interface for a visitor which can be used to query a
- * {@link ITraversable} to produce a result. A visitor is submitted to
- * {@link ITraversable#traverse(double[], Visitor)}, and during the traversal
- * the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes
- * in the traversal path.
+ * This is the interface for a visitor which can be used to query a ITraversable
+ * to produce a result. A visitor is submitted to
+ * ITraversable#traverse(double[], Visitor), and during the traversal the
+ * {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in
+ * the traversal path.
  * <p>
- * See {@link ITraversable#traverse(double[], Visitor)} for details about the
- * traversal path.
+ * See ITraversable#traverse(double[], Visitor) for details about the traversal
+ * path.
  */
 public interface Visitor<R> {
     /**

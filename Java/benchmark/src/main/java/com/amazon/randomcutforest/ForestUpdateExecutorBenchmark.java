@@ -18,24 +18,15 @@ package com.amazon.randomcutforest;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Level;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.OperationsPerInvocation;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.amazon.randomcutforest.executor.*;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.CompactRandomCutTree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
@@ -81,9 +72,9 @@ public class ForestUpdateExecutorBenchmark {
                 ArrayList<IUpdatable<double[]>> trees = new ArrayList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     RandomCutTree tree = RandomCutTree.builder().build();
-                    SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler(sampleSize, lambda,
+                    SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda,
                             random.nextLong(), false);
-                    SamplerPlusTree<double[]> samplingTree = new SamplerPlusTree(sampler, tree);
+                    SamplerPlusTree<double[]> samplingTree = new SamplerPlusTree<>(sampler, tree);
                     trees.add(samplingTree);
                 }
 
@@ -105,9 +96,9 @@ public class ForestUpdateExecutorBenchmark {
                 }
 
                 if (parallelExecutionEnabled) {
-                    executor = new ParallelForestUpdateExecutor(updateCoordinator, trees, threadPoolSize);
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
                 } else {
-                    executor = new SequentialForestUpdateExecutor(updateCoordinator, trees);
+                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
                 }
             }
         }

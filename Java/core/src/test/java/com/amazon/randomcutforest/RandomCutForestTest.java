@@ -18,28 +18,14 @@ package com.amazon.randomcutforest;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -50,20 +36,14 @@ import org.powermock.reflect.Whitebox;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.executor.*;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
-import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
-import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.returntypes.*;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
 public class RandomCutForestTest {
@@ -778,22 +758,22 @@ public class RandomCutForestTest {
     @Test
     public void testSamplersFull() {
         long totalUpdates = sampleSize / 2;
-        when(updateExecutor.getTotalUpdates()).thenReturn(totalUpdates);
+        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
         assertFalse(forest.samplersFull());
 
         totalUpdates = sampleSize;
-        when(updateExecutor.getTotalUpdates()).thenReturn(totalUpdates);
+        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
         assertTrue(forest.samplersFull());
 
         totalUpdates = sampleSize * 10;
-        when(updateExecutor.getTotalUpdates()).thenReturn(totalUpdates);
+        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
         assertTrue(forest.samplersFull());
     }
 
     @Test
     public void testGetTotalUpdates() {
         long totalUpdates = 987654321L;
-        when(updateExecutor.getTotalUpdates()).thenReturn(totalUpdates);
+        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
         assertEquals(totalUpdates, forest.getTotalUpdates());
     }
 }

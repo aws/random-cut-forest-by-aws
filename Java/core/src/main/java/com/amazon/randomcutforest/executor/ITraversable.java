@@ -13,7 +13,10 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
+
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 
 public interface ITraversable {
     <R> R traverse(double[] point, Visitor<R> visitor);

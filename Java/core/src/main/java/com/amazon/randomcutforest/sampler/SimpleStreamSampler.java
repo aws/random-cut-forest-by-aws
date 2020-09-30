@@ -19,7 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.*;
 
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
  * SimpleStreamSamplerV2 is a sampler with a fixed sample size. Once the sampler
@@ -178,18 +178,36 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     }
 
     /**
-     * @return the list of weighted points currently in the sample.
+     * @return the list of weighted points currently in the sample. If there is no
+     *         sequential information then a dummy variable is placed.
      */
-    public List<Sequential<P>> getWeightedSamples() {
-        if (weightedSamples.size() == 0) {
-            return new ArrayList<>();
+    @Override
+    public List<Weighted<P>> getWeightedSamples() {
+        ArrayList<Weighted<P>> result;
+        if (!storeSequenceIndices) {
+            result = new ArrayList<>(weightedSamples);
         } else {
-            ArrayList<Sequential<P>> result = new ArrayList<>();
-            weightedSamples.stream().map(e -> (e.getClass() == Sequential.class) ? result.add((Sequential<P>) e)
-                    : result.add(new Sequential(e.getValue(), e.getWeight(), 1L)));
-
-            return result;
+            result = new ArrayList<>();
+            weightedSamples.stream().map(e -> result.add(new Weighted(e.getValue(), e.getWeight())));
         }
+        return result;
+
+    }
+
+    /**
+     * @return the list of weighted points currently in the sample. If there is no
+     *         sequential information then a dummy variable is placed.
+     */
+    public List<Sequential<P>> getSequentialSamples() {
+        ArrayList<Sequential<P>> result = new ArrayList<>();
+        for (Weighted<P> e : weightedSamples) {
+            if (storeSequenceIndices) {
+                result.add((Sequential<P>) e);
+            } else {
+                result.add(new Sequential(e.getValue(), e.getWeight(), 1L));
+            }
+        }
+        return result;
     }
 
     /**

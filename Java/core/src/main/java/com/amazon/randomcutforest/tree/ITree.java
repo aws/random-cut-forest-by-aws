@@ -15,8 +15,8 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.ITraversable;
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.ITraversable;
+import com.amazon.randomcutforest.executor.Sequential;
 
 public interface ITree<P> extends ITraversable {
     int getMass();

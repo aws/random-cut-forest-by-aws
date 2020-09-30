@@ -15,36 +15,26 @@
 
 package com.amazon.randomcutforest;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.executor.*;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
-import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
-import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.returntypes.*;
+import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplerPlusTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
 /**
@@ -88,6 +78,13 @@ public class RandomCutForest {
      * By default, trees will not store sequence indexes.
      */
     public static final boolean DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED = false;
+
+    /**
+     * By default, trees will not create indexable references.
+     */
+    public static final boolean DEFAULT_COMPACT_ENABLED = false;
+
+    public static final boolean DEFAULT_TREE_SAVE = false;
 
     /**
      * By default, nodes will not store center of mass.
@@ -134,6 +131,10 @@ public class RandomCutForest {
      */
     protected final boolean storeSequenceIndexesEnabled;
     /**
+     * Store the time information
+     */
+    protected final boolean compactEnabled;
+    /**
      * Enable center of mass at internal nodes
      */
     protected final boolean centerOfMassEnabled;
@@ -153,7 +154,11 @@ public class RandomCutForest {
     /**
      * An implementation of forest update algorithms.
      */
-    protected AbstractForestUpdateExecutor updateExecutor;
+    protected final AbstractForestUpdateExecutor updateExecutor;
+
+    protected final PointStoreDouble pointStore;
+
+    protected boolean saveTreeData;
 
     protected RandomCutForest(Builder<?> builder) {
         checkArgument(builder.numberOfTrees > 0, "numberOfTrees must be greater than 0");
@@ -166,8 +171,8 @@ public class RandomCutForest {
         builder.lambda.ifPresent(lambda -> {
             checkArgument(lambda >= 0, "lambda must be greater than or equal to 0");
         });
-        builder.threadPoolSize.ifPresent(n -> checkArgument(n > 0,
-                "threadPoolSize must be greater than 0. To disable thread pool, set parallel execution to 'false'."));
+        builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
+                "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
@@ -177,20 +182,37 @@ public class RandomCutForest {
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
+        compactEnabled = builder.compactEnabled;
+        saveTreeData = builder.saveTreeData;
         ArrayList<SamplerPlusTree> components = new ArrayList<>(numberOfTrees);
-        IUpdateCoordinator<double[]> coordinator = new PointSequencer();
+        IUpdateCoordinator coordinator;
 
         // If a random seed was given, use it to create a new Random. Otherwise, call
         // the 0-argument constructor
         rng = builder.randomSeed.map(Random::new).orElseGet(Random::new);
 
-        for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
-            SimpleStreamSampler newSampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong(),
-                    storeSequenceIndexesEnabled);
-            components.add(new SamplerPlusTree(newSampler, tree));
+        if (compactEnabled) {
+            pointStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
+            coordinator = new PointStoreCoordinator(pointStore);
+        } else {
+            pointStore = null;
+            coordinator = new PointSequencer();
+        }
 
+        for (int i = 0; i < numberOfTrees; i++) {
+            if (!compactEnabled) {
+                RandomCutTree tree = RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                        .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
+                SimpleStreamSampler newSampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong(),
+                        storeSequenceIndexesEnabled);
+                components.add(new SamplerPlusTree(newSampler, tree));
+            } else {
+                CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(),
+                        pointStore);
+                CompactSampler newSampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
+                        storeSequenceIndexesEnabled);
+                components.add(new SamplerPlusTree(newSampler, tree));
+            }
         }
 
         if (parallelExecutionEnabled) {
@@ -280,6 +302,13 @@ public class RandomCutForest {
     }
 
     /**
+     * @return true if points are saved with sequence indexes, false otherwise.
+     */
+    public boolean compactEnabled() {
+        return compactEnabled;
+    }
+
+    /**
      * @return true if tree nodes retain the center of mass, false otherwise.
      */
     public boolean centerOfMassEnabled() {
@@ -299,6 +328,10 @@ public class RandomCutForest {
      */
     public int getThreadPoolSize() {
         return threadPoolSize;
+    }
+
+    public boolean saveTreeData() {
+        return saveTreeData;
     }
 
     /**
@@ -862,14 +895,14 @@ public class RandomCutForest {
      * @return true if all samplers are ready to output results.
      */
     public boolean isOutputReady() {
-        return updateExecutor.getTotalUpdates() >= outputAfter;
+        return updateExecutor.getCurrentIndex() >= outputAfter;
     }
 
     /**
      * @return true if all samplers in the forest are full.
      */
     public boolean samplersFull() {
-        return updateExecutor.getTotalUpdates() >= sampleSize;
+        return updateExecutor.getCurrentIndex() >= sampleSize;
     }
 
     /**
@@ -880,7 +913,7 @@ public class RandomCutForest {
      * @return the total number of updates to the forest.
      */
     public long getTotalUpdates() {
-        return updateExecutor.getTotalUpdates();
+        return updateExecutor.getCurrentIndex();
     }
 
     public static class Builder<T extends Builder<T>> {
@@ -894,6 +927,8 @@ public class RandomCutForest {
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         private Optional<Double> lambda = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
+        private boolean compactEnabled = DEFAULT_COMPACT_ENABLED;
+        private boolean saveTreeData = DEFAULT_TREE_SAVE;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
@@ -949,8 +984,46 @@ public class RandomCutForest {
             return (T) this;
         }
 
+        public T compactEnabled(boolean compactEnabled) {
+            this.compactEnabled = compactEnabled;
+            return (T) this;
+        }
+
+        public T saveTreeData(boolean saveTreedata) {
+            this.saveTreeData = saveTreedata;
+            return (T) this;
+        }
+
         public RandomCutForest build() {
             return new RandomCutForest(this);
         }
     }
+
+    /**
+     * The following initialization must happen as soon as the forest is created and
+     * trees are empty
+     */
+    public static RandomCutForest getForest(ForestState forestState) {
+        RandomCutForest forest = builder().dimensions(forestState.dimensions).numberOfTrees(forestState.numberOfTrees)
+                .lambda(forestState.lambda).outputAfter(forestState.outputAfter).sampleSize(forestState.sampleSize)
+                .centerOfMassEnabled(forestState.centerOfMassEnabled).compactEnabled(forestState.compactEnabled)
+                .storeSequenceIndexesEnabled(forestState.storeSequenceIndexesEnabled)
+                .threadPoolSize(forestState.threadPoolSize)
+                .parallelExecutionEnabled(forestState.parallelExecutionEnabled).build();
+
+        if (!forestState.compactEnabled) {
+            forest.updateExecutor.initializeModels(forestState.smallSamplerData, forestState.sequentialSamplerData);
+        } else {
+            forest.pointStore.reInitialize(forestState.pointStoreDoubleData);
+            if (forestState.saveTreeData) {
+                checkState(forestState.treeData != null, " error, missing tree information");
+            }
+            forest.updateExecutor.initializeCompact(forestState.compactSamplerData, forestState.treeData);
+
+        }
+
+        forest.updateExecutor.setCurrentIndex(forestState.entreesSeen);
+        return forest;
+    }
+
 }

@@ -15,18 +15,19 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.Sequential;
 
 public class SimpleStreamSamplerTest {
 
@@ -88,7 +89,7 @@ public class SimpleStreamSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
-        List<Sequential<double[]>> samples = sampler.getWeightedSamples();
+        List<Sequential<double[]>> samples = sampler.getSequentialSamples();
         // samples.sort(Comparator.comparing(Weighted::getWeight).reversed());
 
         // for (int i = 0; i < 3; i++) {
@@ -98,7 +99,6 @@ public class SimpleStreamSamplerTest {
 
     @Test
     public void testIsReadyIsFull() {
-        WeightedPoint sampledPoint;
         int i;
         for (i = 1; i < sampleSize / 4; i++) {
             assertTrue(sampler.sample(new double[] { Math.random() }, i));

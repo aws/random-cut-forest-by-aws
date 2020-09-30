@@ -13,10 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.List;
 import java.util.Optional;
+
+import com.amazon.randomcutforest.store.PointStoreDoubleData;
 
 /**
  * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
@@ -46,6 +48,8 @@ public interface IUpdateCoordinator<P> {
      * 
      * @param updateResults A list of points that were deleted.
      */
-    void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults);
+    void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults, P updateInput);
+
+    public PointStoreDoubleData getPointStoreData();
 
 }

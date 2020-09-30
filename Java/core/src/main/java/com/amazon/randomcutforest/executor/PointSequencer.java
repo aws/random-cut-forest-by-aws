@@ -13,10 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.List;
 import java.util.Optional;
+
+import com.amazon.randomcutforest.store.PointStoreDoubleData;
 
 public class PointSequencer implements IUpdateCoordinator<double[]> {
 
@@ -29,7 +31,13 @@ public class PointSequencer implements IUpdateCoordinator<double[]> {
     }
 
     @Override
-    public void completeUpdate(List<Optional<UpdateReturn<double[]>>> updateResults) {
+    public void completeUpdate(List<Optional<UpdateReturn<double[]>>> updateResults, double[] initial) {
+
+    }
+
+    @Override
+    public PointStoreDoubleData getPointStoreData() {
+        return null;
     }
 
 }

@@ -18,7 +18,9 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -31,11 +33,12 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore extends IndexManager implements IPointStore {
+public class PointStore extends IndexManager implements IPointStore<float[]> {
 
     private final float[] store;
-    private final int[] refCount;
+    private final short[] refCount;
     private final int dimensions;
+    private final int capacity;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -48,8 +51,9 @@ public class PointStore extends IndexManager implements IPointStore {
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
 
         this.dimensions = dimensions;
+        this.capacity = capacity;
         store = new float[capacity * dimensions];
-        refCount = new int[capacity];
+        refCount = new short[capacity];
     }
 
     /**
@@ -169,5 +173,23 @@ public class PointStore extends IndexManager implements IPointStore {
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
+    }
+
+    @Override
+    public List<Float> getData() {
+        List<Float> result = new ArrayList<>(store.length);
+        for (int j = 0; j < capacity * dimensions; j++) {
+            result.add(store[j]);
+        }
+        return result;
+    }
+
+    @Override
+    public List<Short> getRef() {
+        List<Short> result = new ArrayList<>(capacity);
+        for (int j = 0; j < capacity; j++) {
+            result.add(refCount[j]);
+        }
+        return result;
     }
 }

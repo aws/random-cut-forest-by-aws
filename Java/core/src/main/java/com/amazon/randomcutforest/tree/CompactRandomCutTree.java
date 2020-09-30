@@ -15,17 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.*;
 
 import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Sequential;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
@@ -58,10 +56,10 @@ public class CompactRandomCutTree implements ITree<Integer> {
     private final int maxSize;
     protected final NodeStore internalNodes;
     protected final LeafStore leafNodes;
-    protected final IPointStore pointStore;
+    protected final IPointStore<float[]> pointStore;
     protected short rootIndex;
 
-    public CompactRandomCutTree(int maxSize, long seed, IPointStore pointStore) {
+    public CompactRandomCutTree(int maxSize, long seed, IPointStore<float[]> pointStore) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         checkNotNull(pointStore, "pointStore must not be null");
         this.maxSize = maxSize;
