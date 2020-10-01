@@ -113,7 +113,7 @@ an example CLI application by adding the core jar file to your classpath.
 In the example below we train and score a Random Cut Forest model on the
 three-dimensional data shown in Figure 3 in the original RCF paper.
 ([PDF](http://proceedings.mlr.press/v48/guha16.pdf)) These example data can be
-found in the `data/example.csv`:
+found at `../example-data/rcf-paper.csv`:
 
 ```text
 $ tail data/example.csv
@@ -135,7 +135,7 @@ vector data point, scores the data point, and then updates the model with this
 point. The program output appends a column of anomaly scores to the input:
 
 ```text
-$ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < data/example.csv > example_output.csv
+$ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
 $ tail example_output.csv
 -5.0029,0.0170,-0.0057,0.8129401629464965
 -4.9975,-0.0102,-0.0065,0.6591046054520615
@@ -146,6 +146,7 @@ $ tail example_output.csv
 -4.9947,0.0126,-0.0010,0.7259960347128676
 -5.0209,0.0004,-0.0033,0.9119498264685114
 4.9923,-0.0142,0.0030,0.7310102658466711
+Done.
 ```
 
 (As you can see the anomalous data point was given large anomaly score.) You can
