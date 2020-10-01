@@ -112,7 +112,7 @@ an example CLI application by adding the core jar file to your classpath.
 
 In the example below we train and score a Random Cut Forest model on the
 three-dimensional data shown in Figure 3 in the original RCF paper.
-([PDF](http://proceedings.mlr.press/v48/guha16.pdf)) These example data can be
+([PDF][rcf-paper]) These example data can be
 found at `../example-data/rcf-paper.csv`:
 
 ```text
@@ -227,4 +227,4 @@ benchmark methods will be executed.
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
 
-rcf-paper: http://proceedings.mlr.press/v48/guha16.pdf
+[rcf-paper]: http://proceedings.mlr.press/v48/guha16.pdf
