@@ -115,7 +115,7 @@ three-dimensional data shown in Figure 3 in the original RCF paper.
 ([PDF](http://proceedings.mlr.press/v48/guha16.pdf)) These example data can be
 found in the `data/example.csv`:
 
-```shell
+```text
 $ tail data/example.csv
 -5.0074,-0.0038,-0.0237
 -5.0029,0.0170,-0.0057
@@ -134,7 +134,7 @@ $ tail data/example.csv
 vector data point, scores the data point, and then updates the model with this
 point. The program output appends a column of anomaly scores to the input:
 
-```shell
+```text
 $ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < data/example.csv > example_output.csv
 $ tail example_output.csv
 -5.0029,0.0170,-0.0057,0.8129401629464965
@@ -152,7 +152,7 @@ $ tail example_output.csv
 read additional usage instructions, including options for setting model
 hyperparameters, using the `--help` flag:
 
-```shell
+```text
 $ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
 Usage: java -cp target/random-cut-forest-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
