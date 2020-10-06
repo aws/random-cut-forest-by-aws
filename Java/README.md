@@ -102,18 +102,60 @@ mvn package -DexcludedGroups=functional
 
 ## Build Command-line (CLI) usage
 
-For some of the algorithms included in this package, there are CLI applications that can
-be used for experiments. These applications use `String::split` to read
-delimited data, and as such are **not intended for production use**. Instead,
-use these applications as example code and as a way to learn about the
-algorithms and their hyperparameters.
+> **Important.** The CLI applications use `String::split` to read delimited data
+> and as such are **not intended for production use**.
 
-After building the project (described in the previous section), you can invoke an example CLI application by adding the
-core jar file to your classpath. For example:
+For some of the algorithms included in this package there are CLI applications
+that can be used for experimentation as well as a way to learn about these
+algorithms and their hyperparameters. After building the project you can invoke
+an example CLI application by adding the core jar file to your classpath.
+
+In the example below we train and score a Random Cut Forest model on the
+three-dimensional data shown in Figure 3 in the original RCF paper.
+([PDF][rcf-paper]) These example data can be
+found at `../example-data/rcf-paper.csv`:
 
 ```text
-% java -cp core/target/randomcutforest-core-1.0-alpha.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
-Usage: java -cp randomcutforest-core-1.0-alpha.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
+$ tail data/example.csv
+-5.0074,-0.0038,-0.0237
+-5.0029,0.0170,-0.0057
+-4.9975,-0.0102,-0.0065
+4.9878,0.0136,-0.0087
+5.0118,0.0098,-0.0057
+0.0158,0.0061,0.0091
+5.0167,0.0041,0.0054
+-4.9947,0.0126,-0.0010
+-5.0209,0.0004,-0.0033
+4.9923,-0.0142,0.0030
+```
+
+(Note that there is one data point above that is not like the others.) The
+`AnomalyScoreRunner` application reads in each line of the input data as a
+vector data point, scores the data point, and then updates the model with this
+point. The program output appends a column of anomaly scores to the input:
+
+```text
+$ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
+$ tail example_output.csv
+-5.0029,0.0170,-0.0057,0.8129401629464965
+-4.9975,-0.0102,-0.0065,0.6591046054520615
+4.9878,0.0136,-0.0087,0.8552217070518414
+5.0118,0.0098,-0.0057,0.7224686064066762
+0.0158,0.0061,0.0091,2.8299054033889814
+5.0167,0.0041,0.0054,0.7571453322237215
+-4.9947,0.0126,-0.0010,0.7259960347128676
+-5.0209,0.0004,-0.0033,0.9119498264685114
+4.9923,-0.0142,0.0030,0.7310102658466711
+Done.
+```
+
+(As you can see the anomalous data point was given large anomaly score.) You can
+read additional usage instructions, including options for setting model
+hyperparameters, using the `--help` flag:
+
+```text
+$ java -cp core/target/randomcutforest-core-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+Usage: java -cp target/random-cut-forest-1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
 
@@ -129,6 +171,9 @@ Options:
 
         --help, -h: Print this help message and exit.
 ```
+
+Other CLI applications are available in the `com.amazon.randomcutforest.runner`
+package.
 
 ## Testing
 
@@ -181,3 +226,5 @@ benchmark methods will be executed.
 ```text
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
+
+[rcf-paper]: http://proceedings.mlr.press/v48/guha16.pdf
