@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.sampler.WeightedPoint;
+import com.amazon.randomcutforest.executor.Sequential;
 
 public class HyperTree extends RandomCutTree {
 
@@ -118,13 +118,13 @@ public class HyperTree extends RandomCutTree {
         return new Cut(td, bb.getMinValue(td) + bb.getRange(td) * cutf);
     }
 
-    @Override
-    public void addPoint(WeightedPoint point) {
+    public double[] addPoint(Sequential<double[]> point) {
+        return point.getValue();
         // () -> /dev/null
     }
 
     @Override
-    public void deletePoint(WeightedPoint point) {
+    public void deletePoint(Sequential point) {
         // () -> /dev/null
     }
 

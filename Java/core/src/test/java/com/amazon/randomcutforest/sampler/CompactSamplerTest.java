@@ -19,23 +19,20 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.executor.Sequential;
 
-public class SimpleStreamSamplerTest {
+public class CompactSamplerTest {
 
     private int sampleSize;
     private double lambda;
     private long seed;
     private Random random;
-    private SimpleStreamSampler<double[]> sampler;
+    private CompactSampler sampler;
 
     @BeforeEach
     public void setUp() {
@@ -43,7 +40,7 @@ public class SimpleStreamSamplerTest {
         lambda = 0.01;
         seed = 42L;
         random = spy(new Random(seed));
-        sampler = new SimpleStreamSampler(sampleSize, lambda, random, false);
+        sampler = new CompactSampler(sampleSize, lambda, random, false);
     }
 
     @Test
@@ -55,7 +52,7 @@ public class SimpleStreamSamplerTest {
         assertEquals(0, sampler.getSize());
         assertEquals(lambda, sampler.getLambda());
 
-        SimpleStreamSampler uniformSampler = new SimpleStreamSampler(11, 0, 14, false);
+        CompactSampler uniformSampler = new CompactSampler(11, 0, 14, false);
         assertFalse(uniformSampler.getEvictedPoint().isPresent());
         assertFalse(uniformSampler.isReady());
         assertFalse(uniformSampler.isFull());
@@ -79,9 +76,9 @@ public class SimpleStreamSamplerTest {
     public void testGetScore() {
         when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
 
-        sampler.sample(new double[] { -0.1 }, 101);
-        sampler.sample(new double[] { 11.1 }, 102);
-        sampler.sample(new double[] { 99.8 }, 103);
+        sampler.sample(1, 101);
+        sampler.sample(2, 102);
+        sampler.sample(3, 103);
 
         double[] expectedScores = new double[3];
         expectedScores[0] = -lambda * 101L + Math.log(-Math.log(0.25));
@@ -89,7 +86,7 @@ public class SimpleStreamSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
-        List<Sequential<double[]>> samples = sampler.getSequentialSamples();
+        List<Weighted<Integer>> samples = sampler.getWeightedSamples();
         // samples.sort(Comparator.comparing(Weighted::getWeight).reversed());
 
         // for (int i = 0; i < 3; i++) {
@@ -101,7 +98,7 @@ public class SimpleStreamSamplerTest {
     public void testIsReadyIsFull() {
         int i;
         for (i = 1; i < sampleSize / 4; i++) {
-            assertTrue(sampler.sample(new double[] { Math.random() }, i));
+            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
             assertFalse(sampler.isReady());
             assertFalse(sampler.isFull());
             assertEquals(i, sampler.getSize());
@@ -109,14 +106,14 @@ public class SimpleStreamSamplerTest {
         }
 
         for (i = sampleSize / 4; i < sampleSize; i++) {
-            assertTrue(sampler.sample(new double[] { Math.random() }, i));
+            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
             assertTrue(sampler.isReady());
             assertFalse(sampler.isFull());
             assertEquals(i, sampler.getSize());
             assertFalse(sampler.getEvictedPoint().isPresent());
         }
 
-        assertTrue(sampler.sample(new double[] { Math.random() }, sampleSize));
+        assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), sampleSize));
         assertTrue(sampler.isReady());
         assertTrue(sampler.isFull());
         assertEquals(i, sampler.getSize());
@@ -125,7 +122,8 @@ public class SimpleStreamSamplerTest {
         java.util.Optional<Sequential<double[]>> evicted;
         for (i = sampleSize + 1; i < 2 * sampleSize; i++) {
             // Either the sampling and the evicted point are both null or both non-null
-            assertTrue(sampler.sample(new double[] { Math.random() }, i) == sampler.getEvictedPoint().isPresent());
+            assertTrue(
+                    sampler.sample((int) Math.ceil(Math.random() * 100), i) == sampler.getEvictedPoint().isPresent());
 
             assertTrue(sampler.isReady());
             assertTrue(sampler.isFull());
@@ -134,6 +132,33 @@ public class SimpleStreamSamplerTest {
         }
     }
 
+    @Test
+    public void testCompareSampling() {
+        CompactSampler compact = new CompactSampler(10, 0.001, 10, false);
+        SimpleStreamSampler<double[]> simple = new SimpleStreamSampler<>(10, 0.001, 10, false);
+
+        for (int i = 0; i < 100000; i++) {
+            Optional<Double> weightOne = compact.acceptSample(i);
+            Optional<Double> weightTwo = simple.acceptSample(i);
+            assertEquals(weightOne.isPresent(), weightTwo.isPresent());
+            if (weightOne.isPresent()) {
+                assertEquals(weightOne.get(), weightTwo.get(), 1E-10);
+                compact.addSample(i, weightOne.get(), i);
+                simple.addSample(new double[] { i }, weightTwo.get(), i);
+            }
+            assertEquals(compact.getEvictedPoint().isPresent(), simple.getEvictedPoint().isPresent());
+            if (compact.getEvictedPoint().isPresent()) {
+                // assertEquals(compact.getEvictedPoint().get().getWeight(),simple.getEvictedPoint().get().getWeight(),1E-10);
+                int y = compact.getEvictedPoint().get().getValue();
+                double[] x = simple.getEvictedPoint().get().getValue();
+                assertEquals(x[0], y);
+                assertEquals(compact.getEvictedPoint().get().getWeight(), simple.getEvictedPoint().get().getWeight(),
+                        1E-10);
+
+            }
+
+        }
+    }
     /*
      * @Test public void testSample() { // first populate the sampler:
      * 

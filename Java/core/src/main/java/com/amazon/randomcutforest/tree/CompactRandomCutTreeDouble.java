@@ -24,9 +24,7 @@ import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.executor.Sequential;
-import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.LeafStore;
-import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.*;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -43,7 +41,7 @@ import com.amazon.randomcutforest.store.NodeStore;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public class CompactRandomCutTree implements ITree<Integer> {
+public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
     /**
      * The index value used to represent the absence of a node. For example, when
@@ -56,10 +54,10 @@ public class CompactRandomCutTree implements ITree<Integer> {
     private final int maxSize;
     protected final NodeStore internalNodes;
     protected final LeafStore leafNodes;
-    protected final IPointStore<float[]> pointStore;
+    protected final IPointStore<double[]> pointStore;
     protected short rootIndex;
 
-    public CompactRandomCutTree(int maxSize, long seed, IPointStore<float[]> pointStore) {
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         checkNotNull(pointStore, "pointStore must not be null");
         this.maxSize = maxSize;
@@ -111,8 +109,8 @@ public class CompactRandomCutTree implements ITree<Integer> {
     /** spoof a leaf */
     Node getLeafNode(int index) {
         int leafOffset = index - maxSize;
-        float[] leafPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
-        Node leaf = newLeafNode(CommonUtils.toDoubleArray(leafPoint), -1);
+        double[] leafPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
+        Node leaf = newLeafNode(leafPoint, -1);
         leaf.setMass(leafNodes.mass[leafOffset]);
         return leaf;
     }
@@ -218,7 +216,7 @@ public class CompactRandomCutTree implements ITree<Integer> {
      *                   node being evaluated.
      * @return the index of the deleted node.
      */
-    private int deletePoint(short nodeOffset, float[] point, int level) {
+    private int deletePoint(short nodeOffset, double[] point, int level) {
 
         if (isLeaf(nodeOffset)) {
             short leafOffset = (short) (nodeOffset - maxSize);
@@ -274,16 +272,16 @@ public class CompactRandomCutTree implements ITree<Integer> {
 
         BoundingBox leftBox;
         if (isLeaf(internalNodes.leftIndex[nodeOffset])) {
-            float[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.leftIndex[nodeOffset] - maxSize]);
-            leftBox = new BoundingBox(CommonUtils.toDoubleArray(leafPoint));
+            double[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.leftIndex[nodeOffset] - maxSize]);
+            leftBox = new BoundingBox(leafPoint);
         } else {
             leftBox = internalNodes.boundingBox[internalNodes.leftIndex[nodeOffset]];
         }
 
         BoundingBox rightBox;
         if (isLeaf(internalNodes.rightIndex[nodeOffset])) {
-            float[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.rightIndex[nodeOffset] - maxSize]);
-            rightBox = new BoundingBox(CommonUtils.toDoubleArray(leafPoint));
+            double[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.rightIndex[nodeOffset] - maxSize]);
+            rightBox = new BoundingBox(leafPoint);
         } else {
             rightBox = internalNodes.boundingBox[internalNodes.rightIndex[nodeOffset]];
         }
@@ -295,7 +293,7 @@ public class CompactRandomCutTree implements ITree<Integer> {
 
     public Integer addPoint(Sequential<Integer> seq) {
         int pointIndex = seq.getValue();
-        float[] pointValue = pointStore.get(pointIndex);
+        double[] pointValue = pointStore.get(pointIndex);
         if (rootIndex == NULL) {
             rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
             return pointIndex;
@@ -326,21 +324,20 @@ public class CompactRandomCutTree implements ITree<Integer> {
      * @param pointIndex is the location of the point in pointstore
      */
 
-    private int addPoint(short nodeOffset, float[] point, int pointIndex) {
+    private int addPoint(short nodeOffset, double[] point, int pointIndex) {
         if (isLeaf(nodeOffset) && pointStore.pointEquals(leafNodes.pointIndex[nodeOffset - maxSize], point)) {
             // the inserted point is equal to an existing leaf point
             ++leafNodes.mass[nodeOffset - maxSize];
-
             return leafNodes.pointIndex[nodeOffset - maxSize];
         }
 
         // either the node is not a leaf, or else it's a leaf node containing a
         // different point
 
-        double[] dpoint = CommonUtils.toDoubleArray(point);
+        double[] dpoint = point;
 
         BoundingBox existingBox = (isLeaf(nodeOffset))
-                ? new BoundingBox(CommonUtils.toDoubleArray(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])))
+                ? new BoundingBox(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]))
                 : internalNodes.boundingBox[nodeOffset];
         BoundingBox mergedBox = existingBox.getMergedBox(dpoint);
 
@@ -350,7 +347,7 @@ public class CompactRandomCutTree implements ITree<Integer> {
 
             Cut cut = randomCut(random, mergedBox);
             int splitDimension = cut.getDimension();
-            float splitValue = (float) cut.getValue();
+            double splitValue = cut.getValue();
             double minValue = existingBox.getMinValue(splitDimension);
             double maxValue = existingBox.getMaxValue(splitDimension);
 
@@ -368,6 +365,15 @@ public class CompactRandomCutTree implements ITree<Integer> {
                 short mergedNode = (minValue > splitValue)
                         ? internalNodes.addNode(NULL, leafOffset, nodeOffset, splitDimension, splitValue, oldmass + 1)
                         : internalNodes.addNode(NULL, nodeOffset, leafOffset, splitDimension, splitValue, oldmass + 1);
+
+                // uncomment on for state verification in addPoint
+                // if (minValue> splitValue){
+                // checkState(verify(nodeOffset,splitDimension,splitValue,false),"right
+                // incorrect");
+                // } else {
+                // checkState(verify(nodeOffset,splitDimension,splitValue,true)," left
+                // incorrect");
+                // }
 
                 int parent;
                 if (isLeaf(nodeOffset))
@@ -408,6 +414,29 @@ public class CompactRandomCutTree implements ITree<Integer> {
         return ret; // the above can be rearranged for tail recursion
     }
 
+    boolean verify(short nodeOffset, int dimension, double cutValue, boolean allSmall) {
+        if (isLeaf(nodeOffset)) {
+            if (pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] < cutValue) {
+                if (!allSmall) {
+                    System.out.println("ERROR Small "
+                            + pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] + " " + cutValue);
+                }
+                return (allSmall);
+            } else {
+                if (allSmall) {
+                    System.out.println("ERROR large "
+                            + pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] + " " + cutValue);
+                }
+                return (!allSmall);
+            }
+        } else {
+            boolean answer = verify(internalNodes.leftIndex[nodeOffset], dimension, cutValue, allSmall);
+            if (answer == false)
+                return false;
+            return verify(internalNodes.rightIndex[nodeOffset], dimension, cutValue, allSmall);
+        }
+    }
+
     /**
      * Starting from the root, traverse the canonical path to a leaf node and visit
      * the nodes along the path. The canonical path is determined by the input
@@ -440,8 +469,23 @@ public class CompactRandomCutTree implements ITree<Integer> {
         } else {
             short childNode = leftOf(point, currentNode) ? internalNodes.leftIndex[currentNode]
                     : internalNodes.rightIndex[currentNode];
+
             traversePathToLeafAndVisitNodes(point, visitor, childNode, depthOfNode + 1);
-            visitor.accept(getInternalNode(currentNode), depthOfNode);
+
+            Node node = getInternalNode(currentNode);
+
+            if (!isLeaf(internalNodes.leftIndex[currentNode])) {
+                node.setLeftChild(getInternalNode(internalNodes.leftIndex[currentNode]));
+            } else {
+                node.setLeftChild(getLeafNode(internalNodes.leftIndex[currentNode]));
+            }
+            if (!isLeaf(internalNodes.rightIndex[currentNode])) {
+                node.setRightChild(getInternalNode(internalNodes.rightIndex[currentNode]));
+            } else {
+                node.setRightChild(getLeafNode(internalNodes.rightIndex[currentNode]));
+            }
+
+            visitor.accept(node, depthOfNode);
         }
     }
 
@@ -532,11 +576,26 @@ public class CompactRandomCutTree implements ITree<Integer> {
 
     private BoundingBox reflateNode(int offset) {
         if (offset >= maxSize) {
-            float[] leafPoint = pointStore.get(leafNodes.pointIndex[offset - maxSize]);
-            return new BoundingBox(CommonUtils.toDoubleArray(leafPoint));
+            double[] leafPoint = pointStore.get(leafNodes.pointIndex[offset - maxSize]);
+            return new BoundingBox(leafPoint);
         }
         internalNodes.boundingBox[offset] = reflateNode(internalNodes.leftIndex[offset])
                 .getMergedBox(reflateNode(internalNodes.rightIndex[offset]));
         return internalNodes.boundingBox[offset];
+    }
+
+    NodeStoreData getNodes() {
+        return new NodeStoreData(internalNodes);
+    }
+
+    LeafStoreData getLeaves() {
+        return new LeafStoreData(leafNodes);
+    }
+
+    public void reInitialize(TreeData treeData) {
+        rootIndex = treeData.rootIndex;
+        leafNodes.reInitialize(treeData.leafData);
+        internalNodes.reInitialize(treeData.nodeData);
+        reflateTree();
     }
 }

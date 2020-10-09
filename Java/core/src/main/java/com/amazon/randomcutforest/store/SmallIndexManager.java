@@ -27,9 +27,9 @@ import java.util.BitSet;
 public class SmallIndexManager {
 
     private final short capacity;
-    private final short[] freeIndexes;
-    private short freeIndexPointer;
-    private final BitSet occupied;
+    protected final short[] freeIndexes;
+    protected short freeIndexPointer;
+    protected final BitSet occupied;
 
     /**
      * Create a new store with the given capacity.

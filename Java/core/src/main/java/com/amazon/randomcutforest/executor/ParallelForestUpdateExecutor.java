@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,9 +39,9 @@ public class ParallelForestUpdateExecutor<P> extends AbstractForestUpdateExecuto
     }
 
     @Override
-    protected List<P> update(P point) {
-        return submitAndJoin(() -> models.parallelStream().map(t -> t.update(point)).filter(Optional::isPresent)
-                .map(Optional::get).collect(Collectors.toList()));
+    protected List<Optional<UpdateReturn<P>>> update(P point, long seqNum) {
+        return submitAndJoin(
+                () -> models.parallelStream().map(t -> t.update(point, seqNum)).collect(Collectors.toList()));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

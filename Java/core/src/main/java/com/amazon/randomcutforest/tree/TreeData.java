@@ -13,10 +13,20 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.tree;
 
-public interface ITraversable {
-    <R> R traverse(double[] point, Visitor<R> visitor);
+import com.amazon.randomcutforest.store.LeafStoreData;
+import com.amazon.randomcutforest.store.NodeStoreData;
 
-    <R> R traverseMulti(double[] point, MultiVisitor<R> visitor);
+public class TreeData {
+    public LeafStoreData leafData;
+    public NodeStoreData nodeData;
+    public short rootIndex;
+
+    public TreeData(CompactRandomCutTreeDouble tree) {
+        leafData = tree.getLeaves();
+        nodeData = tree.getNodes();
+        rootIndex = tree.rootIndex;
+    }
+
 }

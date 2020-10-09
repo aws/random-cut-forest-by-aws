@@ -15,10 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -162,8 +159,9 @@ public class RandomCutForestBuilderTest {
 
     @Test
     public void testIllegalExceptionIsThrownWhenPoolSizeIsZero() {
-        assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).dimensions(dimensions).threadPoolSize(0).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                        .dimensions(dimensions).threadPoolSize(0).parallelExecutionEnabled(true).build());
     }
 
     @Test

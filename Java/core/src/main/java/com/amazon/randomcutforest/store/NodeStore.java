@@ -37,7 +37,7 @@ public class NodeStore extends SmallIndexManager {
     public final short[] leftIndex;
     public final short[] rightIndex;
     public final int[] cutDimension;
-    public final float[] cutValue;
+    public final double[] cutValue;
     public final int[] mass;
     public final BoundingBox[] boundingBox;
 
@@ -52,7 +52,7 @@ public class NodeStore extends SmallIndexManager {
         leftIndex = new short[capacity];
         rightIndex = new short[capacity];
         cutDimension = new int[capacity];
-        cutValue = new float[capacity];
+        cutValue = new double[capacity];
         mass = new int[capacity];
         boundingBox = new BoundingBox[capacity];
     }
@@ -68,7 +68,7 @@ public class NodeStore extends SmallIndexManager {
      * @param cutValue     The value of the cut in this node.
      * @return the index of the newly stored node.
      */
-    public short addNode(short parentIndex, short leftIndex, short rightIndex, int cutDimension, float cutValue,
+    public short addNode(short parentIndex, short leftIndex, short rightIndex, int cutDimension, double cutValue,
             int mass) {
         short index = takeIndex();
         this.cutValue[index] = cutValue;
@@ -94,7 +94,7 @@ public class NodeStore extends SmallIndexManager {
         private short leftIndex;
         private short rightIndex;
         private int cutDimension;
-        private float cutValue;
+        private double cutValue;
         private int mass;
 
         public StagedNode parentIndex(short parentIndex) {
@@ -117,7 +117,7 @@ public class NodeStore extends SmallIndexManager {
             return this;
         }
 
-        public StagedNode cutValue(float cutValue) {
+        public StagedNode cutValue(double cutValue) {
             this.cutValue = cutValue;
             return this;
         }
@@ -130,6 +130,25 @@ public class NodeStore extends SmallIndexManager {
         public short add() {
             return addNode(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass);
         }
+    }
+
+    public void reInitialize(NodeStoreData nodeStoreData) {
+        for (int i = 0; i < getCapacity(); i++) {
+            mass[i] = nodeStoreData.mass[i];
+            leftIndex[i] = nodeStoreData.leftIndex[i];
+            rightIndex[i] = nodeStoreData.rightIndex[i];
+            parentIndex[i] = nodeStoreData.parentIndex[i];
+            cutValue[i] = nodeStoreData.cutValue[i];
+            cutDimension[i] = nodeStoreData.cutDimension[i];
+            occupied.set(i);
+            // sets everything
+        }
+        for (int i = 0; i < nodeStoreData.freeIndexes.length; i++) {
+            freeIndexes[i] = nodeStoreData.freeIndexes[i];
+            occupied.clear(freeIndexes[i]);
+            // resets index for free entries
+        }
+        freeIndexPointer = (short) (nodeStoreData.freeIndexes.length - 1);
     }
 
 }

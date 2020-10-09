@@ -13,47 +13,44 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import com.amazon.randomcutforest.sampler.Weighted;
 
 /**
  * A container type representing a value with an associated sequence index.
  * 
- * @param <T> The type contained value.
+ * @param <P> The type contained value.
  */
-public class Sequential<T> {
+public class Sequential<P> extends Weighted<P> {
 
-    protected final T value;
     protected final long sequenceIndex;
 
     /**
      * Create a new sequential object
      * 
      * @param value         The contained value.
+     * @param weight        The weight for Weighted
      * @param sequenceIndex The sequence idnex.
      */
-    public Sequential(T value, long sequenceIndex) {
-        checkNotNull(value, "value must not be null");
-        this.value = value;
+    public Sequential(P value, double weight, long sequenceIndex) {
+        super(value, weight);
         this.sequenceIndex = sequenceIndex;
     }
+
+    /*
+     * public Sequential(P value, long sequenceIndex, double weight) { super(value,
+     * weight); this.sequenceIndex = sequenceIndex; }
+     */
 
     /**
      * Copy constructor.
      * 
      * @param other An existing sequential value.
      */
-    public Sequential(Sequential<T> other) {
-        value = other.value;
+    public Sequential(Sequential<P> other) {
+        super(other.getValue(), other.getWeight());
         sequenceIndex = other.sequenceIndex;
-    }
-
-    /**
-     * @return the contained vaule.
-     */
-    public T getValue() {
-        return value;
     }
 
     /**

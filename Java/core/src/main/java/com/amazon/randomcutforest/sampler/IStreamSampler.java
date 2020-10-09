@@ -18,32 +18,70 @@ package com.amazon.randomcutforest.sampler;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
  * A sampler that samples from an ordered sequence of points.
  * 
- * @param <P> The type representing the point value.
+ * @param <P> The type representing the points
  */
 public interface IStreamSampler<P> {
     /**
      * Submit a point to the sampler. The sampler implementation determines whether
      * the point is added to the sample or not.
+     *
+     * This function is not used explicitly in RandomCutForest but is helpful in
+     * testing the samplers.
      * 
-     * @param point The point submitted to the sampler.
+     * @param point  The point submitted to the sampler.
+     * @param seqNum the sequence number
      * @return true if the point is accepted and added to the sample, false if the
      *         point is rejected.
      */
-    boolean sample(Sequential<P> point);
+    default boolean sample(P point, long seqNum) {
+        Optional<Double> result = acceptSample(seqNum);
+        if (result.isPresent()) {
+            addSample(point, result.get(), seqNum);
+            return true;
+        }
+        return false;
+    }
 
     /**
-     * @return the list of sequential points currently making up the sample.
+     * the function that adds to the sampler
+     * 
+     * @param point  reference of point
+     * @param weight weight value in sampler
+     * @param seqNum the sequence number
      */
-    List<Sequential<P>> getSamples();
+    void addSample(P point, double weight, long seqNum);
+
+    /**
+     * The function decides if the new object elem would be added to the queue.
+     *
+     * @param seqNum sequence number
+     *
+     * @return returns Optional.empty() if the entry is noe accepted; otherwise
+     *         returns the weight
+     */
+
+    Optional<Double> acceptSample(long seqNum);
+
+    /**
+     * @return the list of weighted points currently making up the sample.
+     */
+    List<Weighted<P>> getWeightedSamples();
+
+    /**
+     * @return the list of Sequential points currently making up the sample. If the
+     *         sequence number is not present then a dummy variable is added.
+     */
+    List<Sequential<P>> getSequentialSamples();
 
     /**
      * @return the point that was evicted from the sample in the most recent call to
      *         {@link #sample}, or {@code Optional.empty()} if no point was evicted.
      */
+
     Optional<Sequential<P>> getEvictedPoint();
 }

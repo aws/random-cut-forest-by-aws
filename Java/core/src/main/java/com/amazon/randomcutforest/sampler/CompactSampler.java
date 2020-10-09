@@ -18,17 +18,14 @@ package com.amazon.randomcutforest.sampler;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Random;
 
-import com.amazon.randomcutforest.Sequential;
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
- * SimpleStreamSamplerV2 is a sampler with a fixed sample size. Once the sampler
+ * SimpleStreamSampler is a sampler with a fixed sample size. Once the sampler
  * is full, when a new point is submitted to the sampler decision is made to
  * accept or reject the new point. If the point is accepted, then an older point
  * is removed from the sampler. This class implements time-based reservoir
@@ -53,40 +50,24 @@ import com.amazon.randomcutforest.Sequential;
  * The SimpleStreamSampler creates a time-decayed sample by using the
  * coefficient function: <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
  */
-public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
-
-    /**
-     * This is the comparator used to order the priority queue in which we store the
-     * in-sample points. We want the head of the queue to be the element with the
-     * least priority, so we reverse the natural defined by the weight.
-     *
-     * @param <T>   The point type used by this comparator.
-     * @param clazz The point type used by this comparator.
-     */
-    protected static <T> Comparator<Weighted<T>> getComparator(Class<T> clazz) {
-        return Comparator.comparingDouble(Weighted<T>::getWeight).reversed();
-    }
-
-    /**
-     * Wraps PriorityQueue with default comparator.
-     *
-     * @param <T> type of comparator.
-     */
-    protected static <T> PriorityQueue<Weighted<T>> getQueue(Class<T> clazz) {
-        return new PriorityQueue<>(getComparator(clazz));
-    }
+public class CompactSampler implements IStreamSampler<Integer> {
 
     /**
      * A min-heap containing the weighted points currently in sample. The head
      * element is the lowest priority point in the sample (or, equivalently, is the
      * point with the greatest weight).
      */
-    private final Queue<Weighted<P>> weightedSamples;
+    protected final double[] weightArray;
 
+    protected final int[] referenceArray;
+
+    protected final long[] sequenceArray;
     /**
      * The number of points in the sample when full.
      */
-    private final int sampleSize;
+    protected final int maxSize;
+
+    protected int currentSize;
     /**
      * The decay factor used for generating the weight of the point. For greater
      * values of lambda we become more biased in favor of recent points.
@@ -104,37 +85,45 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      * The point evicted by the last call to {@link #sample}, or if the new point
      * was not accepted by the sampler.
      */
-    private transient Weighted<P> evictedPoint;
+    private transient Sequential<Integer> evictedPoint;
+
+    private final boolean storeSequenceEnabled;
 
     /**
-     * Construct a new SimpleStreamSampler.
+     * Construct a new CompactSampler.
      *
-     * @param clazz      The point type used by this comparator.
      * @param sampleSize The number of points in the sampler when full.
      * @param lambda     The decay factor used for generating the weight of the
      *                   point. For greater values of lambda we become more biased
      *                   in favor of recent points.
      * @param seed       The seed value used to create a random number generator.
      */
-    public SimpleStreamSamplerV2(Class<P> clazz, final int sampleSize, final double lambda, long seed) {
-        this(clazz, sampleSize, lambda, new Random(seed));
+    public CompactSampler(final int sampleSize, final double lambda, long seed, boolean storeSeq) {
+        this(sampleSize, lambda, new Random(seed), storeSeq);
     }
 
     /**
-     * Construct a new SimpleStreamSampler. This constructor exposes the Random
-     * argument so that it can be mocked for testing.
+     * Construct a new OffsetSampler. This constructor exposes the Random argument
+     * so that it can be mocked for testing.
      *
-     * @param clazz      The point type used by this comparator.
      * @param sampleSize The number of points in the sampler when full.
      * @param lambda     The decay factor used for generating the weight of the
      *                   point. For greater values of lambda we become more biased
      *                   in favor of recent points.
      * @param random     A random number generator that will be used in sampling.
      */
-    protected SimpleStreamSamplerV2(Class<P> clazz, final int sampleSize, final double lambda, Random random) {
-        this.sampleSize = sampleSize;
+    protected CompactSampler(final int sampleSize, final double lambda, Random random, boolean storeSeq) {
+        this.maxSize = sampleSize;
         entriesSeen = 0;
-        weightedSamples = getQueue(clazz);
+        currentSize = 0;
+        weightArray = new double[sampleSize];
+        referenceArray = new int[sampleSize];
+        this.storeSequenceEnabled = storeSeq;
+        if (storeSeq) {
+            this.sequenceArray = new long[sampleSize];
+        } else {
+            this.sequenceArray = null;
+        }
         this.random = random;
         this.lambda = lambda;
     }
@@ -143,68 +132,92 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      * This convenience constructor creates a SimpleStreamSampler with lambda equal
      * to 0, which is equivalent to uniform sampling on the stream.
      *
-     * @param clazz      The point type used by this comparator.
      * @param sampleSize The number of points in the sampler when full.
      * @param seed       The seed value used to create a random number generator.
      * @return a new SimpleStreamSampler which samples uniformly from its input.
      */
-    public static <Q> SimpleStreamSamplerV2<Q> uniformSampler(Class<Q> clazz, int sampleSize, long seed) {
-        return new SimpleStreamSamplerV2<>(clazz, sampleSize, 0.0, seed);
+    public static CompactSampler uniformSampler(int sampleSize, long seed, boolean storeSeq) {
+        return new CompactSampler(sampleSize, 0.0, seed, storeSeq);
     }
 
-    /**
-     * Submit a new point to the sampler. When the point is submitted, a new weight
-     * is computed for the point using the {@link #computeWeight} method. If the new
-     * weight is smaller than the largest weight currently in the sampler, then the
-     * new point is accepted into the sampler and the point corresponding to the
-     * largest weight is evicted.
-     *
-     * @param sequential The sequential value being submitted.
-     * @return true if the input point is accepted by the sampler. Return false
-     *         otherwise.
-     */
-    public boolean sample(Sequential<P> sequential) {
+    @Override
+    public Optional<Double> acceptSample(long sequenceIndex) {
         evictedPoint = null;
-        double weight = computeWeight(sequential.getSequenceIndex());
-        ++entriesSeen;
-
-        if (entriesSeen <= sampleSize || weight < weightedSamples.element().getWeight()) {
-            if (isFull()) {
-                evictedPoint = weightedSamples.poll();
+        double weight = computeWeight(sequenceIndex);
+        entriesSeen++;
+        if (currentSize < maxSize) {
+            return Optional.of(weight);
+        } else if (weight < weightArray[0]) {
+            long tmpLong = 0;
+            if (storeSequenceEnabled) {
+                tmpLong = sequenceArray[0];
             }
-            Weighted<P> weightedPoint = new Weighted<>(sequential, weight);
-            weightedSamples.add(weightedPoint);
-
-            checkState(weightedSamples.size() <= sampleSize,
-                    "The number of points in the sampler is greater than the sample size");
-
-            return true;
+            evictedPoint = new Sequential(referenceArray[0], weightArray[0], tmpLong);
+            --currentSize;
+            weightArray[0] = weightArray[currentSize];
+            referenceArray[0] = referenceArray[currentSize];
+            int current = 0;
+            while ((2 * current + 1) < currentSize) {
+                int maxIndex = 2 * current + 1;
+                if ((2 * current + 2 < currentSize) && (weightArray[2 * current + 2] > weightArray[maxIndex]))
+                    maxIndex = 2 * current + 2;
+                if (weightArray[maxIndex] > weightArray[current]) {
+                    swapWeights(current, maxIndex);
+                    current = maxIndex;
+                } else
+                    break;
+            }
+            return Optional.of(weight);
+        } else {
+            return Optional.empty();
         }
 
-        return false;
+    }
+
+    @Override
+    public void addSample(Integer pointRef, double weight, long seqNUm) {
+        checkState(currentSize < maxSize, " sampler full");
+        weightArray[currentSize] = weight;
+        referenceArray[currentSize] = pointRef;
+        if (storeSequenceEnabled) {
+            sequenceArray[currentSize] = seqNUm;
+        }
+        int current = currentSize++;
+        while (current > 0) {
+            int tmp = (current - 1) / 2;
+            if (weightArray[tmp] < weightArray[current]) {
+                swapWeights(current, tmp);
+                current = tmp;
+            } else
+                break;
+        }
+    }
+
+    @Override
+    public List<Sequential<Integer>> getSequentialSamples() {
+        checkState(storeSequenceEnabled == true, "incorrect option");
+        List<Sequential<Integer>> result = new ArrayList<>();
+        for (int i = 0; i < currentSize; i++) {
+            result.add(new Sequential(referenceArray[i], weightArray[i], sequenceArray[i]));
+        }
+        return result;
+    }
+
+    @Override
+    public List<Weighted<Integer>> getWeightedSamples() {
+        List<Weighted<Integer>> result = new ArrayList<>();
+        for (int i = 0; i < currentSize; i++) {
+            result.add(new Weighted<>(referenceArray[i], weightArray[i]));
+        }
+        return result;
     }
 
     /**
      * @return the point evicted by the most recent call to {@link #sample}, or null
      *         if no point was evicted.
      */
-    @Override
-    public Optional<Sequential<P>> getEvictedPoint() {
+    public Optional<Sequential<Integer>> getEvictedPoint() {
         return Optional.ofNullable(evictedPoint);
-    }
-
-    /**
-     * @return the list of points currently in the sample.
-     */
-    public List<Sequential<P>> getSamples() {
-        return new ArrayList<>(weightedSamples);
-    }
-
-    /**
-     * @return the list of points currently in the sample.
-     */
-    public List<Weighted<P>> getWeightedSamples() {
-        return new ArrayList<>(weightedSamples);
     }
 
     /**
@@ -212,14 +225,14 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      *         score computation, false otherwise.
      */
     public boolean isReady() {
-        return weightedSamples.size() >= sampleSize / 4;
+        return entriesSeen >= maxSize / 4;
     }
 
     /**
      * @return true if the sampler has reached it's full capacity, false otherwise.
      */
     public boolean isFull() {
-        return weightedSamples.size() == sampleSize;
+        return entriesSeen >= maxSize;
     }
 
     /**
@@ -250,14 +263,14 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      * @return the number of points contained by the sampler when full.
      */
     public long getCapacity() {
-        return sampleSize;
+        return maxSize;
     }
 
     /**
      * @return the number of points currently contained by the sampler.
      */
     public long getSize() {
-        return weightedSamples.size();
+        return currentSize;
     }
 
     /**
@@ -268,5 +281,34 @@ public class SimpleStreamSamplerV2<P> implements IStreamSampler<P> {
      */
     public double getLambda() {
         return lambda;
+    }
+
+    private void swapWeights(int a, int b) {
+        int tmp = referenceArray[a];
+        referenceArray[a] = referenceArray[b];
+        referenceArray[b] = tmp;
+
+        double tmpDouble = weightArray[a];
+        weightArray[a] = weightArray[b];
+        weightArray[b] = tmpDouble;
+
+        if (storeSequenceEnabled) {
+            long tmpLong = sequenceArray[a];
+            sequenceArray[a] = sequenceArray[b];
+            sequenceArray[b] = tmpLong;
+        }
+    }
+
+    public void reInitialize(CompactSamplerData samplerData) {
+        checkState(maxSize >= samplerData.maxSize, " need larger samplers");
+        checkState(!storeSequenceEnabled || samplerData.sequenceArray != null, "sequences missing");
+        currentSize = samplerData.currentSize;
+        for (int i = 0; i < currentSize; i++) {
+            referenceArray[i] = samplerData.referenceArray[i];
+            weightArray[i] = samplerData.weightArray[i];
+            if (storeSequenceEnabled) {
+                sequenceArray[i] = samplerData.sequenceArray[i];
+            }
+        }
     }
 }

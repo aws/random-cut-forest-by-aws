@@ -17,9 +17,7 @@ package com.amazon.randomcutforest;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +38,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
-public class RandomCutForestFunctionalTest {
+public class CompactRandomCutForestFunctionalTest {
 
     private static int numberOfTrees;
     private static int sampleSize;
@@ -67,12 +65,12 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         parallelExecutionForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .build();
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).parallelExecutionEnabled(false).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .parallelExecutionEnabled(false).build();
 
         dataSize = 10_000;
 
@@ -415,12 +413,13 @@ public class RandomCutForestFunctionalTest {
             ++hardPass;
 
         assertTrue(hardPass >= 15); // maximum is 20
+
     }
 
     @Test
     public void testUpdateWithSignedZeros() {
         RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(2).dimensions(1)
-                .randomSeed(randomSeed).centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).build();
+                .randomSeed(randomSeed).compactEnabled(true).build();
 
         forest.update(new double[] { 0.0 });
         forest.getAnomalyScore(new double[] { 0.0 });
@@ -450,8 +449,7 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1e-5)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).lambda(1e-5).build();
 
         dataSize = 10_000;
 
@@ -580,8 +578,7 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -628,8 +625,7 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -680,12 +676,10 @@ public class RandomCutForestFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
 
         double amplitude = 50.0;
         double noise = 2.0;

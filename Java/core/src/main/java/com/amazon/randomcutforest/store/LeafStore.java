@@ -49,4 +49,21 @@ public class LeafStore extends SmallIndexManager {
     public void delete(short index) {
         releaseIndex(index);
     }
+
+    public void reInitialize(LeafStoreData leafStoreData) {
+        for (int i = 0; i < getCapacity(); i++) {
+            pointIndex[i] = leafStoreData.pointIndex[i];
+            parentIndex[i] = leafStoreData.parentIndex[i];
+            mass[i] = leafStoreData.mass[i];
+            occupied.set(i);
+            // sets everything
+        }
+        for (int i = 0; i < leafStoreData.freeIndexes.length; i++) {
+            freeIndexes[i] = leafStoreData.freeIndexes[i];
+            occupied.clear(freeIndexes[i]);
+            // resets index for free entries
+        }
+        freeIndexPointer = (short) (leafStoreData.freeIndexes.length - 1);
+
+    }
 }

@@ -17,16 +17,12 @@ package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.*;
+
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
- * SimpleStreamSampler is a sampler with a fixed sample size. Once the sampler
+ * SimpleStreamSamplerV2 is a sampler with a fixed sample size. Once the sampler
  * is full, when a new point is submitted to the sampler decision is made to
  * accept or reject the new point. If the point is accepted, then an older point
  * is removed from the sampler. This class implements time-based reservoir
@@ -51,36 +47,14 @@ import java.util.stream.Collectors;
  * The SimpleStreamSampler creates a time-decayed sample by using the
  * coefficient function: <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
  */
-public class SimpleStreamSampler {
-
-    /**
-     * Wraps PriorityQueue with default comparator.
-     *
-     * @param <WeightedPoint> type of comparator.
-     */
-    static class PriorityQueueWrapper<WeightedPoint> extends PriorityQueue<WeightedPoint> {
-
-        /**
-         * Constructor of PriorityQueue with default WeightedPoint comparator.
-         */
-        PriorityQueueWrapper() {
-            super((Comparator<? super WeightedPoint>) POINT_COMPARATOR);
-        }
-    }
-
-    /**
-     * This is the comparator used to order the priority queue in which we store the
-     * in-sample points. We want the head of the queue to be the element with the
-     * least priority, so we reverse the natural defined by the weight.
-     */
-    static Comparator<WeightedPoint> POINT_COMPARATOR = Comparator.comparingDouble(WeightedPoint::getWeight).reversed();
+public class SimpleStreamSampler<P> implements IStreamSampler<P> {
 
     /**
      * A min-heap containing the weighted points currently in sample. The head
      * element is the lowest priority point in the sample (or, equivalently, is the
      * point with the greatest weight).
      */
-    private final Queue<WeightedPoint> weightedSamples;
+    private final Queue<Weighted<P>> weightedSamples;
 
     /**
      * The number of points in the sample when full.
@@ -103,49 +77,27 @@ public class SimpleStreamSampler {
      * The point evicted by the last call to {@link #sample}, or if the new point
      * was not accepted by the sampler.
      */
-    private transient WeightedPoint evictedPoint;
-
+    private transient Sequential<P> evictedPoint;
     /**
-     * Construct a new SimpleStreamSampler.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param seed       The seed value used to create a random number generator.
+     * A flag to determine if the sequence information is to be stored
      */
-    public SimpleStreamSampler(final int sampleSize, final double lambda, long seed) {
-        this(sampleSize, lambda, new Random(seed));
-    }
+    private boolean storeSequenceIndices = false;
 
-    /**
-     * Construct a new SimpleStreamSampler. This constructor exposes the Random
-     * argument so that it can be mocked for testing.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param random     A random number generator that will be used in sampling.
-     */
-    protected SimpleStreamSampler(final int sampleSize, final double lambda, Random random) {
+    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
         this.sampleSize = sampleSize;
         entriesSeen = 0;
-        weightedSamples = new PriorityQueueWrapper<>();
+        weightedSamples = new PriorityQueue(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
         this.lambda = lambda;
+        this.storeSequenceIndices = storeSequenceIndices;
     }
 
-    /**
-     * This convenience constructor creates a SimpleStreamSampler with lambda equal
-     * to 0, which is equivalent to uniform sampling on the stream.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param seed       The seed value used to create a random number generator.
-     * @return a new SimpleStreamSampler which samples uniformly from its input.
-     */
-    public static SimpleStreamSampler uniformSampler(int sampleSize, long seed) {
-        return new SimpleStreamSampler(sampleSize, 0.0, seed);
+    public SimpleStreamSampler(int sampleSize, final double lambda, long seed, boolean storeSequenceIndices) {
+        this(sampleSize, lambda, new Random(seed), storeSequenceIndices);
+    }
+
+    public SimpleStreamSampler(int sampleSize, final double lambda, long seed) {
+        this(sampleSize, lambda, new Random(seed), false);
     }
 
     /**
@@ -155,52 +107,107 @@ public class SimpleStreamSampler {
      * new point is accepted into the sampler and the point corresponding to the
      * largest weight is evicted.
      *
-     * @param newPoint      A candidate point to add to the sampler.
-     * @param sequenceIndex An ordinal index corresponding to when this point was
-     *                      added to the forest.
-     * @return a WeightedPoint created from the input point if the input point is
-     *         accepted by the sampler. Return null otherwise.
+     * @param seqIndex The timestamp value being submitted.
+     * @return A weighted point that can be added to the sampler or null
      */
-    public WeightedPoint sample(double[] newPoint, long sequenceIndex) {
+    public Optional<Double> acceptSample(long seqIndex) {
         evictedPoint = null;
-        WeightedPoint candidate = null;
-        double weight = computeWeight(sequenceIndex);
+        double weight = computeWeight(seqIndex);
         ++entriesSeen;
 
         if (entriesSeen <= sampleSize || weight < weightedSamples.element().getWeight()) {
             if (isFull()) {
-                evictedPoint = weightedSamples.poll();
+                Weighted<P> tmp = weightedSamples.poll();
+                if (storeSequenceIndices) {
+                    checkState(tmp.getClass() == Sequential.class, "incorrect use");
+                    evictedPoint = (Sequential<P>) tmp;
+                } else {
+                    evictedPoint = new Sequential(tmp.getValue(), tmp.getWeight(), 1L);
+                }
             }
-            candidate = new WeightedPoint(newPoint, sequenceIndex, weight);
-            weightedSamples.add(candidate);
-
-            checkState(weightedSamples.size() <= sampleSize,
-                    "The number of points in the sampler is greater than the sample size");
+            return Optional.of(weight);
         }
+        return Optional.empty();
+    }
 
-        return candidate;
+    /**
+     * adds the sample to sampler; if the sampler was full, then the sampler has
+     * already evicted a point in determining the weight.
+     * 
+     * @param point  to be entered in sampler
+     * @param weight computed by acceptSample
+     * @param seqNum timestamp
+     */
+
+    @Override
+    public void addSample(P point, double weight, long seqNum) {
+        if (storeSequenceIndices) {
+            weightedSamples.add(new Sequential(point, weight, seqNum));
+        } else {
+            weightedSamples.add(new Weighted(point, weight));
+        }
+        checkState(weightedSamples.size() <= sampleSize,
+                "The number of points in the sampler is greater than the sample size");
+    }
+
+    /**
+     * The basic sampling broken down into a proposal/acceptance and a commit. This
+     * breakdown allows the Tree to be in sync with the sampler when duplicates are
+     * present.
+     *
+     * @param point  entry for sample
+     * @param seqNum sequential stamp
+     * @return true if the point is accepted and added, false otherwise
+     */
+    public boolean sample(P point, long seqNum) {
+        Optional<Double> preSample = acceptSample(seqNum);
+        if (preSample.isPresent()) {
+            addSample(point, preSample.get(), seqNum);
+            return true;
+        }
+        return false;
     }
 
     /**
      * @return the point evicted by the most recent call to {@link #sample}, or null
      *         if no point was evicted.
      */
-    public WeightedPoint getEvictedPoint() {
-        return evictedPoint;
+    @Override
+    public Optional<Sequential<P>> getEvictedPoint() {
+        return Optional.ofNullable(evictedPoint);
     }
 
     /**
-     * @return the list of points currently in the sample.
+     * @return the list of weighted points currently in the sample. If there is no
+     *         sequential information then a dummy variable is placed.
      */
-    public List<double[]> getSamples() {
-        return weightedSamples.stream().map(WeightedPoint::getPoint).collect(Collectors.toList());
+    @Override
+    public List<Weighted<P>> getWeightedSamples() {
+        ArrayList<Weighted<P>> result;
+        if (!storeSequenceIndices) {
+            result = new ArrayList<>(weightedSamples);
+        } else {
+            result = new ArrayList<>();
+            weightedSamples.stream().map(e -> result.add(new Weighted(e.getValue(), e.getWeight())));
+        }
+        return result;
+
     }
 
     /**
-     * @return the list of points currently in the sample.
+     * @return the list of weighted points currently in the sample. If there is no
+     *         sequential information then a dummy variable is placed.
      */
-    public List<WeightedPoint> getWeightedSamples() {
-        return new ArrayList<>(weightedSamples);
+    public List<Sequential<P>> getSequentialSamples() {
+        ArrayList<Sequential<P>> result = new ArrayList<>();
+        for (Weighted<P> e : weightedSamples) {
+            if (storeSequenceIndices) {
+                result.add((Sequential<P>) e);
+            } else {
+                result.add(new Sequential(e.getValue(), e.getWeight(), 1L));
+            }
+        }
+        return result;
     }
 
     /**

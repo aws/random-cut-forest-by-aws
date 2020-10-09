@@ -13,21 +13,13 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.sampler;
+package com.amazon.randomcutforest.executor;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 
-import org.junit.jupiter.api.Test;
+public interface ITraversable {
+    <R> R traverse(double[] point, Visitor<R> visitor);
 
-public class WeightedPointTest {
-
-    @Test
-    public void testNew() {
-        WeightedPoint point = new WeightedPoint(new double[] { 0.99, -55.2 }, 999L, 1.23);
-        assertEquals(1.23, point.getWeight());
-        assertEquals(999L, point.getSequenceIndex());
-        assertArrayEquals(new double[] { 0.99, -55.2 }, point.getPoint());
-    }
-
+    <R> R traverseMulti(double[] point, MultiVisitor<R> visitor);
 }

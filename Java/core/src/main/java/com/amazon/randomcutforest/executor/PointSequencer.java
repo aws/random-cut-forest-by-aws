@@ -13,25 +13,31 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-/**
- * Traverse the trees in a forest sequentially.
- */
-public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecutor<P> {
+import com.amazon.randomcutforest.store.PointStoreDoubleData;
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models) {
-        super(updateCoordinator, models);
+public class PointSequencer implements IUpdateCoordinator<double[]> {
+
+    public PointSequencer() {
     }
 
     @Override
-    protected List<P> update(P point) {
-        return models.stream().map(t -> t.update(point)).filter(Optional::isPresent).map(Optional::get)
-                .collect(Collectors.toList());
+    public double[] initUpdate(double[] point, long seqNum) {
+        return point;
     }
+
+    @Override
+    public void completeUpdate(List<Optional<UpdateReturn<double[]>>> updateResults, double[] initial) {
+
+    }
+
+    @Override
+    public PointStoreDoubleData getPointStoreData() {
+        return null;
+    }
+
 }

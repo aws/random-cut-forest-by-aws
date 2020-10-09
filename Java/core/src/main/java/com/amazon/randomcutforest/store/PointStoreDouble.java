@@ -33,12 +33,11 @@ import java.util.List;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore extends IndexManager implements IPointStore<float[]> {
+public class PointStoreDouble extends IndexManager implements IPointStore<double[]> {
 
-    private final float[] store;
-    private final short[] refCount;
+    protected final double[] store;
+    protected final short[] refCount;
     private final int dimensions;
-    private final int capacity;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -46,13 +45,12 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      * @param dimensions The number of dimensions in stored points.
      * @param capacity   The maximum number of points that can be stored.
      */
-    public PointStore(int dimensions, int capacity) {
+    public PointStoreDouble(int dimensions, int capacity) {
         super(capacity);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
 
         this.dimensions = dimensions;
-        this.capacity = capacity;
-        store = new float[capacity * dimensions];
+        store = new double[capacity * dimensions];
         refCount = new short[capacity];
     }
 
@@ -82,12 +80,11 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      *                                  the point store's dimensions.
      * @throws IllegalStateException    if the point store is full.
      */
-    public int add(float[] point) {
+    public int add(double[] point) {
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
         int nextIndex = takeIndex();
         System.arraycopy(point, 0, store, nextIndex * dimensions, dimensions);
-
         refCount[nextIndex] = 1;
         return nextIndex;
     }
@@ -139,8 +136,9 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
+
     @Override
-    public boolean pointEquals(int index, float[] point) {
+    public boolean pointEquals(int index, double[] point) {
         checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
@@ -164,7 +162,7 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      *                                  index is nonpositive.
      */
     @Override
-    public float[] get(int index) {
+    public double[] get(int index) {
         checkValidIndex(index);
         return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
     }
@@ -176,8 +174,8 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
     }
 
     @Override
-    public List<Float> getData() {
-        List<Float> result = new ArrayList<>(store.length);
+    public List<Double> getData() {
+        List<Double> result = new ArrayList<>(store.length);
         for (int j = 0; j < capacity * dimensions; j++) {
             result.add(store[j]);
         }
@@ -187,9 +185,35 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
     @Override
     public List<Short> getRef() {
         List<Short> result = new ArrayList<>(capacity);
-        for (int j = 0; j < capacity; j++) {
+        for (int j = 0; j < super.capacity; j++) {
             result.add(refCount[j]);
         }
         return result;
     }
+
+    public void reInitialize(PointStoreDoubleData pointStoreData) {
+        int debug = 0;
+        for (int i = 0; i < getCapacity(); i++) {
+            refCount[i] = pointStoreData.refCount[i];
+            if (refCount[i] > 0) {
+                occupied.set(i);
+            }
+            // sets everything
+        }
+
+        for (int i = 0; i < pointStoreData.freeIndexes.length; i++) {
+            freeIndexes[i] = pointStoreData.freeIndexes[i];
+            occupied.clear(freeIndexes[i]);
+            // resets index for free entries
+        }
+        // note that freeIndexPointer can be -1; when everything is occupied
+        // otherwise it indexes to last free position in [0:capacity-1]
+        freeIndexPointer = pointStoreData.freeIndexes.length - 1;
+
+        for (int i = 0; i < pointStoreData.store.length; i++) {
+            store[i] = pointStoreData.store[i];
+        }
+
+    }
+
 }

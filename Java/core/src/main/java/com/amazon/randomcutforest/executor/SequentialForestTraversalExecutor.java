@@ -13,37 +13,32 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.executor;
 
 import java.util.ArrayList;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.tree.ITree;
 
 /**
  * Traverse the trees in a forest sequentially.
  */
 public class SequentialForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
-    public SequentialForestTraversalExecutor(ArrayList<TreeUpdater> treeUpdaters) {
-        super(treeUpdaters);
+    public SequentialForestTraversalExecutor(ArrayList<SamplerPlusTree> components) {
+        super(components);
     }
 
     @Override
-    protected void update(double[] pointCopy, long sequenceIndex) {
-        treeUpdaters.forEach(updater -> {
-            updater.update(pointCopy, sequenceIndex);
-        });
-    }
-
-    @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+        R unnormalizedResult = components.stream().map(SamplerPlusTree::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
             return tree.traverse(point, visitor);
         }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
@@ -52,21 +47,21 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+        return components.stream().map(SamplerPlusTree::getTree).map(tree -> {
             Visitor<R> visitor = visitorFactory.apply(tree);
             return tree.traverse(point, visitor);
         }).collect(collector);
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
-        for (TreeUpdater treeUpdater : treeUpdaters) {
-            RandomCutTree tree = treeUpdater.getTree();
+        for (SamplerPlusTree component : components) {
+            ITree<?> tree = component.getTree();
             Visitor<R> visitor = visitorFactory.apply(tree);
             accumulator.accept(tree.traverse(point, visitor));
             if (accumulator.isConverged()) {
@@ -78,10 +73,10 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+        R unnormalizedResult = components.stream().map(SamplerPlusTree::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
             return tree.traverseMulti(point, visitor);
         }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
@@ -90,10 +85,10 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return treeUpdaters.stream().map(TreeUpdater::getTree).map(tree -> {
+        return components.stream().map(SamplerPlusTree::getTree).map(tree -> {
             MultiVisitor<R> visitor = visitorFactory.apply(tree);
             return tree.traverseMulti(point, visitor);
         }).collect(collector);

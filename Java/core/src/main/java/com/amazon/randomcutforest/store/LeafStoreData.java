@@ -15,22 +15,20 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.List;
+import java.util.Arrays;
 
-/**
- * A read-only point store interface.
- */
-public interface IPointStore<P> {
-    int getDimensions();
+public class LeafStoreData {
 
-    int getCapacity();
+    public final int[] pointIndex;
+    public final short[] parentIndex;
+    public final int[] mass;
+    public final short[] freeIndexes;
 
-    boolean pointEquals(int index, P point);
-
-    P get(int index);
-
-    List<?> getData();
-
-    List<Short> getRef();
+    public LeafStoreData(LeafStore leafStore) {
+        pointIndex = Arrays.copyOf(leafStore.pointIndex, leafStore.pointIndex.length);
+        parentIndex = Arrays.copyOf(leafStore.parentIndex, leafStore.parentIndex.length);
+        mass = Arrays.copyOf(leafStore.mass, leafStore.mass.length);
+        freeIndexes = Arrays.copyOf(leafStore.freeIndexes, leafStore.freeIndexPointer + 1);
+    }
 
 }

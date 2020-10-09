@@ -15,18 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.*;
 import static com.amazon.randomcutforest.tree.Node.isLeftOf;
 
 import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Sequential;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.sampler.WeightedPoint;
+import com.amazon.randomcutforest.executor.Sequential;
 
 /**
  * A Random Cut Tree is a tree data structure whose leaves represent points
@@ -39,7 +36,7 @@ import com.amazon.randomcutforest.sampler.WeightedPoint;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public class RandomCutTree implements ITree<Sequential<double[]>> {
+public class RandomCutTree implements ITree<double[]> {
 
     /**
      * By default, trees will not store sequence indexes.
@@ -207,16 +204,6 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
     }
 
     /**
-     * Delete the given point from this tree.
-     *
-     * @param weightedPoint A point in the tree that we wish to delete.
-     */
-    public void deletePoint(WeightedPoint weightedPoint) {
-        checkState(root != null, "root must not be null");
-        deletePoint(root, weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-    }
-
-    /**
      * This function deletes the point from the tree recursively. We traverse the
      * tree based on the cut stored in each interior node until we reach a leaf
      * node. We then delete the leaf node if the mass of the node is 1, otherwise we
@@ -292,25 +279,13 @@ public class RandomCutTree implements ITree<Sequential<double[]>> {
      * @param point The point to add to the tree.
      */
     @Override
-    public void addPoint(Sequential<double[]> point) {
+    public double[] addPoint(Sequential<double[]> point) {
         if (root == null) {
             root = newLeafNode(point.getValue(), point.getSequenceIndex());
         } else {
             addPoint(root, point.getValue(), point.getSequenceIndex());
         }
-    }
-
-    /**
-     * Add a new point to the tree.
-     *
-     * @param weightedPoint The point to add to the tree.
-     */
-    public void addPoint(WeightedPoint weightedPoint) {
-        if (root == null) {
-            root = newLeafNode(weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-        } else {
-            addPoint(root, weightedPoint.getPoint(), weightedPoint.getSequenceIndex());
-        }
+        return point.getValue();
     }
 
     /**
