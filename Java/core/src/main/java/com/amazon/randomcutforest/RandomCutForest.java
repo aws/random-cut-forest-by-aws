@@ -15,13 +15,6 @@
 
 package com.amazon.randomcutforest;
 
-import static com.amazon.randomcutforest.CommonUtils.*;
-
-import java.util.*;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.stream.Collector;
-
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.executor.*;
@@ -36,6 +29,13 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
+
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collector;
+
+import static com.amazon.randomcutforest.CommonUtils.*;
 
 /**
  * The RandomCutForest class is the interface to the algorithms in this package,
@@ -1024,6 +1024,50 @@ public class RandomCutForest {
 
         forest.updateExecutor.setCurrentIndex(forestState.entreesSeen);
         return forest;
+    }
+
+    public ForestState getForestState() {
+        ForestState answer = new ForestState();
+        answer.numberOfTrees = getNumberOfTrees();
+        answer.dimensions = getDimensions();
+        answer.lambda = getLambda();
+        answer.sampleSize = getSampleSize();
+        answer.centerOfMassEnabled = centerOfMassEnabled();
+        answer.outputAfter = getOutputAfter();
+        answer.parallelExecutionEnabled = parallelExecutionEnabled();
+        answer.threadPoolSize = getThreadPoolSize();
+        answer.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled();
+        answer.entreesSeen = getTotalUpdates();
+        answer.compactEnabled = compactEnabled();
+        answer.saveTreeData = saveTreeData();
+
+        if (!compactEnabled) {
+            /**
+             * In this case there is no pointstore and we onle have a basic serialization
+             * where the samples are stored and the trees are rebuilt from the samples.
+             */
+            answer.pointStoreDoubleData = null;
+            if (storeSequenceIndexesEnabled) {
+                answer.sequentialSamplerData = updateExecutor.getSequentialSamples();
+                answer.smallSamplerData = null;
+            } else {
+                answer.smallSamplerData = updateExecutor.getWeightedSamples();
+                answer.sequentialSamplerData = null;
+            }
+            answer.compactSamplerData = null;
+        } else {
+            answer.pointStoreDoubleData = updateExecutor.getPointStoredata();
+            if (this.saveTreeData) {
+                answer.treeData = updateExecutor.getTreeData();
+            } else {
+                answer.treeData = null;
+            }
+            answer.compactSamplerData = updateExecutor.getCompactSamplerData();
+            answer.sequentialSamplerData = null;
+            answer.smallSamplerData = null;
+        }
+        answer.entreesSeen = getTotalUpdates();
+        return answer;
     }
 
 }

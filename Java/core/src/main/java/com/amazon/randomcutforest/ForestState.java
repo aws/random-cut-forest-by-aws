@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.sampler.CompactSamplerData;
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.store.PointStoreDoubleData;
 import com.amazon.randomcutforest.tree.TreeData;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A class that encapsulates most of the data used in a RandomCutForest such
@@ -30,7 +30,7 @@ import com.amazon.randomcutforest.tree.TreeData;
  */
 public class ForestState {
 
-    public int typeOfForest = 0;
+    public String typeOfForest = null;
 
     public long entreesSeen;
 
@@ -66,6 +66,7 @@ public class ForestState {
 
     public ArrayList<TreeData> treeData;
 
+    /*
     public ForestState(RandomCutForest forest) {
         this.numberOfTrees = forest.getNumberOfTrees();
         this.dimensions = forest.getDimensions();
@@ -81,10 +82,6 @@ public class ForestState {
         this.saveTreeData = forest.saveTreeData();
 
         if (!compactEnabled) {
-            /**
-             * In this case there is no pointstore and we onle have a basic serialization
-             * where the samples are stored and the trees are rebuilt from the samples.
-             */
             this.pointStoreDoubleData = null;
             if (storeSequenceIndexesEnabled) {
                 this.sequentialSamplerData = forest.updateExecutor.getSequentialSamples();
@@ -107,4 +104,6 @@ public class ForestState {
         }
         this.entreesSeen = forest.getTotalUpdates();
     }
+    */
+
 }
