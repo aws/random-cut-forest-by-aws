@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.serialize;
 
-import com.amazon.randomcutforest.ForestState;
-import com.amazon.randomcutforest.RandomCutForest;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import com.amazon.randomcutforest.ForestState;
+import com.amazon.randomcutforest.RandomCutForest;
 
 public class RandomCutForestSerDeTests {
 
@@ -56,7 +56,6 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-
         ForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
 
@@ -71,12 +70,12 @@ public class RandomCutForestSerDeTests {
         for (double[] point : generate(numTestSamples, numDims)) {
             double score = forest.getAnomalyScore(point);
             double newScore = reForest.getAnomalyScore(point);
-            if (numDims>1) {
+            if (numDims > 1) {
                 assertTrue(Math.abs(score - newScore) < delta);
-                if ((score>1) && (Math.abs( score - newScore) > 0.05 * score))
+                if ((score > 1) && (Math.abs(score - newScore) > 0.05 * score))
                     num++;
             } else {
-                if (((score>1) || (newScore>1)) && (Math.abs(score - newScore) > delta))
+                if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > delta))
                     numForDimOne++;
             }
 
@@ -84,18 +83,18 @@ public class RandomCutForestSerDeTests {
             reForest.update(point);
         }
         /**
-         * It may be the case that more than epsilon = 0.05 fraction of the points are not within
-         * 5% of the score,  but then all those scores are lower than 1. Note that for numDims>1
-         * the difference never exceeds delta.
+         * It may be the case that more than epsilon = 0.05 fraction of the points are
+         * not within 5% of the score, but then all those scores are lower than 1. Note
+         * that for numDims>1 the difference never exceeds delta.
          *
          * For numDims == 1, there may be more noise; and hence the test corresponds to
          */
-        if (numDims>1) {
+        if (numDims > 1) {
             assertTrue(num < 0.05 * numTestSamples);
         } else {
             assertTrue(numForDimOne < 0.01 * numTestSamples);
         }
-        
+
     }
 
     @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "

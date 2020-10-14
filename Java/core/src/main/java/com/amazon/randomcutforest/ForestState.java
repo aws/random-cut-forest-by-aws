@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.sampler.CompactSamplerData;
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.store.PointStoreDoubleData;
 import com.amazon.randomcutforest.tree.TreeData;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A class that encapsulates most of the data used in a RandomCutForest such
@@ -31,7 +31,6 @@ import java.util.List;
 public class ForestState {
 
     public String typeOfForest = null;
-
 
     public long entreesSeen;
 
@@ -66,6 +65,5 @@ public class ForestState {
     public ArrayList<List<Weighted<double[]>>> smallSamplerData;
 
     public ArrayList<TreeData> treeData;
-
 
 }

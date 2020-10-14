@@ -15,6 +15,12 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.*;
+
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
@@ -30,13 +36,6 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
-
-import java.util.*;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.stream.Collector;
-
-import static com.amazon.randomcutforest.CommonUtils.*;
 
 /**
  * The RandomCutForest class is the interface to the algorithms in this package,
@@ -1070,6 +1069,5 @@ public class RandomCutForest {
         answer.entreesSeen = getTotalUpdates();
         return answer;
     }
-
 
 }
