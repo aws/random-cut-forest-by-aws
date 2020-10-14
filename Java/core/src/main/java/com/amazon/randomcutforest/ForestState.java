@@ -30,7 +30,7 @@ import com.amazon.randomcutforest.tree.TreeData;
  */
 public class ForestState {
 
-    public int typeOfForest = 0;
+    public String typeOfForest = null;
 
     public long entreesSeen;
 
@@ -66,45 +66,4 @@ public class ForestState {
 
     public ArrayList<TreeData> treeData;
 
-    public ForestState(RandomCutForest forest) {
-        this.numberOfTrees = forest.getNumberOfTrees();
-        this.dimensions = forest.getDimensions();
-        this.lambda = forest.getLambda();
-        this.sampleSize = forest.getSampleSize();
-        this.centerOfMassEnabled = forest.centerOfMassEnabled();
-        this.outputAfter = forest.getOutputAfter();
-        this.parallelExecutionEnabled = forest.parallelExecutionEnabled();
-        this.threadPoolSize = forest.getThreadPoolSize();
-        this.storeSequenceIndexesEnabled = forest.storeSequenceIndexesEnabled();
-        this.entreesSeen = forest.getTotalUpdates();
-        this.compactEnabled = forest.compactEnabled();
-        this.saveTreeData = forest.saveTreeData();
-
-        if (!compactEnabled) {
-            /**
-             * In this case there is no pointstore and we onle have a basic serialization
-             * where the samples are stored and the trees are rebuilt from the samples.
-             */
-            this.pointStoreDoubleData = null;
-            if (storeSequenceIndexesEnabled) {
-                this.sequentialSamplerData = forest.updateExecutor.getSequentialSamples();
-                this.smallSamplerData = null;
-            } else {
-                this.smallSamplerData = forest.updateExecutor.getWeightedSamples();
-                this.sequentialSamplerData = null;
-            }
-            this.compactSamplerData = null;
-        } else {
-            this.pointStoreDoubleData = forest.updateExecutor.getPointStoredata();
-            if (this.saveTreeData) {
-                this.treeData = forest.updateExecutor.getTreeData();
-            } else {
-                this.treeData = null;
-            }
-            this.compactSamplerData = forest.updateExecutor.getCompactSamplerData();
-            this.sequentialSamplerData = null;
-            this.smallSamplerData = null;
-        }
-        this.entreesSeen = forest.getTotalUpdates();
-    }
 }

@@ -56,7 +56,7 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-        ForestState forestState = new ForestState(forest);
+        ForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
 
         ForestState reForestState = serializer.fromJson(json);
@@ -65,13 +65,36 @@ public class RandomCutForestSerDeTests {
         RandomCutForest reForest = RandomCutForest.getForest(reForestState);
 
         int num = 0;
+        int numForDimOne = 0;
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;
         for (double[] point : generate(numTestSamples, numDims)) {
-            // System.out.println(" seen new " + num++);
-            assertTrue(Math.abs(forest.getAnomalyScore(point) - reForest.getAnomalyScore(point)) < delta);
+            double score = forest.getAnomalyScore(point);
+            double newScore = reForest.getAnomalyScore(point);
+            if (numDims > 1) {
+                assertTrue(Math.abs(score - newScore) < delta);
+                if ((score > 1) && (Math.abs(score - newScore) > 0.05 * score))
+                    num++;
+            } else {
+                if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > delta))
+                    numForDimOne++;
+            }
+
             forest.update(point);
             reForest.update(point);
         }
+        /**
+         * It may be the case that more than epsilon = 0.05 fraction of the points are
+         * not within 5% of the score, but then all those scores are lower than 1. Note
+         * that for numDims>1 the difference never exceeds delta.
+         *
+         * For numDims == 1, there may be more noise; and hence the test corresponds to
+         */
+        if (numDims > 1) {
+            assertTrue(num < 0.05 * numTestSamples);
+        } else {
+            assertTrue(numForDimOne < 0.01 * numTestSamples);
+        }
+
     }
 
     @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
@@ -92,21 +115,22 @@ public class RandomCutForestSerDeTests {
         for (double[] point : generate(numTrainSamples, numDims)) {
             forest.update(point);
         }
-        ForestState forestState = new ForestState(forest);
+
+        ForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;
         System.out.println("Size " + json.length());
         ForestState reForestState = serializer.fromJson(json);
 
         for (int i = 0; i < numTestSamples; i++) {
-            // ForestState reForestState = serializer.fromJson(json);
+            reForestState = serializer.fromJson(json);
             RandomCutForest reForest = RandomCutForest.getForest(reForestState);
             double[] point = generate(1, numDims)[0];
             assertTrue(Math.abs(forest.getAnomalyScore(point) - reForest.getAnomalyScore(point)) < delta);
             reForest.update(point);
             forest.update(point);
-            // json = serializer.toJson( new ForestState(reForest));
-            reForestState = new ForestState(reForest);
+            reForestState = reForest.getForestState();
+            json = serializer.toJson(reForestState);
         }
     }
 
