@@ -32,6 +32,7 @@ public class ForestState {
 
     public String typeOfForest = null;
 
+
     public long entreesSeen;
 
     public double lambda;
@@ -65,5 +66,6 @@ public class ForestState {
     public ArrayList<List<Weighted<double[]>>> smallSamplerData;
 
     public ArrayList<TreeData> treeData;
+
 
 }

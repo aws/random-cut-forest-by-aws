@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+
 public class RandomCutForestSerDeTests {
 
     private RandomCutForestSerDe serializer = new RandomCutForestSerDe();
@@ -54,6 +55,7 @@ public class RandomCutForestSerDeTests {
         for (double[] point : generate(numTrainSamples, numDims)) {
             forest.update(point);
         }
+
 
         ForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
@@ -93,7 +95,7 @@ public class RandomCutForestSerDeTests {
         } else {
             assertTrue(numForDimOne < 0.01 * numTestSamples);
         }
-
+        
     }
 
     @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
@@ -114,6 +116,7 @@ public class RandomCutForestSerDeTests {
         for (double[] point : generate(numTrainSamples, numDims)) {
             forest.update(point);
         }
+
         ForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;

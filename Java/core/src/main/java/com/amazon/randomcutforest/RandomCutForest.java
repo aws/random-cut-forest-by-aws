@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest;
 
+
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.executor.*;
@@ -1069,5 +1070,6 @@ public class RandomCutForest {
         answer.entreesSeen = getTotalUpdates();
         return answer;
     }
+
 
 }
