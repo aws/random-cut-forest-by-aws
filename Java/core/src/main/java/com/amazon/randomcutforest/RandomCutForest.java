@@ -30,8 +30,10 @@ import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
 import com.amazon.randomcutforest.returntypes.*;
 import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.sampler.ConvertToCompact;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreDoubleData;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
@@ -1000,10 +1002,9 @@ public class RandomCutForest {
     }
 
     /**
-     * The following initialization must happen as soon as the forest is created and
-     * trees are empty
+     * The following function creates a forest based on the state information
      */
-    public static RandomCutForest getForest(ForestState forestState) {
+    public static RandomCutForest createForest(ForestState forestState) {
         RandomCutForest forest = builder().dimensions(forestState.dimensions).numberOfTrees(forestState.numberOfTrees)
                 .lambda(forestState.lambda).outputAfter(forestState.outputAfter).sampleSize(forestState.sampleSize)
                 .centerOfMassEnabled(forestState.centerOfMassEnabled).compactEnabled(forestState.compactEnabled)
@@ -1046,15 +1047,20 @@ public class RandomCutForest {
              * In this case there is no pointstore and we onle have a basic serialization
              * where the samples are stored and the trees are rebuilt from the samples.
              */
-            answer.pointStoreDoubleData = null;
-            if (storeSequenceIndexesEnabled) {
-                answer.sequentialSamplerData = updateExecutor.getSequentialSamples();
-                answer.smallSamplerData = null;
-            } else {
-                answer.smallSamplerData = updateExecutor.getWeightedSamples();
-                answer.sequentialSamplerData = null;
-            }
-            answer.compactSamplerData = null;
+            /*
+             * answer.pointStoreDoubleData = null; if (storeSequenceIndexesEnabled) {
+             * answer.sequentialSamplerData = updateExecutor.getSequentialSamples();
+             * answer.smallSamplerData = null; } else { answer.smallSamplerData =
+             * updateExecutor.getWeightedSamples(); answer.sequentialSamplerData = null; }
+             * answer.compactSamplerData = null;
+             */
+            this.saveTreeData = false;
+            ConvertToCompact convertor = new ConvertToCompact(storeSequenceIndexesEnabled, dimensions,
+                    sampleSize * numberOfTrees + 1);
+            convertor.addSamples(updateExecutor.getSequentialSamples(), sampleSize);
+            answer.pointStoreDoubleData = new PointStoreDoubleData(convertor.pointStoreDouble);
+            answer.compactSamplerData = convertor.dataList;
+            answer.compactEnabled = true;
         } else {
             answer.pointStoreDoubleData = updateExecutor.getPointStoredata();
             if (this.saveTreeData) {

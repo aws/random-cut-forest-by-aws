@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -168,32 +167,34 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
     }
 
     @Override
+    public List<?> getData() {
+        return null;
+    }
+
+    @Override
+    public List<Short> getRef() {
+        return null;
+    }
+
+    @Override
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
     }
 
-    @Override
-    public List<Double> getData() {
-        List<Double> result = new ArrayList<>(store.length);
-        for (int j = 0; j < capacity * dimensions; j++) {
-            result.add(store[j]);
-        }
-        return result;
-    }
-
-    @Override
-    public List<Short> getRef() {
-        List<Short> result = new ArrayList<>(capacity);
-        for (int j = 0; j < super.capacity; j++) {
-            result.add(refCount[j]);
-        }
-        return result;
-    }
-
+    /*
+     * @Override public List<Double> getData() { List<Double> result = new
+     * ArrayList<>(store.length); for (int j = 0; j < capacity * dimensions; j++) {
+     * result.add(store[j]); } return result; }
+     * 
+     * @Override public List<Short> getRef() { List<Short> result = new
+     * ArrayList<>(capacity); for (int j = 0; j < super.capacity; j++) {
+     * result.add(refCount[j]); } return result; }
+     */
     public void reInitialize(PointStoreDoubleData pointStoreData) {
         int debug = 0;
         for (int i = 0; i < getCapacity(); i++) {
+            occupied.clear(i);
             refCount[i] = pointStoreData.refCount[i];
             if (refCount[i] > 0) {
                 occupied.set(i);
@@ -201,15 +202,19 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
             // sets everything
         }
 
-        for (int i = 0; i < pointStoreData.freeIndexes.length; i++) {
-            freeIndexes[i] = pointStoreData.freeIndexes[i];
-            occupied.clear(freeIndexes[i]);
-            // resets index for free entries
+        freeIndexPointer = -1;
+        for (int i = getCapacity() - 1; i >= 0; i--) {
+            if (!occupied.get(i)) {
+                freeIndexes[++freeIndexPointer] = i;
+            }
         }
-        // note that freeIndexPointer can be -1; when everything is occupied
-        // otherwise it indexes to last free position in [0:capacity-1]
-        freeIndexPointer = pointStoreData.freeIndexes.length - 1;
-
+        /*
+         * for (int i = 0; i < pointStoreData.freeIndexes.length; i++) { freeIndexes[i]
+         * = pointStoreData.freeIndexes[i]; occupied.clear(freeIndexes[i]); // resets
+         * index for free entries } // note that freeIndexPointer can be -1; when
+         * everything is occupied // otherwise it indexes to last free position in
+         * [0:capacity-1] freeIndexPointer = pointStoreData.freeIndexes.length - 1;
+         */
         for (int i = 0; i < pointStoreData.store.length; i++) {
             store[i] = pointStoreData.store[i];
         }

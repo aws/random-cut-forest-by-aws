@@ -21,7 +21,7 @@ public class PointStoreDoubleData {
 
     public final double[] store;
     public final short[] refCount;
-    public final int[] freeIndexes;
+    public int[] freeIndexes;
 
     /**
      * Takes a PointStoreDouble and stores the information. Note that
@@ -33,7 +33,8 @@ public class PointStoreDoubleData {
     public PointStoreDoubleData(PointStoreDouble pointStoreDouble) {
         store = Arrays.copyOf(pointStoreDouble.store, pointStoreDouble.store.length);
         refCount = Arrays.copyOf(pointStoreDouble.refCount, pointStoreDouble.refCount.length);
-        freeIndexes = Arrays.copyOf(pointStoreDouble.freeIndexes, pointStoreDouble.freeIndexPointer + 1);
+        // freeIndexes = Arrays.copyOf(pointStoreDouble.freeIndexes,
+        // pointStoreDouble.freeIndexPointer + 1);
     }
 
 }

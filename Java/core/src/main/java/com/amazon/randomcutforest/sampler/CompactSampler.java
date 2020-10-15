@@ -156,22 +156,32 @@ public class CompactSampler implements IStreamSampler<Integer> {
             --currentSize;
             weightArray[0] = weightArray[currentSize];
             referenceArray[0] = referenceArray[currentSize];
-            int current = 0;
-            while ((2 * current + 1) < currentSize) {
-                int maxIndex = 2 * current + 1;
-                if ((2 * current + 2 < currentSize) && (weightArray[2 * current + 2] > weightArray[maxIndex]))
-                    maxIndex = 2 * current + 2;
-                if (weightArray[maxIndex] > weightArray[current]) {
-                    swapWeights(current, maxIndex);
-                    current = maxIndex;
-                } else
-                    break;
-            }
+            swapDown(0);
             return Optional.of(weight);
         } else {
             return Optional.empty();
         }
 
+    }
+
+    private void swapDown(int startIndex) {
+        int current = startIndex;
+        while ((2 * current + 1) < currentSize) {
+            int maxIndex = 2 * current + 1;
+            if ((2 * current + 2 < currentSize) && (weightArray[2 * current + 2] > weightArray[maxIndex]))
+                maxIndex = 2 * current + 2;
+            if (weightArray[maxIndex] > weightArray[current]) {
+                swapWeights(current, maxIndex);
+                current = maxIndex;
+            } else
+                break;
+        }
+    }
+
+    private void reheap() {
+        for (int i = (currentSize + 1) / 2; i >= 0; i--) {
+            swapDown(i);
+        }
     }
 
     @Override
@@ -310,5 +320,6 @@ public class CompactSampler implements IStreamSampler<Integer> {
                 sequenceArray[i] = samplerData.sequenceArray[i];
             }
         }
+        reheap();
     }
 }
