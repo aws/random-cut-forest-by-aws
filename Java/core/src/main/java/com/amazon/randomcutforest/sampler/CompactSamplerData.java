@@ -41,4 +41,15 @@ public class CompactSamplerData {
         }
     }
 
+    public CompactSamplerData(int currentSize, int maxSize, boolean storeSeq) {
+        this.currentSize = currentSize;
+        this.maxSize = maxSize;
+        weightArray = new double[currentSize];
+        referenceArray = new int[currentSize];
+        if (storeSeq) {
+            sequenceArray = new long[currentSize];
+        } else {
+            sequenceArray = null;
+        }
+    }
 }

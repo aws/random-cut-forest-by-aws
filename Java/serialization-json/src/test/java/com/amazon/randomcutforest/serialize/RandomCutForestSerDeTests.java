@@ -37,13 +37,13 @@ public class RandomCutForestSerDeTests {
             "1, 100, 256, 1024, 1024, 0, 0", "10, 100, 256, 32, 1024, 0, 0", "10, 100, 256, 256, 1024, 0, 0",
             "10, 100, 256, 512, 1024, 0, 0", "10, 100, 256, 1024, 1024, 0, 0", "1, 100, 256, 32, 1024, 1, 0",
             "1, 100, 256, 256, 1024, 1, 1", "1, 100, 256, 512, 1024, 1, 2", "1, 100, 256, 1024, 1024, 1, 4",
-            "10, 100, 256, 32, 1024, 1, 0", "10, 100, 256, 1024, 1024, 1, 1", "4, 10, 256, 1024, 1024, 1, 2",
+            "10, 100, 256, 32, 1024, 1, 0", "10, 100, 256, 1024, 1024, 1, 1", "4, 100, 256, 1024, 1024, 1, 2",
             "10, 100, 256, 1024, 10240, 1, 6" })
 
     public void toJsonString(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
             int enableParallel, int numThreads) {
         RandomCutForest.Builder forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).saveTreeData(true);
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(false);
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -62,7 +62,7 @@ public class RandomCutForestSerDeTests {
         ForestState reForestState = serializer.fromJson(json);
         System.out.println(" Size " + json.length());
 
-        RandomCutForest reForest = RandomCutForest.getForest(reForestState);
+        RandomCutForest reForest = RandomCutForest.createForest(reForestState);
 
         int num = 0;
         int numForDimOne = 0;
@@ -72,7 +72,7 @@ public class RandomCutForestSerDeTests {
             double newScore = reForest.getAnomalyScore(point);
             if (numDims > 1) {
                 assertTrue(Math.abs(score - newScore) < delta);
-                if ((score > 1) && (Math.abs(score - newScore) > 0.05 * score))
+                if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > 0.05 * score))
                     num++;
             } else {
                 if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > delta))
@@ -124,7 +124,7 @@ public class RandomCutForestSerDeTests {
 
         for (int i = 0; i < numTestSamples; i++) {
             reForestState = serializer.fromJson(json);
-            RandomCutForest reForest = RandomCutForest.getForest(reForestState);
+            RandomCutForest reForest = RandomCutForest.createForest(reForestState);
             double[] point = generate(1, numDims)[0];
             assertTrue(Math.abs(forest.getAnomalyScore(point) - reForest.getAnomalyScore(point)) < delta);
             reForest.update(point);
