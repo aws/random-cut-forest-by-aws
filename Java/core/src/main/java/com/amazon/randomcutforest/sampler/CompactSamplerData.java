@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 public class CompactSamplerData {
 
-    public final double[] weightArray;
+    public final float[] weightArray;
 
     public final int[] referenceArray;
 
@@ -44,7 +44,7 @@ public class CompactSamplerData {
     public CompactSamplerData(int currentSize, int maxSize, boolean storeSeq) {
         this.currentSize = currentSize;
         this.maxSize = maxSize;
-        weightArray = new double[currentSize];
+        weightArray = new float[currentSize];
         referenceArray = new int[currentSize];
         if (storeSeq) {
             sequenceArray = new long[currentSize];

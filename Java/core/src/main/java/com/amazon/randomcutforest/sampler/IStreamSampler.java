@@ -39,7 +39,7 @@ public interface IStreamSampler<P> {
      *         point is rejected.
      */
     default boolean sample(P point, long seqNum) {
-        Optional<Double> result = acceptSample(seqNum);
+        Optional<Float> result = acceptSample(seqNum);
         if (result.isPresent()) {
             addSample(point, result.get(), seqNum);
             return true;
@@ -54,7 +54,7 @@ public interface IStreamSampler<P> {
      * @param weight weight value in sampler
      * @param seqNum the sequence number
      */
-    void addSample(P point, double weight, long seqNum);
+    void addSample(P point, float weight, long seqNum);
 
     /**
      * The function decides if the new object elem would be added to the queue.
@@ -65,7 +65,7 @@ public interface IStreamSampler<P> {
      *         returns the weight
      */
 
-    Optional<Double> acceptSample(long seqNum);
+    Optional<Float> acceptSample(long seqNum);
 
     /**
      * @return the list of weighted points currently making up the sample.

@@ -187,7 +187,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
     public void initializeModels(ArrayList<List<Weighted<P>>> samplerData,
             ArrayList<List<Sequential<P>>> sequentialSamplerData) {
         checkArgument(samplerData != null || sequentialSamplerData != null, "error, need one");
-        checkArgument(samplerData != null && sequentialSamplerData != null, "need exactly one");
+        checkArgument(!(samplerData != null && sequentialSamplerData != null), "need exactly one");
         if (sequentialSamplerData == null) {
             checkArgument(samplerData.size() == models.size(), " Mismatch ");
             int componentNum = 0;

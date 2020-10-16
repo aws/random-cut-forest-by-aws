@@ -57,7 +57,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * element is the lowest priority point in the sample (or, equivalently, is the
      * point with the greatest weight).
      */
-    protected final double[] weightArray;
+    protected final float[] weightArray;
 
     protected final int[] referenceArray;
 
@@ -116,7 +116,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
         this.maxSize = sampleSize;
         entriesSeen = 0;
         currentSize = 0;
-        weightArray = new double[sampleSize];
+        weightArray = new float[sampleSize];
         referenceArray = new int[sampleSize];
         this.storeSequenceEnabled = storeSeq;
         if (storeSeq) {
@@ -141,9 +141,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     @Override
-    public Optional<Double> acceptSample(long sequenceIndex) {
+    public Optional<Float> acceptSample(long sequenceIndex) {
         evictedPoint = null;
-        double weight = computeWeight(sequenceIndex);
+        float weight = computeWeight(sequenceIndex);
         entriesSeen++;
         if (currentSize < maxSize) {
             return Optional.of(weight);
@@ -185,7 +185,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     @Override
-    public void addSample(Integer pointRef, double weight, long seqNUm) {
+    public void addSample(Integer pointRef, float weight, long seqNUm) {
         checkState(currentSize < maxSize, " sampler full");
         weightArray[currentSize] = weight;
         referenceArray[currentSize] = pointRef;
@@ -260,13 +260,13 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                      computed.
      * @return the weight value used to define point priority
      */
-    protected double computeWeight(long sequenceIndex) {
+    protected float computeWeight(long sequenceIndex) {
         double randomNumber = 0d;
         while (randomNumber == 0d) {
             randomNumber = random.nextDouble();
         }
 
-        return -sequenceIndex * lambda + Math.log(-Math.log(randomNumber));
+        return (float) (-sequenceIndex * lambda + Math.log(-Math.log(randomNumber)));
     }
 
     /**
@@ -298,7 +298,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
         referenceArray[a] = referenceArray[b];
         referenceArray[b] = tmp;
 
-        double tmpDouble = weightArray[a];
+        float tmpDouble = weightArray[a];
         weightArray[a] = weightArray[b];
         weightArray[b] = tmpDouble;
 
