@@ -34,7 +34,7 @@ public class Sequential<P> extends Weighted<P> {
      * @param sequenceIndex The sequence idnex.
      */
     public Sequential(P value, double weight, long sequenceIndex) {
-        super(value, weight);
+        super(value, (float) weight);
         this.sequenceIndex = sequenceIndex;
     }
 

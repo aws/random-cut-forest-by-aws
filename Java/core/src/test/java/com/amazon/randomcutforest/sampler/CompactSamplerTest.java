@@ -138,8 +138,8 @@ public class CompactSamplerTest {
         SimpleStreamSampler<double[]> simple = new SimpleStreamSampler<>(10, 0.001, 10, false);
 
         for (int i = 0; i < 100000; i++) {
-            Optional<Double> weightOne = compact.acceptSample(i);
-            Optional<Double> weightTwo = simple.acceptSample(i);
+            Optional<Float> weightOne = compact.acceptSample(i);
+            Optional<Float> weightTwo = simple.acceptSample(i);
             assertEquals(weightOne.isPresent(), weightTwo.isPresent());
             if (weightOne.isPresent()) {
                 assertEquals(weightOne.get(), weightTwo.get(), 1E-10);

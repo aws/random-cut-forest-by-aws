@@ -25,7 +25,7 @@ package com.amazon.randomcutforest.sampler;
 public class Weighted<P> {
 
     public P value;
-    private double weight;
+    private float weight;
 
     /**
      * Create a new weighted value from a point value of type P.
@@ -33,7 +33,7 @@ public class Weighted<P> {
      * @param point  A value.
      * @param weight The weight value.
      */
-    public Weighted(P point, double weight) {
+    public Weighted(P point, float weight) {
         this.value = point;
         this.weight = weight;
     }
@@ -51,7 +51,7 @@ public class Weighted<P> {
     /**
      * @return the weight value.
      */
-    public double getWeight() {
+    public float getWeight() {
         return weight;
     }
 
@@ -77,7 +77,7 @@ public class Weighted<P> {
      * 
      * @param otherWeight new weight
      */
-    public void setWeight(double otherWeight) {
+    public void setWeight(float otherWeight) {
         this.weight = otherWeight;
     }
 

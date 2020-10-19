@@ -70,7 +70,7 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
     @Override
     public Optional<UpdateReturn<P>> update(P point, long seqNum) {
         P deleteRef = null;
-        Optional<Double> presampleResult = sampler.acceptSample(seqNum);
+        Optional<Float> presampleResult = sampler.acceptSample(seqNum);
         if (presampleResult.isPresent()) {
             Optional<Sequential<P>> deletedPoint = sampler.getEvictedPoint();
             if (deletedPoint.isPresent()) {

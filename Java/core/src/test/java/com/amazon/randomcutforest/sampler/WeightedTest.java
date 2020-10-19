@@ -26,8 +26,8 @@ public class WeightedTest {
 
     @Test
     public void testNew() {
-        Sequential<double[]> point = new Sequential(new double[] { 0.99, -55.2 }, 1.23, 999L);
-        assertEquals(1.23, point.getWeight());
+        Sequential<double[]> point = new Sequential(new double[] { 0.99, -55.2 }, 1.23f, 999L);
+        assertEquals(1.23f, point.getWeight());
         assertEquals(999L, point.getSequenceIndex());
         assertArrayEquals(new double[] { 0.99, -55.2 }, point.getValue());
     }

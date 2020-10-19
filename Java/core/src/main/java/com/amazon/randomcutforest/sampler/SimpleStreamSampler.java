@@ -110,9 +110,9 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * @param seqIndex The timestamp value being submitted.
      * @return A weighted point that can be added to the sampler or null
      */
-    public Optional<Double> acceptSample(long seqIndex) {
+    public Optional<Float> acceptSample(long seqIndex) {
         evictedPoint = null;
-        double weight = computeWeight(seqIndex);
+        float weight = computeWeight(seqIndex);
         ++entriesSeen;
 
         if (entriesSeen <= sampleSize || weight < weightedSamples.element().getWeight()) {
@@ -140,7 +140,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
 
     @Override
-    public void addSample(P point, double weight, long seqNum) {
+    public void addSample(P point, float weight, long seqNum) {
         if (storeSequenceIndices) {
             weightedSamples.add(new Sequential(point, weight, seqNum));
         } else {
@@ -160,7 +160,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * @return true if the point is accepted and added, false otherwise
      */
     public boolean sample(P point, long seqNum) {
-        Optional<Double> preSample = acceptSample(seqNum);
+        Optional<Float> preSample = acceptSample(seqNum);
         if (preSample.isPresent()) {
             addSample(point, preSample.get(), seqNum);
             return true;
@@ -240,13 +240,13 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      *                      computed.
      * @return the weight value used to define point priority
      */
-    protected double computeWeight(long sequenceIndex) {
+    protected float computeWeight(long sequenceIndex) {
         double randomNumber = 0d;
         while (randomNumber == 0d) {
             randomNumber = random.nextDouble();
         }
 
-        return -sequenceIndex * lambda + Math.log(-Math.log(randomNumber));
+        return (float) (-sequenceIndex * lambda + Math.log(-Math.log(randomNumber)));
     }
 
     /**
