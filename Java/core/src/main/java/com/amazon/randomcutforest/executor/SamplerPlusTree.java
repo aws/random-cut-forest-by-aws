@@ -24,12 +24,12 @@ import java.util.Optional;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.CompactSampler;
-import com.amazon.randomcutforest.sampler.CompactSamplerData;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
+import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
+import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.TreeData;
 
 public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
 
@@ -130,13 +130,13 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
         }
     }
 
-    public void initializeCompact(CompactSamplerData samplerData, TreeData treeData) {
+    public void initializeCompact(CompactSamplerState samplerData, CompactRandomCutTreeState treeData) {
         ((CompactSampler) sampler).reInitialize(samplerData);
         if (treeData != null) {
             ((CompactRandomCutTreeDouble) tree).reInitialize(treeData);
         } else {
             long seqNum = 0L;
-            for (int i = 0; i < samplerData.currentSize; i++) {
+            for (int i = 0; i < samplerData.size; i++) {
                 if (samplerData.sequenceArray != null) {
                     ((CompactRandomCutTreeDouble) tree).addPoint(new Sequential<>(samplerData.referenceArray[i],
                             samplerData.weightArray[i], samplerData.sequenceArray[i]));
@@ -148,12 +148,12 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
         }
     }
 
-    public TreeData getTreeData() {
-        return new TreeData((CompactRandomCutTreeDouble) tree);
+    public CompactRandomCutTreeState getTreeData() {
+        return new CompactRandomCutTreeState((CompactRandomCutTreeDouble) tree);
     }
 
-    public CompactSamplerData getCompactSamplerData() {
-        return new CompactSamplerData((CompactSampler) sampler);
+    public CompactSamplerState getCompactSamplerData() {
+        return new CompactSamplerState((CompactSampler) sampler);
     }
 
     /**
@@ -178,7 +178,7 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
 
     /**
      * deletes from the tree
-     * 
+     *
      * @param point to be deleted
      */
 

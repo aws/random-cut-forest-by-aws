@@ -13,17 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest;
 
-/**
- * A read-only point store interface.
- */
-public interface IPointStore<P> {
-    int getDimensions();
+public interface IStateMapper<Model, State> {
+    State toState(Model model);
 
-    int getCapacity();
+    Model toModel(State state, long seed);
 
-    boolean pointEquals(int index, P point);
-
-    P get(int index);
+    default Model toModel(State state) {
+        return toModel(state, 0L);
+    }
 }

@@ -86,17 +86,17 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
         this.sampleSize = sampleSize;
         entriesSeen = 0;
-        weightedSamples = new PriorityQueue(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
+        weightedSamples = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
         this.lambda = lambda;
         this.storeSequenceIndices = storeSequenceIndices;
     }
 
-    public SimpleStreamSampler(int sampleSize, final double lambda, long seed, boolean storeSequenceIndices) {
+    public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
         this(sampleSize, lambda, new Random(seed), storeSequenceIndices);
     }
 
-    public SimpleStreamSampler(int sampleSize, final double lambda, long seed) {
+    public SimpleStreamSampler(int sampleSize, double lambda, long seed) {
         this(sampleSize, lambda, new Random(seed), false);
     }
 
@@ -142,9 +142,9 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     @Override
     public void addSample(P point, float weight, long seqNum) {
         if (storeSequenceIndices) {
-            weightedSamples.add(new Sequential(point, weight, seqNum));
+            weightedSamples.add(new Sequential<>(point, weight, seqNum));
         } else {
-            weightedSamples.add(new Weighted(point, weight));
+            weightedSamples.add(new Weighted<>(point, weight));
         }
         checkState(weightedSamples.size() <= sampleSize,
                 "The number of points in the sampler is greater than the sample size");
@@ -204,7 +204,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
             if (storeSequenceIndices) {
                 result.add((Sequential<P>) e);
             } else {
-                result.add(new Sequential(e.getValue(), e.getWeight(), 1L));
+                result.add(new Sequential<>(e.getValue(), e.getWeight(), 1L));
             }
         }
         return result;
@@ -252,14 +252,14 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * @return the number of points contained by the sampler when full.
      */
-    public long getCapacity() {
+    public int getCapacity() {
         return sampleSize;
     }
 
     /**
      * @return the number of points currently contained by the sampler.
      */
-    public long getSize() {
+    public int size() {
         return weightedSamples.size();
     }
 

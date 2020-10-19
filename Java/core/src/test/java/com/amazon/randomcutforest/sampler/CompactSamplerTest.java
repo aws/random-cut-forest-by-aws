@@ -49,7 +49,7 @@ public class CompactSamplerTest {
         assertFalse(sampler.isReady());
         assertFalse(sampler.isFull());
         assertEquals(sampleSize, sampler.getCapacity());
-        assertEquals(0, sampler.getSize());
+        assertEquals(0, sampler.size());
         assertEquals(lambda, sampler.getLambda());
 
         CompactSampler uniformSampler = new CompactSampler(11, 0, 14, false);
@@ -57,7 +57,7 @@ public class CompactSamplerTest {
         assertFalse(uniformSampler.isReady());
         assertFalse(uniformSampler.isFull());
         assertEquals(11, uniformSampler.getCapacity());
-        assertEquals(0, uniformSampler.getSize());
+        assertEquals(0, uniformSampler.size());
         assertEquals(0.0, uniformSampler.getLambda());
     }
 
@@ -101,7 +101,7 @@ public class CompactSamplerTest {
             assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
             assertFalse(sampler.isReady());
             assertFalse(sampler.isFull());
-            assertEquals(i, sampler.getSize());
+            assertEquals(i, sampler.size());
             assertFalse(sampler.getEvictedPoint().isPresent());
         }
 
@@ -109,14 +109,14 @@ public class CompactSamplerTest {
             assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
             assertTrue(sampler.isReady());
             assertFalse(sampler.isFull());
-            assertEquals(i, sampler.getSize());
+            assertEquals(i, sampler.size());
             assertFalse(sampler.getEvictedPoint().isPresent());
         }
 
         assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), sampleSize));
         assertTrue(sampler.isReady());
         assertTrue(sampler.isFull());
-        assertEquals(i, sampler.getSize());
+        assertEquals(i, sampler.size());
         assertFalse(sampler.getEvictedPoint().isPresent());
 
         java.util.Optional<Sequential<double[]>> evicted;
@@ -127,7 +127,7 @@ public class CompactSamplerTest {
 
             assertTrue(sampler.isReady());
             assertTrue(sampler.isFull());
-            assertEquals(sampleSize, sampler.getSize());
+            assertEquals(sampleSize, sampler.size());
 
         }
     }
