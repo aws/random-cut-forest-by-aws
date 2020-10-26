@@ -44,6 +44,18 @@ public class IndexManagerTest {
     }
 
     @Test
+    public void testNewFromState() {
+        int[] freeIndexes = { 4, 0, 3, 1, 2 };
+        int freeIndexPointer = 2;
+        IndexManager manager = new IndexManager(freeIndexes, freeIndexPointer);
+        assertEquals(freeIndexes.length, manager.getCapacity());
+        assertEquals(2, manager.size());
+        assertEquals(3, manager.takeIndex());
+        assertEquals(0, manager.takeIndex());
+        assertEquals(4, manager.takeIndex());
+    }
+
+    @Test
     public void testTakeIndex() {
         Set<Integer> indexes = new HashSet<>();
         for (int i = 0; i < capacity; i++) {

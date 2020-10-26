@@ -13,22 +13,29 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest.state.store;
 
 import java.util.Arrays;
 
-public class LeafStoreData {
+import lombok.Data;
 
-    public final int[] pointIndex;
-    public final short[] parentIndex;
-    public final int[] mass;
-    public final short[] freeIndexes;
+import com.amazon.randomcutforest.store.LeafStore;
 
-    public LeafStoreData(LeafStore leafStore) {
+@Data
+public class LeafStoreState {
+
+    public int[] pointIndex;
+    public short[] parentIndex;
+    public int[] mass;
+    public short[] freeIndexes;
+
+    public LeafStoreState() {
+    }
+
+    public LeafStoreState(LeafStore leafStore) {
         pointIndex = Arrays.copyOf(leafStore.pointIndex, leafStore.pointIndex.length);
         parentIndex = Arrays.copyOf(leafStore.parentIndex, leafStore.parentIndex.length);
         mass = Arrays.copyOf(leafStore.mass, leafStore.mass.length);
-        freeIndexes = Arrays.copyOf(leafStore.freeIndexes, leafStore.freeIndexPointer + 1);
+        freeIndexes = Arrays.copyOf(leafStore.getFreeIndexes(), leafStore.getFreeIndexPointer() + 1);
     }
-
 }

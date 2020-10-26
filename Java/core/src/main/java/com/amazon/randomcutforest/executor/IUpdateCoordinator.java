@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.executor;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.store.PointStoreDoubleData;
+import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 
 /**
  * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
@@ -50,6 +50,6 @@ public interface IUpdateCoordinator<P> {
      */
     void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults, P updateInput);
 
-    public PointStoreDoubleData getPointStoreData();
+    PointStoreDoubleState getPointStoreState();
 
 }

@@ -13,17 +13,10 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest;
 
-/**
- * A read-only point store interface.
- */
-public interface IPointStore<P> {
-    int getDimensions();
+import com.amazon.randomcutforest.executor.ITraversable;
+import com.amazon.randomcutforest.executor.IUpdatable;
 
-    int getCapacity();
-
-    boolean pointEquals(int index, P point);
-
-    P get(int index);
+public interface IComponentModel<P> extends ITraversable, IUpdatable<P> {
 }

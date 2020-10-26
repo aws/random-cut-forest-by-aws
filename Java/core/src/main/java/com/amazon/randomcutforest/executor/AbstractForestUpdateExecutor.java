@@ -22,10 +22,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.sampler.CompactSamplerData;
 import com.amazon.randomcutforest.sampler.Weighted;
-import com.amazon.randomcutforest.store.PointStoreDoubleData;
-import com.amazon.randomcutforest.tree.TreeData;
+import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
+import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
+import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -145,8 +145,8 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * 
      * @return the tree data for the specifica sampler combination
      */
-    public ArrayList<TreeData> getTreeData() {
-        ArrayList<TreeData> result = new ArrayList<>();
+    public ArrayList<CompactRandomCutTreeState> getTreeData() {
+        ArrayList<CompactRandomCutTreeState> result = new ArrayList<>();
         for (IUpdatable<P> t : models) {
             result.add(((SamplerPlusTree) t).getTreeData());
         }
@@ -158,8 +158,8 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * 
      * @return
      */
-    public ArrayList<CompactSamplerData> getCompactSamplerData() {
-        ArrayList<CompactSamplerData> result = new ArrayList<>();
+    public ArrayList<CompactSamplerState> getCompactSamplerData() {
+        ArrayList<CompactSamplerState> result = new ArrayList<>();
         for (IUpdatable<P> t : models) {
             result.add(((SamplerPlusTree) t).getCompactSamplerData());
         }
@@ -172,8 +172,8 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * 
      * @return pointstore information,
      */
-    public PointStoreDoubleData getPointStoredata() {
-        return updateCoordinator.getPointStoreData();
+    public PointStoreDoubleState getPointStoredata() {
+        return updateCoordinator.getPointStoreState();
     }
 
     /**
@@ -184,8 +184,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
      *                              the arguments is required.
      */
 
-    public void initializeModels(ArrayList<List<Weighted<P>>> samplerData,
-            ArrayList<List<Sequential<P>>> sequentialSamplerData) {
+    public void initializeModels(List<List<Weighted<P>>> samplerData, List<List<Sequential<P>>> sequentialSamplerData) {
         checkArgument(samplerData != null || sequentialSamplerData != null, "error, need one");
         checkArgument(!(samplerData != null && sequentialSamplerData != null), "need exactly one");
         if (sequentialSamplerData == null) {
@@ -213,13 +212,13 @@ public abstract class AbstractForestUpdateExecutor<P> {
      *                     would be rebuilt from the sampler information
      */
 
-    public void initializeCompact(ArrayList<CompactSamplerData> samplerData, ArrayList<TreeData> treeDataList) {
+    public void initializeCompact(List<CompactSamplerState> samplerData, List<CompactRandomCutTreeState> treeDataList) {
         checkArgument(samplerData.size() == models.size(), " Mismatch ");
         if (treeDataList != null) {
             checkArgument(samplerData.size() == treeDataList.size(), " Mismatch ");
         }
         int componentNum = 0;
-        for (CompactSamplerData singleSampler : samplerData) {
+        for (CompactSamplerState singleSampler : samplerData) {
             if (treeDataList != null) {
                 ((SamplerPlusTree) models.get(componentNum)).initializeCompact(singleSampler,
                         treeDataList.get(componentNum));

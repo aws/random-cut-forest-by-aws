@@ -23,8 +23,8 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.amazon.randomcutforest.ForestState;
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.RandomCutForestState;
 
 public class RandomCutForestSerDeTests {
 
@@ -56,10 +56,10 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-        ForestState forestState = forest.getForestState();
+        RandomCutForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
 
-        ForestState reForestState = serializer.fromJson(json);
+        RandomCutForestState reForestState = serializer.fromJson(json);
         System.out.println(" Size " + json.length());
 
         RandomCutForest reForest = RandomCutForest.createForest(reForestState);
@@ -116,11 +116,11 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-        ForestState forestState = forest.getForestState();
+        RandomCutForestState forestState = forest.getForestState();
         String json = serializer.toJson(forestState);
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;
         System.out.println("Size " + json.length());
-        ForestState reForestState = serializer.fromJson(json);
+        RandomCutForestState reForestState = serializer.fromJson(json);
 
         for (int i = 0; i < numTestSamples; i++) {
             reForestState = serializer.fromJson(json);

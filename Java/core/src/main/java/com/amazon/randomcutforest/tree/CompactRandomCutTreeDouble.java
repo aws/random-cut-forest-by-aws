@@ -24,6 +24,9 @@ import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.executor.Sequential;
+import com.amazon.randomcutforest.state.store.LeafStoreState;
+import com.amazon.randomcutforest.state.store.NodeStoreState;
+import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.store.*;
 
 /**
@@ -66,6 +69,22 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         leafNodes = new LeafStore((short) this.maxSize);
         random = new Random(seed);
         rootIndex = NULL;
+    }
+
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, LeafStore leafStore,
+            NodeStore nodeStore, short rootIndex) {
+        checkArgument(maxSize > 0, "maxSize must be greater than 0");
+        checkNotNull(pointStore, "pointStore must not be null");
+        checkNotNull(leafStore, "leafStore must not be null");
+        checkNotNull(nodeStore, "nodeStore must not be null");
+
+        this.maxSize = maxSize;
+        this.pointStore = pointStore;
+        this.rootIndex = rootIndex;
+        random = new Random(seed);
+        internalNodes = nodeStore;
+        leafNodes = leafStore;
+        reflateTree();
     }
 
     protected boolean isLeaf(short index) {
@@ -584,18 +603,23 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return internalNodes.boundingBox[offset];
     }
 
-    NodeStoreData getNodes() {
-        return new NodeStoreData(internalNodes);
+    public NodeStoreState getNodes() {
+        return new NodeStoreState(internalNodes);
     }
 
-    LeafStoreData getLeaves() {
-        return new LeafStoreData(leafNodes);
+    public LeafStoreState getLeaves() {
+        return new LeafStoreState(leafNodes);
     }
 
-    public void reInitialize(TreeData treeData) {
+    public short getRootIndex() {
+        return rootIndex;
+    }
+
+    public void reInitialize(CompactRandomCutTreeState treeData) {
         rootIndex = treeData.rootIndex;
-        leafNodes.reInitialize(treeData.leafData);
-        internalNodes.reInitialize(treeData.nodeData);
+        leafNodes.reInitialize(treeData.leafStoreState);
+        internalNodes.reInitialize(treeData.nodeStoreState);
         reflateTree();
     }
+
 }

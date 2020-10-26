@@ -21,8 +21,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.amazon.randomcutforest.ForestState;
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.RandomCutForestState;
 import com.amazon.randomcutforest.tree.Node;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
@@ -69,7 +69,7 @@ public class RandomCutForestSerDe {
      * @param forestState a RCF ForestState object
      * @return a json string serialized from the RCF
      */
-    public String toJson(ForestState forestState) {
+    public String toJson(RandomCutForestState forestState) {
         return gson.toJson(forestState);
     }
 
@@ -79,7 +79,7 @@ public class RandomCutForestSerDe {
      * @param json a json string serialized from a RCF
      * @return a RCF deserialized from the string
      */
-    public ForestState fromJson(String json) {
-        return gson.fromJson(json, ForestState.class);
+    public RandomCutForestState fromJson(String json) {
+        return gson.fromJson(json, RandomCutForestState.class);
     }
 }

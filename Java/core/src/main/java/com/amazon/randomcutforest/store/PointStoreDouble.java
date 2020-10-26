@@ -16,10 +16,12 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
-import java.util.List;
+
+import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -51,6 +53,18 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
         this.dimensions = dimensions;
         store = new double[capacity * dimensions];
         refCount = new short[capacity];
+    }
+
+    public PointStoreDouble(double[] store, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
+        super(freeIndexes, freeIndexPointer);
+        checkNotNull(store, "store must not be null");
+        checkNotNull(refCount, "refCount must not be null");
+        checkArgument(refCount.length == capacity, "refCount.length must equal capacity");
+        checkArgument(store.length % capacity == 0, "store.length must be an exact multiple of capacity");
+
+        dimensions = store.length / capacity;
+        this.store = store;
+        this.refCount = refCount;
     }
 
     /**
@@ -167,16 +181,6 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
     }
 
     @Override
-    public List<?> getData() {
-        return null;
-    }
-
-    @Override
-    public List<Short> getRef() {
-        return null;
-    }
-
-    @Override
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
@@ -191,7 +195,7 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
      * ArrayList<>(capacity); for (int j = 0; j < super.capacity; j++) {
      * result.add(refCount[j]); } return result; }
      */
-    public void reInitialize(PointStoreDoubleData pointStoreData) {
+    public void reInitialize(PointStoreDoubleState pointStoreData) {
         int debug = 0;
         for (int i = 0; i < getCapacity(); i++) {
             occupied.clear(i);
@@ -218,7 +222,13 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
         for (int i = 0; i < pointStoreData.store.length; i++) {
             store[i] = pointStoreData.store[i];
         }
-
     }
 
+    public double[] getStore() {
+        return store;
+    }
+
+    public short[] getRefCount() {
+        return refCount;
+    }
 }

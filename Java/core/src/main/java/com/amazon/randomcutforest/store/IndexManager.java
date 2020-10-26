@@ -16,12 +16,13 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -50,6 +51,46 @@ public class IndexManager {
 
         freeIndexPointer = capacity - 1;
         occupied = new BitSet(capacity);
+    }
+
+    /**
+     * Construct a new IndexManager with the given array of free indexes.
+     * 
+     * @param freeIndexes      An array of index values.
+     * @param freeIndexPointer Entries in freeIndexes between 0 (inclusive) and
+     *                         freeIndexPointer (inclusive) contain valid index
+     *                         values.
+     */
+    public IndexManager(int[] freeIndexes, int freeIndexPointer) {
+        checkNotNull(freeIndexes, "freeIndexes must not be null");
+        checkFreeIndexes(freeIndexes, freeIndexPointer);
+
+        this.capacity = freeIndexes.length;
+        this.freeIndexes = freeIndexes;
+        this.freeIndexPointer = freeIndexPointer;
+
+        occupied = new BitSet(capacity);
+        occupied.set(0, capacity);
+
+        for (int i = 0; i <= freeIndexPointer; i++) {
+            occupied.clear(freeIndexes[i]);
+        }
+    }
+
+    private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {
+        checkArgument(0 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
+                "freeIndexPoint must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+
+        int capacity = freeIndexes.length;
+        Set<Integer> freeIndexSet = new HashSet<>();
+
+        for (int i = 0; i <= freeIndexPointer; i++) {
+            int index = freeIndexes[i];
+            checkArgument(!freeIndexSet.contains(index), "free index values must not be repeated");
+            checkArgument(0 <= freeIndexes[i] && freeIndexes[i] < capacity,
+                    "entries in freeIndexes must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+            freeIndexSet.add(index);
+        }
     }
 
     /**
@@ -100,16 +141,12 @@ public class IndexManager {
         checkArgument(occupied.get(index), "this index is not being used");
     }
 
-    public List<Integer> getFreeIndices() {
-        ArrayList result = new ArrayList<>();
-        for (int i = 0; i <= freeIndexPointer; i++) {
-            result.add(freeIndexes[i]);
-        }
-        return result;
+    public int getFreeIndexPointer() {
+        return freeIndexPointer;
     }
 
     public int[] getFreeIndexes() {
-        return Arrays.copyOfRange(freeIndexes, 0, freeIndexPointer);
+        return freeIndexes;
     }
 
     public void initializeIndices(List<Integer> freeList) {

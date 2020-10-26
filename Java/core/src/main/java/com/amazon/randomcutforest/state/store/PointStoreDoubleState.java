@@ -13,15 +13,24 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest.state.store;
 
 import java.util.Arrays;
 
-public class PointStoreDoubleData {
+import lombok.Data;
 
-    public final double[] store;
-    public final short[] refCount;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+
+@Data
+public class PointStoreDoubleState {
+
+    public double[] store;
+    public short[] refCount;
     public int[] freeIndexes;
+
+    public PointStoreDoubleState() {
+
+    }
 
     /**
      * Takes a PointStoreDouble and stores the information. Note that
@@ -30,11 +39,9 @@ public class PointStoreDoubleData {
      *
      * @param pointStoreDouble
      */
-    public PointStoreDoubleData(PointStoreDouble pointStoreDouble) {
-        store = Arrays.copyOf(pointStoreDouble.store, pointStoreDouble.store.length);
-        refCount = Arrays.copyOf(pointStoreDouble.refCount, pointStoreDouble.refCount.length);
-        // freeIndexes = Arrays.copyOf(pointStoreDouble.freeIndexes,
-        // pointStoreDouble.freeIndexPointer + 1);
+    public PointStoreDoubleState(PointStoreDouble pointStoreDouble) {
+        store = Arrays.copyOf(pointStoreDouble.getStore(), pointStoreDouble.getStore().length);
+        refCount = Arrays.copyOf(pointStoreDouble.getRefCount(), pointStoreDouble.getRefCount().length);
     }
 
 }
