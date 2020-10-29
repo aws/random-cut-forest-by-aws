@@ -18,8 +18,6 @@ package com.amazon.randomcutforest.executor;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
-
 /**
  * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
  * instances. The coordinator transforms the input point into the form expected
@@ -33,12 +31,11 @@ public interface IUpdateCoordinator<P> {
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.
      * 
-     * @param point  The input point.
-     * @param seqNum the sequence number; for future use
+     * @param point The input point.
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    P initUpdate(double[] point, long seqNum);
+    P initUpdate(double[] point);
 
     /**
      * Complete the update. This method is called by IUpdateCoordinator after all
@@ -47,9 +44,15 @@ public interface IUpdateCoordinator<P> {
      * further processing if needed.
      * 
      * @param updateResults A list of points that were deleted.
+     * @param updateInput   The corresponding output from {@link #initUpdate}, which
+     *                      was passed into the update method for each component
+     *                      model.
      */
     void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults, P updateInput);
 
-    PointStoreDoubleState getPointStoreState();
+    long getTotalUpdates();
 
+    // TODO we can remove this from the interface once this value is being set in
+    // the appropriate mapper
+    void setTotalUpdates(long totalUpdates);
 }

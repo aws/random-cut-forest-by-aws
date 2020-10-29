@@ -24,7 +24,6 @@ import java.util.Optional;
 
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 
 /**
@@ -37,7 +36,6 @@ public abstract class AbstractForestUpdateExecutor<P> {
 
     protected final IUpdateCoordinator<P> updateCoordinator;
     protected final ArrayList<IUpdatable<P>> models;
-    protected long currentIndex;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
@@ -50,22 +48,6 @@ public abstract class AbstractForestUpdateExecutor<P> {
     protected AbstractForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models) {
         this.updateCoordinator = updateCoordinator;
         this.models = models;
-        currentIndex = 0L;
-    }
-
-    /**
-     * @return the total number of times that an update has been completed.
-     */
-    public long getCurrentIndex() {
-        return currentIndex;
-    }
-
-    /**
-     * @param seen sets the "clock" of the updater needed for time dependent
-     *             sampling
-     */
-    public void setCurrentIndex(long seen) {
-        currentIndex = seen;
     }
 
     /**
@@ -77,9 +59,8 @@ public abstract class AbstractForestUpdateExecutor<P> {
      */
     public void update(double[] point) {
         double[] pointCopy = cleanCopy(point);
-        ++currentIndex;
-        P updateInput = updateCoordinator.initUpdate(pointCopy, currentIndex);
-        List<Optional<UpdateReturn<P>>> results = update(updateInput, currentIndex);
+        P updateInput = updateCoordinator.initUpdate(pointCopy);
+        List<Optional<UpdateReturn<P>>> results = update(updateInput, updateCoordinator.getTotalUpdates());
         updateCoordinator.completeUpdate(results, updateInput);
     }
 
@@ -164,16 +145,6 @@ public abstract class AbstractForestUpdateExecutor<P> {
             result.add(((SamplerPlusTree) t).getCompactSamplerData());
         }
         return result;
-    }
-
-    /**
-     * gets the pointstore information, currently for Integer refs and double[]
-     * input
-     * 
-     * @return pointstore information,
-     */
-    public PointStoreDoubleState getPointStoredata() {
-        return updateCoordinator.getPointStoreState();
     }
 
     /**

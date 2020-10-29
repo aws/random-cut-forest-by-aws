@@ -53,6 +53,7 @@ public class RandomCutForestTest {
     private int numberOfTrees;
     private ArrayList<SamplerPlusTree> components;
     private AbstractForestTraversalExecutor traversalExecutor;
+    private IUpdateCoordinator<double[]> updateCoordinator;
     private AbstractForestUpdateExecutor updateExecutor;
     private RandomCutForest forest;
 
@@ -69,14 +70,15 @@ public class RandomCutForestTest {
             components.add(spy(new SamplerPlusTree(sampler, tree)));
 
         }
-        IUpdateCoordinator coordinator = new PointSequencer();
+        updateCoordinator = spy(new PassThroughCoordinator());
         traversalExecutor = spy(new SequentialForestTraversalExecutor(components));
-        updateExecutor = spy(new SequentialForestUpdateExecutor(coordinator, components));
+        updateExecutor = spy(new SequentialForestUpdateExecutor(updateCoordinator, components));
 
         forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .build();
         forest = spy(forest);
         Whitebox.setInternalState(forest, "traversalExecutor", traversalExecutor);
+        Whitebox.setInternalState(forest, "updateCoordinator", updateCoordinator);
         Whitebox.setInternalState(forest, "updateExecutor", updateExecutor);
     }
 
@@ -758,22 +760,22 @@ public class RandomCutForestTest {
     @Test
     public void testSamplersFull() {
         long totalUpdates = sampleSize / 2;
-        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
+        when(updateCoordinator.getTotalUpdates()).thenReturn(totalUpdates);
         assertFalse(forest.samplersFull());
 
         totalUpdates = sampleSize;
-        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
+        when(updateCoordinator.getTotalUpdates()).thenReturn(totalUpdates);
         assertTrue(forest.samplersFull());
 
         totalUpdates = sampleSize * 10;
-        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
+        when(updateCoordinator.getTotalUpdates()).thenReturn(totalUpdates);
         assertTrue(forest.samplersFull());
     }
 
     @Test
     public void testGetTotalUpdates() {
         long totalUpdates = 987654321L;
-        when(updateExecutor.getCurrentIndex()).thenReturn(totalUpdates);
+        when(updateCoordinator.getTotalUpdates()).thenReturn(totalUpdates);
         assertEquals(totalUpdates, forest.getTotalUpdates());
     }
 }

@@ -574,7 +574,7 @@ public class CompactRandomCutForestFunctionalTest {
 
         numberOfTrees = 100;
         sampleSize = 256;
-        int shinglesize = 100;
+        int shinglesize = 10;
         randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
