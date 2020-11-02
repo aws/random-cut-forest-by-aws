@@ -30,8 +30,8 @@ public class CompactSamplerData {
     public final int maxSize;
 
     public CompactSamplerData(CompactSampler sampler) {
-        currentSize = sampler.currentSize;
-        maxSize = sampler.maxSize;
+        currentSize = sampler.size;
+        maxSize = sampler.capacity;
         weightArray = Arrays.copyOf(sampler.weightArray, currentSize);
         referenceArray = Arrays.copyOf(sampler.referenceArray, currentSize);
         if (sampler.sequenceArray != null) {

@@ -18,9 +18,7 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -173,23 +171,5 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
-    }
-
-    @Override
-    public List<Float> getData() {
-        List<Float> result = new ArrayList<>(store.length);
-        for (int j = 0; j < capacity * dimensions; j++) {
-            result.add(store[j]);
-        }
-        return result;
-    }
-
-    @Override
-    public List<Short> getRef() {
-        List<Short> result = new ArrayList<>(capacity);
-        for (int j = 0; j < capacity; j++) {
-            result.add(refCount[j]);
-        }
-        return result;
     }
 }

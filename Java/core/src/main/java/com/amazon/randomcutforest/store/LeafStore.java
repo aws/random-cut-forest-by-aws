@@ -15,6 +15,11 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
+import com.amazon.randomcutforest.state.store.LeafStoreState;
+
 /**
  * A fixed-size buffer for storing leaf nodes. A leaf node is defined by its
  * parent node and its leaf node value. * The LeafStore class uses arrays to
@@ -38,6 +43,22 @@ public class LeafStore extends SmallIndexManager {
         mass = new int[capacity];
     }
 
+    public LeafStore(int[] pointIndex, short[] parentIndex, int[] mass, short[] freeIndexes, short freeIndexPointer) {
+        super(freeIndexes, freeIndexPointer);
+
+        checkNotNull(pointIndex, "pointIndex must not be null");
+        checkNotNull(parentIndex, "parentIndex must not be null");
+        checkNotNull(mass, "mass must not be null");
+
+        int capacity = pointIndex.length;
+        checkArgument(parentIndex.length == capacity && mass.length == capacity && freeIndexes.length == capacity,
+                "all array arguments must have the same length");
+
+        this.pointIndex = pointIndex;
+        this.parentIndex = parentIndex;
+        this.mass = mass;
+    }
+
     public short add(short parentIndex, int pointIndex, int mass) {
         short index = takeIndex();
         this.parentIndex[index] = parentIndex;
@@ -50,20 +71,20 @@ public class LeafStore extends SmallIndexManager {
         releaseIndex(index);
     }
 
-    public void reInitialize(LeafStoreData leafStoreData) {
+    public void reInitialize(LeafStoreState leafStoreState) {
         for (int i = 0; i < getCapacity(); i++) {
-            pointIndex[i] = leafStoreData.pointIndex[i];
-            parentIndex[i] = leafStoreData.parentIndex[i];
-            mass[i] = leafStoreData.mass[i];
+            pointIndex[i] = leafStoreState.pointIndex[i];
+            parentIndex[i] = leafStoreState.parentIndex[i];
+            mass[i] = leafStoreState.mass[i];
             occupied.set(i);
             // sets everything
         }
-        for (int i = 0; i < leafStoreData.freeIndexes.length; i++) {
-            freeIndexes[i] = leafStoreData.freeIndexes[i];
+        for (int i = 0; i < leafStoreState.freeIndexes.length; i++) {
+            freeIndexes[i] = leafStoreState.freeIndexes[i];
             occupied.clear(freeIndexes[i]);
             // resets index for free entries
         }
-        freeIndexPointer = (short) (leafStoreData.freeIndexes.length - 1);
+        freeIndexPointer = (short) (leafStoreState.freeIndexes.length - 1);
 
     }
 }

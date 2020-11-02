@@ -18,14 +18,30 @@ package com.amazon.randomcutforest;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.OperationsPerInvocation;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.executor.*;
+import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.IUpdatable;
+import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.PointSequencer;
+import com.amazon.randomcutforest.executor.PointStoreCoordinator;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.CompactRandomCutTree;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 @Warmup(iterations = 5)
@@ -84,11 +100,12 @@ public class ForestUpdateExecutorBenchmark {
                     executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
                 }
             } else {
-                PointStore store = new PointStore(dimensions, numberOfTrees * sampleSize);
+                PointStoreDouble store = new PointStoreDouble(dimensions, numberOfTrees * sampleSize);
                 IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(store);
                 ArrayList<IUpdatable<Integer>> trees = new ArrayList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
-                    CompactRandomCutTree tree = new CompactRandomCutTree(sampleSize, random.nextLong(), store);
+                    CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble(sampleSize, random.nextLong(),
+                            store);
                     SimpleStreamSampler<Integer> sampler = new SimpleStreamSampler(sampleSize, lambda,
                             random.nextLong(), false);
                     SamplerPlusTree<Integer> samplerTree = new SamplerPlusTree(sampler, tree);

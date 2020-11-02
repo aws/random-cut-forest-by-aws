@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.executor;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.store.PointStoreDoubleData;
+import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 
 public class PointSequencer implements IUpdateCoordinator<double[]> {
 
@@ -36,7 +36,7 @@ public class PointSequencer implements IUpdateCoordinator<double[]> {
     }
 
     @Override
-    public PointStoreDoubleData getPointStoreData() {
+    public PointStoreDoubleState getPointStoreState() {
         return null;
     }
 

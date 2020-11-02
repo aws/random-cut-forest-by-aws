@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Random;
 
 import com.amazon.randomcutforest.executor.Sequential;
+import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 
 /**
  * SimpleStreamSampler is a sampler with a fixed sample size. Once the sampler
@@ -65,9 +66,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
     /**
      * The number of points in the sample when full.
      */
-    protected final int maxSize;
+    protected final int capacity;
 
-    protected int currentSize;
+    protected int size;
     /**
      * The decay factor used for generating the weight of the point. For greater
      * values of lambda we become more biased in favor of recent points.
@@ -87,7 +88,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      */
     private transient Sequential<Integer> evictedPoint;
 
-    private final boolean storeSequenceEnabled;
+    private final boolean storeSequenceIndexesEnabled;
 
     /**
      * Construct a new CompactSampler.
@@ -112,13 +113,13 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                   in favor of recent points.
      * @param random     A random number generator that will be used in sampling.
      */
-    protected CompactSampler(final int sampleSize, final double lambda, Random random, boolean storeSeq) {
-        this.maxSize = sampleSize;
+    public CompactSampler(final int sampleSize, final double lambda, Random random, boolean storeSeq) {
+        this.capacity = sampleSize;
         entriesSeen = 0;
-        currentSize = 0;
+        size = 0;
         weightArray = new float[sampleSize];
         referenceArray = new int[sampleSize];
-        this.storeSequenceEnabled = storeSeq;
+        this.storeSequenceIndexesEnabled = storeSeq;
         if (storeSeq) {
             this.sequenceArray = new long[sampleSize];
         } else {
@@ -145,17 +146,17 @@ public class CompactSampler implements IStreamSampler<Integer> {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
         entriesSeen++;
-        if (currentSize < maxSize) {
+        if (size < capacity) {
             return Optional.of(weight);
         } else if (weight < weightArray[0]) {
             long tmpLong = 0;
-            if (storeSequenceEnabled) {
+            if (storeSequenceIndexesEnabled) {
                 tmpLong = sequenceArray[0];
             }
             evictedPoint = new Sequential(referenceArray[0], weightArray[0], tmpLong);
-            --currentSize;
-            weightArray[0] = weightArray[currentSize];
-            referenceArray[0] = referenceArray[currentSize];
+            --size;
+            weightArray[0] = weightArray[size];
+            referenceArray[0] = referenceArray[size];
             swapDown(0);
             return Optional.of(weight);
         } else {
@@ -166,9 +167,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
 
     private void swapDown(int startIndex) {
         int current = startIndex;
-        while ((2 * current + 1) < currentSize) {
+        while ((2 * current + 1) < size) {
             int maxIndex = 2 * current + 1;
-            if ((2 * current + 2 < currentSize) && (weightArray[2 * current + 2] > weightArray[maxIndex]))
+            if ((2 * current + 2 < size) && (weightArray[2 * current + 2] > weightArray[maxIndex]))
                 maxIndex = 2 * current + 2;
             if (weightArray[maxIndex] > weightArray[current]) {
                 swapWeights(current, maxIndex);
@@ -179,20 +180,21 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     private void reheap() {
-        for (int i = (currentSize + 1) / 2; i >= 0; i--) {
+        for (int i = (size + 1) / 2; i >= 0; i--) {
             swapDown(i);
         }
     }
 
     @Override
     public void addSample(Integer pointRef, float weight, long seqNUm) {
-        checkState(currentSize < maxSize, " sampler full");
-        weightArray[currentSize] = weight;
-        referenceArray[currentSize] = pointRef;
-        if (storeSequenceEnabled) {
-            sequenceArray[currentSize] = seqNUm;
+        checkState(size < capacity, " sampler full");
+        weightArray[size] = weight;
+        referenceArray[size] = pointRef;
+        if (storeSequenceIndexesEnabled) {
+            sequenceArray[size] = seqNUm;
+
         }
-        int current = currentSize++;
+        int current = size++;
         while (current > 0) {
             int tmp = (current - 1) / 2;
             if (weightArray[tmp] < weightArray[current]) {
@@ -205,9 +207,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
 
     @Override
     public List<Sequential<Integer>> getSequentialSamples() {
-        checkState(storeSequenceEnabled == true, "incorrect option");
+        checkState(storeSequenceIndexesEnabled == true, "incorrect option");
         List<Sequential<Integer>> result = new ArrayList<>();
-        for (int i = 0; i < currentSize; i++) {
+        for (int i = 0; i < size; i++) {
             result.add(new Sequential(referenceArray[i], weightArray[i], sequenceArray[i]));
         }
         return result;
@@ -216,7 +218,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
     @Override
     public List<Weighted<Integer>> getWeightedSamples() {
         List<Weighted<Integer>> result = new ArrayList<>();
-        for (int i = 0; i < currentSize; i++) {
+        for (int i = 0; i < size; i++) {
             result.add(new Weighted<>(referenceArray[i], weightArray[i]));
         }
         return result;
@@ -235,14 +237,14 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *         score computation, false otherwise.
      */
     public boolean isReady() {
-        return entriesSeen >= maxSize / 4;
+        return entriesSeen >= capacity / 4;
     }
 
     /**
      * @return true if the sampler has reached it's full capacity, false otherwise.
      */
     public boolean isFull() {
-        return entriesSeen >= maxSize;
+        return entriesSeen >= capacity;
     }
 
     /**
@@ -272,15 +274,27 @@ public class CompactSampler implements IStreamSampler<Integer> {
     /**
      * @return the number of points contained by the sampler when full.
      */
-    public long getCapacity() {
-        return maxSize;
+    public int getCapacity() {
+        return capacity;
     }
 
     /**
      * @return the number of points currently contained by the sampler.
      */
-    public long getSize() {
-        return currentSize;
+    public int size() {
+        return size;
+    }
+
+    public float[] getWeightArray() {
+        return weightArray;
+    }
+
+    public int[] getReferenceArray() {
+        return referenceArray;
+    }
+
+    public long[] getSequenceArray() {
+        return sequenceArray;
     }
 
     /**
@@ -293,6 +307,10 @@ public class CompactSampler implements IStreamSampler<Integer> {
         return lambda;
     }
 
+    public boolean isStoreSequenceIndexesEnabled() {
+        return storeSequenceIndexesEnabled;
+    }
+
     private void swapWeights(int a, int b) {
         int tmp = referenceArray[a];
         referenceArray[a] = referenceArray[b];
@@ -302,21 +320,21 @@ public class CompactSampler implements IStreamSampler<Integer> {
         weightArray[a] = weightArray[b];
         weightArray[b] = tmpDouble;
 
-        if (storeSequenceEnabled) {
+        if (storeSequenceIndexesEnabled) {
             long tmpLong = sequenceArray[a];
             sequenceArray[a] = sequenceArray[b];
             sequenceArray[b] = tmpLong;
         }
     }
 
-    public void reInitialize(CompactSamplerData samplerData) {
-        checkState(maxSize >= samplerData.maxSize, " need larger samplers");
-        checkState(!storeSequenceEnabled || samplerData.sequenceArray != null, "sequences missing");
-        currentSize = samplerData.currentSize;
-        for (int i = 0; i < currentSize; i++) {
+    public void reInitialize(CompactSamplerState samplerData) {
+        checkState(capacity >= samplerData.capacity, " need larger samplers");
+        checkState(!storeSequenceIndexesEnabled || samplerData.sequenceArray != null, "sequences missing");
+        size = samplerData.size;
+        for (int i = 0; i < size; i++) {
             referenceArray[i] = samplerData.referenceArray[i];
             weightArray[i] = samplerData.weightArray[i];
-            if (storeSequenceEnabled) {
+            if (storeSequenceIndexesEnabled) {
                 sequenceArray[i] = samplerData.sequenceArray[i];
             }
         }

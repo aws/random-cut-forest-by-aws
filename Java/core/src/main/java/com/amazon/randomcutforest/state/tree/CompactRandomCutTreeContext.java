@@ -13,17 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest.state.tree;
 
-/**
- * A read-only point store interface.
- */
-public interface IPointStore<P> {
-    int getDimensions();
+import lombok.Data;
 
-    int getCapacity();
+import com.amazon.randomcutforest.store.IPointStore;
 
-    boolean pointEquals(int index, P point);
-
-    P get(int index);
+@Data
+public class CompactRandomCutTreeContext {
+    private int maxSize;
+    private IPointStore<double[]> pointStore;
 }

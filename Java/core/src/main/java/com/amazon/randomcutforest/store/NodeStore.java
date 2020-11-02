@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.store;
 
+import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.tree.BoundingBox;
 
 /**
@@ -55,6 +56,19 @@ public class NodeStore extends SmallIndexManager {
         cutValue = new double[capacity];
         mass = new int[capacity];
         boundingBox = new BoundingBox[capacity];
+    }
+
+    public NodeStore(short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension, double[] cutValue,
+            int[] mass, short[] freeIndexes, short freeIndexPointer) {
+        // TODO validations
+        super(freeIndexes, freeIndexPointer);
+        this.parentIndex = parentIndex;
+        this.leftIndex = leftIndex;
+        this.rightIndex = rightIndex;
+        this.cutDimension = cutDimension;
+        this.cutValue = cutValue;
+        this.mass = mass;
+        boundingBox = new BoundingBox[getCapacity()];
     }
 
     /**
@@ -132,23 +146,22 @@ public class NodeStore extends SmallIndexManager {
         }
     }
 
-    public void reInitialize(NodeStoreData nodeStoreData) {
+    public void reInitialize(NodeStoreState nodeStoreState) {
         for (int i = 0; i < getCapacity(); i++) {
-            mass[i] = nodeStoreData.mass[i];
-            leftIndex[i] = nodeStoreData.leftIndex[i];
-            rightIndex[i] = nodeStoreData.rightIndex[i];
-            parentIndex[i] = nodeStoreData.parentIndex[i];
-            cutValue[i] = nodeStoreData.cutValue[i];
-            cutDimension[i] = nodeStoreData.cutDimension[i];
+            mass[i] = nodeStoreState.mass[i];
+            leftIndex[i] = nodeStoreState.leftIndex[i];
+            rightIndex[i] = nodeStoreState.rightIndex[i];
+            parentIndex[i] = nodeStoreState.parentIndex[i];
+            cutValue[i] = nodeStoreState.cutValue[i];
+            cutDimension[i] = nodeStoreState.cutDimension[i];
             occupied.set(i);
             // sets everything
         }
-        for (int i = 0; i < nodeStoreData.freeIndexes.length; i++) {
-            freeIndexes[i] = nodeStoreData.freeIndexes[i];
+        for (int i = 0; i < nodeStoreState.freeIndexes.length; i++) {
+            freeIndexes[i] = nodeStoreState.freeIndexes[i];
             occupied.clear(freeIndexes[i]);
             // resets index for free entries
         }
-        freeIndexPointer = (short) (nodeStoreData.freeIndexes.length - 1);
+        freeIndexPointer = (short) (nodeStoreState.freeIndexes.length - 1);
     }
-
 }

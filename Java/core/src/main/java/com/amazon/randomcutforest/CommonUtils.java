@@ -63,8 +63,9 @@ public class CommonUtils {
      * @param message the error message that will be used if the condition is not
      *                met
      */
-    public static void checkNotNull(Object object, String message) {
+    public static <T> T checkNotNull(T object, String message) {
         Objects.requireNonNull(object, message);
+        return object;
     }
 
     /**

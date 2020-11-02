@@ -13,20 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.store.LeafStoreData;
-import com.amazon.randomcutforest.store.NodeStoreData;
+public interface IContextualStateMapper<Model, State, ContextState> {
+    State toState(Model model);
 
-public class TreeData {
-    public LeafStoreData leafData;
-    public NodeStoreData nodeData;
-    public short rootIndex;
+    Model toModel(State state, ContextState contextState, long seed);
 
-    public TreeData(CompactRandomCutTreeDouble tree) {
-        leafData = tree.getLeaves();
-        nodeData = tree.getNodes();
-        rootIndex = tree.rootIndex;
+    default Model toModel(State state, ContextState contextState) {
+        return toModel(state, contextState, 0L);
     }
-
 }

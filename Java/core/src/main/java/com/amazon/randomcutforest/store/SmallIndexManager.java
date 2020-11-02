@@ -16,9 +16,12 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -46,6 +49,46 @@ public class SmallIndexManager {
 
         freeIndexPointer = (short) (capacity - 1);
         occupied = new BitSet(capacity);
+    }
+
+    /**
+     * Construct a new SmallIndexManager with the given array of free indexes.
+     * 
+     * @param freeIndexes      An array of index values.
+     * @param freeIndexPointer Entries in freeIndexes between 0 (inclusive) and
+     *                         freeIndexPointer (inclusive) contain valid index
+     *                         values.
+     */
+    public SmallIndexManager(short[] freeIndexes, short freeIndexPointer) {
+        checkNotNull(freeIndexes, "freeIndexes must not be null");
+        checkFreeIndexes(freeIndexes, freeIndexPointer);
+
+        this.capacity = (short) freeIndexes.length;
+        this.freeIndexes = freeIndexes;
+        this.freeIndexPointer = freeIndexPointer;
+
+        occupied = new BitSet(capacity);
+        occupied.set(0, capacity);
+
+        for (int i = 0; i <= freeIndexPointer; i++) {
+            occupied.clear(freeIndexes[i]);
+        }
+    }
+
+    private static void checkFreeIndexes(short[] freeIndexes, short freeIndexPointer) {
+        checkArgument(0 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
+                "freeIndexPoint must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+
+        int capacity = freeIndexes.length;
+        Set<Short> freeIndexSet = new HashSet<>();
+
+        for (int i = 0; i <= freeIndexPointer; i++) {
+            short index = freeIndexes[i];
+            checkArgument(!freeIndexSet.contains(index), "free index values must not be repeated");
+            checkArgument(0 <= freeIndexes[i] && freeIndexes[i] < capacity,
+                    "entries in freeIndexes must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+            freeIndexSet.add(index);
+        }
     }
 
     /**
@@ -91,4 +134,13 @@ public class SmallIndexManager {
         checkArgument(index >= 0 && index < capacity, "index must be between 0 (inclusive) and capacity (exclusive)");
         checkArgument(occupied.get(index), "this index is not being used");
     }
+
+    public short getFreeIndexPointer() {
+        return freeIndexPointer;
+    }
+
+    public short[] getFreeIndexes() {
+        return freeIndexes;
+    }
+
 }
