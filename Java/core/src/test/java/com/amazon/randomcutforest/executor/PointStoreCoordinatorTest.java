@@ -41,13 +41,12 @@ public class PointStoreCoordinatorTest {
     @Test
     public void testInitUpdate() {
         double[] point = { 1.2, -3.4 };
-        long sequenceIndex = 1001L;
         int index = 123;
 
         ArgumentCaptor<double[]> captor = ArgumentCaptor.forClass(double[].class);
         when(store.add(captor.capture())).thenReturn(index);
 
-        int result = coordinator.initUpdate(point, sequenceIndex);
+        int result = coordinator.initUpdate(point);
 
         verify(store, times(1)).add(point);
         assertEquals(result, index);

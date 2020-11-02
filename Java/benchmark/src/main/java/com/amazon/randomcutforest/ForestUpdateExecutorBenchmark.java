@@ -34,7 +34,7 @@ import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.IUpdatable;
 import com.amazon.randomcutforest.executor.IUpdateCoordinator;
 import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
-import com.amazon.randomcutforest.executor.PointSequencer;
+import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
@@ -84,7 +84,7 @@ public class ForestUpdateExecutorBenchmark {
             Random random = new Random();
 
             if (!compactEnabled) {
-                IUpdateCoordinator<double[]> updateCoordinator = new PointSequencer();
+                IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
                 ArrayList<IUpdatable<double[]>> trees = new ArrayList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     RandomCutTree tree = RandomCutTree.builder().build();

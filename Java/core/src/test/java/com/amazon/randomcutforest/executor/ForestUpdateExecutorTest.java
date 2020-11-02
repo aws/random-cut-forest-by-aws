@@ -49,11 +49,11 @@ public class ForestUpdateExecutorTest {
                 parallelTrees.add(mock(IUpdatable.class));
             }
 
-            IUpdateCoordinator<double[]> sequentialUpdateCoordinator = new PointSequencer();
+            IUpdateCoordinator<double[]> sequentialUpdateCoordinator = new PassThroughCoordinator();
             AbstractForestUpdateExecutor<Sequential<double[]>> sequentialExecutor = new SequentialForestUpdateExecutor(
                     sequentialUpdateCoordinator, sequentialTrees);
 
-            IUpdateCoordinator<double[]> parallelUpdateCoordinator = new PointSequencer();
+            IUpdateCoordinator<double[]> parallelUpdateCoordinator = new PassThroughCoordinator();
             AbstractForestUpdateExecutor<Sequential<double[]>> parallelExecutor = new ParallelForestUpdateExecutor(
                     parallelUpdateCoordinator, parallelTrees, threadPoolSize);
 

@@ -21,6 +21,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.List;
 import java.util.Optional;
 
+import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.CompactSampler;
@@ -31,7 +32,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 
-public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
+public class SamplerPlusTree<P> implements IComponentModel<P> {
 
     private ITree<P> tree;
     private IStreamSampler<P> sampler;
@@ -154,37 +155,6 @@ public class SamplerPlusTree<P> implements ITree<P>, IUpdatable<P> {
 
     public CompactSamplerState getCompactSamplerData() {
         return new CompactSamplerState((CompactSampler) sampler);
-    }
-
-    /**
-     *
-     * @return mass of tree, needed by Visitor classes
-     */
-    @Override
-    public int getMass() {
-        return tree.getMass();
-    }
-
-    /**
-     *
-     * @param point to be added to tree
-     * @return the reference corresponding to the addition; if there is a duplicate
-     *         found then the old reference will continue to be used and returned.
-     */
-    @Override
-    public P addPoint(Sequential<P> point) {
-        return tree.addPoint(point);
-    }
-
-    /**
-     * deletes from the tree
-     *
-     * @param point to be deleted
-     */
-
-    @Override
-    public void deletePoint(Sequential<P> point) {
-        tree.deletePoint(point);
     }
 
     /**
