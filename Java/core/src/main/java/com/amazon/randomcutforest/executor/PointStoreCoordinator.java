@@ -20,10 +20,9 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
-public class PointStoreCoordinator implements IUpdateCoordinator<Integer> {
+public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
 
     private final PointStoreDouble store;
 
@@ -33,7 +32,7 @@ public class PointStoreCoordinator implements IUpdateCoordinator<Integer> {
     }
 
     @Override
-    public Integer initUpdate(double[] point, long seqNum) {
+    public Integer initUpdate(double[] point) {
         return store.add(point);
     }
 
@@ -44,15 +43,10 @@ public class PointStoreCoordinator implements IUpdateCoordinator<Integer> {
             result.getSecond().ifPresent(store::decrementRefCount);
         });
         store.decrementRefCount(updateInput);
+        totalUpdates++;
     }
 
     public PointStoreDouble getStore() {
         return store;
     }
-
-    @Override
-    public PointStoreDoubleState getPointStoreState() {
-        return new PointStoreDoubleState(store);
-    }
-
 }
