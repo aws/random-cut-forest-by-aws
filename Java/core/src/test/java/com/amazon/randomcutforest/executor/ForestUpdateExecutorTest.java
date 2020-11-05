@@ -17,7 +17,6 @@ package com.amazon.randomcutforest.executor;
 
 import static org.mockito.Mockito.mock;
 
-import java.util.ArrayList;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +26,9 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.IComponentModel;
 
 @ExtendWith(MockitoExtension.class)
 public class ForestUpdateExecutorTest {
@@ -41,24 +43,23 @@ public class ForestUpdateExecutorTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
 
-            ArrayList<IUpdatable<Sequential<double[]>>> sequentialTrees = new ArrayList<>();
-            ArrayList<IUpdatable<Sequential<double[]>>> parallelTrees = new ArrayList<>();
+            ComponentList<double[]> sequentialComponents = new ComponentList<>();
+            ComponentList<double[]> parallelComponents = new ComponentList<>();
 
             for (int i = 0; i < numberOfTrees; i++) {
-                sequentialTrees.add(mock(IUpdatable.class));
-                parallelTrees.add(mock(IUpdatable.class));
+                sequentialComponents.add(mock(IComponentModel.class));
+                parallelComponents.add(mock(IComponentModel.class));
             }
 
             IUpdateCoordinator<double[]> sequentialUpdateCoordinator = new PassThroughCoordinator();
-            AbstractForestUpdateExecutor<Sequential<double[]>> sequentialExecutor = new SequentialForestUpdateExecutor(
-                    sequentialUpdateCoordinator, sequentialTrees);
+            AbstractForestUpdateExecutor<double[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
+                    sequentialUpdateCoordinator, sequentialComponents);
 
             IUpdateCoordinator<double[]> parallelUpdateCoordinator = new PassThroughCoordinator();
-            AbstractForestUpdateExecutor<Sequential<double[]>> parallelExecutor = new ParallelForestUpdateExecutor(
-                    parallelUpdateCoordinator, parallelTrees, threadPoolSize);
+            AbstractForestUpdateExecutor<double[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
+                    parallelUpdateCoordinator, parallelComponents, threadPoolSize);
 
             return Stream.of(sequentialExecutor, parallelExecutor).map(Arguments::of);
         }
     }
-
 }

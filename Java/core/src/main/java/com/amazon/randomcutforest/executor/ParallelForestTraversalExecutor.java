@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
@@ -24,6 +23,7 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
@@ -38,7 +38,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestTraversalExecutor(ArrayList<SamplerPlusTree> treeExecutors, int threadPoolSize) {
+    public ParallelForestTraversalExecutor(ComponentList<?> treeExecutors, int threadPoolSize) {
         super(treeExecutors);
         this.threadPoolSize = threadPoolSize;
         forkJoinPool = new ForkJoinPool(threadPoolSize);
@@ -48,21 +48,17 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        return submitAndJoin(() -> components.parallelStream().map(SamplerPlusTree::getTree).map(tree -> {
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverse(point, visitor);
-        }).reduce(accumulator).map(finisher))
-                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(() -> components.parallelStream().map(c -> c.traverse(point, visitorFactory))
+                .reduce(accumulator).map(finisher))
+                        .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
     public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return submitAndJoin(() -> components.parallelStream().map(SamplerPlusTree::getTree).map(tree -> {
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverse(point, visitor);
-        }).collect(collector));
+        return submitAndJoin(
+                () -> components.parallelStream().map(c -> c.traverse(point, visitorFactory)).collect(collector));
     }
 
     @Override
@@ -73,12 +69,8 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
             final int start = i;
             final int end = Math.min(start + threadPoolSize, components.size());
 
-            List<R> results = submitAndJoin(
-                    () -> components.subList(start, end).parallelStream().map(SamplerPlusTree::getTree).map(tree -> {
-                        Visitor<R> visitor = visitorFactory.apply(tree);
-                        return tree.traverse(point, visitor);
-                    }).collect(Collectors.toList()));
-
+            List<R> results = submitAndJoin(() -> components.subList(start, end).parallelStream()
+                    .map(c -> c.traverse(point, visitorFactory)).collect(Collectors.toList()));
             results.forEach(accumulator::accept);
 
             if (accumulator.isConverged()) {
@@ -93,21 +85,17 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        return submitAndJoin(() -> components.parallelStream().map(SamplerPlusTree::getTree).map(tree -> {
-            MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseMulti(point, visitor);
-        }).reduce(accumulator).map(finisher))
-                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(() -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory))
+                .reduce(accumulator).map(finisher))
+                        .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
     public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return submitAndJoin(() -> components.parallelStream().map(SamplerPlusTree::getTree).map(tree -> {
-            MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseMulti(point, visitor);
-        }).collect(collector));
+        return submitAndJoin(
+                () -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

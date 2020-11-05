@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
@@ -176,27 +177,27 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
     /**
      * traversal methods
      * 
-     * @param point   to be evaluated
-     * @param visitor the visitor implementation that corresponds to the function
-     *                being evaluated
-     * @param <R>     return type
+     * @param point          to be evaluated
+     * @param visitorFactory the visitor implementation that corresponds to the
+     *                       function being evaluated
+     * @param <R>            return type
      * @return
      */
     @Override
-    public <R> R traverse(double[] point, Visitor<R> visitor) {
-        return tree.traverse(point, visitor);
+    public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
+        return tree.traverse(point, visitorFactory);
     }
 
     /**
      *
-     * @param point   to be evaluated
-     * @param visitor MultiVisitor, used in extrapolation
-     * @param <R>     return type
+     * @param point          to be evaluated
+     * @param visitorFactory MultiVisitor, used in extrapolation
+     * @param <R>            return type
      * @return
      */
     @Override
-    public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
-        return tree.traverseMulti(point, visitor);
+    public <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory) {
+        return tree.traverseMulti(point, visitorFactory);
     }
 
 }

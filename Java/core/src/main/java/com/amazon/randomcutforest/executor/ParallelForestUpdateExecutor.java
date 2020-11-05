@@ -15,12 +15,13 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
+
+import com.amazon.randomcutforest.ComponentList;
 
 /**
  * An implementation of forest traversal methods that uses a private thread pool
@@ -31,9 +32,9 @@ public class ParallelForestUpdateExecutor<P> extends AbstractForestUpdateExecuto
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models,
+    public ParallelForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ComponentList<P> components,
             int threadPoolSize) {
-        super(updateCoordinator, models);
+        super(updateCoordinator, components);
         this.threadPoolSize = threadPoolSize;
         forkJoinPool = new ForkJoinPool(threadPoolSize);
     }
@@ -41,7 +42,7 @@ public class ParallelForestUpdateExecutor<P> extends AbstractForestUpdateExecuto
     @Override
     protected List<Optional<UpdateReturn<P>>> update(P point, long seqNum) {
         return submitAndJoin(
-                () -> models.parallelStream().map(t -> t.update(point, seqNum)).collect(Collectors.toList()));
+                () -> components.parallelStream().map(t -> t.update(point, seqNum)).collect(Collectors.toList()));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

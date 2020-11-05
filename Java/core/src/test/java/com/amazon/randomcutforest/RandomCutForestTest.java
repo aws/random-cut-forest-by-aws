@@ -18,14 +18,28 @@ package com.amazon.randomcutforest;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -34,15 +48,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
 
-import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
-import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
-import com.amazon.randomcutforest.executor.*;
-import com.amazon.randomcutforest.imputation.ImputeVisitor;
-import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
-import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
-import com.amazon.randomcutforest.returntypes.*;
+import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
+import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import com.amazon.randomcutforest.executor.PassThroughCoordinator;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
+import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
+import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
+import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
@@ -51,10 +72,10 @@ public class RandomCutForestTest {
     private int dimensions;
     private int sampleSize;
     private int numberOfTrees;
-    private ArrayList<SamplerPlusTree> components;
+    private ComponentList<double[]> components;
     private AbstractForestTraversalExecutor traversalExecutor;
     private IUpdateCoordinator<double[]> updateCoordinator;
-    private AbstractForestUpdateExecutor updateExecutor;
+    private AbstractForestUpdateExecutor<double[]> updateExecutor;
     private RandomCutForest forest;
 
     @BeforeEach
@@ -63,22 +84,22 @@ public class RandomCutForestTest {
         sampleSize = 256;
         numberOfTrees = 10;
 
-        components = new ArrayList<>();
+        components = new ComponentList<>();
         for (int i = 0; i < numberOfTrees; i++) {
-            SimpleStreamSampler sampler = mock(SimpleStreamSampler.class);
+            SimpleStreamSampler<double[]> sampler = mock(SimpleStreamSampler.class);
             RandomCutTree tree = mock(RandomCutTree.class);
-            components.add(spy(new SamplerPlusTree(sampler, tree)));
+            components.add(spy(new SamplerPlusTree<>(sampler, tree)));
 
         }
         updateCoordinator = spy(new PassThroughCoordinator());
         traversalExecutor = spy(new SequentialForestTraversalExecutor(components));
-        updateExecutor = spy(new SequentialForestUpdateExecutor(updateCoordinator, components));
+        updateExecutor = spy(new SequentialForestUpdateExecutor<>(updateCoordinator, components));
 
-        forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .build();
-        forest = spy(forest);
+        RandomCutForest.Builder<?> builder = RandomCutForest.builder().dimensions(dimensions)
+                .numberOfTrees(numberOfTrees).sampleSize(sampleSize);
+        forest = spy(new RandomCutForest(builder, updateCoordinator, components));
+
         Whitebox.setInternalState(forest, "traversalExecutor", traversalExecutor);
-        Whitebox.setInternalState(forest, "updateCoordinator", updateCoordinator);
         Whitebox.setInternalState(forest, "updateExecutor", updateExecutor);
     }
 
@@ -101,8 +122,8 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            doReturn(0.0).when(c).traverse(aryEq(point), any(Function.class));
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher);
@@ -116,8 +137,8 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -135,8 +156,8 @@ public class RandomCutForestTest {
     public void testTraverseForestCollector() {
         double[] point = { 2.2, -1.1 };
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            doReturn(0.0).when(c).traverse(aryEq(point), any(Function.class));
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR);
@@ -148,8 +169,8 @@ public class RandomCutForestTest {
     public void testTranverseForestCollectorInvalid() {
         double[] point = { 2.2, -1.1 };
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class, () -> forest.traverseForest(null,
@@ -171,8 +192,8 @@ public class RandomCutForestTest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            doReturn(0.0).when(c).traverse(aryEq(point), any(Function.class));
         });
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher);
@@ -189,8 +210,8 @@ public class RandomCutForestTest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class,
@@ -210,8 +231,8 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            doReturn(0.0).when(c).traverseMulti(aryEq(point), any(Function.class));
         });
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher);
@@ -225,8 +246,8 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            when(c.traverseMulti(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
@@ -244,8 +265,8 @@ public class RandomCutForestTest {
     public void testTraverseForestMultiCollector() {
         double[] point = { 2.2, -1.1 };
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverseMulti(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            doReturn(0.0).when(c).traverseMulti(aryEq(point), any(Function.class));
         });
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY,
@@ -258,8 +279,8 @@ public class RandomCutForestTest {
     public void testTranverseForestCollectorMultiInvalid() {
         double[] point = { 2.2, -1.1 };
 
-        components.stream().map(SamplerPlusTree::getTree).forEach(tree -> {
-            when(tree.traverse(aryEq(point), any())).thenReturn(0.0);
+        components.forEach(c -> {
+            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
         });
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
@@ -283,13 +304,12 @@ public class RandomCutForestTest {
         double expectedResult = 0.0;
 
         for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
             double treeResult = Math.random();
-            when(tree.traverse(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(Function.class))).thenReturn(treeResult);
 
-            Node root = mock(Node.class);
-            when(root.getMass()).thenReturn(256);
-            when(tree.getRoot()).thenReturn(root);
+            when(tree.getMass()).thenReturn(256);
 
             expectedResult += treeResult;
         }
@@ -313,13 +333,12 @@ public class RandomCutForestTest {
                 RandomCutForest.DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
 
         for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
             double treeResult = Math.random();
-            when(tree.traverse(aryEq(point), any(AnomalyScoreVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(Function.class))).thenReturn(treeResult);
 
-            Node root = mock(Node.class);
-            when(root.getMass()).thenReturn(256);
-            when(tree.getRoot()).thenReturn(root);
+            when(tree.getMass()).thenReturn(256);
 
             if (!accumulator.isConverged()) {
                 accumulator.accept(treeResult);
@@ -350,12 +369,11 @@ public class RandomCutForestTest {
                 treeResult.low[j] = Math.random();
             }
 
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
-            when(tree.traverse(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
+            when(tree.traverse(aryEq(point), any(Function.class))).thenReturn(treeResult);
 
-            Node root = mock(Node.class);
-            when(root.getMass()).thenReturn(256);
-            when(tree.getRoot()).thenReturn(root);
+            when(tree.getMass()).thenReturn(256);
 
             DiVector.addToLeft(expectedResult, treeResult);
         }
@@ -384,7 +402,8 @@ public class RandomCutForestTest {
                 RandomCutForest.DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
 
         for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
             DiVector treeResult = new DiVector(dimensions);
 
             for (int j = 0; j < dimensions; j++) {
@@ -392,11 +411,9 @@ public class RandomCutForestTest {
                 treeResult.low[j] = Math.random();
             }
 
-            when(tree.traverse(aryEq(point), any(AnomalyAttributionVisitor.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(Function.class))).thenReturn(treeResult);
 
-            Node root = mock(Node.class);
-            when(root.getMass()).thenReturn(256);
-            when(tree.getRoot()).thenReturn(root);
+            when(tree.getMass()).thenReturn(256);
 
             if (!accumulator.isConverged()) {
                 accumulator.accept(treeResult);
@@ -431,8 +448,9 @@ public class RandomCutForestTest {
                 treeResult.probMass.low[j] = Math.random();
             }
 
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
-            when(tree.traverse(aryEq(point), any(SimpleInterpolationVisitor.class))).thenReturn(treeResult);
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
+            when(tree.traverse(aryEq(point), any(Function.class))).thenReturn(treeResult);
             intermediateResults.add(treeResult);
         }
 
@@ -495,10 +513,11 @@ public class RandomCutForestTest {
         int[] missingIndexes = { 1, 999 };
 
         for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
             double[] treeResult = Arrays.copyOf(point, point.length);
             treeResult[missingIndexes[0]] = returnValues.get(i);
-            when(tree.traverseMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(Function.class))).thenReturn(treeResult);
         }
 
         doReturn(true).when(forest).isOutputReady();
@@ -530,9 +549,10 @@ public class RandomCutForestTest {
         double[] expectedResult = null;
 
         for (int i = 0; i < numberOfTrees; i++) {
-            RandomCutTree tree = (RandomCutTree) components.get(i).getTree();
+            SamplerPlusTree<double[]> component = (SamplerPlusTree<double[]>) components.get(i);
+            ITree<double[]> tree = component.getTree();
             double[] treeResult = { Math.random(), Math.random() };
-            when(tree.traverseMulti(aryEq(point), any(ImputeVisitor.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(Function.class))).thenReturn(treeResult);
 
             double anomalyScore = anomalyScores.get(i);
             doReturn(anomalyScore).when(forest).getAnomalyScore(aryEq(treeResult));
@@ -680,26 +700,26 @@ public class RandomCutForestTest {
         indexes5.add(4L);
 
         Neighbor neighbor1 = new Neighbor(new double[] { 1, 2 }, 5, indexes1);
-        when(components.get(0).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+        when(((SamplerPlusTree<?>) components.get(0)).getTree().traverse(any(double[].class), any(Function.class)))
                 .thenReturn(Optional.of(neighbor1));
 
         Neighbor neighbor2 = new Neighbor(new double[] { 1, 2 }, 5, indexes2);
-        when(components.get(1).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+        when(((SamplerPlusTree<?>) components.get(1)).getTree().traverse(any(double[].class), any(Function.class)))
                 .thenReturn(Optional.of(neighbor2));
 
-        when(components.get(2).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+        when(((SamplerPlusTree<?>) components.get(2)).getTree().traverse(any(double[].class), any(Function.class)))
                 .thenReturn(Optional.empty());
 
         Neighbor neighbor4 = new Neighbor(new double[] { 2, 3 }, 4, indexes4);
-        when(components.get(3).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+        when(((SamplerPlusTree<?>) components.get(3)).getTree().traverse(any(double[].class), any(Function.class)))
                 .thenReturn(Optional.of(neighbor4));
 
         Neighbor neighbor5 = new Neighbor(new double[] { 2, 3 }, 4, indexes5);
-        when(components.get(4).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+        when(((SamplerPlusTree<?>) components.get(4)).getTree().traverse(any(double[].class), any(Function.class)))
                 .thenReturn(Optional.of(neighbor5));
 
         for (int i = 5; i < components.size(); i++) {
-            when(components.get(i).getTree().traverse(any(double[].class), any(NearNeighborVisitor.class)))
+            when(((SamplerPlusTree<?>) components.get(i)).getTree().traverse(any(double[].class), any(Function.class)))
                     .thenReturn(Optional.empty());
         }
 

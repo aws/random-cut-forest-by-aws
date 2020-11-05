@@ -15,11 +15,14 @@
 
 package com.amazon.randomcutforest.executor;
 
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.tree.ITree;
 
 public interface ITraversable {
-    <R> R traverse(double[] point, Visitor<R> visitor);
+    <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory);
 
-    <R> R traverseMulti(double[] point, MultiVisitor<R> visitor);
+    <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory);
 }

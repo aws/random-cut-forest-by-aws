@@ -15,11 +15,12 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
+import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
@@ -30,7 +31,7 @@ import com.amazon.randomcutforest.tree.ITree;
  */
 public class SequentialForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
-    public SequentialForestTraversalExecutor(ArrayList<SamplerPlusTree> components) {
+    public SequentialForestTraversalExecutor(ComponentList<?> components) {
         super(components);
     }
 
@@ -38,10 +39,8 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = components.stream().map(SamplerPlusTree::getTree).map(tree -> {
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverse(point, visitor);
-        }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        R unnormalizedResult = components.stream().map(c -> c.traverse(point, visitorFactory)).reduce(accumulator)
+                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         return finisher.apply(unnormalizedResult);
     }
@@ -50,20 +49,15 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return components.stream().map(SamplerPlusTree::getTree).map(tree -> {
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverse(point, visitor);
-        }).collect(collector);
+        return components.stream().map(c -> c.traverse(point, visitorFactory)).collect(collector);
     }
 
     @Override
     public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
-        for (SamplerPlusTree component : components) {
-            ITree<?> tree = component.getTree();
-            Visitor<R> visitor = visitorFactory.apply(tree);
-            accumulator.accept(tree.traverse(point, visitor));
+        for (IComponentModel<?> component : components) {
+            accumulator.accept(component.traverse(point, visitorFactory));
             if (accumulator.isConverged()) {
                 break;
             }
@@ -76,10 +70,8 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
-        R unnormalizedResult = components.stream().map(SamplerPlusTree::getTree).map(tree -> {
-            MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseMulti(point, visitor);
-        }).reduce(accumulator).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        R unnormalizedResult = components.stream().map(c -> c.traverseMulti(point, visitorFactory)).reduce(accumulator)
+                .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         return finisher.apply(unnormalizedResult);
     }
@@ -88,9 +80,6 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
-        return components.stream().map(SamplerPlusTree::getTree).map(tree -> {
-            MultiVisitor<R> visitor = visitorFactory.apply(tree);
-            return tree.traverseMulti(point, visitor);
-        }).collect(collector);
+        return components.stream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector);
     }
 }
