@@ -32,6 +32,7 @@ import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisito
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.HyperTree;
+import com.amazon.randomcutforest.tree.ITree;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
@@ -159,17 +160,14 @@ public class TransductiveHyperForestFunctionalTest {
 
             checkArgument(dimensions == point.length, "incorrect dimensions");
 
-            Function<HyperTree, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
-                    tree.getRoot().getMass(), seen, unseen, newDamp, tree.getgVec());
+            Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
+                    tree.getMass(), seen, unseen, newDamp, ((HyperTree) tree).getgVec());
             BinaryOperator<Double> accumulator = Double::sum;
 
             Function<Double, Double> finisher = sum -> sum / numberOfTrees;
 
-            return trees.parallelStream().map(tree -> {
-                Visitor<Double> visitor = visitorFactory.apply(tree);
-                return tree.traverse(point, visitor);
-            }).reduce(accumulator).map(finisher)
-                    .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+            return trees.parallelStream().map(tree -> tree.traverse(point, visitorFactory)).reduce(accumulator)
+                    .map(finisher).orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
 
         }
 

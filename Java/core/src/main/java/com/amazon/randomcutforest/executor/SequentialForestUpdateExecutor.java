@@ -15,22 +15,23 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.amazon.randomcutforest.ComponentList;
 
 /**
  * Traverse the trees in a forest sequentially.
  */
 public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecutor<P> {
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ArrayList<IUpdatable<P>> models) {
-        super(updateCoordinator, models);
+    public SequentialForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ComponentList<P> components) {
+        super(updateCoordinator, components);
     }
 
     @Override
     protected List<Optional<UpdateReturn<P>>> update(P point, long seqNum) {
-        return models.stream().map(t -> t.update(point, seqNum)).collect(Collectors.toList());
+        return components.stream().map(t -> t.update(point, seqNum)).collect(Collectors.toList());
     }
 }
