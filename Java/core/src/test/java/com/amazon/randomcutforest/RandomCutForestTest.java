@@ -97,7 +97,7 @@ public class RandomCutForestTest {
 
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().dimensions(dimensions)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize);
-        forest = spy(new RandomCutForest(builder, updateCoordinator, components));
+        forest = spy(new RandomCutForest(builder, updateCoordinator, components, builder.getRandom()));
 
         Whitebox.setInternalState(forest, "traversalExecutor", traversalExecutor);
         Whitebox.setInternalState(forest, "updateExecutor", updateExecutor);

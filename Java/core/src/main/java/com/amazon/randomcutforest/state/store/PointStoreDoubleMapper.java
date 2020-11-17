@@ -19,7 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.IStateMapper;
+import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
 public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, PointStoreDoubleState> {
@@ -36,7 +36,7 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
 
-        return new PointStoreDouble(state.getStore(), state.getRefCount(), freeIndexes, freeIndexPointer);
+        return new PointStoreDouble(store, refCount, freeIndexes, freeIndexPointer);
     }
 
     @Override

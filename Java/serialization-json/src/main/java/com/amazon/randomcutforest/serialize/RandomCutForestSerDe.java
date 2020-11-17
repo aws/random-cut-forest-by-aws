@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.RandomCutForestState;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.tree.Node;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;

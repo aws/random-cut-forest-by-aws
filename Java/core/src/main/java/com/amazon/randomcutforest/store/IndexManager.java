@@ -78,8 +78,8 @@ public class IndexManager {
     }
 
     private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {
-        checkArgument(0 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
-                "freeIndexPoint must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+        checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
+                "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");
 
         int capacity = freeIndexes.length;
         Set<Integer> freeIndexSet = new HashSet<>();

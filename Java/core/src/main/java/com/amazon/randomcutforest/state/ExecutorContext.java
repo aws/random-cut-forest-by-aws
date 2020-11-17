@@ -13,18 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.executor;
+package com.amazon.randomcutforest.state;
 
-import java.util.Optional;
+import lombok.Data;
 
-public interface IUpdatable<P> {
-    /**
-     * result of an update on a sampler plus tree
-     * 
-     * @param point  to be considered for updating the sampler plus tree
-     * @param seqNum timestamp
-     * @return the (inserted,deleted) pair of handles in the tree for eventual
-     *         bookkeeping
-     */
-    Optional<UpdateReturn<P>> update(P point, long seqNum);
+@Data
+public class ExecutorContext {
+    private boolean parallelExecutionEnabled;
+    private int threadPoolSize;
 }

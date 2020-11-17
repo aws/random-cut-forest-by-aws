@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.state.tree;
 
-import com.amazon.randomcutforest.IContextualStateMapper;
+import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.store.LeafStore;

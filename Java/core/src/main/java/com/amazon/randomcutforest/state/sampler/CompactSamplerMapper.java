@@ -17,9 +17,9 @@ package com.amazon.randomcutforest.state.sampler;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.IContextualStateMapper;
-import com.amazon.randomcutforest.RandomCutForestState;
 import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.state.IContextualStateMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 
 public class CompactSamplerMapper
         implements IContextualStateMapper<CompactSampler, CompactSamplerState, RandomCutForestState> {

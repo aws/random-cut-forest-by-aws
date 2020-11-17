@@ -76,8 +76,8 @@ public class SmallIndexManager {
     }
 
     private static void checkFreeIndexes(short[] freeIndexes, short freeIndexPointer) {
-        checkArgument(0 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
-                "freeIndexPoint must be between 0 (inclusive) and freeIndexes.length (exclusive)");
+        checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
+                "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");
 
         int capacity = freeIndexes.length;
         Set<Short> freeIndexSet = new HashSet<>();

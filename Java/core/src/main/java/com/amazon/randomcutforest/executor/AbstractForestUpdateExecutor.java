@@ -15,17 +15,11 @@
 
 package com.amazon.randomcutforest.executor;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import com.amazon.randomcutforest.ComponentList;
-import com.amazon.randomcutforest.sampler.Weighted;
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -94,111 +88,4 @@ public abstract class AbstractForestUpdateExecutor<P> {
         }
         return pointCopy;
     }
-
-    /**
-     *
-     * @return the weighted samples (without sequential information)
-     */
-    public ArrayList<List<Weighted<P>>> getWeightedSamples() {
-        ArrayList<List<Weighted<P>>> result = new ArrayList<>();
-        for (IUpdatable<P> t : components) {
-            result.add(t.getWeightedSamples());
-        }
-        ;
-        return result;
-    }
-
-    /**
-     *
-     * @return the sequential samples; if that is not stored then a dummy value is
-     *         placed
-     */
-    public ArrayList<List<Sequential<P>>> getSequentialSamples() {
-        ArrayList<List<Sequential<P>>> result = new ArrayList<>();
-        for (IUpdatable<P> t : components) {
-            result.add(t.getSequentialSamples());
-        }
-        ;
-        return result;
-    }
-
-    /**
-     * Gets the tree data for compact RCF
-     * 
-     * @return the tree data for the specifica sampler combination
-     */
-    public ArrayList<CompactRandomCutTreeState> getTreeData() {
-        ArrayList<CompactRandomCutTreeState> result = new ArrayList<>();
-        for (IUpdatable<P> t : components) {
-            result.add(((SamplerPlusTree) t).getTreeData());
-        }
-        return result;
-    }
-
-    /**
-     * gets the sampler data for compact RCF
-     * 
-     * @return
-     */
-    public ArrayList<CompactSamplerState> getCompactSamplerData() {
-        ArrayList<CompactSamplerState> result = new ArrayList<>();
-        for (IUpdatable<P> t : components) {
-            result.add(((SamplerPlusTree) t).getCompactSamplerData());
-        }
-        return result;
-    }
-
-    /**
-     * initializes the models (sampler + plus) based on samples
-     * 
-     * @param samplerData           data without sequence information
-     * @param sequentialSamplerData data with sequence information Exactly one of
-     *                              the arguments is required.
-     */
-
-    public void initializeModels(List<List<Weighted<P>>> samplerData, List<List<Sequential<P>>> sequentialSamplerData) {
-        checkArgument(samplerData != null || sequentialSamplerData != null, "error, need one");
-        checkArgument(!(samplerData != null && sequentialSamplerData != null), "need exactly one");
-        if (sequentialSamplerData == null) {
-            checkArgument(samplerData.size() == components.size(), " Mismatch ");
-            int componentNum = 0;
-            for (List<Weighted<P>> singleList : samplerData) {
-                components.get(componentNum).initialize(singleList, null);
-                ++componentNum;
-            }
-        } else {
-            checkArgument(sequentialSamplerData.size() == components.size(), " Mismatch ");
-            int componentNum = 0;
-            for (List<Sequential<P>> singleList : sequentialSamplerData) {
-                components.get(componentNum).initialize(null, singleList);
-                ++componentNum;
-            }
-        }
-    }
-
-    /**
-     * Initializes the compact RCF model
-     * 
-     * @param samplerData  data for the samplers, can have sequence information
-     * @param treeDataList data for the trees; can be null, in which case the trees
-     *                     would be rebuilt from the sampler information
-     */
-
-    public void initializeCompact(List<CompactSamplerState> samplerData, List<CompactRandomCutTreeState> treeDataList) {
-        checkArgument(samplerData.size() == components.size(), " Mismatch ");
-        if (treeDataList != null) {
-            checkArgument(samplerData.size() == treeDataList.size(), " Mismatch ");
-        }
-        int componentNum = 0;
-        for (CompactSamplerState singleSampler : samplerData) {
-            if (treeDataList != null) {
-                ((SamplerPlusTree) components.get(componentNum)).initializeCompact(singleSampler,
-                        treeDataList.get(componentNum));
-            } else {
-                ((SamplerPlusTree) components.get(componentNum)).initializeCompact(singleSampler, null);
-            }
-            ++componentNum;
-        }
-    }
-
 }
