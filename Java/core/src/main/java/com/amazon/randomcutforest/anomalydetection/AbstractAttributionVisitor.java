@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
+
+import java.util.Arrays;
 
 /**
  * Attribution exposes the attribution of scores produced by ScalarScoreVisitor
@@ -121,11 +121,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
             // use the sibling bounding box to represent counterfactual "what if point & the
             // candidate near neighbor
             // had not been inserted in the tree"
-            // Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() :
-            // node.getLeftChild();
 
-            // shadowBox = shadowBox == null ? sibling.getBoundingBox() :
-            // shadowBox.getMergedBox(sibling.getBoundingBox());
             shadowBox = shadowBox == null ? Node.getSiblingBoundingBox(pointToScore, node)
                     : shadowBox.getMergedBox(Node.getSiblingBoundingBox(pointToScore, node));
 

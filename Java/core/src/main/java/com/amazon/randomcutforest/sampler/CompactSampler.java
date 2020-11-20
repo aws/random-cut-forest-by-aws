@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.executor.Sequential;
+import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import com.amazon.randomcutforest.executor.Sequential;
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * SimpleStreamSampler is a sampler with a fixed sample size. Once the sampler
@@ -192,7 +192,6 @@ public class CompactSampler implements IStreamSampler<Integer> {
         referenceArray[size] = pointRef;
         if (storeSequenceIndexesEnabled) {
             sequenceArray[size] = seqNUm;
-
         }
         int current = size++;
         while (current > 0) {
