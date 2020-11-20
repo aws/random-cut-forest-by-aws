@@ -17,7 +17,7 @@ package com.amazon.randomcutforest.state.store;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.IStateMapper;
+import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
 
 public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> {

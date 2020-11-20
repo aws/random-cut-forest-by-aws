@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.*;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.function.Function;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
@@ -468,15 +469,17 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      * then we will invoke visitor::accept on the remaining nodes in the following
      * order: nodeN, node(N-1), ..., node2, node1, and root.
      *
-     * @param point   A point which determines the traversal path from the root to a
-     *                leaf node.
-     * @param visitor A visitor that will be invoked for each node on the path.
-     * @param <R>     The return type of the Visitor.
+     * @param point          A point which determines the traversal path from the
+     *                       root to a leaf node.
+     * @param visitorFactory A visitor that will be invoked for each node on the
+     *                       path.
+     * @param <R>            The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
-    public <R> R traverse(double[] point, Visitor<R> visitor) {
+    public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
         checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
+        Visitor<R> visitor = visitorFactory.apply(this);
         traversePathToLeafAndVisitNodes(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }
@@ -510,15 +513,16 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
     /**
      * This is a traversal method which follows the standard traveral path (defined
-     * in {@link #traverse(double[], Visitor)}) but at Node in checks to see whether
-     * the visitor should split. If a split is triggered, then independent copies of
-     * the visitor are sent down each branch of the tree and then merged before
-     * propogating the result.
+     * in {@link #traverse(double[], Function)}) but at Node in checks to see
+     * whether the visitor should split. If a split is triggered, then independent
+     * copies of the visitor are sent down each branch of the tree and then merged
+     * before propogating the result.
      *
-     * @param point   A point which determines the traversal path from the root to a
-     *                leaf node.
-     * @param visitor A visitor that will be invoked for each node on the path.
-     * @param <R>     The return type of the Visitor.
+     * @param point          A point which determines the traversal path from the
+     *                       root to a leaf node.
+     * @param visitorFactory A visitor that will be invoked for each node on the
+     *                       path.
+     * @param <R>            The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     /*
@@ -530,10 +534,11 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      */
 
     @Override
-    public <R> R traverseMulti(double[] point, MultiVisitor<R> visitor) {
+    public <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory) {
         checkNotNull(point, "point must not be null");
-        checkNotNull(visitor, "visitor must not be null");
+        checkNotNull(visitorFactory, "visitor must not be null");
         checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
+        MultiVisitor<R> visitor = visitorFactory.apply(this);
         traverseTreeMulti(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }

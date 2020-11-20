@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.ArrayList;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
+import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
@@ -28,10 +28,10 @@ import com.amazon.randomcutforest.tree.RandomCutTree;
 
 public abstract class AbstractForestTraversalExecutor {
 
-    protected final ArrayList<SamplerPlusTree> components;
+    protected final ComponentList<?> components;
 
-    protected AbstractForestTraversalExecutor(ArrayList<SamplerPlusTree> treeExecutors) {
-        this.components = treeExecutors;
+    protected AbstractForestTraversalExecutor(ComponentList<?> components) {
+        this.components = components;
     }
 
     /**
@@ -62,7 +62,7 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from
+     * {@link RandomCutTree#traverse(double[], Function)}. The results from
      * individual trees are collected using the {@link java.util.stream.Collector}
      * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -86,7 +86,7 @@ public abstract class AbstractForestTraversalExecutor {
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
      * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], Visitor)}. The results from all the
+     * {@link RandomCutTree#traverse(double[], Function)}. The results from all the
      * trees are combined using the {@link ConvergingAccumulator}, and the method
      * stops visiting trees after convergence is reached. The result is transformed
      * using the finisher before being returned.

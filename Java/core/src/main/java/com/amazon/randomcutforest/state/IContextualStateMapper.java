@@ -13,14 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.state;
 
-public interface IStateMapper<Model, State> {
+public interface IContextualStateMapper<Model, State, ContextState> {
     State toState(Model model);
 
-    Model toModel(State state, long seed);
+    Model toModel(State state, ContextState contextState, long seed);
 
-    default Model toModel(State state) {
-        return toModel(state, 0L);
+    default Model toModel(State state, ContextState contextState) {
+        return toModel(state, contextState, 0L);
     }
 }

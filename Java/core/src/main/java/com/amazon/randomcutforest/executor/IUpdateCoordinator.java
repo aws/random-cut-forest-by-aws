@@ -52,7 +52,5 @@ public interface IUpdateCoordinator<P> {
 
     long getTotalUpdates();
 
-    // TODO we can remove this from the interface once this value is being set in
-    // the appropriate mapper
     void setTotalUpdates(long totalUpdates);
 }
