@@ -13,14 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.state;
 
 import java.util.List;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.executor.Sequential;
-import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
@@ -32,7 +30,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 @Data
 public class RandomCutForestState {
 
-    private long entriesSeen;
+    private long totalUpdates;
 
     private double lambda;
 
@@ -50,19 +48,11 @@ public class RandomCutForestState {
 
     private boolean centerOfMassEnabled;
 
-    private boolean parallelExecutionEnabled;
+    private PointStoreDoubleState pointStoreDoubleState;
 
-    private int threadPoolSize;
+    private List<CompactSamplerState> compactSamplerStates;
 
-    public boolean saveTreeData;
+    private List<CompactRandomCutTreeState> compactRandomCutTreeStates;
 
-    public PointStoreDoubleState pointStoreDoubleState;
-
-    public List<CompactSamplerState> compactSamplerStates;
-
-    public List<List<Sequential<double[]>>> sequentialSamplerData;
-
-    public List<List<Weighted<double[]>>> smallSamplerData;
-
-    public List<CompactRandomCutTreeState> compactRandomCutTreeStates;
+    private ExecutorContext executorContext;
 }

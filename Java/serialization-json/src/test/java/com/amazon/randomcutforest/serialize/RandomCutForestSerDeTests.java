@@ -24,7 +24,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.RandomCutForestState;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 
 public class RandomCutForestSerDeTests {
 
@@ -42,8 +43,8 @@ public class RandomCutForestSerDeTests {
 
     public void toJsonString(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
             int enableParallel, int numThreads) {
-        RandomCutForest.Builder forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(false);
+        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true);
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -56,13 +57,17 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-        RandomCutForestState forestState = forest.getForestState();
+        RandomCutForestMapper mapper = new RandomCutForestMapper();
+        mapper.setSaveTreeState(true);
+        mapper.setSaveExecutorContext(true);
+
+        RandomCutForestState forestState = mapper.toState(forest);
         String json = serializer.toJson(forestState);
 
         RandomCutForestState reForestState = serializer.fromJson(json);
         System.out.println(" Size " + json.length());
 
-        RandomCutForest reForest = RandomCutForest.createForest(reForestState);
+        RandomCutForest reForest = mapper.toModel(forestState);
 
         int num = 0;
         int numForDimOne = 0;
@@ -102,8 +107,13 @@ public class RandomCutForestSerDeTests {
     @CsvSource({ "10, 100, 256, 2048, 100, 0, 0" })
     public void timeTest(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
             int enableParallel, int numThreads) {
-        RandomCutForest.Builder forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).saveTreeData(false);
+
+        RandomCutForestMapper mapper = new RandomCutForestMapper();
+        mapper.setSaveExecutorContext(true);
+
+        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true);
+
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -116,7 +126,7 @@ public class RandomCutForestSerDeTests {
             forest.update(point);
         }
 
-        RandomCutForestState forestState = forest.getForestState();
+        RandomCutForestState forestState = mapper.toState(forest);
         String json = serializer.toJson(forestState);
         double delta = Math.log(numSamples) / Math.log(2) * 0.05;
         System.out.println("Size " + json.length());
@@ -124,12 +134,13 @@ public class RandomCutForestSerDeTests {
 
         for (int i = 0; i < numTestSamples; i++) {
             reForestState = serializer.fromJson(json);
-            RandomCutForest reForest = RandomCutForest.createForest(reForestState);
+            RandomCutForest reForest = mapper.toModel(reForestState);
+
             double[] point = generate(1, numDims)[0];
             assertTrue(Math.abs(forest.getAnomalyScore(point) - reForest.getAnomalyScore(point)) < delta);
             reForest.update(point);
             forest.update(point);
-            reForestState = reForest.getForestState();
+            reForestState = mapper.toState(reForest);
             json = serializer.toJson(reForestState);
         }
     }

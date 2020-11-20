@@ -16,21 +16,14 @@
 package com.amazon.randomcutforest.executor;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
-import com.amazon.randomcutforest.sampler.Weighted;
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
 
 public class SamplerPlusTree<P> implements IComponentModel<P> {
@@ -85,77 +78,6 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
             return Optional.ofNullable(new UpdateReturn(newRef, Optional.ofNullable(deleteRef)));
         }
         return Optional.empty();
-    }
-
-    /**
-     *
-     * @return the samples in the sampler. This is sufficient information to
-     *         recreate the pair functionally, (up to randomness).
-     */
-    @Override
-    public List<Sequential<P>> getSequentialSamples() {
-        return sampler.getSequentialSamples();
-    }
-
-    /**
-     *
-     * @return the weighted samples in the sampler. This is sufficient information
-     *         to recreate the pair functionally, (up to randomness) without the
-     *         sequence number
-     */
-    @Override
-    public List<Weighted<P>> getWeightedSamples() {
-        return sampler.getWeightedSamples();
-    }
-
-    /**
-     * Initializes the sampler and tree for basic RCFs
-     * 
-     * @param samples    weighted samples
-     * @param seqSamples sequential samples exactly one of the parameters should be
-     *                   non null and would be used to populate the models
-     */
-    @Override
-    public void initialize(List<Weighted<P>> samples, List<Sequential<P>> seqSamples) {
-        checkState(samples == null || seqSamples == null, " need exactly one");
-        checkState(samples != null || seqSamples != null, "need one");
-        if (seqSamples == null) {
-            for (Weighted<P> elem : samples) {
-                sampler.addSample(elem.getValue(), elem.getWeight(), 0);
-                tree.addPoint(new Sequential(elem.getValue(), elem.getWeight(), 0));
-            }
-        } else {
-            for (Sequential<P> elem : seqSamples) {
-                sampler.addSample(elem.getValue(), elem.getWeight(), elem.getSequenceIndex());
-                tree.addPoint(elem);
-            }
-        }
-    }
-
-    public void initializeCompact(CompactSamplerState samplerData, CompactRandomCutTreeState treeData) {
-        ((CompactSampler) sampler).reInitialize(samplerData);
-        if (treeData != null) {
-            ((CompactRandomCutTreeDouble) tree).reInitialize(treeData);
-        } else {
-            long seqNum = 0L;
-            for (int i = 0; i < samplerData.size; i++) {
-                if (samplerData.sequenceArray != null) {
-                    ((CompactRandomCutTreeDouble) tree).addPoint(new Sequential<>(samplerData.referenceArray[i],
-                            samplerData.weightArray[i], samplerData.sequenceArray[i]));
-                } else {
-                    ((CompactRandomCutTreeDouble) tree)
-                            .addPoint(new Sequential<>(samplerData.referenceArray[i], samplerData.weightArray[i], 0));
-                }
-            }
-        }
-    }
-
-    public CompactRandomCutTreeState getTreeData() {
-        return new CompactRandomCutTreeState((CompactRandomCutTreeDouble) tree);
-    }
-
-    public CompactSamplerState getCompactSamplerData() {
-        return new CompactSamplerState((CompactSampler) sampler);
     }
 
     /**

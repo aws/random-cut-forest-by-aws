@@ -17,7 +17,6 @@ package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,13 +54,6 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulato
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.state.sampler.ArraySamplersToCompactStateConverter;
-import com.amazon.randomcutforest.state.sampler.CompactSamplerMapper;
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
-import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeMapper;
-import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.ITree;
@@ -136,7 +128,7 @@ public class RandomCutForest {
     /**
      * Random number generator used by the forest.
      */
-    protected final Random rng;
+    protected Random rng;
     /**
      * The number of dimensions in the input data.
      */
@@ -178,8 +170,6 @@ public class RandomCutForest {
      */
     protected final int threadPoolSize;
 
-    protected boolean saveTreeData;
-
     protected IUpdateCoordinator<?> updateCoordinator;
     protected ComponentList<?> components;
 
@@ -191,24 +181,27 @@ public class RandomCutForest {
     /**
      * An implementation of forest update algorithms.
      */
-    protected AbstractForestUpdateExecutor updateExecutor;
+    protected AbstractForestUpdateExecutor<?> updateExecutor;
 
     protected PointStoreDouble pointStore;
 
-    protected <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator,
-            ComponentList<Q> components) {
+    public <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components,
+            Random rng) {
         this(builder, false);
 
         checkNotNull(updateCoordinator, "updateCoordinator must not be null");
         checkNotNull(components, "componentModels must not be null");
+        checkNotNull(rng, "rng must not be null");
 
         this.updateCoordinator = updateCoordinator;
         this.components = components;
+        this.rng = rng;
         initExecutors(updateCoordinator, components);
     }
 
-    protected RandomCutForest(Builder<?> builder) {
+    public RandomCutForest(Builder<?> builder) {
         this(builder, false);
+        rng = builder.getRandom();
         if (compactEnabled) {
             initCompact();
         } else {
@@ -290,11 +283,6 @@ public class RandomCutForest {
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         compactEnabled = builder.compactEnabled;
-        saveTreeData = builder.saveTreeData;
-
-        // If a random seed was given, use it to create a new Random. Otherwise, call
-        // the 0-argument constructor
-        rng = builder.randomSeed.map(Random::new).orElseGet(Random::new);
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -372,28 +360,28 @@ public class RandomCutForest {
     /**
      * @return true if points are saved with sequence indexes, false otherwise.
      */
-    public boolean storeSequenceIndexesEnabled() {
+    public boolean isStoreSequenceIndexesEnabled() {
         return storeSequenceIndexesEnabled;
     }
 
     /**
      * @return true if points are saved with sequence indexes, false otherwise.
      */
-    public boolean compactEnabled() {
+    public boolean isCompactEnabled() {
         return compactEnabled;
     }
 
     /**
      * @return true if tree nodes retain the center of mass, false otherwise.
      */
-    public boolean centerOfMassEnabled() {
+    public boolean isCenterOfMassEnabled() {
         return centerOfMassEnabled;
     }
 
     /**
      * @return true if parallel execution is enabled, false otherwise.
      */
-    public boolean parallelExecutionEnabled() {
+    public boolean isParallelExecutionEnabled() {
         return parallelExecutionEnabled;
     }
 
@@ -405,8 +393,12 @@ public class RandomCutForest {
         return threadPoolSize;
     }
 
-    public boolean saveTreeData() {
-        return saveTreeData;
+    public IUpdateCoordinator<?> getUpdateCoordinator() {
+        return updateCoordinator;
+    }
+
+    public ComponentList<?> getComponents() {
+        return components;
     }
 
     /**
@@ -1003,7 +995,6 @@ public class RandomCutForest {
         private Optional<Double> lambda = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
         private boolean compactEnabled = DEFAULT_COMPACT_ENABLED;
-        private boolean saveTreeData = DEFAULT_TREE_SAVE;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
@@ -1064,165 +1055,14 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T saveTreeData(boolean saveTreedata) {
-            this.saveTreeData = saveTreedata;
-            return (T) this;
-        }
-
         public RandomCutForest build() {
             return new RandomCutForest(this);
         }
-    }
 
-    /**
-     * The following function creates a forest based on the state information
-     */
-    public static RandomCutForest createForest(RandomCutForestState forestState) {
-        RandomCutForest forest = builder().dimensions(forestState.getDimensions())
-                .numberOfTrees(forestState.getNumberOfTrees()).lambda(forestState.getLambda())
-                .outputAfter(forestState.getOutputAfter()).sampleSize(forestState.getSampleSize())
-                .centerOfMassEnabled(forestState.isCenterOfMassEnabled()).compactEnabled(forestState.isCompactEnabled())
-                .storeSequenceIndexesEnabled(forestState.isStoreSequenceIndexesEnabled())
-                .threadPoolSize(forestState.getThreadPoolSize())
-                .parallelExecutionEnabled(forestState.isParallelExecutionEnabled()).build();
-
-        if (!forestState.isCompactEnabled()) {
-            forest.updateExecutor.initializeModels(forestState.smallSamplerData, forestState.sequentialSamplerData);
-        } else {
-            forest.pointStore.reInitialize(forestState.pointStoreDoubleState);
-            if (forestState.saveTreeData) {
-                checkState(forestState.compactRandomCutTreeStates != null, " error, missing tree information");
-            }
-            forest.updateExecutor.initializeCompact(forestState.compactSamplerStates,
-                    forestState.compactRandomCutTreeStates);
-        }
-
-        forest.updateCoordinator.setTotalUpdates(forestState.getEntriesSeen());
-        return forest;
-    }
-
-    public static class StateMapper implements IStateMapper<RandomCutForest, RandomCutForestState> {
-
-        private boolean saveTreeState;
-
-        public StateMapper(boolean saveTreeState) {
-            this.saveTreeState = saveTreeState;
-        }
-
-        @Override
-        public RandomCutForestState toState(RandomCutForest forest) {
-            RandomCutForestState state = new RandomCutForestState();
-            state.setNumberOfTrees(forest.numberOfTrees);
-            state.setDimensions(forest.dimensions);
-            state.setLambda(forest.lambda);
-            state.setSampleSize(forest.sampleSize);
-            state.setCenterOfMassEnabled(forest.centerOfMassEnabled);
-            state.setOutputAfter(forest.outputAfter);
-            state.setParallelExecutionEnabled(forest.parallelExecutionEnabled);
-            state.setThreadPoolSize(forest.threadPoolSize);
-            state.setStoreSequenceIndexesEnabled(forest.storeSequenceIndexesEnabled);
-            state.setEntriesSeen(forest.getTotalUpdates());
-            state.setCompactEnabled(forest.compactEnabled);
-            state.setSaveTreeData(forest.saveTreeData);
-
-            if (forest.compactEnabled) {
-                PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.updateCoordinator;
-                PointStoreDoubleState pointStoreState = new PointStoreDoubleMapper()
-                        .toState(pointStoreCoordinator.getStore());
-                state.setPointStoreDoubleState(pointStoreState);
-
-                List<CompactSamplerState> samplerStates = new ArrayList<>();
-                List<CompactRandomCutTreeState> treeStates = null;
-                if (saveTreeState) {
-                    treeStates = new ArrayList<>();
-                }
-
-                CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
-                CompactRandomCutTreeMapper treeMapper = new CompactRandomCutTreeMapper();
-
-                for (IComponentModel<?> model : forest.components) {
-                    SamplerPlusTree<Integer> samplerPlusTree = (SamplerPlusTree<Integer>) model;
-                    CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
-                    samplerStates.add(samplerMapper.toState(sampler));
-                    if (treeStates != null) {
-                        CompactRandomCutTreeDouble tree = (CompactRandomCutTreeDouble) samplerPlusTree.getTree();
-                        treeStates.add(treeMapper.toState(tree));
-                    }
-                }
-                state.setCompactSamplerStates(samplerStates);
-                state.setCompactRandomCutTreeStates(treeStates);
-            } else {
-                ArraySamplersToCompactStateConverter converter = new ArraySamplersToCompactStateConverter(
-                        forest.storeSequenceIndexesEnabled, forest.dimensions, forest.sampleSize);
-
-                for (IComponentModel<?> model : forest.components) {
-                    SamplerPlusTree<double[]> samplerPlusTree = (SamplerPlusTree<double[]>) model;
-                    SimpleStreamSampler<double[]> sampler = (SimpleStreamSampler<double[]>) samplerPlusTree
-                            .getSampler();
-                    converter.addSampler(sampler);
-                }
-
-                state.setPointStoreDoubleState(converter.getPointStoreDoubleState());
-                state.setCompactSamplerStates(converter.getCompactSamplerStates());
-            }
-
-            return state;
-        }
-
-        @Override
-        public RandomCutForest toModel(RandomCutForestState state, long seed) {
-            throw new UnsupportedOperationException();
+        public Random getRandom() {
+            // If a random seed was given, use it to create a new Random. Otherwise, call
+            // the 0-argument constructor
+            return randomSeed.map(Random::new).orElseGet(Random::new);
         }
     }
-
-    public RandomCutForestState getForestState() {
-        RandomCutForestState answer = new RandomCutForestState();
-        answer.setNumberOfTrees(getNumberOfTrees());
-        answer.setDimensions(getDimensions());
-        answer.setLambda(getLambda());
-        answer.setSampleSize(getSampleSize());
-        answer.setCenterOfMassEnabled(centerOfMassEnabled());
-        answer.setOutputAfter(getOutputAfter());
-        answer.setParallelExecutionEnabled(parallelExecutionEnabled());
-        answer.setThreadPoolSize(getThreadPoolSize());
-        answer.setStoreSequenceIndexesEnabled(storeSequenceIndexesEnabled());
-        answer.setEntriesSeen(getTotalUpdates());
-        answer.setCompactEnabled(compactEnabled());
-        answer.saveTreeData = saveTreeData();
-
-        if (!compactEnabled) {
-            /**
-             * In this case there is no pointstore and we onle have a basic serialization
-             * where the samples are stored and the trees are rebuilt from the samples.
-             */
-            /*
-             * answer.pointStoreDoubleData = null; if (storeSequenceIndexesEnabled) {
-             * answer.sequentialSamplerData = updateExecutor.getSequentialSamples();
-             * answer.smallSamplerData = null; } else { answer.smallSamplerData =
-             * updateExecutor.getWeightedSamples(); answer.sequentialSamplerData = null; }
-             * answer.compactSamplerData = null;
-             */
-            this.saveTreeData = false;
-            ArraySamplersToCompactStateConverter convertor = new ArraySamplersToCompactStateConverter(
-                    storeSequenceIndexesEnabled, dimensions, sampleSize * numberOfTrees + 1);
-            convertor.addSamples(updateExecutor.getSequentialSamples(), sampleSize);
-            answer.pointStoreDoubleState = convertor.getPointStoreDoubleState();
-            answer.compactSamplerStates = convertor.getCompactSamplerStates();
-            answer.setCompactEnabled(true);
-        } else {
-            PointStoreCoordinator coordinator = (PointStoreCoordinator) updateCoordinator;
-            answer.pointStoreDoubleState = new PointStoreDoubleState(coordinator.getStore());
-            if (this.saveTreeData) {
-                answer.compactRandomCutTreeStates = updateExecutor.getTreeData();
-            } else {
-                answer.compactRandomCutTreeStates = null;
-            }
-            answer.compactSamplerStates = updateExecutor.getCompactSamplerData();
-            answer.sequentialSamplerData = null;
-            answer.smallSamplerData = null;
-        }
-
-        return answer;
-    }
-
 }
