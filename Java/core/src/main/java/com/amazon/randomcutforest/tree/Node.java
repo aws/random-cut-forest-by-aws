@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
@@ -434,12 +435,9 @@ public class Node {
      */
 
     public static BoundingBox getSiblingBoundingBox(double[] point, Node node) {
-        if (node == null)
-            return null;
-        Node sibling = Node.isLeftOf(point, node) ? node.getRightChild() : node.getLeftChild();
-        if (sibling == null)
-            return null;
-        return sibling.getBoundingBox();
+        checkNotNull(node, "invalid invocation of getSiblingBox");
+        Node siblingOfPath = Node.isLeftOf(point, node) ? node.getRightChild() : node.getLeftChild();
+        return (siblingOfPath == null) ? null : siblingOfPath.getBoundingBox();
     }
 
 }
