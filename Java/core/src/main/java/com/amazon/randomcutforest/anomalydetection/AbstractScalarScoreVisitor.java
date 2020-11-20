@@ -158,9 +158,12 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
                 return;
             }
         } else {
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            shadowBox = (shadowBox == null) ? sibling.getBoundingBox()
-                    : shadowBox.getMergedBox(sibling.getBoundingBox());
+            // Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() :
+            // node.getLeftChild();
+            // shadowBox = (shadowBox == null) ? sibling.getBoundingBox()
+            // : shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = shadowBox == null ? Node.getSiblingBoundingBox(pointToScore, node)
+                    : shadowBox.getMergedBox(Node.getSiblingBoundingBox(pointToScore, node));
             probabilityOfSeparation = (shadowBox.getRangeSum() <= 0) ? 1.0 : getProbabilityOfSeparation(shadowBox);
         }
 

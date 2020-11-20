@@ -422,4 +422,24 @@ public class Node {
             sequenceIndexes.remove(sequenceIndex);
         }
     }
+
+    /**
+     * The following function returns the bounding box corresponding to the child
+     * that is not the path from the node to leaf traversed by a point. If such a
+     * box cannot be defined then the function returns null.
+     * 
+     * @param point the point as above
+     * @param node  the node as above
+     * @return the bounding box of the node
+     */
+
+    public static BoundingBox getSiblingBoundingBox(double[] point, Node node) {
+        if (node == null)
+            return null;
+        Node sibling = Node.isLeftOf(point, node) ? node.getRightChild() : node.getLeftChild();
+        if (sibling == null)
+            return null;
+        return sibling.getBoundingBox();
+    }
+
 }

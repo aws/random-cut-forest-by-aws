@@ -121,9 +121,13 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
             // use the sibling bounding box to represent counterfactual "what if point & the
             // candidate near neighbor
             // had not been inserted in the tree"
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
+            // Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() :
+            // node.getLeftChild();
 
-            shadowBox = shadowBox == null ? sibling.getBoundingBox() : shadowBox.getMergedBox(sibling.getBoundingBox());
+            // shadowBox = shadowBox == null ? sibling.getBoundingBox() :
+            // shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = shadowBox == null ? Node.getSiblingBoundingBox(pointToScore, node)
+                    : shadowBox.getMergedBox(Node.getSiblingBoundingBox(pointToScore, node));
 
             smallBox = shadowBox;
         } else {
