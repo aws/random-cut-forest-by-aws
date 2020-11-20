@@ -96,13 +96,8 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
 
         if (pointEqualsLeaf) {
             largeBox = node.getBoundingBox();
-
-            // use the sibling bounding box to represent counterfactual "what if point & the
-            // candidate near neighbor
-            // had not been inserted in the tree"
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            theShadowBox = theShadowBox == null ? sibling.getBoundingBox()
-                    : theShadowBox.getMergedBox(sibling.getBoundingBox());
+            theShadowBox = theShadowBox == null ? Node.getSiblingBoundingBox(pointToScore, node)
+                    : theShadowBox.getMergedBox(Node.getSiblingBoundingBox(pointToScore, node));
             smallBox = theShadowBox;
         } else {
             smallBox = node.getBoundingBox();
