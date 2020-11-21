@@ -21,7 +21,7 @@ import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * Attribution exposes the attribution of scores produced by ScalarScoreVisitor
@@ -110,7 +110,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -122,8 +122,8 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
             // candidate near neighbor
             // had not been inserted in the tree"
 
-            shadowBox = shadowBox == null ? Node.getSiblingBoundingBox(pointToScore, node)
-                    : shadowBox.getMergedBox(Node.getSiblingBoundingBox(pointToScore, node));
+            shadowBox = shadowBox == null ? node.getSiblingBoundingBox(pointToScore)
+                    : shadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
 
             smallBox = shadowBox;
         } else {
@@ -166,7 +166,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     }
 
     @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
 
         updateRangesForScoring(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 

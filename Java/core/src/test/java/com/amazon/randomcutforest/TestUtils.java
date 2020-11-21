@@ -21,8 +21,8 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
+import com.amazon.randomcutforest.tree.INodeView;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.Node;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 public class TestUtils {
@@ -33,7 +33,7 @@ public class TestUtils {
      */
     public static final Function<RandomCutTree, Visitor<Double>> DUMMY_VISITOR_FACTORY = tree -> new Visitor<Double>() {
         @Override
-        public void accept(Node node, int depthOfNode) {
+        public void accept(INodeView node, int depthOfNode) {
         }
 
         @Override
@@ -47,7 +47,7 @@ public class TestUtils {
      */
     public static final Function<ITree<?>, Visitor<Double>> DUMMY_GENERIC_VISITOR_FACTORY = tree -> new Visitor<Double>() {
         @Override
-        public void accept(Node node, int depthOfNode) {
+        public void accept(INodeView node, int depthOfNode) {
         }
 
         @Override
@@ -61,7 +61,7 @@ public class TestUtils {
      */
     public static final Function<RandomCutTree, MultiVisitor<Double>> DUMMY_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
         @Override
-        public void accept(Node node, int depthOfNode) {
+        public void accept(INodeView node, int depthOfNode) {
         }
 
         @Override
@@ -70,7 +70,7 @@ public class TestUtils {
         }
 
         @Override
-        public boolean trigger(Node node) {
+        public boolean trigger(INodeView node) {
             return false;
         }
 
@@ -138,7 +138,7 @@ public class TestUtils {
      */
     public static final Function<ITree<?>, MultiVisitor<Double>> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
         @Override
-        public void accept(Node node, int depthOfNode) {
+        public void accept(INodeView node, int depthOfNode) {
         }
 
         @Override
@@ -147,7 +147,7 @@ public class TestUtils {
         }
 
         @Override
-        public boolean trigger(Node node) {
+        public boolean trigger(INodeView node) {
             return false;
         }
 

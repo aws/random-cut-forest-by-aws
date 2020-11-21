@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
@@ -32,7 +31,7 @@ import com.amazon.randomcutforest.Visitor;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node {
+public class Node implements INodeView<double[]> {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value
@@ -430,14 +429,16 @@ public class Node {
      * box cannot be defined then the function returns null.
      * 
      * @param point the point as above
-     * @param node  the node as above
      * @return the bounding box of the node
      */
 
-    public static BoundingBox getSiblingBoundingBox(double[] point, Node node) {
-        checkNotNull(node, "invalid invocation of getSiblingBox");
-        Node siblingOfPath = Node.isLeftOf(point, node) ? node.getRightChild() : node.getLeftChild();
+    public BoundingBox getSiblingBoundingBox(double[] point) {
+        Node siblingOfPath = Node.isLeftOf(point, this) ? this.getRightChild() : this.getLeftChild();
         return (siblingOfPath == null) ? null : siblingOfPath.getBoundingBox();
     }
 
+    @Override
+    public short getCutDimension() {
+        return (short) getCut().getDimension();
+    }
 }

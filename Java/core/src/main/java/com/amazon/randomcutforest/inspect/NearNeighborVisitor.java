@@ -21,7 +21,7 @@ import java.util.Optional;
 
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * A visitor that returns the leaf node in a traversal if the distance between
@@ -64,7 +64,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
      * @param depthOfNode the depth of the node being visited
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
     }
 
     /**
@@ -78,7 +78,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
      * @param depthOfNode the depth of the leaf node
      */
     @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
         double[] leafPoint = leafNode.getLeafPoint();
         double distanceSquared = 0.0;
         for (int i = 0; i < leafPoint.length; i++) {
