@@ -19,7 +19,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarScoreVisitor {
 
@@ -57,8 +57,8 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
-        double weight = getWeight(node.getCut().getDimension(), vecSepBuild, node.getBoundingBox());
+    public void accept(INodeView node, int depthOfNode) {
+        double weight = getWeight(node.getCutDimension(), vecSepBuild, node.getBoundingBox());
 
         if (pointInsideBox) {
             score *= weight;

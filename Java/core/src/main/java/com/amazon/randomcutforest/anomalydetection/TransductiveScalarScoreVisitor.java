@@ -19,7 +19,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
 
@@ -70,7 +70,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -79,7 +79,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
         // probability function used to build the trees.
 
         double probabilityOfSeparation = getProbabilityOfSeparation(node.getBoundingBox());
-        double weight = getWeight(node.getCut().getDimension(), vecSepScore, node.getBoundingBox());
+        double weight = getWeight(node.getCutDimension(), vecSepScore, node.getBoundingBox());
         if (probabilityOfSeparation == 0) {
             pointInsideBox = true;
             return;

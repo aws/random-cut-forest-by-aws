@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.Visitor;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node {
+public class Node implements INodeView<double[]> {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value
@@ -421,5 +421,24 @@ public class Node {
         if (sequenceIndexes != null) {
             sequenceIndexes.remove(sequenceIndex);
         }
+    }
+
+    /**
+     * The following function returns the bounding box corresponding to the child
+     * that is not the path from the node to leaf traversed by a point. If such a
+     * box cannot be defined then the function returns null.
+     * 
+     * @param point the point as above
+     * @return the bounding box of the node
+     */
+
+    public BoundingBox getSiblingBoundingBox(double[] point) {
+        Node siblingOfPath = Node.isLeftOf(point, this) ? this.getRightChild() : this.getLeftChild();
+        return (siblingOfPath == null) ? null : siblingOfPath.getBoundingBox();
+    }
+
+    @Override
+    public short getCutDimension() {
+        return (short) getCut().getDimension();
     }
 }

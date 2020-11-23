@@ -21,7 +21,7 @@ import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * A Visitor which computes several geometric measures that related a given
@@ -87,7 +87,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     }
 
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -96,13 +96,8 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
 
         if (pointEqualsLeaf) {
             largeBox = node.getBoundingBox();
-
-            // use the sibling bounding box to represent counterfactual "what if point & the
-            // candidate near neighbor
-            // had not been inserted in the tree"
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            theShadowBox = theShadowBox == null ? sibling.getBoundingBox()
-                    : theShadowBox.getMergedBox(sibling.getBoundingBox());
+            theShadowBox = theShadowBox == null ? node.getSiblingBoundingBox(pointToScore)
+                    : theShadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
             smallBox = theShadowBox;
         } else {
             smallBox = node.getBoundingBox();
@@ -141,7 +136,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     }
 
     @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
         updateForCompute(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
         if (sumOfDifferenceInRange <= 0) { // values must be equal
@@ -228,27 +223,27 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      *         different Kernels can be expressed in this decomposed manner.
      */
 
-    double fieldExt(Node node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double fieldExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influenceExt(Node node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double influenceExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return 1.0;
     }
 
-    double fieldPoint(Node node, double thisMass, double[] thislocation) {
+    double fieldPoint(INodeView node, double thisMass, double[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influencePoint(Node node, double thisMass, double[] thislocation) {
+    double influencePoint(INodeView node, double thisMass, double[] thislocation) {
         return 1.0;
     }
 
-    double selfField(Node leafNode, double mass) {
+    double selfField(INodeView leafNode, double mass) {
         return mass;
     }
 
-    double selfInfluence(Node leafnode, double mass) {
+    double selfInfluence(INodeView leafnode, double mass) {
         return 1.0;
     }
 

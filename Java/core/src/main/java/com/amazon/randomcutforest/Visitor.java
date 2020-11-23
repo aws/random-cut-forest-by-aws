@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * This is the interface for a visitor which can be used to query a ITraversable
@@ -34,16 +34,16 @@ public interface Visitor<R> {
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
      */
-    void accept(Node node, int depthOfNode);
+    void accept(INodeView node, int depthOfNode);
 
     /**
      * Visit the leaf node in the traversal path. By default this method proxies to
-     * {@link #accept(Node, int)}.
+     * {@link #accept(INodeView, int)}.
      *
      * @param leafNode    the leaf node being visited
      * @param depthOfNode the depth of the leaf node
      */
-    default void acceptLeaf(Node leafNode, final int depthOfNode) {
+    default void acceptLeaf(INodeView leafNode, final int depthOfNode) {
         accept(leafNode, depthOfNode);
     }
 

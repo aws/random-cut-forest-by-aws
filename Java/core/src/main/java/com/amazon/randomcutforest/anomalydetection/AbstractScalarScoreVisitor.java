@@ -20,7 +20,7 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * This abstract visitor encodes a standard method for computing a scalar result
@@ -88,14 +88,14 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
 
     /**
      * If true, then the scoreUnseen method will be used to score a point equal to a
-     * leaf point in {@link #acceptLeaf(Node, int)}.
+     * leaf point in {@link #acceptLeaf(INodeView, int)}.
      */
     protected boolean ignoreLeafEquals;
 
     /**
      * If the point being scored is equal to the leaf point but the leaf mass is
      * smaller than this value, then the scoreUnseen method will be used to score
-     * the point in {@link #accept(Node, int)}.
+     * the point in {@link #accept(INodeView, int)}.
      */
     protected int ignoreLeafMassThreshold;
 
@@ -146,7 +146,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -158,9 +158,8 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
                 return;
             }
         } else {
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
-            shadowBox = (shadowBox == null) ? sibling.getBoundingBox()
-                    : shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = shadowBox == null ? node.getSiblingBoundingBox(pointToScore)
+                    : shadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
             probabilityOfSeparation = (shadowBox.getRangeSum() <= 0) ? 1.0 : getProbabilityOfSeparation(shadowBox);
         }
 
@@ -175,7 +174,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the leaf node
      */
     @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
         if (leafNode.leafPointEquals(pointToScore)
                 && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             pointInsideBox = true;
