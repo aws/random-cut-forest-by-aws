@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.state.sampler;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
@@ -24,12 +25,20 @@ import com.amazon.randomcutforest.state.RandomCutForestState;
 public class CompactSamplerMapper
         implements IContextualStateMapper<CompactSampler, CompactSamplerState, RandomCutForestState> {
 
+    private boolean validateHeap;
+
+    public CompactSamplerMapper(boolean validateHeap) {
+        this.validateHeap = validateHeap;
+    }
+
+    public CompactSamplerMapper() {
+        this(false);
+    }
+
     @Override
     public CompactSampler toModel(CompactSamplerState state, RandomCutForestState forestState, long seed) {
-        CompactSampler sampler = new CompactSampler(forestState.getSampleSize(), forestState.getLambda(), seed,
-                forestState.isStoreSequenceIndexesEnabled());
-        sampler.reInitialize(state);
-        return sampler;
+        return new CompactSampler(forestState.getSampleSize(), forestState.getLambda(), new Random(seed),
+                state.getWeight(), state.getPointIndex(), state.getSequenceIndex(), validateHeap);
     }
 
     @Override
@@ -37,10 +46,10 @@ public class CompactSamplerMapper
         CompactSamplerState state = new CompactSamplerState();
         state.setSize(model.size());
         state.setCapacity(model.getCapacity());
-        state.setWeightArray(Arrays.copyOf(model.getWeightArray(), model.size()));
-        state.setReferenceArray(Arrays.copyOf(model.getReferenceArray(), model.size()));
+        state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
+        state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
         if (model.isStoreSequenceIndexesEnabled()) {
-            state.setSequenceArray(Arrays.copyOf(model.getSequenceArray(), model.size()));
+            state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
         }
         return state;
     }

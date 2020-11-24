@@ -53,51 +53,36 @@ public class ArraySamplersToCompactStateConverter {
     }
 
     public void addSampler(SimpleStreamSampler<double[]> sampler) {
-        CompactSamplerState compactState = new CompactSamplerState(sampler.size(), sampler.getCapacity(),
-                storeSequences);
+        int[] pointIndex = new int[sampler.size()];
+        float[] weight = new float[sampler.size()];
+        long[] sequenceIndex = storeSequences ? new long[sampler.size()] : null;
 
         int i = 0;
         for (Sequential<double[]> sample : sampler.getSequentialSamples()) {
-            double[] ref = sample.getValue();
+            double[] index = sample.getValue();
 
-            if (pointMap.containsKey(ref)) {
-                compactState.referenceArray[i] = pointMap.get(ref);
-                pointStoreDouble.incrementRefCount(compactState.referenceArray[i]);
+            if (pointMap.containsKey(index)) {
+                pointIndex[i] = pointMap.get(index);
+                pointStoreDouble.incrementRefCount(pointIndex[i]);
             } else {
-                compactState.referenceArray[i] = pointStoreDouble.add(ref);
-                pointMap.put(ref, compactState.referenceArray[i]);
+                pointIndex[i] = pointStoreDouble.add(index);
+                pointMap.put(index, pointIndex[i]);
             }
-            compactState.weightArray[i] = sample.getWeight();
-            if (storeSequences) {
-                compactState.sequenceArray[i] = sample.getSequenceIndex();
+            weight[i] = sample.getWeight();
+            if (sequenceIndex != null) {
+                sequenceIndex[i] = sample.getSequenceIndex();
             }
 
             i++;
         }
 
-        compactSamplerStates.add(compactState);
-    }
+        CompactSamplerState samplerState = new CompactSamplerState();
+        samplerState.setSize(sampler.size());
+        samplerState.setCapacity(sampler.getCapacity());
+        samplerState.setPointIndex(pointIndex);
+        samplerState.setWeight(weight);
+        samplerState.setSequenceIndex(sequenceIndex);
 
-    public void addSamples(ArrayList<List<Sequential<double[]>>> sampleList, int capacity) {
-
-        for (List<Sequential<double[]>> indivList : sampleList) {
-            CompactSamplerState compactData = new CompactSamplerState(indivList.size(), capacity, storeSequences);
-            for (int i = 0; i < indivList.size(); i++) {
-                double[] ref = indivList.get(i).getValue();
-
-                if (pointMap.containsKey(ref)) {
-                    compactData.referenceArray[i] = pointMap.get(ref);
-                    pointStoreDouble.incrementRefCount(compactData.referenceArray[i]);
-                } else {
-                    compactData.referenceArray[i] = pointStoreDouble.add(ref);
-                    pointMap.put(ref, compactData.referenceArray[i]);
-                }
-                compactData.weightArray[i] = indivList.get(i).getWeight();
-                if (storeSequences) {
-                    compactData.sequenceArray[i] = indivList.get(i).getSequenceIndex();
-                }
-            }
-            compactSamplerStates.add(compactData);
-        }
+        compactSamplerStates.add(samplerState);
     }
 }

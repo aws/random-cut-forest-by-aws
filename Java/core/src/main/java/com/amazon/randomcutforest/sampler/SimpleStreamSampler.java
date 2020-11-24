@@ -70,10 +70,6 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     private final Random random;
     /**
-     * The number of points which have been submitted to the update method.
-     */
-    private long entriesSeen;
-    /**
      * The point evicted by the last call to {@link #sample}, or if the new point
      * was not accepted by the sampler.
      */
@@ -81,11 +77,10 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * A flag to determine if the sequence information is to be stored
      */
-    private boolean storeSequenceIndices = false;
+    private boolean storeSequenceIndices;
 
     public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
         this.sampleSize = sampleSize;
-        entriesSeen = 0;
         weightedSamples = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
         this.lambda = lambda;
@@ -113,16 +108,15 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     public Optional<Float> acceptSample(long seqIndex) {
         evictedPoint = null;
         float weight = computeWeight(seqIndex);
-        ++entriesSeen;
 
-        if (entriesSeen <= sampleSize || weight < weightedSamples.element().getWeight()) {
+        if (weightedSamples.size() < sampleSize || weight < weightedSamples.element().getWeight()) {
             if (isFull()) {
                 Weighted<P> tmp = weightedSamples.poll();
                 if (storeSequenceIndices) {
-                    checkState(tmp.getClass() == Sequential.class, "incorrect use");
+                    checkState(tmp instanceof Sequential, "incorrect use");
                     evictedPoint = (Sequential<P>) tmp;
                 } else {
-                    evictedPoint = new Sequential(tmp.getValue(), tmp.getWeight(), 1L);
+                    evictedPoint = new Sequential<>(tmp.getValue(), tmp.getWeight(), 1L);
                 }
             }
             return Optional.of(weight);
@@ -183,12 +177,12 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     @Override
     public List<Weighted<P>> getWeightedSamples() {
-        ArrayList<Weighted<P>> result;
+        List<Weighted<P>> result;
         if (!storeSequenceIndices) {
             result = new ArrayList<>(weightedSamples);
         } else {
             result = new ArrayList<>();
-            weightedSamples.stream().map(e -> result.add(new Weighted(e.getValue(), e.getWeight())));
+            weightedSamples.forEach(e -> result.add(new Weighted<>(e.getValue(), e.getWeight())));
         }
         return result;
 
@@ -252,6 +246,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * @return the number of points contained by the sampler when full.
      */
+    @Override
     public int getCapacity() {
         return sampleSize;
     }
@@ -259,6 +254,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * @return the number of points currently contained by the sampler.
      */
+    @Override
     public int size() {
         return weightedSamples.size();
     }

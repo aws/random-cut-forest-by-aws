@@ -15,19 +15,25 @@
 
 package com.amazon.randomcutforest.sampler;
 
+import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.executor.Sequential;
 
 public class SimpleStreamSamplerTest {
 
@@ -43,19 +49,16 @@ public class SimpleStreamSamplerTest {
         lambda = 0.01;
         seed = 42L;
         random = spy(new Random(seed));
-        sampler = new SimpleStreamSampler(sampleSize, lambda, random, false);
+        sampler = new SimpleStreamSampler<>(sampleSize, lambda, random, false);
     }
 
     @Test
     public void testNew() {
-        assertFalse(sampler.getEvictedPoint().isPresent());
-        assertFalse(sampler.isReady());
-        assertFalse(sampler.isFull());
-        assertEquals(sampleSize, sampler.getCapacity());
-        assertEquals(0, sampler.size());
+        // test fields defined in SimpleStreamSampler that aren't part of the
+        // IStreamSampler interface
         assertEquals(lambda, sampler.getLambda());
 
-        SimpleStreamSampler uniformSampler = new SimpleStreamSampler(11, 0, 14, false);
+        SimpleStreamSampler<double[]> uniformSampler = new SimpleStreamSampler<>(11, 0, 14, false);
         assertFalse(uniformSampler.getEvictedPoint().isPresent());
         assertFalse(uniformSampler.isReady());
         assertFalse(uniformSampler.isFull());
@@ -65,23 +68,88 @@ public class SimpleStreamSamplerTest {
     }
 
     @Test
-    public void testPointComparator() {
-        Sequential<double[]> point1 = new Sequential(new double[] { 0.99, -55.2 }, 1.23, 999L);
-        Sequential<double[]> point2 = new Sequential(new double[] { 2.2, 87.0 }, -77, 1000L);
-        Sequential<double[]> point3 = new Sequential(new double[] { -2.1, 99.4 }, -77, 1001L);
+    public void testAddSample() {
+        assertEquals(0, sampler.size());
+        assertEquals(sampleSize, sampler.getCapacity());
 
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point1, point2) < 0);
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point3, point1) > 0);
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point2, point3) == 0);
+        sampler.addSample(new double[] { 1.1 }, 0.5f, 10L);
+        sampler.addSample(new double[] { -2.2 }, 1.2f, 11L);
+        sampler.addSample(new double[] { 3.3 }, 0.03f, 12L);
+
+        assertEquals(3, sampler.size());
+        assertEquals(sampleSize, sampler.getCapacity());
+
+        List<Weighted<double[]>> samples = sampler.getWeightedSamples();
+        samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
+        assertEquals(3, samples.size());
+
+        assertArrayEquals(new double[] { 3.3 }, samples.get(0).getValue());
+        assertEquals(0.03f, samples.get(0).getWeight());
+
+        assertArrayEquals(new double[] { 1.1 }, samples.get(1).getValue());
+        assertEquals(0.5f, samples.get(1).getWeight());
+
+        assertArrayEquals(new double[] { -2.2 }, samples.get(2).getValue());
+        assertEquals(1.2f, samples.get(2).getWeight());
+    }
+
+    @Test
+    public void testAcceptSample() {
+        // The sampler should accept all samples until the sampler is full
+        for (int i = 0; i < sampleSize; i++) {
+            Optional<Float> weight = sampler.acceptSample(i);
+            assertTrue(weight.isPresent());
+            sampler.addSample(new double[] { Math.random() }, weight.get(), i);
+        }
+
+        // In subsequent calls to sample, either the result is empty or else
+        // the new weight is smaller than the evicted weight
+
+        int numAccepted = 0;
+        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+            Optional<Float> weight = sampler.acceptSample(i);
+            if (weight.isPresent()) {
+                numAccepted++;
+                assertTrue(sampler.getEvictedPoint().isPresent());
+                assertTrue(weight.get() < sampler.getEvictedPoint().get().getWeight());
+                sampler.addSample(new double[] { Math.random() }, weight.get(), i);
+            }
+        }
+        assertTrue(numAccepted > 0, "the sampler did not accept any points");
+    }
+
+    @Test
+    public void testSample() {
+        SimpleStreamSampler<double[]> samplerSpy = spy(sampler);
+        for (int i = 0; i < sampleSize; i++) {
+            assertTrue(samplerSpy.sample(new double[] { i + 0.0 }, i));
+        }
+
+        // all points should be added to the sampler until the sampler is full
+        assertEquals(sampleSize, samplerSpy.size());
+        verify(samplerSpy, times(sampleSize)).addSample(any(), anyFloat(), anyLong());
+
+        reset(samplerSpy);
+
+        int numSampled = 0;
+        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+            if (samplerSpy.sample(new double[] { i + 0.0 }, i)) {
+                numSampled++;
+            }
+        }
+        assertTrue(numSampled > 0, "no new values were sampled");
+        assertTrue(numSampled < sampleSize, "all values were sampled");
+
+        verify(samplerSpy, times(numSampled)).addSample(any(), anyFloat(), anyLong());
     }
 
     @Test
     public void testGetScore() {
         when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
 
-        sampler.sample(new double[] { -0.1 }, 101);
-        sampler.sample(new double[] { 11.1 }, 102);
-        sampler.sample(new double[] { 99.8 }, 103);
+        sampler.sample(new double[] { 1.0 }, 101);
+        sampler.sample(new double[] { 2.0 }, 102);
+        sampler.sample(new double[] { 3.0 }, 103);
 
         double[] expectedScores = new double[3];
         expectedScores[0] = -lambda * 101L + Math.log(-Math.log(0.25));
@@ -89,100 +157,11 @@ public class SimpleStreamSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
-        List<Sequential<double[]>> samples = sampler.getSequentialSamples();
-        // samples.sort(Comparator.comparing(Weighted::getWeight).reversed());
+        List<Weighted<double[]>> samples = sampler.getWeightedSamples();
+        samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
 
-        // for (int i = 0; i < 3; i++) {
-        // assertEquals(expectedScores[i], samples.get(i).getWeight(), EPSILON);
-        // }
-    }
-
-    @Test
-    public void testIsReadyIsFull() {
-        int i;
-        for (i = 1; i < sampleSize / 4; i++) {
-            assertTrue(sampler.sample(new double[] { Math.random() }, i));
-            assertFalse(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        for (i = sampleSize / 4; i < sampleSize; i++) {
-            assertTrue(sampler.sample(new double[] { Math.random() }, i));
-            assertTrue(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        assertTrue(sampler.sample(new double[] { Math.random() }, sampleSize));
-        assertTrue(sampler.isReady());
-        assertTrue(sampler.isFull());
-        assertEquals(i, sampler.size());
-        assertFalse(sampler.getEvictedPoint().isPresent());
-
-        java.util.Optional<Sequential<double[]>> evicted;
-        for (i = sampleSize + 1; i < 2 * sampleSize; i++) {
-            // Either the sampling and the evicted point are both null or both non-null
-            assertTrue(sampler.sample(new double[] { Math.random() }, i) == sampler.getEvictedPoint().isPresent());
-
-            assertTrue(sampler.isReady());
-            assertTrue(sampler.isFull());
-            assertEquals(sampleSize, sampler.size());
-
+        for (int i = 0; i < 3; i++) {
+            assertEquals(expectedScores[i], samples.get(i).getWeight(), EPSILON);
         }
     }
-
-    /*
-     * @Test public void testSample() { // first populate the sampler:
-     * 
-     * int entriesSeen; for (entriesSeen = 0; entriesSeen < 2 * sampleSize;
-     * entriesSeen++) { sampler.sample(new double[] { Math.random() }, entriesSeen);
-     * }
-     * 
-     * assertEquals(entriesSeen, 2 * sampleSize); assertTrue(sampler.isFull());
-     * 
-     * // find the lowest weight currently in the sampler // double maxWeight = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new);
-     * 
-     * // First choose a random value U so that // -lambda * entriesSeen +
-     * log(-log(U)) > maxWeight // which is equivalent to // U < exp(-exp(maxWeight
-     * + lambda * entriesSeen)) // using this formula results in an underflow, so
-     * just use a very small number
-     * 
-     * double u = 10e-100; when(random.nextDouble()).thenReturn(u);
-     * 
-     * // With this choice of u, the next sample should be rejected
-     * 
-     * assertFalse(sampler.sample(new double[] { Math.random() }, ++entriesSeen));
-     * assertFalse(sampler.getEvictedPoint().isPresent());
-     * 
-     * // double maxWeight2 = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new);
-     * 
-     * // assertEquals(maxWeight, maxWeight2);
-     * 
-     * // Next choose a large value of u (i.e., close to 1) // For this choice of U,
-     * the new point should be accepted
-     * 
-     * u = 1 - 10e-100; when(random.nextDouble()).thenReturn(u);
-     * 
-     * double point = Math.random(); Optional<Double> weight =
-     * sampler.acceptSample(++entriesSeen); assertTrue(sampler.sample(new double[] {
-     * point }, ++entriesSeen)); Optional<Sequential<double[]>> evicted =
-     * sampler.getEvictedPoint(); assertTrue(evicted.isPresent());
-     * assertTrue(weight.get() < evicted.get().getWeight()); //
-     * assertEquals(maxWeight, evicted.get().getWeight(), EPSILON);
-     * 
-     * // maxWeight2 = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new); // assertTrue(maxWeight2 <
-     * maxWeight); //
-     * assertTrue(sampler.getWeightedSamples().stream().anyMatch((Sequential) array
-     * // -> array.getValue() == point)); }
-     */
-
 }
