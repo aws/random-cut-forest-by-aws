@@ -28,6 +28,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>software.amazon.randomcutforest</groupId>
+      <artifactId>randomcutforest-serialization-json</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
       <version>${jmh.version}</version>
