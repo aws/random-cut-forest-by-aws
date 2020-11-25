@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.Random;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
