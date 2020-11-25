@@ -26,7 +26,7 @@ public interface INodeView<P> {
 
     boolean leafPointEquals(P point);
 
-    short getCutDimension();
+    int getCutDimension();
 
     double[] getLeafPoint();
 

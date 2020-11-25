@@ -438,7 +438,7 @@ public class Node implements INodeView<double[]> {
     }
 
     @Override
-    public short getCutDimension() {
-        return (short) getCut().getDimension();
+    public int getCutDimension() {
+        return getCut().getDimension();
     }
 }
