@@ -17,7 +17,16 @@ package com.amazon.randomcutforest;
 
 import java.util.Random;
 
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.OperationsPerInvocation;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.amazon.randomcutforest.returntypes.DensityOutput;
@@ -34,13 +43,13 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "10" })
+        @Param({ "10", "20" })
         int dimensions;
 
         @Param({ "100" })
         int numberOfTrees;
 
-        @Param({ "false", "true" })
+        @Param({ "false" })
         boolean parallelExecutionEnabled;
 
         double[][] data;
@@ -84,8 +93,9 @@ public class RandomCutForestBenchmark {
 
         for (int i = 0; i < data.length; i++) {
             score += forest.getAnomalyScore(data[i]);
-            if (rnd.nextDouble() < 0.01)
+            if (rnd.nextDouble() < 0.01) {
                 forest.update(data[i]); // this should execute sparingly
+            }
         }
 
         blackhole.consume(score);

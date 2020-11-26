@@ -18,32 +18,32 @@ package com.amazon.randomcutforest.tree;
 import java.util.Arrays;
 import java.util.Set;
 
-public class CompactNodeViewDouble implements INodeView<double[]> {
-    final CompactRandomCutTreeDouble treeRef;
+public class CompactNodeViewDouble implements INodeView {
+    final CompactRandomCutTreeDouble tree;
     short currentNodeOffset;
 
-    public CompactNodeViewDouble(short nodeId, CompactRandomCutTreeDouble treeRef) {
-        this.treeRef = treeRef;
-        this.currentNodeOffset = nodeId;
+    public CompactNodeViewDouble(CompactRandomCutTreeDouble tree, short initialNodeIndex) {
+        this.tree = tree;
+        this.currentNodeOffset = initialNodeIndex;
     }
 
-    public void updateNode(short newId) {
-        currentNodeOffset = newId;
+    public void setCurrentNodeIndex(short newOffset) {
+        currentNodeOffset = newOffset;
     }
 
     public int getMass() {
-        return treeRef.getMass(currentNodeOffset);
+        return tree.getMass(currentNodeOffset);
     }
 
     public BoundingBox getBoundingBox() {
-        return treeRef.getBoundingBox(currentNodeOffset);
+        return tree.getBoundingBox(currentNodeOffset);
     }
 
     public BoundingBox getSiblingBoundingBox(double[] point) {
-        if (treeRef.leftOf(point, currentNodeOffset)) {
-            return treeRef.getBoundingBox(treeRef.internalNodes.rightIndex[currentNodeOffset]);
+        if (tree.leftOf(point, currentNodeOffset)) {
+            return tree.getBoundingBox(tree.internalNodes.rightIndex[currentNodeOffset]);
         } else {
-            return treeRef.getBoundingBox(treeRef.internalNodes.leftIndex[currentNodeOffset]);
+            return tree.getBoundingBox(tree.internalNodes.leftIndex[currentNodeOffset]);
         }
     }
 
@@ -52,11 +52,11 @@ public class CompactNodeViewDouble implements INodeView<double[]> {
     }
 
     public int getCutDimension() {
-        return treeRef.internalNodes.cutDimension[currentNodeOffset];
+        return tree.internalNodes.cutDimension[currentNodeOffset];
     }
 
     public double[] getLeafPoint() {
-        return treeRef.getLeafPoint(currentNodeOffset);
+        return tree.getLeafPoint(currentNodeOffset);
     }
 
     public Set<Long> getSequenceIndexes() {

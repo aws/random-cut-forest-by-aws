@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.Visitor;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node implements INodeView<double[]> {
+public class Node implements INodeView {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value

@@ -15,7 +15,9 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.*;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -56,23 +58,23 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     public static final short NULL = -1;
 
     private final Random random;
-    protected final short maxSize;
+    private final int maxSize;
     protected final NodeStore internalNodes;
     protected final LeafStore leafNodes;
     protected final IPointStore<double[]> pointStore;
     protected short rootIndex;
-    private final CompactNodeViewDouble usher;
+    private final CompactNodeViewDouble nodeView;
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         checkNotNull(pointStore, "pointStore must not be null");
-        this.maxSize = (short) maxSize;
+        this.maxSize = maxSize;
         this.pointStore = pointStore;
         internalNodes = new NodeStore((short) (this.maxSize - 1));
         leafNodes = new LeafStore((short) this.maxSize);
         random = new Random(seed);
         rootIndex = NULL;
-        usher = new CompactNodeViewDouble(NULL, this);
+        nodeView = new CompactNodeViewDouble(this, NULL);
     }
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, LeafStore leafStore,
@@ -82,14 +84,14 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         checkNotNull(leafStore, "leafStore must not be null");
         checkNotNull(nodeStore, "nodeStore must not be null");
 
-        this.maxSize = (short) maxSize;
+        this.maxSize = maxSize;
         this.pointStore = pointStore;
         this.rootIndex = rootIndex;
         random = new Random(seed);
         internalNodes = nodeStore;
         leafNodes = leafStore;
-        usher = new CompactNodeViewDouble(rootIndex, this);
-        reflateTree();
+        nodeView = new CompactNodeViewDouble(this, rootIndex);
+        // reflateTree();
     }
 
     protected boolean isLeaf(short index) {
@@ -138,6 +140,14 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             if (internalNodes.boundingBox[nodeOffset] == null) {
                 reflateNode(nodeOffset);
             }
+            return internalNodes.boundingBox[nodeOffset];
+        }
+    }
+
+    BoundingBox getBoundingBoxLeaveNull(short nodeOffset) {
+        if (nodeOffset - maxSize >= 0) {
+            return new BoundingBox(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]));
+        } else {
             return internalNodes.boundingBox[nodeOffset];
         }
     }
@@ -210,8 +220,28 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     protected boolean leftOf(double[] point, short nodeOffset) {
-        // checkArgument(!isLeaf(nodeOffset), " error ");
         return (point[internalNodes.cutDimension[nodeOffset]] <= internalNodes.cutValue[nodeOffset]);
+    }
+
+    private boolean resolvedDelete;
+
+    /**
+     * The function merges the two child boxes, provided none of the three
+     * (including itself) was non-null before the delete.
+     * 
+     * @param nodeOffset the current node
+     */
+    void updateBoxAfterDelete(short nodeOffset, double[] point) {
+        if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
+            return;
+        BoundingBox leftBox = getBoundingBoxLeaveNull(internalNodes.leftIndex[nodeOffset]);
+        BoundingBox rightBox = getBoundingBoxLeaveNull(internalNodes.rightIndex[nodeOffset]);
+        if ((rightBox != null) && (leftBox != null)) {
+            internalNodes.boundingBox[nodeOffset] = leftBox.getMergedBox(rightBox);
+            if (internalNodes.boundingBox[nodeOffset].contains(point)) {
+                resolvedDelete = true;
+            }
+        }
     }
 
     /**
@@ -222,6 +252,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     @Override
     public void deletePoint(Sequential<Integer> sequential) {
         checkState(rootIndex != NULL, "root must not be null");
+        resolvedDelete = false;
         deletePoint(rootIndex, pointStore.get(sequential.getValue()), 0);
     }
 
@@ -291,23 +322,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             ret = deletePoint(internalNodes.rightIndex[nodeOffset], point, level + 1);
         }
 
-        BoundingBox leftBox;
-        if (isLeaf(internalNodes.leftIndex[nodeOffset])) {
-            double[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.leftIndex[nodeOffset] - maxSize]);
-            leftBox = new BoundingBox(leafPoint);
-        } else {
-            leftBox = internalNodes.boundingBox[internalNodes.leftIndex[nodeOffset]];
-        }
-
-        BoundingBox rightBox;
-        if (isLeaf(internalNodes.rightIndex[nodeOffset])) {
-            double[] leafPoint = pointStore.get(leafNodes.pointIndex[internalNodes.rightIndex[nodeOffset] - maxSize]);
-            rightBox = new BoundingBox(leafPoint);
-        } else {
-            rightBox = internalNodes.boundingBox[internalNodes.rightIndex[nodeOffset]];
-        }
-
-        internalNodes.boundingBox[nodeOffset] = leftBox.getMergedBox(rightBox);
+        updateBoxAfterDelete(nodeOffset, point);
         --internalNodes.mass[nodeOffset];
         return ret;
     }
@@ -357,9 +372,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
         double[] dpoint = point;
 
-        BoundingBox existingBox = (isLeaf(nodeOffset))
-                ? new BoundingBox(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]))
-                : internalNodes.boundingBox[nodeOffset];
+        BoundingBox existingBox = getBoundingBox(nodeOffset);
         BoundingBox mergedBox = existingBox.getMergedBox(dpoint);
 
         if (!existingBox.contains(dpoint)) {
@@ -423,7 +436,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
         internalNodes.boundingBox[nodeOffset] = mergedBox;
         ++internalNodes.mass[nodeOffset];
-        return ret; // the above can be rearranged for tail recursion
+        return ret;
     }
 
     boolean verify(short nodeOffset, int dimension, double cutValue, boolean allSmall) {
@@ -472,22 +485,21 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
         checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.apply(this);
-        // CompactNodeViewDouble usher = new CompactNodeViewDouble(rootIndex, this);
-        traversePathToLeafAndVisitNodes(point, visitor, rootIndex, usher, 0);
+        traversePathToLeafAndVisitNodes(point, visitor, rootIndex, nodeView, 0);
         return visitor.getResult();
     }
 
     private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, short currentNode,
-            CompactNodeViewDouble usher, int depthOfNode) {
+            CompactNodeViewDouble nodeView, int depthOfNode) {
         if (isLeaf(currentNode)) {
-            usher.updateNode(currentNode);
-            visitor.acceptLeaf(usher, depthOfNode);
+            nodeView.setCurrentNodeIndex(currentNode);
+            visitor.acceptLeaf(nodeView, depthOfNode);
         } else {
             short childNode = leftOf(point, currentNode) ? internalNodes.leftIndex[currentNode]
                     : internalNodes.rightIndex[currentNode];
-            traversePathToLeafAndVisitNodes(point, visitor, childNode, usher, depthOfNode + 1);
-            usher.updateNode(currentNode);
-            visitor.accept(usher, depthOfNode);
+            traversePathToLeafAndVisitNodes(point, visitor, childNode, nodeView, depthOfNode + 1);
+            nodeView.setCurrentNodeIndex(currentNode);
+            visitor.accept(nodeView, depthOfNode);
         }
     }
 
@@ -512,32 +524,31 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(rootIndex != NULL, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.apply(this);
-        // CompactNodeViewDouble usher = new CompactNodeViewDouble(rootIndex, this);
-        traverseTreeMulti(point, visitor, rootIndex, usher, 0);
+        traverseTreeMulti(point, visitor, rootIndex, nodeView, 0);
         return visitor.getResult();
     }
 
     private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, short currentNode,
-            CompactNodeViewDouble usher, int depthOfNode) {
+            CompactNodeViewDouble nodeView, int depthOfNode) {
         if (isLeaf(currentNode)) {
-            usher.updateNode(currentNode);
-            visitor.acceptLeaf(usher, depthOfNode);
+            nodeView.setCurrentNodeIndex(currentNode);
+            visitor.acceptLeaf(nodeView, depthOfNode);
         } else {
-            usher.updateNode(currentNode);
-            if (visitor.trigger(usher)) {
-                traverseTreeMulti(point, visitor, internalNodes.leftIndex[currentNode], usher, depthOfNode + 1);
+            nodeView.setCurrentNodeIndex(currentNode);
+            if (visitor.trigger(nodeView)) {
+                traverseTreeMulti(point, visitor, internalNodes.leftIndex[currentNode], nodeView, depthOfNode + 1);
                 MultiVisitor<R> newVisitor = visitor.newCopy();
-                usher.updateNode(internalNodes.rightIndex[currentNode]);
-                traverseTreeMulti(point, newVisitor, internalNodes.rightIndex[currentNode], usher, depthOfNode + 1);
+                nodeView.setCurrentNodeIndex(internalNodes.rightIndex[currentNode]);
+                traverseTreeMulti(point, newVisitor, internalNodes.rightIndex[currentNode], nodeView, depthOfNode + 1);
                 visitor.combine(newVisitor);
-                usher.updateNode(currentNode);
-                visitor.accept(usher, depthOfNode);
+                nodeView.setCurrentNodeIndex(currentNode);
+                visitor.accept(nodeView, depthOfNode);
             } else {
                 short childNode = leftOf(point, currentNode) ? internalNodes.leftIndex[currentNode]
                         : internalNodes.rightIndex[currentNode];
-                traverseTreeMulti(point, visitor, childNode, usher, depthOfNode + 1);
-                usher.updateNode(currentNode);
-                visitor.accept(usher, depthOfNode);
+                traverseTreeMulti(point, visitor, childNode, nodeView, depthOfNode + 1);
+                nodeView.setCurrentNodeIndex(currentNode);
+                visitor.accept(nodeView, depthOfNode);
             }
         }
     }
