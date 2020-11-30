@@ -220,7 +220,99 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     protected boolean leftOf(double[] point, short nodeOffset) {
-        return (point[internalNodes.cutDimension[nodeOffset]] <= internalNodes.cutValue[nodeOffset]);
+        return leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset]);
+    }
+
+    boolean leftOf(double[] point, int dimension, double val) {
+        return (point[dimension] <= val);
+    }
+
+    class CandidateChange {
+        short siblingOffset;
+        int cutDimension;
+        double cutValue;
+        BoundingBox savedBox;
+
+        void setCandidateChange(short sibling, short dim, double val, BoundingBox box) {
+            siblingOffset = sibling;
+            cutDimension = dim;
+            cutValue = val;
+            savedBox = box;
+        }
+
+        void effectChange(int pointIndex, double[] point, int parentIndex) {
+            addResolved = true;
+            int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
+                    : internalNodes.mass[siblingOffset];
+            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
+            // needs to be fixed
+            short mergedNode = leftOf(point, cutDimension, cutValue)
+                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
+                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
+
+            int parent;
+            if (isLeaf(siblingOffset))
+                parent = leafNodes.parentIndex[siblingOffset - maxSize];
+            else
+                parent = internalNodes.parentIndex[siblingOffset];
+
+            if (parent == NULL) {
+                rootIndex = mergedNode;
+            } else {
+                replaceNode(siblingOffset, mergedNode);
+            }
+            leafNodes.parentIndex[leafOffset - maxSize] = mergedNode;
+            if (isLeaf(siblingOffset))
+                leafNodes.parentIndex[siblingOffset - maxSize] = mergedNode;
+            else
+                internalNodes.parentIndex[siblingOffset] = mergedNode;
+
+            internalNodes.boundingBox[mergedNode] = savedBox;
+            short tempNode = mergedNode;
+            while (internalNodes.parentIndex[tempNode] != parentIndex) {
+                tempNode = internalNodes.parentIndex[tempNode];
+                internalNodes.boundingBox[tempNode].addPoint(point);
+            }
+
+        }
+
+        boolean checkContainsAndUpdateCut(double[] point, short nodeOffset) {
+            BoundingBox existingBox = getBoundingBox(nodeOffset);
+            if (existingBox.contains(point)) {
+                return true;
+            }
+            BoundingBox mergedBox = existingBox.getMergedBox(point);
+            Cut cut = randomCut(random, mergedBox);
+            int splitDimension = cut.getDimension();
+            double splitValue = cut.getValue();
+            double minValue = existingBox.getMinValue(splitDimension);
+            double maxValue = existingBox.getMaxValue(splitDimension);
+
+            // if the proposed cut separates the new point from the existing bounding box:
+            // * create a new leaf node for the point
+            // * make it a sibling of the existing bounding box
+            // * make the new leaf node and the existing node children of a new node with
+            // the merged bounding box
+
+            if (minValue > splitValue || maxValue <= splitValue) {
+                cutValue = splitValue;
+                cutDimension = splitDimension;
+                siblingOffset = nodeOffset;
+                savedBox = mergedBox;
+            }
+            return false;
+        }
+    }
+
+    CandidateChange candidateChange = new CandidateChange();
+
+    boolean checkEquals(double[] point, double[] otherPoint) {
+        for (int j = 0; j < point.length; j++) {
+            if (point[j] != otherPoint[j]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean resolvedDelete;
@@ -327,105 +419,43 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return ret;
     }
 
-    public Integer addPoint(Sequential<Integer> seq) {
-        int pointIndex = seq.getValue();
-        double[] pointValue = pointStore.get(pointIndex);
-        if (rootIndex == NULL) {
-            rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
-            return pointIndex;
-        } else {
-            return addPoint(rootIndex, pointValue, pointIndex);
-        }
-    }
+    boolean addResolved;
 
     /**
-     * This function adds a point to the tree recursively. The algorithm for adding
-     * a point is as follows:
+     * This function adds a point to the tree recursively starting from the leaf
+     * node. The algorithm for adding a point is as follows:
      * <ol>
      * <li>At the current node we create a new bounding box by merging the point
      * with the existing box.</li>
      * <li>We pick a dimension and a value of cut.</li>
-     * <li>If the cut falls outside the existing box we create a new node and
-     * replace the current node with the new node. We then add the current node as
-     * the child node to the new node. We create another leaf node containing the
-     * point that we want to insert and add it as the other child of the node that
-     * we have created earlier.</li>
-     * <li>If the cut falls inside the existing box. We follow the cut of the
-     * existing box and move to right or left child of the current node based on the
-     * existing cut.</li>
+     * <li>If the cut falls outside the existing box we record the most recent
+     * location.</li>
+     * <li>We proceed to the parent.</li>
+     * <li>If the point is within the current bounding box then make the change
+     * corresponding to the most recent location and "resolve" the situation. If the
+     * point is outside the bounding box of the tree then this step is taken at the
+     * root node in addpoint(Sequential seg)</li>
      * </ol>
      *
      * @param nodeOffset the current node in the tree we are on
      * @param point      the point that we want to add to the tree
      * @param pointIndex is the location of the point in pointstore
      */
-
     private int addPoint(short nodeOffset, double[] point, int pointIndex) {
-        if (isLeaf(nodeOffset) && pointStore.pointEquals(leafNodes.pointIndex[nodeOffset - maxSize], point)) {
-            // the inserted point is equal to an existing leaf point
-            ++leafNodes.mass[nodeOffset - maxSize];
-            return leafNodes.pointIndex[nodeOffset - maxSize];
-        }
-
-        // either the node is not a leaf, or else it's a leaf node containing a
-        // different point
-
-        double[] dpoint = point;
-
-        BoundingBox existingBox = getBoundingBox(nodeOffset);
-        BoundingBox mergedBox = existingBox.getMergedBox(dpoint);
-
-        if (!existingBox.contains(dpoint)) {
-
-            // Propose a random cut
-
-            Cut cut = randomCut(random, mergedBox);
-            int splitDimension = cut.getDimension();
-            double splitValue = cut.getValue();
-            double minValue = existingBox.getMinValue(splitDimension);
-            double maxValue = existingBox.getMaxValue(splitDimension);
-
-            // if the proposed cut separates the new point from the existing bounding box:
-            // * create a new leaf node for the point
-            // * make it a sibling of the existing bounding box
-            // * make the new leaf node and the existing node children of a new node with
-            // the merged bounding box
-
-            if (minValue > splitValue || maxValue <= splitValue) {
-                int oldmass = (isLeaf(nodeOffset)) ? leafNodes.mass[nodeOffset - maxSize]
-                        : internalNodes.mass[nodeOffset];
-                short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
-                                                                                           // needs to be fixed
-                short mergedNode = (minValue > splitValue)
-                        ? internalNodes.addNode(NULL, leafOffset, nodeOffset, splitDimension, splitValue, oldmass + 1)
-                        : internalNodes.addNode(NULL, nodeOffset, leafOffset, splitDimension, splitValue, oldmass + 1);
-
-                int parent;
-                if (isLeaf(nodeOffset))
-                    parent = leafNodes.parentIndex[nodeOffset - maxSize];
-                else
-                    parent = internalNodes.parentIndex[nodeOffset];
-
-                if (parent == NULL) {
-                    rootIndex = mergedNode;
-                } else {
-                    replaceNode(nodeOffset, mergedNode);
-                }
-                leafNodes.parentIndex[leafOffset - maxSize] = mergedNode;
-                if (isLeaf(nodeOffset))
-                    leafNodes.parentIndex[nodeOffset - maxSize] = mergedNode;
-                else
-                    internalNodes.parentIndex[nodeOffset] = mergedNode;
-
-                internalNodes.boundingBox[mergedNode] = mergedBox;
-
+        if (isLeaf(nodeOffset)) {
+            double[] oldPoint = pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
+            if (checkEquals(oldPoint, point)) {
+                // the inserted point is equal to an existing leaf point
+                ++leafNodes.mass[nodeOffset - maxSize];
+                addResolved = true;
+                return leafNodes.pointIndex[nodeOffset - maxSize];
+            } else {
+                BoundingBox mergedBox = BoundingBox.getMergedBox(point, oldPoint);
+                Cut cut = randomCut(random, mergedBox);
+                candidateChange.setCandidateChange(nodeOffset, (short) cut.getDimension(), cut.getValue(), mergedBox);
                 return pointIndex;
             }
         }
-
-        // Either the new point is contained in this node's bounding box, or else the
-        // proposed cut did not separate
-        // it from the existing bounding box. Try again at the next level.
 
         int ret;
         if (leftOf(point, nodeOffset)) {
@@ -434,31 +464,29 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             ret = addPoint(internalNodes.rightIndex[nodeOffset], point, pointIndex);
         }
 
-        internalNodes.boundingBox[nodeOffset] = mergedBox;
+        if (!addResolved) {
+            addResolved = candidateChange.checkContainsAndUpdateCut(point, nodeOffset);
+            if (addResolved) {
+                candidateChange.effectChange(pointIndex, point, nodeOffset);
+            }
+        }
         ++internalNodes.mass[nodeOffset];
         return ret;
     }
 
-    boolean verify(short nodeOffset, int dimension, double cutValue, boolean allSmall) {
-        if (isLeaf(nodeOffset)) {
-            if (pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] < cutValue) {
-                if (!allSmall) {
-                    System.out.println("ERROR Small "
-                            + pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] + " " + cutValue);
-                }
-                return (allSmall);
-            } else {
-                if (allSmall) {
-                    System.out.println("ERROR large "
-                            + pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize])[dimension] + " " + cutValue);
-                }
-                return (!allSmall);
-            }
+    public Integer addPoint(Sequential<Integer> seq) {
+        int pointIndex = seq.getValue();
+        double[] pointValue = pointStore.get(pointIndex);
+        if (rootIndex == NULL) {
+            rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
+            return pointIndex;
         } else {
-            boolean answer = verify(internalNodes.leftIndex[nodeOffset], dimension, cutValue, allSmall);
-            if (answer == false)
-                return false;
-            return verify(internalNodes.rightIndex[nodeOffset], dimension, cutValue, allSmall);
+            addResolved = false;
+            int ret = addPoint(rootIndex, pointValue, pointIndex);
+            if (!addResolved) {
+                candidateChange.effectChange(pointIndex, pointValue, NULL);
+            }
+            return ret;
         }
     }
 
