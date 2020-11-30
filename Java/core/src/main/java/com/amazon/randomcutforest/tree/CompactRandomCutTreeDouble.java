@@ -220,6 +220,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     protected boolean leftOf(double[] point, short nodeOffset) {
+
         return leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset]);
     }
 
@@ -313,6 +314,28 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             }
         }
         return true;
+    }
+
+    private boolean resolvedDelete;
+
+    /**
+     * The function merges the two child boxes, provided none of the three
+     * (including itself) was non-null before the delete.
+     * 
+     * @param nodeOffset the current node
+     */
+    void updateBoxAfterDelete(short nodeOffset, double[] point) {
+        if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
+            return;
+        BoundingBox leftBox = getBoundingBoxLeaveNull(internalNodes.leftIndex[nodeOffset]);
+        BoundingBox rightBox = getBoundingBoxLeaveNull(internalNodes.rightIndex[nodeOffset]);
+        if ((rightBox != null) && (leftBox != null)) {
+            internalNodes.boundingBox[nodeOffset] = leftBox.getMergedBox(rightBox);
+            if (internalNodes.boundingBox[nodeOffset].contains(point)) {
+                resolvedDelete = true;
+            }
+        }
+
     }
 
     private boolean resolvedDelete;
@@ -442,6 +465,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      * @param pointIndex is the location of the point in pointstore
      */
     private int addPoint(short nodeOffset, double[] point, int pointIndex) {
+
         if (isLeaf(nodeOffset)) {
             double[] oldPoint = pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
             if (checkEquals(oldPoint, point)) {
