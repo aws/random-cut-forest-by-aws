@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest;
 
+import java.util.Random;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -41,13 +43,13 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "1", "16", "256" })
+        @Param({ "10", "20" })
         int dimensions;
 
-        @Param({ "50", "100" })
+        @Param({ "100" })
         int numberOfTrees;
 
-        @Param({ "false", "true" })
+        @Param({ "false" })
         boolean parallelExecutionEnabled;
 
         double[][] data;
@@ -62,7 +64,7 @@ public class RandomCutForestBenchmark {
         @Setup(Level.Invocation)
         public void setUpForest() {
             forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).dimensions(dimensions)
-                    .parallelExecutionEnabled(parallelExecutionEnabled).randomSeed(99).build();
+                    .parallelExecutionEnabled(parallelExecutionEnabled).compactEnabled(true).randomSeed(99).build();
         }
     }
 
@@ -83,7 +85,26 @@ public class RandomCutForestBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest updateAndGetAnomalyScore(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest scoreOnly(BenchmarkState state, Blackhole blackhole) {
+        double[][] data = state.data;
+        forest = state.forest;
+        double score = 0.0;
+        Random rnd = new Random(0);
+
+        for (int i = 0; i < data.length; i++) {
+            score += forest.getAnomalyScore(data[i]);
+            if (rnd.nextDouble() < 0.01) {
+                forest.update(data[i]); // this should execute sparingly
+            }
+        }
+
+        blackhole.consume(score);
+        return forest;
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(DATA_SIZE)
+    public RandomCutForest scoreAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         double score = 0.0;
@@ -99,7 +120,7 @@ public class RandomCutForestBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest updateAndGetAnomalyAttribution(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest attributionAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         DiVector vector = new DiVector(forest.getDimensions());
@@ -115,7 +136,7 @@ public class RandomCutForestBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest updateAndGetBasicDensity(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest basicDensityAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         DensityOutput output = new DensityOutput(forest.getDimensions(), forest.getSampleSize());

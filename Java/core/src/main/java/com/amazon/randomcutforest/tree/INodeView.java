@@ -17,16 +17,16 @@ package com.amazon.randomcutforest.tree;
 
 import java.util.Set;
 
-public interface INodeView<P> {
+public interface INodeView {
     int getMass();
 
     BoundingBox getBoundingBox();
 
-    BoundingBox getSiblingBoundingBox(P point);
+    BoundingBox getSiblingBoundingBox(double[] point);
 
-    boolean leafPointEquals(P point);
+    boolean leafPointEquals(double[] point);
 
-    short getCutDimension();
+    int getCutDimension();
 
     double[] getLeafPoint();
 
