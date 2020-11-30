@@ -338,27 +338,6 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
     }
 
-    private boolean resolvedDelete;
-
-    /**
-     * The function merges the two child boxes, provided none of the three
-     * (including itself) was non-null before the delete.
-     * 
-     * @param nodeOffset the current node
-     */
-    void updateBoxAfterDelete(short nodeOffset, double[] point) {
-        if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
-            return;
-        BoundingBox leftBox = getBoundingBoxLeaveNull(internalNodes.leftIndex[nodeOffset]);
-        BoundingBox rightBox = getBoundingBoxLeaveNull(internalNodes.rightIndex[nodeOffset]);
-        if ((rightBox != null) && (leftBox != null)) {
-            internalNodes.boundingBox[nodeOffset] = leftBox.getMergedBox(rightBox);
-            if (internalNodes.boundingBox[nodeOffset].contains(point)) {
-                resolvedDelete = true;
-            }
-        }
-    }
-
     /**
      * Delete the given point from this tree.
      *
