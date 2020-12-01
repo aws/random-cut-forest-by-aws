@@ -15,6 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -24,14 +32,6 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -385,7 +385,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             addResolved = true;
             int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
                     : internalNodes.mass[siblingOffset];
-            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); 
+            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
             short mergedNode = leftOf(point, cutDimension, cutValue)
                     ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
                     : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
