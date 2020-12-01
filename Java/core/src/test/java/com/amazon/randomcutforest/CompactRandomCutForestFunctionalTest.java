@@ -380,7 +380,6 @@ public class CompactRandomCutForestFunctionalTest {
          */
 
         point = new double[] { -3.0, 6.0, 0.0 };
-        System.out.println(result.getHighLowSum());
         assertTrue(result.getHighLowSum() > 0.95);
         result = forest.getAnomalyAttribution(point);
         if (result.low[0] > 0.5)
