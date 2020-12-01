@@ -47,7 +47,7 @@ public class BoundingBox {
     /**
      * The sum of side lengths defined by this bounding box.
      */
-    private final double rangeSum;
+    private double rangeSum;
 
     /**
      * Creates a degenerate bounding box containing a single point.
@@ -121,6 +121,34 @@ public class BoundingBox {
         }
 
         return new BoundingBox(minValuesMerged, maxValuesMerged);
+    }
+
+    /**
+     * Returns a bounding box of two points
+     * 
+     * @param point      the first point
+     * @param otherPoint the second point
+     * @return a bounding box that covers both points
+     */
+    public static BoundingBox getMergedBox(double[] point, double[] otherPoint) {
+        double[] minValuesMerged = new double[point.length];
+        double[] maxValuesMerged = new double[point.length];
+
+        for (int i = 0; i < point.length; ++i) {
+            minValuesMerged[i] = Math.min(otherPoint[i], point[i]);
+            maxValuesMerged[i] = Math.max(otherPoint[i], point[i]);
+        }
+        return new BoundingBox(minValuesMerged, maxValuesMerged);
+    }
+
+    public BoundingBox addPoint(double[] point) {
+        rangeSum = 0;
+        for (int i = 0; i < point.length; ++i) {
+            minValues[i] = Math.min(minValues[i], point[i]);
+            maxValues[i] = Math.max(maxValues[i], point[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
     }
 
     /**

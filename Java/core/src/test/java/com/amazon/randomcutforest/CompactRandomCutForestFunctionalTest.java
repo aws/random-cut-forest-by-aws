@@ -17,7 +17,9 @@ package com.amazon.randomcutforest;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -378,7 +380,7 @@ public class CompactRandomCutForestFunctionalTest {
          */
 
         point = new double[] { -3.0, 6.0, 0.0 };
-        assertTrue(result.getHighLowSum() > 1.0);
+        assertTrue(result.getHighLowSum() > 0.95);
         result = forest.getAnomalyAttribution(point);
         if (result.low[0] > 0.5)
             ++hardPass;
