@@ -15,6 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -24,14 +32,6 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -230,13 +230,11 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return (point[dimension] <= val);
     }
 
-
-
-
     /**
-     * Checks equality of points -- this has to work in tandem across deletePoint, addPoint and
-     * randomCut
-     * @param point first point in question
+     * Checks equality of points -- this has to work in tandem across deletePoint,
+     * addPoint and randomCut
+     * 
+     * @param point      first point in question
      * @param otherPoint second point
      * @return identical or otherwise
      */
@@ -250,13 +248,12 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return true;
     }
 
-
     /**
      * The function merges the two child boxes, provided none of the three
      * (including itself) was non-null before the delete.
      * 
      * @param nodeOffset the current node
-     * @param point the coordinates of the point being deleted
+     * @param point      the coordinates of the point being deleted
      */
     void updateBoxAfterDelete(short nodeOffset, double[] point) {
         if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
@@ -301,7 +298,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         if (isLeaf(nodeOffset)) {
             short leafOffset = (short) (nodeOffset - maxSize);
             double[] oldPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
-            if (!checkEquals(oldPoint,point)) {
+            if (!checkEquals(oldPoint, point)) {
                 throw new IllegalStateException(
                         Arrays.toString(point) + " " + Arrays.toString(pointStore.get(leafNodes.pointIndex[leafOffset]))
                                 + " " + leafOffset + " node " + leafNodes.pointIndex[leafOffset] + " " + false
@@ -357,18 +354,20 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     /**
-     * The following class corresponds to the state stored during the addPoint operation; the sibling
-     * (after the addition) of the point being added, the cut dimension, the cut value and the bounding box.
-     * Saving the same bounding box as is used to generate the random cut appears to be necessary from the
+     * The following class corresponds to the state stored during the addPoint
+     * operation; the sibling (after the addition) of the point being added, the cut
+     * dimension, the cut value and the bounding box. Saving the same bounding box
+     * as is used to generate the random cut appears to be necessary from the
      * perspective of precision/loss there of.
      *
      * The assumption is that the process would begin at the leaf and bubble up.
      *
-     * The checkContainsAndUpdateCut method provides a mechanism to update the state as we visit parents
-     * recursively, in the current context, nodeOffset.
+     * The checkContainsAndUpdateCut method provides a mechanism to update the state
+     * as we visit parents recursively, in the current context, nodeOffset.
      *
-     * The effectChange methiod effects the change, where it takes the additional information of the parent
-     * where the addition of the point no longer updates any bounding box.
+     * The effectChange methiod effects the change, where it takes the additional
+     * information of the parent where the addition of the point no longer updates
+     * any bounding box.
      */
 
     class CandidateChange {
@@ -432,7 +431,6 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             double minValue = existingBox.getMinValue(splitDimension);
             double maxValue = existingBox.getMaxValue(splitDimension);
 
-
             if (minValue > splitValue || maxValue <= splitValue) {
                 cutValue = splitValue;
                 cutDimension = splitDimension;
@@ -463,9 +461,10 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      * @param point      the point that we want to add to the tree
      * @param pointIndex is the location of the new copy of the point in pointstore
      *
-     * @return the integer index of the inserted point. If a previous copy is found then the index of the
-     * previous copy is returned. That helps in maintaining the number of times a particular vector
-     * has been seen by some tree. If no duplicate is found then pointIndex is returned.
+     * @return the integer index of the inserted point. If a previous copy is found
+     *         then the index of the previous copy is returned. That helps in
+     *         maintaining the number of times a particular vector has been seen by
+     *         some tree. If no duplicate is found then pointIndex is returned.
      */
     private int addPoint(short nodeOffset, double[] point, int pointIndex) {
 
@@ -503,10 +502,12 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
     /**
      * adds a point to the tree
-     * @param seq the index of the point in PointStore and the corresponding timestamp
+     * 
+     * @param seq the index of the point in PointStore and the corresponding
+     *            timestamp
      *
-     * @return the index of the inserted point, which can be the input or the index of a previously
-     * seen copy
+     * @return the index of the inserted point, which can be the input or the index
+     *         of a previously seen copy
      */
 
     public Integer addPoint(Sequential<Integer> seq) {
