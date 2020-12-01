@@ -15,14 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -32,6 +24,14 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -66,7 +66,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     private final CompactNodeViewDouble nodeView;
     private boolean resolvedDelete;
     private boolean addResolved;
-    CandidateChange candidateChange = new CandidateChange();
+    CandidateForSiblingInAddPoint candidateForSiblingInAddPoint = new CandidateForSiblingInAddPoint();
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
@@ -227,7 +227,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     private boolean leftOf(double[] point, int dimension, double val) {
-        return (point[dimension] <= val);
+        return point[dimension] <= val;
     }
 
     /**
@@ -368,20 +368,20 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      * any bounding box.
      */
 
-    class CandidateChange {
+    class CandidateForSiblingInAddPoint {
         short siblingOffset;
         int cutDimension;
         double cutValue;
         BoundingBox savedBox;
 
-        void setCandidateChange(short sibling, short dim, double val, BoundingBox box) {
+        void initialize(short sibling, short dim, double val, BoundingBox box) {
             siblingOffset = sibling;
             cutDimension = dim;
             cutValue = val;
             savedBox = box;
         }
 
-        void effectChange(int pointIndex, double[] point, int parentIndex) {
+        void resolve(int pointIndex, double[] point, int parentIndex) {
             addResolved = true;
             int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
                     : internalNodes.mass[siblingOffset];
@@ -391,11 +391,11 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
                     : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
 
             int parent;
-            if (isLeaf(siblingOffset))
+            if (isLeaf(siblingOffset)) {
                 parent = leafNodes.parentIndex[siblingOffset - maxSize];
-            else
+            } else {
                 parent = internalNodes.parentIndex[siblingOffset];
-
+            }
             if (parent == NULL) {
                 rootIndex = mergedNode;
             } else {
@@ -476,7 +476,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             } else {
                 BoundingBox mergedBox = BoundingBox.getMergedBox(point, oldPoint);
                 Cut cut = randomCut(random, mergedBox);
-                candidateChange.setCandidateChange(nodeOffset, (short) cut.getDimension(), cut.getValue(), mergedBox);
+                candidateForSiblingInAddPoint.initialize(nodeOffset, (short) cut.getDimension(), cut.getValue(), mergedBox);
                 return pointIndex;
             }
         }
@@ -489,9 +489,9 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         }
 
         if (!addResolved) {
-            addResolved = candidateChange.checkContainsAndUpdateCut(point, nodeOffset);
+            addResolved = candidateForSiblingInAddPoint.checkContainsAndUpdateCut(point, nodeOffset);
             if (addResolved) {
-                candidateChange.effectChange(pointIndex, point, nodeOffset);
+                candidateForSiblingInAddPoint.resolve(pointIndex, point, nodeOffset);
             }
         }
         ++internalNodes.mass[nodeOffset];
@@ -518,7 +518,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             addResolved = false;
             int ret = addPoint(rootIndex, pointValue, pointIndex);
             if (!addResolved) {
-                candidateChange.effectChange(pointIndex, pointValue, NULL);
+                candidateForSiblingInAddPoint.resolve(pointIndex, pointValue, NULL);
             }
             return ret;
         }
