@@ -15,14 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -32,6 +24,14 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -64,6 +64,9 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     protected final IPointStore<double[]> pointStore;
     protected short rootIndex;
     private final CompactNodeViewDouble nodeView;
+    private boolean resolvedDelete;
+    private boolean addResolved;
+    CandidateChange candidateChange = new CandidateChange();
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
@@ -220,94 +223,25 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     protected boolean leftOf(double[] point, short nodeOffset) {
-
         return leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset]);
     }
 
-    boolean leftOf(double[] point, int dimension, double val) {
+    private boolean leftOf(double[] point, int dimension, double val) {
         return (point[dimension] <= val);
     }
 
-    class CandidateChange {
-        short siblingOffset;
-        int cutDimension;
-        double cutValue;
-        BoundingBox savedBox;
 
-        void setCandidateChange(short sibling, short dim, double val, BoundingBox box) {
-            siblingOffset = sibling;
-            cutDimension = dim;
-            cutValue = val;
-            savedBox = box;
-        }
 
-        void effectChange(int pointIndex, double[] point, int parentIndex) {
-            addResolved = true;
-            int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
-                    : internalNodes.mass[siblingOffset];
-            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
-            // needs to be fixed
-            short mergedNode = leftOf(point, cutDimension, cutValue)
-                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
-                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
 
-            int parent;
-            if (isLeaf(siblingOffset))
-                parent = leafNodes.parentIndex[siblingOffset - maxSize];
-            else
-                parent = internalNodes.parentIndex[siblingOffset];
+    /**
+     * Checks equality of points -- this has to work in tandem across deletePoint, addPoint and
+     * randomCut
+     * @param point first point in question
+     * @param otherPoint second point
+     * @return identical or otherwise
+     */
 
-            if (parent == NULL) {
-                rootIndex = mergedNode;
-            } else {
-                replaceNode(siblingOffset, mergedNode);
-            }
-            leafNodes.parentIndex[leafOffset - maxSize] = mergedNode;
-            if (isLeaf(siblingOffset))
-                leafNodes.parentIndex[siblingOffset - maxSize] = mergedNode;
-            else
-                internalNodes.parentIndex[siblingOffset] = mergedNode;
-
-            internalNodes.boundingBox[mergedNode] = savedBox;
-            short tempNode = mergedNode;
-            while (internalNodes.parentIndex[tempNode] != parentIndex) {
-                tempNode = internalNodes.parentIndex[tempNode];
-                internalNodes.boundingBox[tempNode].addPoint(point);
-            }
-
-        }
-
-        boolean checkContainsAndUpdateCut(double[] point, short nodeOffset) {
-            BoundingBox existingBox = getBoundingBox(nodeOffset);
-            if (existingBox.contains(point)) {
-                return true;
-            }
-            BoundingBox mergedBox = existingBox.getMergedBox(point);
-            Cut cut = randomCut(random, mergedBox);
-            int splitDimension = cut.getDimension();
-            double splitValue = cut.getValue();
-            double minValue = existingBox.getMinValue(splitDimension);
-            double maxValue = existingBox.getMaxValue(splitDimension);
-
-            // if the proposed cut separates the new point from the existing bounding box:
-            // * create a new leaf node for the point
-            // * make it a sibling of the existing bounding box
-            // * make the new leaf node and the existing node children of a new node with
-            // the merged bounding box
-
-            if (minValue > splitValue || maxValue <= splitValue) {
-                cutValue = splitValue;
-                cutDimension = splitDimension;
-                siblingOffset = nodeOffset;
-                savedBox = mergedBox;
-            }
-            return false;
-        }
-    }
-
-    CandidateChange candidateChange = new CandidateChange();
-
-    boolean checkEquals(double[] point, double[] otherPoint) {
+    private boolean checkEquals(double[] point, double[] otherPoint) {
         for (int j = 0; j < point.length; j++) {
             if (point[j] != otherPoint[j]) {
                 return false;
@@ -316,13 +250,13 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return true;
     }
 
-    private boolean resolvedDelete;
 
     /**
      * The function merges the two child boxes, provided none of the three
      * (including itself) was non-null before the delete.
      * 
      * @param nodeOffset the current node
+     * @param point the coordinates of the point being deleted
      */
     void updateBoxAfterDelete(short nodeOffset, double[] point) {
         if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
@@ -366,7 +300,8 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
         if (isLeaf(nodeOffset)) {
             short leafOffset = (short) (nodeOffset - maxSize);
-            if (!pointStore.pointEquals(leafNodes.pointIndex[leafOffset], point)) {
+            double[] oldPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
+            if (!checkEquals(oldPoint,point)) {
                 throw new IllegalStateException(
                         Arrays.toString(point) + " " + Arrays.toString(pointStore.get(leafNodes.pointIndex[leafOffset]))
                                 + " " + leafOffset + " node " + leafNodes.pointIndex[leafOffset] + " " + false
@@ -421,7 +356,92 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         return ret;
     }
 
-    boolean addResolved;
+    /**
+     * The following class corresponds to the state stored during the addPoint operation; the sibling
+     * (after the addition) of the point being added, the cut dimension, the cut value and the bounding box.
+     * Saving the same bounding box as is used to generate the random cut appears to be necessary from the
+     * perspective of precision/loss there of.
+     *
+     * The assumption is that the process would begin at the leaf and bubble up.
+     *
+     * The checkContainsAndUpdateCut method provides a mechanism to update the state as we visit parents
+     * recursively, in the current context, nodeOffset.
+     *
+     * The effectChange methiod effects the change, where it takes the additional information of the parent
+     * where the addition of the point no longer updates any bounding box.
+     */
+
+    class CandidateChange {
+        short siblingOffset;
+        int cutDimension;
+        double cutValue;
+        BoundingBox savedBox;
+
+        void setCandidateChange(short sibling, short dim, double val, BoundingBox box) {
+            siblingOffset = sibling;
+            cutDimension = dim;
+            cutValue = val;
+            savedBox = box;
+        }
+
+        void effectChange(int pointIndex, double[] point, int parentIndex) {
+            addResolved = true;
+            int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
+                    : internalNodes.mass[siblingOffset];
+            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
+            // needs to be fixed
+            short mergedNode = leftOf(point, cutDimension, cutValue)
+                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
+                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
+
+            int parent;
+            if (isLeaf(siblingOffset))
+                parent = leafNodes.parentIndex[siblingOffset - maxSize];
+            else
+                parent = internalNodes.parentIndex[siblingOffset];
+
+            if (parent == NULL) {
+                rootIndex = mergedNode;
+            } else {
+                replaceNode(siblingOffset, mergedNode);
+            }
+            leafNodes.parentIndex[leafOffset - maxSize] = mergedNode;
+            if (isLeaf(siblingOffset)) {
+                leafNodes.parentIndex[siblingOffset - maxSize] = mergedNode;
+            } else {
+                internalNodes.parentIndex[siblingOffset] = mergedNode;
+            }
+            internalNodes.boundingBox[mergedNode] = savedBox;
+            short tempNode = mergedNode;
+            while (internalNodes.parentIndex[tempNode] != parentIndex) {
+                tempNode = internalNodes.parentIndex[tempNode];
+                internalNodes.boundingBox[tempNode].addPoint(point);
+            }
+
+        }
+
+        boolean checkContainsAndUpdateCut(double[] point, short nodeOffset) {
+            BoundingBox existingBox = getBoundingBox(nodeOffset);
+            if (existingBox.contains(point)) {
+                return true;
+            }
+            BoundingBox mergedBox = existingBox.getMergedBox(point);
+            Cut cut = randomCut(random, mergedBox);
+            int splitDimension = cut.getDimension();
+            double splitValue = cut.getValue();
+            double minValue = existingBox.getMinValue(splitDimension);
+            double maxValue = existingBox.getMaxValue(splitDimension);
+
+
+            if (minValue > splitValue || maxValue <= splitValue) {
+                cutValue = splitValue;
+                cutDimension = splitDimension;
+                siblingOffset = nodeOffset;
+                savedBox = mergedBox;
+            }
+            return false;
+        }
+    }
 
     /**
      * This function adds a point to the tree recursively starting from the leaf
@@ -441,7 +461,11 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      *
      * @param nodeOffset the current node in the tree we are on
      * @param point      the point that we want to add to the tree
-     * @param pointIndex is the location of the point in pointstore
+     * @param pointIndex is the location of the new copy of the point in pointstore
+     *
+     * @return the integer index of the inserted point. If a previous copy is found then the index of the
+     * previous copy is returned. That helps in maintaining the number of times a particular vector
+     * has been seen by some tree. If no duplicate is found then pointIndex is returned.
      */
     private int addPoint(short nodeOffset, double[] point, int pointIndex) {
 
@@ -476,6 +500,14 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         ++internalNodes.mass[nodeOffset];
         return ret;
     }
+
+    /**
+     * adds a point to the tree
+     * @param seq the index of the point in PointStore and the corresponding timestamp
+     *
+     * @return the index of the inserted point, which can be the input or the index of a previously
+     * seen copy
+     */
 
     public Integer addPoint(Sequential<Integer> seq) {
         int pointIndex = seq.getValue();
