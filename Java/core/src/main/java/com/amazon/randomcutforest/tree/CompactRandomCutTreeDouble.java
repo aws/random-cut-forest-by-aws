@@ -15,6 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -24,14 +32,6 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -476,7 +476,8 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             } else {
                 BoundingBox mergedBox = BoundingBox.getMergedBox(point, oldPoint);
                 Cut cut = randomCut(random, mergedBox);
-                candidateForSiblingInAddPoint.initialize(nodeOffset, (short) cut.getDimension(), cut.getValue(), mergedBox);
+                candidateForSiblingInAddPoint.initialize(nodeOffset, (short) cut.getDimension(), cut.getValue(),
+                        mergedBox);
                 return pointIndex;
             }
         }
