@@ -15,14 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -32,6 +24,14 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -255,6 +255,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      * @param nodeOffset the current node
      * @param point      the coordinates of the point being deleted
      */
+
     void updateBoxAfterDelete(short nodeOffset, double[] point) {
         if (resolvedDelete || internalNodes.boundingBox[nodeOffset] == null)
             return;
@@ -274,6 +275,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      *
      * @param sequential An offset of the point in the tree that we wish to delete.
      */
+
     @Override
     public void deletePoint(Sequential<Integer> sequential) {
         checkState(rootIndex != NULL, "root must not be null");
@@ -293,6 +295,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      *                   node being evaluated.
      * @return the index of the deleted node.
      */
+
     private int deletePoint(short nodeOffset, double[] point, int level) {
 
         if (isLeaf(nodeOffset)) {
@@ -304,11 +307,6 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
                                 + " " + leafOffset + " node " + leafNodes.pointIndex[leafOffset] + " " + false
                                 + " Inconsistency in trees in delete step here.");
             }
-
-            //
-            // the above assumes that sequence indexes are unique ... which is true for the
-            // specific sampler used
-            //
 
             if (leafNodes.mass[leafOffset] > 1) {
                 --leafNodes.mass[leafOffset];
@@ -387,8 +385,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
             addResolved = true;
             int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
                     : internalNodes.mass[siblingOffset];
-            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); // parent pointIndex
-            // needs to be fixed
+            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize); 
             short mergedNode = leftOf(point, cutDimension, cutValue)
                     ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
                     : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
@@ -466,6 +463,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
      *         maintaining the number of times a particular vector has been seen by
      *         some tree. If no duplicate is found then pointIndex is returned.
      */
+
     private int addPoint(short nodeOffset, double[] point, int pointIndex) {
 
         if (isLeaf(nodeOffset)) {
