@@ -15,6 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -24,14 +32,6 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
-
-import java.util.Arrays;
-import java.util.Random;
-import java.util.function.Function;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -230,24 +230,6 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
     }
 
     /**
-     * Checks equality of points -- this has to work in tandem across deletePoint,
-     * addPoint and randomCut
-     * 
-     * @param point      first point in question
-     * @param otherPoint second point
-     * @return identical or otherwise
-     */
-
-    private boolean checkEquals(double[] point, double[] otherPoint) {
-        for (int j = 0; j < point.length; j++) {
-            if (point[j] != otherPoint[j]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * The function merges the two child boxes, provided none of the three
      * (including itself) was non-null before the delete.
      * 
@@ -300,7 +282,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
         if (isLeaf(nodeOffset)) {
             short leafOffset = (short) (nodeOffset - maxSize);
             double[] oldPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
-            if (!checkEquals(oldPoint, point)) {
+            if (!Arrays.equals(oldPoint, point)) {
                 throw new IllegalStateException(
                         Arrays.toString(point) + " " + Arrays.toString(pointStore.get(leafNodes.pointIndex[leafOffset]))
                                 + " " + leafOffset + " node " + leafNodes.pointIndex[leafOffset] + " " + false
@@ -472,7 +454,7 @@ public class CompactRandomCutTreeDouble implements ITree<Integer> {
 
         if (isLeaf(nodeOffset)) {
             double[] oldPoint = pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
-            if (checkEquals(oldPoint, point)) {
+            if (Arrays.equals(oldPoint, point)) {
                 // the inserted point is equal to an existing leaf point
                 ++leafNodes.mass[nodeOffset - maxSize];
                 addPointState.resolved = true;
