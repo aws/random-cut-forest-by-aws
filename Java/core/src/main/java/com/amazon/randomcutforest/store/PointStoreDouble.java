@@ -181,6 +181,11 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
     }
 
     @Override
+    public String getString(int index) {
+        return Arrays.toString(get(index));
+    }
+
+    @Override
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");

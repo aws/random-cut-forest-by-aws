@@ -15,9 +15,6 @@
 
 package com.amazon.randomcutforest.store;
 
-import com.amazon.randomcutforest.state.store.NodeStoreState;
-import com.amazon.randomcutforest.tree.BoundingBox;
-
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
  * defined by its location in the tree (parent and child nodes), its random cut,
@@ -40,7 +37,7 @@ public class NodeStore extends SmallIndexManager {
     public final int[] cutDimension;
     public final double[] cutValue;
     public final int[] mass;
-    public final BoundingBox[] boundingBox;
+    // public final BoundingBox[] boundingBox;
 
     /**
      * Create a new NodeStore with the given capacity.
@@ -55,7 +52,6 @@ public class NodeStore extends SmallIndexManager {
         cutDimension = new int[capacity];
         cutValue = new double[capacity];
         mass = new int[capacity];
-        boundingBox = new BoundingBox[capacity];
     }
 
     public NodeStore(short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension, double[] cutValue,
@@ -68,7 +64,6 @@ public class NodeStore extends SmallIndexManager {
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
         this.mass = mass;
-        boundingBox = new BoundingBox[getCapacity()];
     }
 
     /**
@@ -98,70 +93,4 @@ public class NodeStore extends SmallIndexManager {
         releaseIndex(index);
     }
 
-    public StagedNode stageNode() {
-        return this.new StagedNode();
-    }
-
-    class StagedNode {
-
-        private short parentIndex;
-        private short leftIndex;
-        private short rightIndex;
-        private int cutDimension;
-        private double cutValue;
-        private int mass;
-
-        public StagedNode parentIndex(short parentIndex) {
-            this.parentIndex = parentIndex;
-            return this;
-        }
-
-        public StagedNode leftIndex(short leftIndex) {
-            this.leftIndex = leftIndex;
-            return this;
-        }
-
-        public StagedNode rightIndex(short rightIndex) {
-            this.rightIndex = rightIndex;
-            return this;
-        }
-
-        public StagedNode cutDimension(int cutDimension) {
-            this.cutDimension = cutDimension;
-            return this;
-        }
-
-        public StagedNode cutValue(double cutValue) {
-            this.cutValue = cutValue;
-            return this;
-        }
-
-        public StagedNode mass(int mass) {
-            this.mass = mass;
-            return this;
-        }
-
-        public short add() {
-            return addNode(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass);
-        }
-    }
-
-    public void reInitialize(NodeStoreState nodeStoreState) {
-        for (int i = 0; i < getCapacity(); i++) {
-            mass[i] = nodeStoreState.mass[i];
-            leftIndex[i] = nodeStoreState.leftIndex[i];
-            rightIndex[i] = nodeStoreState.rightIndex[i];
-            parentIndex[i] = nodeStoreState.parentIndex[i];
-            cutValue[i] = nodeStoreState.cutValue[i];
-            cutDimension[i] = nodeStoreState.cutDimension[i];
-            occupied.set(i);
-            // sets everything
-        }
-        for (int i = 0; i < nodeStoreState.freeIndexes.length; i++) {
-            freeIndexes[i] = nodeStoreState.freeIndexes[i];
-            occupied.clear(freeIndexes[i]);
-            // resets index for free entries
-        }
-        freeIndexPointer = (short) (nodeStoreState.freeIndexes.length - 1);
-    }
 }

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
 
@@ -23,70 +24,67 @@ import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 
-public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
+public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore) {
         super(maxSize, seed);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
-        cachedBoxes = new BoundingBox[maxSize - 1];
+        cachedBoxes = new BoundingBoxFloat[maxSize - 1];
     }
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, LeafStore leafStore,
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, LeafStore leafStore,
             NodeStore nodeStore, short rootIndex) {
         super(maxSize, seed, leafStore, nodeStore, rootIndex);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
-        cachedBoxes = new BoundingBox[maxSize - 1];
+        cachedBoxes = new BoundingBoxFloat[maxSize - 1];
     }
 
     @Override
-    String printString(double[] point) {
+    String printString(float[] point) {
         return Arrays.toString(point);
     }
 
     @Override
-    IBox<double[]> getLeafBox(int offset) {
-        return new BoundingBox(pointStore.get(leafNodes.pointIndex[offset]));
+    IBox<float[]> getLeafBox(int offset) {
+        return new BoundingBoxFloat(pointStore.get(leafNodes.pointIndex[offset]));
     }
 
     @Override
-    IBox<double[]> getInternalMergedBox(double[] point, double[] oldPoint) {
-        return BoundingBox.getMergedBox(point, oldPoint);
+    protected boolean leftOf(double[] point, short nodeOffset) {
+        return point[internalNodes.cutDimension[nodeOffset]] <= internalNodes.cutValue[nodeOffset];
     }
 
-    protected boolean leftOf(double[] point, short nodeOffset) {
+    @Override
+    IBox<float[]> getInternalMergedBox(float[] point, float[] oldPoint) {
+        return BoundingBoxFloat.getMergedBox(point, oldPoint);
+    }
+
+    protected boolean leftOf(float[] point, short nodeOffset) {
         return leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset]);
     }
 
     @Override
-    boolean checkEqual(double[] oldPoint, double[] point) {
+    boolean checkEqual(float[] oldPoint, float[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
     @Override
-    protected boolean leftOf(double[] point, int dimension, double val) {
+    protected boolean leftOf(float[] point, int dimension, double val) {
         return point[dimension] <= val;
     }
 
     @Override
     protected double[] getLeafPoint(short nodeOffset) {
-        return pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
+        return toDoubleArray(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]));
     }
 
-    /**
-     * creates the bounding box of a node/leaf
-     *
-     * @param offset node in question
-     * @return the bounding box
-     */
-
-    @Override
-    BoundingBox reflateNode(short offset) {
+    BoundingBoxFloat reflateNode(short offset) {
         if (offset - maxSize >= 0) {
-            return new BoundingBox(getLeafPoint(offset));
+            return new BoundingBoxFloat(pointStore.get(leafNodes.pointIndex[offset - maxSize]));
         }
-        BoundingBox newBox = reflateNode(internalNodes.leftIndex[offset])
+        BoundingBoxFloat newBox = reflateNode(internalNodes.leftIndex[offset])
                 .getMergedBox(reflateNode(internalNodes.rightIndex[offset]));
         cachedBoxes[offset] = newBox;
         return newBox;
