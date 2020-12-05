@@ -331,7 +331,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param addPointState the in formation about the cut.
      */
 
-    public void resolve(int pointIndex, P point, short parentIndex, AddPointState addPointState) {
+    void resolve(int pointIndex, P point, short parentIndex, AddPointState addPointState) {
         if (!addPointState.getResolved()) {
             addPointState.setResolved();
             short siblingOffset = addPointState.getSiblingOffset();
@@ -385,7 +385,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param nodeOffset    offset of the current node
      * @param addPointState store to remember the most recent cut
      */
-    public void checkContainsAndUpdateState(int pointIndex, P point, short nodeOffset, AddPointState addPointState) {
+    void checkContainsAndUpdateState(int pointIndex, P point, short nodeOffset, AddPointState addPointState) {
         if (!addPointState.getResolved()) {
             IBox<P> existingBox = getInternalBoundingBox(nodeOffset);
             if (existingBox.contains(point)) {

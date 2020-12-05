@@ -103,6 +103,7 @@ public class BoundingBox implements IBox<double[]> {
         return new BoundingBox(minValuesMerged, maxValuesMerged);
     }
 
+    @Override
     public BoundingBox getMergedBox(final IBox<double[]> otherBoundingBox) {
         return getMergedBox(otherBoundingBox.convertBoxToDouble());
     }

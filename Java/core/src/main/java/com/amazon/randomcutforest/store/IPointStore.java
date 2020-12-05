@@ -27,5 +27,12 @@ public interface IPointStore<P> {
 
     P get(int index);
 
+    /**
+     * Prints the point given the index, irrespective of the encoding of the point.
+     * Used in exceptions and error messages
+     * 
+     * @param index index of the point in the store
+     * @return a string that can be printed
+     */
     String getString(int index);
 }

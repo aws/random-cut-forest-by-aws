@@ -37,7 +37,6 @@ public class NodeStore extends SmallIndexManager {
     public final int[] cutDimension;
     public final double[] cutValue;
     public final int[] mass;
-    // public final BoundingBox[] boundingBox;
 
     /**
      * Create a new NodeStore with the given capacity.
