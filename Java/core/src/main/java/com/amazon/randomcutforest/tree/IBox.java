@@ -13,26 +13,29 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.store;
+package com.amazon.randomcutforest.tree;
 
-/**
- * A read-only point store interface.
- */
-public interface IPointStore<P> {
+public interface IBox<P> {
+
+    double getRangeSum();
+
     int getDimensions();
 
-    int getCapacity();
+    double getRange(int i);
 
-    boolean pointEquals(int index, P point);
+    double getMinValue(int i);
 
-    P get(int index);
+    double getMaxValue(int i);
 
-    /**
-     * Prints the point given the index, irrespective of the encoding of the point.
-     * Used in exceptions and error messages
-     * 
-     * @param index index of the point in the store
-     * @return a string that can be printed
-     */
-    String getString(int index);
+    boolean contains(P point);
+
+    IBox<P> getMergedBox(P point);
+
+    IBox<P> getMergedBox(IBox<P> otherBox);
+
+    BoundingBox convertBoxToDouble();
+
+    BoundingBoxFloat convertBoxToFloat();
+
+    IBox<P> addPoint(P point);
 }

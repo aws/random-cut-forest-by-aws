@@ -82,53 +82,6 @@ public class NodeStoreTest {
     }
 
     @Test
-    public void testStageNode() {
-        int mass1 = 1;
-        short parentIndex1 = 1;
-        short leftIndex1 = 2;
-        short rightIndex1 = 3;
-        int cutDimension1 = 4;
-        float cutValue1 = 5.5f;
-
-        short index1 = store.stageNode().parentIndex(parentIndex1).leftIndex(leftIndex1).rightIndex(rightIndex1)
-                .cutDimension(cutDimension1).cutValue(cutValue1).mass(mass1).add();
-
-        assertEquals(1, store.size());
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
-
-        int mass2 = 11;
-        short parentIndex2 = 11;
-        short leftIndex2 = 12;
-        short rightIndex2 = 13;
-        int cutDimension2 = 14;
-        float cutValue2 = 15.5f;
-
-        short index2 = store.stageNode().parentIndex(parentIndex2).leftIndex(leftIndex2).rightIndex(rightIndex2)
-                .cutDimension(cutDimension2).cutValue(cutValue2).mass(mass2).add();
-
-        assertEquals(2, store.size());
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
-
-        // validate that previous values did not change
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
-    }
-
-    @Test
     public void testAddNodeWhenFull() {
         int mass1 = 1;
         short parentIndex1 = 1;

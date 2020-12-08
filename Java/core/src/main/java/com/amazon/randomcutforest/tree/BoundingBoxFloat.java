@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+
 import java.util.Arrays;
 
 /**
@@ -27,17 +29,17 @@ import java.util.Arrays;
  * always the smallest BoundingBox that contains all leaf points which are
  * descendents of the Node.
  */
-public class BoundingBox implements IBox<double[]> {
+public class BoundingBoxFloat implements IBox<float[]> {
 
     /**
      * An array containing the minimum value corresponding to each dimension.
      */
-    private final double[] minValues;
+    private final float[] minValues;
 
     /**
      * An array containing the maximum value corresponding to each dimensions
      */
-    private final double[] maxValues;
+    private final float[] maxValues;
 
     /**
      * The number of dimensions which this bounding box describes.
@@ -54,7 +56,7 @@ public class BoundingBox implements IBox<double[]> {
      *
      * @param point the point for which we need a bounding box
      */
-    public BoundingBox(double[] point) {
+    public BoundingBoxFloat(float[] point) {
         dimensions = point.length;
         minValues = maxValues = Arrays.copyOf(point, point.length);
         rangeSum = 0.0;
@@ -66,7 +68,7 @@ public class BoundingBox implements IBox<double[]> {
      * @param minValues The minimum values for each coordinate.
      * @param maxValues The maximum values for each coordinate
      */
-    protected BoundingBox(final double[] minValues, final double[] maxValues) {
+    private BoundingBoxFloat(final float[] minValues, final float[] maxValues) {
         this.minValues = minValues;
         this.maxValues = maxValues;
         double sum = 0.0;
@@ -91,21 +93,16 @@ public class BoundingBox implements IBox<double[]> {
      * @return the smallest bounding box that contains this bounding box and
      *         otherBoundingBox;
      */
-    public BoundingBox getMergedBox(final BoundingBox otherBoundingBox) {
-        double[] minValuesMerged = new double[dimensions];
-        double[] maxValuesMerged = new double[dimensions];
+    public BoundingBoxFloat getMergedBox(final BoundingBoxFloat otherBoundingBox) {
+        float[] minValuesMerged = new float[dimensions];
+        float[] maxValuesMerged = new float[dimensions];
 
         for (int i = 0; i < dimensions; ++i) {
             minValuesMerged[i] = Math.min(minValues[i], otherBoundingBox.minValues[i]);
             maxValuesMerged[i] = Math.max(maxValues[i], otherBoundingBox.maxValues[i]);
         }
 
-        return new BoundingBox(minValuesMerged, maxValuesMerged);
-    }
-
-    @Override
-    public BoundingBox getMergedBox(final IBox<double[]> otherBoundingBox) {
-        return getMergedBox(otherBoundingBox.convertBoxToDouble());
+        return new BoundingBoxFloat(minValuesMerged, maxValuesMerged);
     }
 
     /**
@@ -116,26 +113,31 @@ public class BoundingBox implements IBox<double[]> {
      * @return the smallest bounding box that contains this bounding box and the
      *         given point.
      */
-    public BoundingBox getMergedBox(double[] point) {
-        double[] minValuesMerged = new double[dimensions];
-        double[] maxValuesMerged = new double[dimensions];
+    public BoundingBoxFloat getMergedBox(float[] point) {
+        float[] minValuesMerged = new float[dimensions];
+        float[] maxValuesMerged = new float[dimensions];
 
         for (int i = 0; i < dimensions; ++i) {
             minValuesMerged[i] = Math.min(minValues[i], point[i]);
             maxValuesMerged[i] = Math.max(maxValues[i], point[i]);
         }
 
-        return new BoundingBox(minValuesMerged, maxValuesMerged);
+        return new BoundingBoxFloat(minValuesMerged, maxValuesMerged);
     }
 
     @Override
-    public BoundingBox convertBoxToDouble() {
-        return this;
+    public IBox<float[]> getMergedBox(IBox<float[]> otherBox) {
+        return getMergedBox(otherBox.convertBoxToFloat());
     }
 
     @Override
     public BoundingBoxFloat convertBoxToFloat() {
-        return null;
+        return this;
+    }
+
+    @Override
+    public BoundingBox convertBoxToDouble() {
+        return new BoundingBox(toDoubleArray(minValues), toDoubleArray(maxValues));
     }
 
     /**
@@ -145,19 +147,18 @@ public class BoundingBox implements IBox<double[]> {
      * @param otherPoint the second point
      * @return a bounding box that covers both points
      */
-    public static BoundingBox getMergedBox(double[] point, double[] otherPoint) {
-        double[] minValuesMerged = new double[point.length];
-        double[] maxValuesMerged = new double[point.length];
+    public static BoundingBoxFloat getMergedBox(float[] point, float[] otherPoint) {
+        float[] minValuesMerged = new float[point.length];
+        float[] maxValuesMerged = new float[point.length];
 
         for (int i = 0; i < point.length; ++i) {
             minValuesMerged[i] = Math.min(otherPoint[i], point[i]);
             maxValuesMerged[i] = Math.max(otherPoint[i], point[i]);
         }
-        return new BoundingBox(minValuesMerged, maxValuesMerged);
+        return new BoundingBoxFloat(minValuesMerged, maxValuesMerged);
     }
 
-    @Override
-    public IBox<double[]> addPoint(double[] point) {
+    public BoundingBoxFloat addPoint(float[] point) {
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
@@ -202,7 +203,7 @@ public class BoundingBox implements IBox<double[]> {
      * @param point with which we're performing the comparison
      * @return whether the point is contained by the bounding box
      */
-    public boolean contains(double[] point) {
+    public boolean contains(float[] point) {
         for (int i = 0; i < dimensions; i++) {
             if (!contains(i, point[i])) {
                 return false;
@@ -220,7 +221,7 @@ public class BoundingBox implements IBox<double[]> {
      * @return true if the given bounding box is contained inside this bounding box,
      *         false otherwise.
      */
-    public boolean contains(BoundingBox other) {
+    public boolean contains(BoundingBoxFloat other) {
         for (int i = 0; i < dimensions; i++) {
             if (!contains(i, other.minValues[i]) || !contains(i, other.maxValues[i])) {
                 return false;
@@ -237,7 +238,7 @@ public class BoundingBox implements IBox<double[]> {
      * @return whether the value of a point is between the minimum or maximum value
      *         of the bounding box for the given dimension
      */
-    private boolean contains(int dimension, double value) {
+    private boolean contains(int dimension, float value) {
         return maxValues[dimension] >= value && value >= minValues[dimension];
     }
 
@@ -267,11 +268,11 @@ public class BoundingBox implements IBox<double[]> {
      */
     @Override
     public boolean equals(Object other) {
-        if (!(other instanceof BoundingBox)) {
+        if (!(other instanceof BoundingBoxFloat)) {
             return false;
         }
 
-        BoundingBox otherBox = (BoundingBox) other;
+        BoundingBoxFloat otherBox = (BoundingBoxFloat) other;
         return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 

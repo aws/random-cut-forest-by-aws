@@ -18,11 +18,11 @@ package com.amazon.randomcutforest.tree;
 import java.util.Arrays;
 import java.util.Set;
 
-public class CompactNodeViewDouble implements INodeView {
-    final CompactRandomCutTreeDouble tree;
+public class CompactNodeView implements INodeView {
+    final AbstractCompactRandomCutTree tree;
     short currentNodeOffset;
 
-    public CompactNodeViewDouble(CompactRandomCutTreeDouble tree, short initialNodeIndex) {
+    public CompactNodeView(AbstractCompactRandomCutTree tree, short initialNodeIndex) {
         this.tree = tree;
         this.currentNodeOffset = initialNodeIndex;
     }
