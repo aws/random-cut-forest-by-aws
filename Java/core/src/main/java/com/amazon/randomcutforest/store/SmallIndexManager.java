@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class SmallIndexManager {
 
-    private final short capacity;
+    protected final short capacity;
     protected final short[] freeIndexes;
     protected short freeIndexPointer;
     protected final BitSet occupied;
@@ -124,10 +124,10 @@ public class SmallIndexManager {
      * 
      * @param index The index value to release.
      */
-    protected void releaseIndex(short index) {
+    protected void releaseIndex(int index) {
         checkValidIndex(index);
         occupied.clear(index);
-        freeIndexes[++freeIndexPointer] = index;
+        freeIndexes[++freeIndexPointer] = (short) index;
     }
 
     protected void checkValidIndex(int index) {

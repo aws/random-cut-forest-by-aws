@@ -54,8 +54,11 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulato
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
@@ -107,6 +110,18 @@ public class RandomCutForest {
      */
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
 
+    /**
+     * By default, trees will not use float[] to save space. Enabling this will
+     * force enableCompact
+     */
+    public static final boolean DEFAULT_FLOAT_ENABLED = false;
+
+    /**
+     * By default, bounding boxes will be used. Disabling this will force
+     * enableCompact .
+     */
+    public static final boolean DEFAULT_CACHE_ENABLED = true;
+
     public static final boolean DEFAULT_TREE_SAVE = false;
 
     /**
@@ -154,9 +169,21 @@ public class RandomCutForest {
      */
     protected final boolean storeSequenceIndexesEnabled;
     /**
-     * Store the time information
+     * Enable compact representation
      */
     protected final boolean compactEnabled;
+    /**
+     * Enable float representation; the input/output is double[] but the internal
+     * representation would be float[]. There will be loss of precision in near
+     * neighbors because of the truncation. Otherwise, unless all numbers are in a
+     * very small range, the loss of precision is unlikely to have larger impact
+     * than changing the random seed.
+     */
+    protected final boolean floatEnabled;
+    /**
+     * The following set to false saves space, but enforces compact representation.
+     */
+    protected final boolean cacheEnabled;
     /**
      * Enable center of mass at internal nodes
      */
@@ -183,7 +210,7 @@ public class RandomCutForest {
      */
     protected AbstractForestUpdateExecutor<?> updateExecutor;
 
-    protected PointStoreDouble pointStore;
+    protected IPointStore<?> pointStore;
 
     public <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components,
             Random rng) {
@@ -202,7 +229,9 @@ public class RandomCutForest {
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
         rng = builder.getRandom();
-        if (compactEnabled) {
+        if (floatEnabled) {
+            initCompactFloat();
+        } else if (compactEnabled) {
             initCompact();
         } else {
             initNoncompact();
@@ -210,11 +239,28 @@ public class RandomCutForest {
     }
 
     private void initCompact() {
-        pointStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
+        PointStoreDouble tempStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
+        pointStore = tempStore;
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(pointStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), pointStore);
+            ITree<Integer> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore, cacheEnabled);
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
+                    storeSequenceIndexesEnabled);
+            components.add(new SamplerPlusTree<>(sampler, tree));
+        }
+        this.updateCoordinator = updateCoordinator;
+        this.components = components;
+        initExecutors(updateCoordinator, components);
+    }
+
+    private void initCompactFloat() {
+        PointStoreFloat tempStore = new PointStoreFloat(dimensions, sampleSize * numberOfTrees + 1);
+        pointStore = tempStore;
+        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(pointStore);
+        ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
+        for (int i = 0; i < numberOfTrees; i++) {
+            ITree<Integer> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore, cacheEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -283,6 +329,10 @@ public class RandomCutForest {
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         compactEnabled = builder.compactEnabled;
+        floatEnabled = builder.floatEnabled;
+        checkArgument(!floatEnabled || compactEnabled, "float representation requires compact trees");
+        cacheEnabled = builder.cacheEnabled;
+        checkArgument(cacheEnabled || compactEnabled, "eliminating bounding boxes requires compact trees");
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -999,6 +1049,8 @@ public class RandomCutForest {
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
+        private boolean floatEnabled = DEFAULT_FLOAT_ENABLED;
+        private boolean cacheEnabled = DEFAULT_CACHE_ENABLED;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -1051,7 +1103,25 @@ public class RandomCutForest {
         }
 
         public T compactEnabled(boolean compactEnabled) {
-            this.compactEnabled = compactEnabled;
+            if (!this.compactEnabled) {
+                this.compactEnabled = compactEnabled;
+            }
+            return (T) this;
+        }
+
+        public T floatEnabled(boolean floatEnabled) {
+            this.floatEnabled = floatEnabled;
+            if (floatEnabled) {
+                this.compactEnabled = true;
+            }
+            return (T) this;
+        }
+
+        public T cacheEnabled(boolean cacheEnabled) {
+            this.cacheEnabled = cacheEnabled;
+            if (cacheEnabled) {
+                this.compactEnabled = true;
+            }
             return (T) this;
         }
 

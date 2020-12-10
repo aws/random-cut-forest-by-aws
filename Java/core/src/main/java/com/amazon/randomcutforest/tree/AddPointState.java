@@ -16,18 +16,29 @@
 package com.amazon.randomcutforest.tree;
 
 public class AddPointState<P> {
-    private short siblingOffset;
+    private int siblingOffset;
     private int cutDimension;
     private double cutValue;
-    private IBox<P> savedBox;
+    private IBoundingBox<P> savedBox;
+    private IBoundingBox<P> currentBox;
     private boolean resolved;
+    private final int pointIndex;
 
-    public void initialize(short sibling, short dim, double val, IBox<P> box) {
+    public void initialize(int sibling, int dim, double val, IBoundingBox<P> box) {
         siblingOffset = sibling;
         cutDimension = dim;
         cutValue = val;
         savedBox = box;
+        currentBox = box;
         resolved = false;
+    }
+
+    public AddPointState(int pointIndex) {
+        this.pointIndex = pointIndex;
+    }
+
+    public int getPointIndex() {
+        return pointIndex;
     }
 
     public void setResolved() {
@@ -38,7 +49,7 @@ public class AddPointState<P> {
         return resolved;
     }
 
-    public IBox<P> getSavedBox() {
+    public IBoundingBox<P> getSavedBox() {
         return savedBox;
     }
 
@@ -50,7 +61,15 @@ public class AddPointState<P> {
         return cutValue;
     }
 
-    public short getSiblingOffset() {
+    public int getSiblingOffset() {
         return siblingOffset;
+    }
+
+    public IBoundingBox<P> getCurrentBox() {
+        return currentBox;
+    }
+
+    public void setCurrentBox(IBoundingBox<P> currentBox) {
+        this.currentBox = currentBox;
     }
 }

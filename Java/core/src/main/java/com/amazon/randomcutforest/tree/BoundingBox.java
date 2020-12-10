@@ -27,7 +27,7 @@ import java.util.Arrays;
  * always the smallest BoundingBox that contains all leaf points which are
  * descendents of the Node.
  */
-public class BoundingBox implements IBox<double[]> {
+public class BoundingBox implements IBoundingBox<double[]> {
 
     /**
      * An array containing the minimum value corresponding to each dimension.
@@ -104,7 +104,7 @@ public class BoundingBox implements IBox<double[]> {
     }
 
     @Override
-    public BoundingBox getMergedBox(final IBox<double[]> otherBoundingBox) {
+    public BoundingBox getMergedBox(final IBoundingBox<double[]> otherBoundingBox) {
         return getMergedBox(otherBoundingBox.convertBoxToDouble());
     }
 
@@ -157,7 +157,7 @@ public class BoundingBox implements IBox<double[]> {
     }
 
     @Override
-    public IBox<double[]> addPoint(double[] point) {
+    public IBoundingBox<double[]> addPoint(double[] point) {
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);

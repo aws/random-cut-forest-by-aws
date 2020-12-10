@@ -40,7 +40,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
-public class CompactRandomCutForestFunctionalTest {
+public class CompactRandomCutForestFloatFunctionalTest {
 
     private static int numberOfTrees;
     private static int sampleSize;
@@ -68,11 +68,11 @@ public class CompactRandomCutForestFunctionalTest {
 
         parallelExecutionForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .build();
+                .floatEnabled(true).cacheEnabled(false).build();
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .parallelExecutionEnabled(false).build();
+                .floatEnabled(true).cacheEnabled(false).parallelExecutionEnabled(false).build();
 
         dataSize = 10_000;
 

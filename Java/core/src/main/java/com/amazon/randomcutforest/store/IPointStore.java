@@ -27,6 +27,19 @@ public interface IPointStore<P> {
 
     P get(int index);
 
+    void incrementRefCount(int index);
+
+    void decrementRefCount(int index);
+
+    /**
+     * Adds to the store; there may be a loss of precision if enableFloat is on in
+     * the Forest level. But external interface of the forest is double[]
+     * 
+     * @param point point to be added
+     * @return index of the stored point
+     */
+    int add(double[] point);
+
     /**
      * Prints the point given the index, irrespective of the encoding of the point.
      * Used in exceptions and error messages
@@ -34,5 +47,5 @@ public interface IPointStore<P> {
      * @param index index of the point in the store
      * @return a string that can be printed
      */
-    String getString(int index);
+    String toString(int index);
 }

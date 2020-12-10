@@ -26,7 +26,7 @@ public class LeafStoreState {
 
     public int[] pointIndex;
     public short[] parentIndex;
-    public int[] mass;
+    public short[] mass;
     public short[] freeIndexes;
 
     public LeafStoreState() {

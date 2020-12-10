@@ -28,7 +28,7 @@ public class NodeStoreState {
     public short[] rightIndex;
     public int[] cutDimension;
     public double[] cutValue;
-    public int[] mass;
+    public short[] mass;
     public short[] freeIndexes;
 
     public NodeStoreState() {

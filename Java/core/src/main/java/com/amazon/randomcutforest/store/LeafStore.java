@@ -18,8 +18,6 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
-import com.amazon.randomcutforest.state.store.LeafStoreState;
-
 /**
  * A fixed-size buffer for storing leaf nodes. A leaf node is defined by its
  * parent node and its leaf node value. * The LeafStore class uses arrays to
@@ -29,21 +27,24 @@ import com.amazon.randomcutforest.state.store.LeafStoreState;
  * If we think of an array of Node objects as being row-oriented (where each row
  * is a Node), then this class is analogous to a column-oriented database of
  * leaf Nodes.
+ *
+ * The reference to the nodes will be offset by an amount that this ihe
+ * capacity.
  */
-public class LeafStore extends SmallIndexManager {
+public class LeafStore extends SmallIndexManager implements ILeafStore {
 
     public final int[] pointIndex;
     public final short[] parentIndex;
-    public final int[] mass;
+    public final short[] mass;
 
     public LeafStore(short capacity) {
         super(capacity);
         pointIndex = new int[capacity];
         parentIndex = new short[capacity];
-        mass = new int[capacity];
+        mass = new short[capacity];
     }
 
-    public LeafStore(int[] pointIndex, short[] parentIndex, int[] mass, short[] freeIndexes, short freeIndexPointer) {
+    public LeafStore(int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes, short freeIndexPointer) {
         super(freeIndexes, freeIndexPointer);
 
         checkNotNull(pointIndex, "pointIndex must not be null");
@@ -59,32 +60,51 @@ public class LeafStore extends SmallIndexManager {
         this.mass = mass;
     }
 
-    public short add(short parentIndex, int pointIndex, int mass) {
+    public int add(int parentIndex, int pointIndex, int mass) {
         short index = takeIndex();
-        this.parentIndex[index] = parentIndex;
-        this.mass[index] = mass;
+        this.parentIndex[index] = (short) parentIndex;
+        this.mass[index] = (short) mass;
         this.pointIndex[index] = pointIndex;
-        return index;
+        return index + super.capacity;
     }
 
-    public void delete(short index) {
-        releaseIndex(index);
+    @Override
+    public boolean isLeaf(int index) {
+        return index >= super.capacity;
     }
 
-    public void reInitialize(LeafStoreState leafStoreState) {
-        for (int i = 0; i < getCapacity(); i++) {
-            pointIndex[i] = leafStoreState.pointIndex[i];
-            parentIndex[i] = leafStoreState.parentIndex[i];
-            mass[i] = leafStoreState.mass[i];
-            occupied.set(i);
-            // sets everything
-        }
-        for (int i = 0; i < leafStoreState.freeIndexes.length; i++) {
-            freeIndexes[i] = leafStoreState.freeIndexes[i];
-            occupied.clear(freeIndexes[i]);
-            // resets index for free entries
-        }
-        freeIndexPointer = (short) (leafStoreState.freeIndexes.length - 1);
-
+    @Override
+    public void setParent(int index, int parent) {
+        parentIndex[index - super.capacity] = (short) parent;
     }
+
+    @Override
+    public int getParent(int index) {
+        return parentIndex[index - super.capacity];
+    }
+
+    public void delete(int index) {
+        releaseIndex(index - super.capacity);
+    }
+
+    @Override
+    public int getPointIndex(int index) {
+        return pointIndex[index - super.capacity];
+    }
+
+    @Override
+    public void incrementMass(int index) {
+        ++mass[index - super.capacity];
+    }
+
+    @Override
+    public void decrementMass(int index) {
+        --mass[index - super.capacity];
+    }
+
+    @Override
+    public int getMass(int index) {
+        return mass[index - super.capacity];
+    }
+
 }

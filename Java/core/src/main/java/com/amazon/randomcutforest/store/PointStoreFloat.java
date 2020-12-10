@@ -31,7 +31,7 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStore extends IndexManager implements IPointStore<float[]> {
+public class PointStoreFloat extends IndexManager implements IPointStore<float[]> {
 
     private final float[] store;
     private final short[] refCount;
@@ -44,7 +44,7 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      * @param dimensions The number of dimensions in stored points.
      * @param capacity   The maximum number of points that can be stored.
      */
-    public PointStore(int dimensions, int capacity) {
+    public PointStoreFloat(int dimensions, int capacity) {
         super(capacity);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
 
@@ -80,11 +80,13 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
      *                                  the point store's dimensions.
      * @throws IllegalStateException    if the point store is full.
      */
-    public int add(float[] point) {
+    public int add(double[] point) {
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
         int nextIndex = takeIndex();
-        System.arraycopy(point, 0, store, nextIndex * dimensions, dimensions);
+        for (int i = 0; i < dimensions; i++) {
+            store[nextIndex * dimensions + i] = (float) point[i];
+        }
 
         refCount[nextIndex] = 1;
         return nextIndex;
@@ -168,13 +170,13 @@ public class PointStore extends IndexManager implements IPointStore<float[]> {
     }
 
     @Override
-    public String getString(int index) {
-        return Arrays.toString(get(index));
-    }
-
-    @Override
     protected void checkValidIndex(int index) {
         super.checkValidIndex(index);
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
+    }
+
+    @Override
+    public String toString(int index) {
+        return Arrays.toString(get(index));
     }
 }

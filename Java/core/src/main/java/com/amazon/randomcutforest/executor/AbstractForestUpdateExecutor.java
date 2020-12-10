@@ -88,4 +88,5 @@ public abstract class AbstractForestUpdateExecutor<P> {
         }
         return pointCopy;
     }
+
 }

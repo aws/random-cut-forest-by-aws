@@ -181,7 +181,7 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
     }
 
     @Override
-    public String getString(int index) {
+    public String toString(int index) {
         return Arrays.toString(get(index));
     }
 

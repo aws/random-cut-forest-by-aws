@@ -29,7 +29,7 @@ import java.util.Arrays;
  * always the smallest BoundingBox that contains all leaf points which are
  * descendents of the Node.
  */
-public class BoundingBoxFloat implements IBox<float[]> {
+public class BoundingBoxFloat implements IBoundingBox<float[]> {
 
     /**
      * An array containing the minimum value corresponding to each dimension.
@@ -126,7 +126,7 @@ public class BoundingBoxFloat implements IBox<float[]> {
     }
 
     @Override
-    public IBox<float[]> getMergedBox(IBox<float[]> otherBox) {
+    public IBoundingBox<float[]> getMergedBox(IBoundingBox<float[]> otherBox) {
         return getMergedBox(otherBox.convertBoxToFloat());
     }
 
