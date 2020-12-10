@@ -26,7 +26,6 @@ import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.state.store.LeafStoreState;
-import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.LeafStore;
@@ -56,13 +55,13 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      */
     public static final short NULL = -1;
 
-    private Random random;
+    private final Random random;
     protected int maxSize;
     protected NodeStore internalNodes;
     protected LeafStore leafNodes;
     protected IPointStore<P> pointStore;
     protected int rootIndex;
-    private CompactNodeView nodeView;
+    private final CompactNodeView nodeView;
     protected IBoundingBox<P>[] cachedBoxes;
 
     public AbstractCompactRandomCutTree(int maxSize, long seed) {
@@ -84,7 +83,6 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         this.maxSize = maxSize;
         this.rootIndex = rootIndex;
         random = new Random(seed);
-        NodeStoreMapper newMapper = new NodeStoreMapper();
         internalNodes = nodeStore;
         leafNodes = leafStore;
         nodeView = new CompactNodeView(this, rootIndex);
@@ -98,7 +96,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    static Cut randomCut(Random random, IBoundingBox box) {
+    static Cut randomCut(Random random, IBoundingBox<?> box) {
         double rangeSum = box.getRangeSum();
         checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
 
@@ -152,7 +150,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      */
 
     int getSibling(int nodeOffset) {
-        checkArgument(nodeOffset >= 0, " cannotbe negative");
+        checkArgument(nodeOffset >= 0, " cannot be negative");
         int parent = getParent(nodeOffset);
 
         if (parent != NULL) {
@@ -226,7 +224,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
     }
 
     /**
-     * returns the boundingbox
+     * returns the bounding box
      */
     BoundingBox getBoundingBox(int nodeOffset) {
         return getInternalBoundingBox(nodeOffset).convertBoxToDouble();
@@ -325,20 +323,20 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param point         the actual values
      * @param parentIndex   index of the ancestor node (can be NULL for root) above
      *                      which no changes need to be made
-     * @param addPointState the in formation about the cut.
+     * @param addPointState the information about the cut.
      */
 
-    void resolve(P point, int parentIndex, AddPointState addPointState) {
+    void resolve(P point, int parentIndex, AddPointState<P> addPointState) {
         if (!addPointState.getResolved()) {
             addPointState.setResolved();
             int siblingOffset = addPointState.getSiblingOffset();
             int cutDimension = addPointState.getCutDimension();
             double cutValue = addPointState.getCutValue();
-            int oldmass = getMass(siblingOffset);
+            int oldMass = getMass(siblingOffset);
             int leafOffset = leafNodes.add(NULL, addPointState.getPointIndex(), 1);
             int mergedNode = leftOf(point, cutDimension, cutValue)
-                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, (oldmass + 1))
-                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, (oldmass + 1));
+                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, (oldMass + 1))
+                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, (oldMass + 1));
 
             int parent = getParent(siblingOffset);
 
@@ -369,7 +367,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      *
      * @param nodeOffset the current node in the tree we are on
      * @param point      the point that we want to add to the tree
-     * @param pointIndex is the location of the new copy of the point in pointstore
+     * @param pointIndex is the location of the new copy of the point in point store
      *
      * @return the integer index of the inserted point. If a previous copy is found
      *         then the index of the previous copy is returned. That helps in
@@ -414,7 +412,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
             nextNode = internalNodes.getRightIndex(nodeOffset);
         }
         // we recurse in a preorder traversal ove the tree
-        AddPointState addPointState = addPoint(nextNode, point, pointIndex);
+        AddPointState<P> addPointState = addPoint(nextNode, point, pointIndex);
 
         if (!addPointState.getResolved()) {
             IBoundingBox<P> existingBox;
@@ -517,11 +515,11 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
     }
 
     /**
-     * This is a traversal method which follows the standard traveral path (defined
+     * This is a traversal method which follows the standard traversal path (defined
      * in {@link #traverse(double[], Function)}) but at Node in checks to see
      * whether the visitor should split. If a split is triggered, then independent
      * copies of the visitor are sent down each branch of the tree and then merged
-     * before propogating the result.
+     * before propagating the result.
      *
      * @param point          A point which determines the traversal path from the
      *                       root to a leaf node.
@@ -555,15 +553,13 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
                 traverseTreeMulti(point, newVisitor, internalNodes.getRightIndex(currentNode), nodeView,
                         depthOfNode + 1);
                 visitor.combine(newVisitor);
-                nodeView.setCurrentNodeIndex(currentNode);
-                visitor.accept(nodeView, depthOfNode);
             } else {
                 int childNode = leftOf(point, currentNode) ? internalNodes.getLeftIndex(currentNode)
                         : internalNodes.getRightIndex(currentNode);
                 traverseTreeMulti(point, visitor, childNode, nodeView, depthOfNode + 1);
-                nodeView.setCurrentNodeIndex(currentNode);
-                visitor.accept(nodeView, depthOfNode);
             }
+            nodeView.setCurrentNodeIndex(currentNode);
+            visitor.accept(nodeView, depthOfNode);
         }
     }
 

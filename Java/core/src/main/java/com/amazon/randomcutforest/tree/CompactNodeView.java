@@ -19,10 +19,10 @@ import java.util.Arrays;
 import java.util.Set;
 
 public class CompactNodeView implements INodeView {
-    final AbstractCompactRandomCutTree tree;
+    final AbstractCompactRandomCutTree<?> tree;
     int currentNodeOffset;
 
-    public CompactNodeView(AbstractCompactRandomCutTree tree, int initialNodeIndex) {
+    public CompactNodeView(AbstractCompactRandomCutTree<?> tree, int initialNodeIndex) {
         this.tree = tree;
         this.currentNodeOffset = initialNodeIndex;
     }

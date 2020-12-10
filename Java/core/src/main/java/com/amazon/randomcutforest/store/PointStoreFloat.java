@@ -36,7 +36,6 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
     private final float[] store;
     private final short[] refCount;
     private final int dimensions;
-    private final int capacity;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -49,7 +48,6 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
 
         this.dimensions = dimensions;
-        this.capacity = capacity;
         store = new float[capacity * dimensions];
         refCount = new short[capacity];
     }

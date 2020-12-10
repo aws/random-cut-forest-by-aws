@@ -136,6 +136,16 @@ public class BoundingBoxFloat implements IBoundingBox<float[]> {
     }
 
     @Override
+    public float getMinValueFloat(int i) {
+        return minValues[i];
+    }
+
+    @Override
+    public float getMaxValueFloat(int i) {
+        return maxValues[i];
+    }
+
+    @Override
     public BoundingBox convertBoxToDouble() {
         return new BoundingBox(toDoubleArray(minValues), toDoubleArray(maxValues));
     }
@@ -163,6 +173,17 @@ public class BoundingBoxFloat implements IBoundingBox<float[]> {
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
             maxValues[i] = Math.max(maxValues[i], point[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
+    public IBoundingBox<float[]> addBox(IBoundingBox<float[]> otherBox) {
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(minValues[i], otherBox.getMinValueFloat(i));
+            maxValues[i] = Math.max(maxValues[i], otherBox.getMaxValueFloat(i));
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

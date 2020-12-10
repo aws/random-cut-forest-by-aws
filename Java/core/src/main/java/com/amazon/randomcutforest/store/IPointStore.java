@@ -48,4 +48,5 @@ public interface IPointStore<P> {
      * @return a string that can be printed
      */
     String toString(int index);
+
 }

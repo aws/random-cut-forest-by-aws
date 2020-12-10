@@ -159,7 +159,7 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
         assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) -1));
     }
