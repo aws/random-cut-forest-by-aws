@@ -72,7 +72,7 @@ public class CompactRandomCutForestFunctionalTest {
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .parallelExecutionEnabled(false).build();
+                .boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).build();
 
         dataSize = 10_000;
 

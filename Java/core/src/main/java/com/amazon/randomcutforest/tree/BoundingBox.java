@@ -56,7 +56,9 @@ public class BoundingBox implements IBoundingBox<double[]> {
      */
     public BoundingBox(double[] point) {
         dimensions = point.length;
-        minValues = maxValues = Arrays.copyOf(point, point.length);
+        minValues = maxValues = point;
+        // a copy in not needed because mergedBox would create a copy
+        // addPoint, addBox would also create copies
         rangeSum = 0.0;
     }
 
@@ -79,8 +81,10 @@ public class BoundingBox implements IBoundingBox<double[]> {
         dimensions = minValues.length;
     }
 
-    public int getDimensions() {
-        return dimensions;
+    public BoundingBox copy() {
+        double[] minValuesNew = Arrays.copyOf(minValues, dimensions);
+        double[] maxValuesNew = Arrays.copyOf(maxValues, dimensions);
+        return new BoundingBox(minValuesNew, maxValuesNew);
     }
 
     /**
@@ -91,6 +95,19 @@ public class BoundingBox implements IBoundingBox<double[]> {
      * @return the smallest bounding box that contains this bounding box and
      *         otherBoundingBox;
      */
+    public BoundingBox getMergedBox(final IBoundingBox<double[]> otherBoundingBox) {
+
+        double[] minValuesMerged = new double[dimensions];
+        double[] maxValuesMerged = new double[dimensions];
+
+        for (int i = 0; i < dimensions; ++i) {
+            minValuesMerged[i] = Math.min(minValues[i], otherBoundingBox.getMinValue(i));
+            maxValuesMerged[i] = Math.max(maxValues[i], otherBoundingBox.getMaxValue(i));
+        }
+
+        return new BoundingBox(minValuesMerged, maxValuesMerged);
+    }
+
     public BoundingBox getMergedBox(final BoundingBox otherBoundingBox) {
         double[] minValuesMerged = new double[dimensions];
         double[] maxValuesMerged = new double[dimensions];
@@ -101,11 +118,6 @@ public class BoundingBox implements IBoundingBox<double[]> {
         }
 
         return new BoundingBox(minValuesMerged, maxValuesMerged);
-    }
-
-    @Override
-    public BoundingBox getMergedBox(final IBoundingBox<double[]> otherBoundingBox) {
-        return getMergedBox(otherBoundingBox.convertBoxToDouble());
     }
 
     /**
@@ -129,13 +141,8 @@ public class BoundingBox implements IBoundingBox<double[]> {
     }
 
     @Override
-    public BoundingBox convertBoxToDouble() {
-        return this;
-    }
-
-    @Override
-    public BoundingBoxFloat convertBoxToFloat() {
-        return null;
+    public BoundingBox copyBoxToDouble() {
+        return copy();
     }
 
     @Override
@@ -146,6 +153,11 @@ public class BoundingBox implements IBoundingBox<double[]> {
     @Override
     public float getMaxValueFloat(int i) {
         return (float) maxValues[i];
+    }
+
+    @Override
+    public int getDimensions() {
+        return dimensions;
     }
 
     /**
@@ -168,6 +180,9 @@ public class BoundingBox implements IBoundingBox<double[]> {
 
     @Override
     public IBoundingBox<double[]> addPoint(double[] point) {
+        if (maxValues == minValues) {
+            return getMergedBox(point);
+        }
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
@@ -179,6 +194,9 @@ public class BoundingBox implements IBoundingBox<double[]> {
 
     @Override
     public IBoundingBox<double[]> addBox(IBoundingBox<double[]> otherBox) {
+        if (maxValues == minValues) {
+            return getMergedBox(otherBox);
+        }
         rangeSum = 0;
         for (int i = 0; i < minValues.length; ++i) {
             minValues[i] = Math.min(minValues[i], otherBox.getMinValue(i));

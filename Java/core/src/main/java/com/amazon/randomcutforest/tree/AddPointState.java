@@ -28,8 +28,8 @@ public class AddPointState<P> {
         siblingOffset = sibling;
         cutDimension = dim;
         cutValue = val;
-        savedBox = box;
-        currentBox = box;
+        this.savedBox = box;
+        this.currentBox = box.copy();
         resolved = false;
     }
 

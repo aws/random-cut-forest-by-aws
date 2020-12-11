@@ -41,9 +41,9 @@ public class CompactNodeView implements INodeView {
 
     public BoundingBox getSiblingBoundingBox(double[] point) {
         if (tree.leftOf(point, currentNodeOffset)) {
-            return tree.getBoundingBox(tree.internalNodes.rightIndex[currentNodeOffset]);
+            return tree.getBoundingBox(tree.internalNodes.getRightIndex(currentNodeOffset));
         } else {
-            return tree.getBoundingBox(tree.internalNodes.leftIndex[currentNodeOffset]);
+            return tree.getBoundingBox(tree.internalNodes.getLeftIndex(currentNodeOffset));
         }
     }
 

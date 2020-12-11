@@ -29,6 +29,9 @@ public interface IBoundingBox<P> {
 
     boolean contains(P point);
 
+    // duplicates
+    IBoundingBox<P> copy();
+
     // below keeps the older box unchanged
     IBoundingBox<P> getMergedBox(P point);
 
@@ -41,9 +44,7 @@ public interface IBoundingBox<P> {
     // merges in place
     IBoundingBox<P> addBox(IBoundingBox<P> otherBox);
 
-    BoundingBox convertBoxToDouble();
-
-    BoundingBoxFloat convertBoxToFloat();
+    BoundingBox copyBoxToDouble();
 
     float getMinValueFloat(int i);
 
