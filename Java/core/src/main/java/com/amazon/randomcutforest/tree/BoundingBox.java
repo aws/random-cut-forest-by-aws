@@ -81,7 +81,7 @@ public class BoundingBox implements IBoundingBox<double[]> {
         dimensions = minValues.length;
     }
 
-    public BoundingBox copy() {
+    public BoundingBox copyBox() {
         double[] minValuesNew = Arrays.copyOf(minValues, dimensions);
         double[] maxValuesNew = Arrays.copyOf(maxValues, dimensions);
         return new BoundingBox(minValuesNew, maxValuesNew);
@@ -142,17 +142,7 @@ public class BoundingBox implements IBoundingBox<double[]> {
 
     @Override
     public BoundingBox copyBoxToDouble() {
-        return copy();
-    }
-
-    @Override
-    public float getMinValueFloat(int i) {
-        return (float) minValues[i];
-    }
-
-    @Override
-    public float getMaxValueFloat(int i) {
-        return (float) maxValues[i];
+        return copyBox();
     }
 
     @Override

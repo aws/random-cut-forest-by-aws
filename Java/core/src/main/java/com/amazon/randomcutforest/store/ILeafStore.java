@@ -16,7 +16,7 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * A read-only point store interface.
+ * An interface for accessing leafstore for different trees.
  */
 public interface ILeafStore {
 

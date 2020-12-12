@@ -29,7 +29,7 @@ public class AddPointState<P> {
         cutDimension = dim;
         cutValue = val;
         this.savedBox = box;
-        this.currentBox = box.copy();
+        this.currentBox = box.copyBox();
         resolved = false;
     }
 

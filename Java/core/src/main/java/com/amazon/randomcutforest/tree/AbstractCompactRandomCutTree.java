@@ -15,21 +15,21 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Random;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.state.store.LeafStoreState;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
-import com.amazon.randomcutforest.store.IPointStoreReadOnly;
+import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+
+import java.util.Random;
+import java.util.function.Function;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -59,7 +59,7 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
     protected int maxSize;
     protected NodeStore internalNodes;
     protected LeafStore leafNodes;
-    protected IPointStoreReadOnly<Point> pointStore;
+    protected IPointStoreView<Point> pointStore;
     protected int rootIndex;
     private final CompactNodeView nodeView;
     protected IBoundingBox<Point>[] cachedBoxes;
@@ -215,27 +215,25 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
         }
     }
 
-    abstract IBoundingBox<Point> reflateNode(int nodeRefernce);
+    abstract IBoundingBox<Point> reflateNode(int nodeReference);
 
-    IBoundingBox<Point> constructBoxInPlace(int nodeRefernce) {
-        if (leafNodes.isLeaf(nodeRefernce)) {
-            return getLeafBoxFromPoint(leafNodes.getPointIndex(nodeRefernce));
+    IBoundingBox<Point> constructBoxInPlace(int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return getLeafBoxFromPoint(leafNodes.getPointIndex(nodeReference));
         } else {
-            IBoundingBox<Point> currentBox = constructBoxInPlace(internalNodes.getLeftIndex(nodeRefernce));
-            // return
-            // currentBox.getMergedBox(constructBoxInPlace(internalNodes.getRightIndex(nodeRefernce)));
-            return constructBoxInPlace(currentBox, internalNodes.getRightIndex(nodeRefernce));
+            IBoundingBox<Point> currentBox = constructBoxInPlace(internalNodes.getLeftIndex(nodeReference));
+            return constructBoxInPlace(currentBox, internalNodes.getRightIndex(nodeReference));
 
         }
     }
 
-    IBoundingBox<Point> constructBoxInPlace(IBoundingBox<Point> currentBox, int nodeRefernce) {
-        if (leafNodes.isLeaf(nodeRefernce)) {
-            return currentBox.addPoint(pointStore.get(leafNodes.getPointIndex(nodeRefernce)));
+    IBoundingBox<Point> constructBoxInPlace(IBoundingBox<Point> currentBox, int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return currentBox.addPoint(pointStore.get(leafNodes.getPointIndex(nodeReference)));
         } else {
-            IBoundingBox<Point> tempBox = constructBoxInPlace(currentBox, internalNodes.getLeftIndex(nodeRefernce));
+            IBoundingBox<Point> tempBox = constructBoxInPlace(currentBox, internalNodes.getLeftIndex(nodeReference));
             // the box may be changed for single points
-            return constructBoxInPlace(tempBox, internalNodes.getRightIndex(nodeRefernce));
+            return constructBoxInPlace(tempBox, internalNodes.getRightIndex(nodeReference));
         }
     }
 

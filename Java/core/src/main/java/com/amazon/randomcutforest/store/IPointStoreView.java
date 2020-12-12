@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * A read-only point store interface.
+ * A view of the PointStore that forces a read only access to the store.
  */
-public interface IPointStoreReadOnly<P> {
+public interface IPointStoreView<P> {
     int getDimensions();
 
     int getCapacity();

@@ -128,26 +128,17 @@ public class BoundingBoxFloat implements IBoundingBox<float[]> {
     }
 
     @Override
-    public IBoundingBox<float[]> getMergedBox(IBoundingBox<float[]> otherBox) {
+    public IBoundingBox<float[]> getMergedBox(IBoundingBox<float[]> secondBox) {
+        BoundingBoxFloat otherBox = (BoundingBoxFloat) secondBox;
         float[] minValuesMerged = new float[dimensions];
         float[] maxValuesMerged = new float[dimensions];
 
         for (int i = 0; i < dimensions; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], otherBox.getMinValueFloat(i));
-            maxValuesMerged[i] = Math.max(maxValues[i], otherBox.getMaxValueFloat(i));
+            minValuesMerged[i] = Math.min(minValues[i], otherBox.minValues[i]);
+            maxValuesMerged[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
         }
 
         return new BoundingBoxFloat(minValuesMerged, maxValuesMerged);
-    }
-
-    @Override
-    public float getMinValueFloat(int i) {
-        return minValues[i];
-    }
-
-    @Override
-    public float getMaxValueFloat(int i) {
-        return maxValues[i];
     }
 
     @Override
@@ -187,14 +178,15 @@ public class BoundingBoxFloat implements IBoundingBox<float[]> {
     }
 
     @Override
-    public IBoundingBox<float[]> addBox(IBoundingBox<float[]> otherBox) {
+    public IBoundingBox<float[]> addBox(IBoundingBox<float[]> secondBox) {
         if (maxValues == minValues) { // this box was created from a point
-            return getMergedBox(otherBox);
+            return getMergedBox(secondBox);
         }
+        BoundingBoxFloat otherBox = (BoundingBoxFloat) secondBox;
         rangeSum = 0.0;
         for (int i = 0; i < dimensions; ++i) {
-            minValues[i] = Math.min(minValues[i], otherBox.getMinValueFloat(i));
-            maxValues[i] = Math.max(maxValues[i], otherBox.getMaxValueFloat(i));
+            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
+            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

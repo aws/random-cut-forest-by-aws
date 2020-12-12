@@ -16,9 +16,13 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * A read-only point store interface.
+ * A store for points of precision type P, which can be double[] or float[]
+ * which can be added to a store by the update coordinator and made accessible
+ * to the trees in a read only manner.
+ * 
+ * @param <P> precision type
  */
-public interface IPointStore<P> extends IPointStoreReadOnly<P> {
+public interface IPointStore<P> extends IPointStoreView<P> {
     /**
      * Adds to the store; there may be a loss of precision if enableFloat is on in
      * the Forest level. But external interface of the forest is double[]

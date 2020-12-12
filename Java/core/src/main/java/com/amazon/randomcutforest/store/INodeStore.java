@@ -16,7 +16,8 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * A read-only point store interface.
+ * An interface for describing access to the node ntore for different types of
+ * trees.
  */
 public interface INodeStore {
     int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass);
