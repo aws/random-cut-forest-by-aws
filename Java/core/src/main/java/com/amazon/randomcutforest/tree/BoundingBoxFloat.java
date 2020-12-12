@@ -238,7 +238,7 @@ public class BoundingBoxFloat implements IBoundingBox<float[]> {
     }
 
     @Override
-    public IBoundingBox<float[]> copy() {
+    public IBoundingBox<float[]> copyBox() {
         float[] minValuesNew = Arrays.copyOf(minValues, dimensions);
         float[] maxValuesNew = Arrays.copyOf(maxValues, dimensions);
         return new BoundingBoxFloat(minValuesNew, maxValuesNew);
