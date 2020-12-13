@@ -373,7 +373,11 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
                     cachedBoxes[tempNode].addPoint(point);
                 }
             }
-
+            int tempNode = mergedNode;
+            while (internalNodes.getParent(tempNode) != NULL) {
+                tempNode = internalNodes.getParent(tempNode);
+                internalNodes.incrementMass(tempNode);
+            }
         }
     }
 
@@ -405,6 +409,11 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
                 // note that boxes (if present) do not need to be updated
                 // the index of the duplicate point is saved
                 newState.setResolved();
+                int node = leafNodes.getParent(nodeReference);
+                while (node != NULL) {
+                    internalNodes.incrementMass(node);
+                    node = getParent(node);
+                }
                 return newState;
             } else {
                 IBoundingBox<Point> mergedBox = getInternalMergedBox(point, oldPoint);
@@ -415,9 +424,6 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
                 return newState;
             }
         }
-
-        // we first increase the mass
-        internalNodes.incrementMass(nodeReference);
 
         int nextNode;
         int sibling;
