@@ -105,7 +105,7 @@ public class RandomCutForest {
     public static final boolean DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED = false;
 
     /**
-     * By default, trees will not create indexable references.
+     * By default, trees will not create indexed references.
      */
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
 
@@ -119,7 +119,7 @@ public class RandomCutForest {
      * By default, bounding boxes will be used. Disabling this will force
      * enableCompact .
      */
-    public static final boolean DEFAULT_CACHE_ENABLED = true;
+    public static final boolean DEFAULT_BOUNDING_BOX_CACHE_ENABLED = true;
 
     public static final boolean DEFAULT_TREE_SAVE = false;
 
@@ -192,7 +192,7 @@ public class RandomCutForest {
      */
     protected final boolean parallelExecutionEnabled;
     /**
-     * Number of threads to use in the threadpool if parallel execution is enabled.
+     * Number of threads to use in the thread pool if parallel execution is enabled.
      */
     protected final int threadPoolSize;
 
@@ -208,8 +208,6 @@ public class RandomCutForest {
      * An implementation of forest update algorithms.
      */
     protected AbstractForestUpdateExecutor<?> updateExecutor;
-
-    // protected IPointStore<?> pointStore;
 
     public <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components,
             Random rng) {
@@ -233,7 +231,7 @@ public class RandomCutForest {
         } else if (compactEnabled) {
             initCompactDouble();
         } else {
-            initNoncompact();
+            initNonCompact();
         }
     }
 
@@ -271,7 +269,7 @@ public class RandomCutForest {
         initExecutors(updateCoordinator, components);
     }
 
-    private void initNoncompact() {
+    private void initNonCompact() {
         IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
         ComponentList<double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -476,7 +474,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -511,7 +509,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -543,7 +541,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    An accumulator that combines the results from
      *                       individual trees into an aggregate result and checks to
      *                       see if the result can be returned without further
@@ -579,7 +577,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a multi-vistor.
+     *                       construct a multi-visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -614,7 +612,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -640,7 +638,7 @@ public class RandomCutForest {
      * compared with the points in the sample to compute a measure of how anomalous
      * it is. Scores are greater than 0, with higher scores corresponding to bing
      * more anomalous. A threshold of 1.0 is commonly used to distinguish anomalous
-     * points from non-anomolous ones.
+     * points from non-anomalous ones.
      * <p>
      * See {@link AnomalyScoreVisitor} for more details about the anomaly score
      * algorithm.
@@ -788,8 +786,8 @@ public class RandomCutForest {
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
 
-        // We check this condition in traverseForest, but we need to check it here s
-        // wellin case we need to copy the
+        // We check this condition in traverseForest, but we need to check it here as
+        // well in case we need to copy the
         // point in the next block
         checkNotNull(point, "point must not be null");
 
@@ -1051,7 +1049,7 @@ public class RandomCutForest {
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
         private boolean singlePrecisionEnabled = DEFAULT_FLOAT_ENABLED;
-        private boolean boundingBoxCachingEnabled = DEFAULT_CACHE_ENABLED;
+        private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;

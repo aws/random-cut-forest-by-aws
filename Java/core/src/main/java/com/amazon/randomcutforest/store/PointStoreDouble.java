@@ -110,9 +110,9 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
      * @throws IllegalArgumentException if the current reference count for this
      *                                  index is nonpositive.
      */
-    public void incrementRefCount(int index) {
+    public int incrementRefCount(int index) {
         checkValidIndex(index);
-        refCount[index]++;
+        return ++refCount[index];
     }
 
     /**
@@ -123,14 +123,14 @@ public class PointStoreDouble extends IndexManager implements IPointStore<double
      * @throws IllegalArgumentException if the current reference count for this
      *                                  index is nonpositive.
      */
-    public void decrementRefCount(int index) {
+    public int decrementRefCount(int index) {
         checkValidIndex(index);
 
         if (refCount[index] == 1) {
             releaseIndex(index);
         }
 
-        refCount[index]--;
+        return --refCount[index];
     }
 
     /**

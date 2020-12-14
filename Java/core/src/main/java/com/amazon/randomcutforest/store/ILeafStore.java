@@ -16,7 +16,9 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * An interface for accessing leafstore for different trees.
+ * An interface for accessing leafstore for different trees. While the library
+ * provides a LeafStore, the interface will allow extensions to other
+ * implementations as well as unification with pointer based nodes.
  */
 public interface ILeafStore {
 

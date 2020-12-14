@@ -34,4 +34,10 @@ public interface IPointStore<P> extends IPointStoreView<P> {
      */
     int add(double[] point);
 
+    // increments and returns the incremented value
+    int incrementRefCount(int index);
+
+    // decrements and returns the decremented value
+    int decrementRefCount(int index);
+
 }

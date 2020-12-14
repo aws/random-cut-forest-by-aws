@@ -27,10 +27,6 @@ public interface IPointStoreView<P> {
 
     P get(int index);
 
-    void incrementRefCount(int index);
-
-    void decrementRefCount(int index);
-
     /**
      * Prints the point given the index, irrespective of the encoding of the point.
      * Used in exceptions and error messages
