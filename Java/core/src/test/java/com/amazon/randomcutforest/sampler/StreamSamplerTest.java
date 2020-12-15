@@ -31,8 +31,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.amazon.randomcutforest.executor.Sequential;
-
 /**
  * Test common functionality for IStreamSampler implementations
  */
@@ -76,7 +74,7 @@ public class StreamSamplerTest {
     public void testIsReadyIsFull(Random random, IStreamSampler<Integer> sampler) {
         int i;
         for (i = 1; i < sampleSize / 4; i++) {
-            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
+            assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), i));
             assertFalse(sampler.isReady());
             assertFalse(sampler.isFull());
             assertEquals(i, sampler.size());
@@ -84,24 +82,24 @@ public class StreamSamplerTest {
         }
 
         for (i = sampleSize / 4; i < sampleSize; i++) {
-            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
+            assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), i));
             assertTrue(sampler.isReady());
             assertFalse(sampler.isFull());
             assertEquals(i, sampler.size());
             assertFalse(sampler.getEvictedPoint().isPresent());
         }
 
-        assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), sampleSize));
+        assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), sampleSize));
         assertTrue(sampler.isReady());
         assertTrue(sampler.isFull());
         assertEquals(i, sampler.size());
         assertFalse(sampler.getEvictedPoint().isPresent());
 
-        java.util.Optional<Sequential<double[]>> evicted;
+        Optional<ISampled<double[]>> evicted;
         for (i = sampleSize + 1; i < 2 * sampleSize; i++) {
             // Either the sampling and the evicted point are both null or both non-null
             assertTrue(
-                    sampler.sample((int) Math.ceil(Math.random() * 100), i) == sampler.getEvictedPoint().isPresent());
+                    sampler.update((int) Math.ceil(Math.random() * 100), i) == sampler.getEvictedPoint().isPresent());
 
             assertTrue(sampler.isReady());
             assertTrue(sampler.isFull());
@@ -110,31 +108,33 @@ public class StreamSamplerTest {
         }
     }
 
+    /**
+     * This test shows that SimpleStreamSampler and CompactSampler have the same
+     * sampling behavior.
+     */
     @Test
     public void testCompareSampling() {
         CompactSampler compact = new CompactSampler(10, 0.001, 10, false);
         SimpleStreamSampler<double[]> simple = new SimpleStreamSampler<>(10, 0.001, 10, false);
 
         for (int i = 0; i < 100000; i++) {
-            Optional<Float> weightOne = compact.acceptSample(i);
-            Optional<Float> weightTwo = simple.acceptSample(i);
-            assertEquals(weightOne.isPresent(), weightTwo.isPresent());
-            if (weightOne.isPresent()) {
-                assertTrue(weightTwo.isPresent());
-                assertEquals(weightOne.get(), weightTwo.get(), 1E-10);
-                compact.addSample(i, weightOne.get(), i);
-                simple.addSample(new double[] { i }, weightTwo.get(), i);
+            boolean accepted1 = compact.acceptPoint(i);
+            boolean accepted2 = simple.acceptPoint(i);
+            assertEquals(accepted1, accepted2);
+            if (accepted1) {
+                assertEquals(compact.acceptPointState.getWeight(), simple.acceptPointState.getWeight(), 1E-10);
+                compact.addPoint(i);
+                simple.addPoint(new double[] { i });
             }
             assertEquals(compact.getEvictedPoint().isPresent(), simple.getEvictedPoint().isPresent());
             if (compact.getEvictedPoint().isPresent()) {
-                int y = compact.getEvictedPoint().get().getValue();
-                double[] x = simple.getEvictedPoint().get().getValue();
+                Weighted<Integer> evictedCompact = (Weighted<Integer>) compact.getEvictedPoint().get();
+                Weighted<double[]> evictedSimple = (Weighted<double[]>) simple.getEvictedPoint().get();
+                int y = evictedCompact.getValue();
+                double[] x = evictedSimple.getValue();
                 assertEquals(x[0], y);
-                assertEquals(compact.getEvictedPoint().get().getWeight(), simple.getEvictedPoint().get().getWeight(),
-                        1E-10);
-
+                assertEquals(evictedCompact.getWeight(), evictedSimple.getWeight(), 1E-10);
             }
-
         }
     }
 }

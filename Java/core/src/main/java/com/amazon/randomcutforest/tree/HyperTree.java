@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.executor.Sequential;
-
 public class HyperTree extends RandomCutTree {
 
     private final Function<BoundingBox, double[]> gVecBuild;
@@ -118,13 +116,13 @@ public class HyperTree extends RandomCutTree {
         return new Cut(td, bb.getMinValue(td) + bb.getRange(td) * cutf);
     }
 
-    public double[] addPoint(Sequential<double[]> point) {
-        return point.getValue();
+    public double[] addPoint(double[] point, long sequenceIndex) {
+        return point;
         // () -> /dev/null
     }
 
     @Override
-    public void deletePoint(Sequential point) {
+    public void deletePoint(double[] point, long sequenceIndex) {
         // () -> /dev/null
     }
 

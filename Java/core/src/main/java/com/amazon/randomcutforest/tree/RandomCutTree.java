@@ -24,7 +24,6 @@ import java.util.function.Function;
 
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.executor.Sequential;
 
 /**
  * A Random Cut Tree is a tree data structure whose leaves represent points
@@ -196,12 +195,13 @@ public class RandomCutTree implements ITree<double[]> {
     /**
      * Delete the given point from this tree.
      *
-     * @param point A point in the tree that we wish to delete.
+     * @param point         A point in the tree that we wish to delete.
+     * @param sequenceIndex The sequence index of the point.
      */
     @Override
-    public void deletePoint(Sequential<double[]> point) {
+    public void deletePoint(double[] point, long sequenceIndex) {
         checkState(root != null, "root must not be null");
-        deletePoint(root, point.getValue(), point.getSequenceIndex());
+        deletePoint(root, point, sequenceIndex);
     }
 
     /**
@@ -280,13 +280,13 @@ public class RandomCutTree implements ITree<double[]> {
      * @param point The point to add to the tree.
      */
     @Override
-    public double[] addPoint(Sequential<double[]> point) {
+    public double[] addPoint(double[] point, long sequenceIndex) {
         if (root == null) {
-            root = newLeafNode(point.getValue(), point.getSequenceIndex());
+            root = newLeafNode(point, sequenceIndex);
         } else {
-            addPoint(root, point.getValue(), point.getSequenceIndex());
+            addPoint(root, point, sequenceIndex);
         }
-        return point.getValue();
+        return point;
     }
 
     /**

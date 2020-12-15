@@ -18,22 +18,25 @@ package com.amazon.randomcutforest.sampler;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-
-import com.amazon.randomcutforest.executor.Sequential;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
+ * <p>
  * CompactSampler is an implementation of time-based reservoir sampling. When a
  * point is submitted to the sampler, the decision to accept the point gives
  * more weight to newer points compared to older points. The newness of a point
  * is determined by its sequence index, and larger sequence indexes are
  * considered newer.
+ * </p>
  * <p>
  * The sampler algorithm is an example of the general weighted reservoir
  * sampling algorithm, which works like this:
+ * </p>
  * <ol>
  * <li>For each item i choose a random number u(i) uniformly from the interval
  * (0, 1) and compute the weight function <code>-(1 / c(i)) * log u(i)</code>,
@@ -46,10 +49,26 @@ import com.amazon.randomcutforest.executor.Sequential;
  * new item.</li>
  * </ol>
  * <p>
- * The coefficient function used by CompactSampler is: *
+ * The coefficient function used by CompactSampler is:
  * <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * </p>
+ * <p>
+ * Note that the sampling algorithm used is the same as for
+ * {@link SimpleStreamSampler}. The difference is that CompactSampler is
+ * specialized to use Integers as the point reference type and the
+ * implementation uses less runtime memory.
+ * </p>
  */
 public class CompactSampler implements IStreamSampler<Integer> {
+
+    /**
+     * When creating a {@code CompactSampler}, the user has the option to disable
+     * storing sequence indexes. If storing sequence indexes is disabled, then this
+     * value is used for the sequence index in {@link ISampled} instances returned
+     * by {@link #getSample()}, {@link #getWeightedSample()}, and
+     * {@link #getEvictedPoint()}.
+     */
+    public static final long SEQUENCE_INDEX_NA = -1L;
 
     /**
      * A max-heap containing the weighted points currently in sample. The head
@@ -57,15 +76,22 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * point with the greatest weight).
      */
     protected final float[] weight;
-
+    /**
+     * Index values identifying the points in the sample. See
+     * {@link com.amazon.randomcutforest.store.IPointStore}.
+     */
     protected final int[] pointIndex;
-
+    /**
+     * Sequence indexes of the points in the sample.
+     */
     protected final long[] sequenceIndex;
     /**
      * The number of points in the sample when full.
      */
     protected final int capacity;
-
+    /**
+     * The number of points currently in the sample.
+     */
     protected int size;
     /**
      * The decay factor used for generating the weight of the point. For greater
@@ -77,11 +103,21 @@ public class CompactSampler implements IStreamSampler<Integer> {
      */
     private final Random random;
     /**
-     * The point evicted by the last call to {@link #sample}, or null if the new
+     * The point evicted by the last call to {@link #update}, or null if the new
      * point was not accepted by the sampler.
      */
-    private transient Sequential<Integer> evictedPoint;
-
+    private transient ISampled<Integer> evictedPoint;
+    /**
+     * This field is used to temporarily store the result from a call to
+     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
+     *
+     * Visible for testing.
+     */
+    protected AcceptPointState acceptPointState;
+    /**
+     * If true, then the sampler will store sequence indexes along with the sampled
+     * points.
+     */
     private final boolean storeSequenceIndexesEnabled;
 
     /**
@@ -194,21 +230,23 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     @Override
-    public Optional<Float> acceptSample(long sequenceIndex) {
+    public boolean acceptPoint(long sequenceIndex) {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
         if (size < capacity) {
-            return Optional.of(weight);
+            acceptPointState = new AcceptPointState(sequenceIndex, weight);
+            return true;
         } else if (weight < this.weight[0]) {
+            acceptPointState = new AcceptPointState(sequenceIndex, weight);
             long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
-            evictedPoint = new Sequential<>(this.pointIndex[0], this.weight[0], evictedIndex);
+            evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
             --size;
             this.weight[0] = this.weight[size];
             this.pointIndex[0] = this.pointIndex[size];
             swapDown(0);
-            return Optional.of(weight);
+            return true;
         } else {
-            return Optional.empty();
+            return false;
         }
     }
 
@@ -255,12 +293,14 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     @Override
-    public void addSample(Integer pointIndex, float weight, long sequenceIndex) {
+    public void addPoint(Integer pointIndex) {
         checkState(size < capacity, "sampler full");
-        this.weight[size] = weight;
+        checkState(acceptPointState != null,
+                "this method should only be called after a successful call to acceptSample(long)");
+        this.weight[size] = acceptPointState.getWeight();
         this.pointIndex[size] = pointIndex;
         if (storeSequenceIndexesEnabled) {
-            this.sequenceIndex[size] = sequenceIndex;
+            this.sequenceIndex[size] = acceptPointState.getSequenceIndex();
         }
         int current = size++;
         while (current > 0) {
@@ -271,32 +311,42 @@ public class CompactSampler implements IStreamSampler<Integer> {
             } else
                 break;
         }
-    }
-
-    @Override
-    public List<Sequential<Integer>> getSequentialSamples() {
-        checkState(storeSequenceIndexesEnabled, "to call this method storeSequenceIndexesEnabled must be true");
-        List<Sequential<Integer>> result = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            result.add(new Sequential<>(pointIndex[i], weight[i], sequenceIndex[i]));
-        }
-        return result;
-    }
-
-    @Override
-    public List<Weighted<Integer>> getWeightedSamples() {
-        List<Weighted<Integer>> result = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            result.add(new Weighted<>(pointIndex[i], weight[i]));
-        }
-        return result;
+        acceptPointState = null;
     }
 
     /**
-     * @return the point evicted by the most recent call to {@link #sample}, or null
+     * Return the list of sampled points. If this sampler was created with the
+     * {@code storeSequenceIndexesEnabled} flag set to false, then all sequence
+     * indexes in the list will be set to {@link #SEQUENCE_INDEX_NA}.
+     *
+     * @return the list of sampled points.
+     */
+    @Override
+    public List<ISampled<Integer>> getSample() {
+        return streamSample().collect(Collectors.toList());
+    }
+
+    /**
+     * Return the list of sampled points with weights.
+     * 
+     * @return the list of sampled points with weights.
+     */
+    public List<Weighted<Integer>> getWeightedSample() {
+        return streamSample().collect(Collectors.toList());
+    }
+
+    private Stream<Weighted<Integer>> streamSample() {
+        return IntStream.range(0, size).mapToObj(i -> {
+            long index = sequenceIndex != null ? sequenceIndex[i] : SEQUENCE_INDEX_NA;
+            return new Weighted<>(pointIndex[i], weight[i], index);
+        });
+    }
+
+    /**
+     * @return the point evicted by the most recent call to {@link #update}, or null
      *         if no point was evicted.
      */
-    public Optional<Sequential<Integer>> getEvictedPoint() {
+    public Optional<ISampled<Integer>> getEvictedPoint() {
         return Optional.ofNullable(evictedPoint);
     }
 
