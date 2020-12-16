@@ -19,15 +19,15 @@ import java.util.Arrays;
 import java.util.Set;
 
 public class CompactNodeView implements INodeView {
-    final AbstractCompactRandomCutTree tree;
-    short currentNodeOffset;
+    final AbstractCompactRandomCutTree<?> tree;
+    int currentNodeOffset;
 
-    public CompactNodeView(AbstractCompactRandomCutTree tree, short initialNodeIndex) {
+    public CompactNodeView(AbstractCompactRandomCutTree<?> tree, int initialNodeIndex) {
         this.tree = tree;
         this.currentNodeOffset = initialNodeIndex;
     }
 
-    public void setCurrentNodeIndex(short newOffset) {
+    public void setCurrentNodeIndex(int newOffset) {
         currentNodeOffset = newOffset;
     }
 
@@ -41,9 +41,9 @@ public class CompactNodeView implements INodeView {
 
     public BoundingBox getSiblingBoundingBox(double[] point) {
         if (tree.leftOf(point, currentNodeOffset)) {
-            return tree.getBoundingBox(tree.internalNodes.rightIndex[currentNodeOffset]);
+            return tree.getBoundingBox(tree.internalNodes.getRightIndex(currentNodeOffset));
         } else {
-            return tree.getBoundingBox(tree.internalNodes.leftIndex[currentNodeOffset]);
+            return tree.getBoundingBox(tree.internalNodes.getLeftIndex(currentNodeOffset));
         }
     }
 

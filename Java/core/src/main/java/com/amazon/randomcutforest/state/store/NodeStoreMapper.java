@@ -27,7 +27,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         short[] leftIndex = Arrays.copyOf(state.getLeftIndex(), capacity);
         short[] rightIndex = Arrays.copyOf(state.getRightIndex(), capacity);
         short[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
+        short[] mass = Arrays.copyOf(state.getMass(), capacity);
         int[] cutDimension = Arrays.copyOf(state.getCutDimension(), capacity);
         double[] cutValue = Arrays.copyOf(state.getCutValue(), capacity);
 

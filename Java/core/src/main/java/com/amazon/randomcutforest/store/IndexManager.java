@@ -21,7 +21,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.BitSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -115,11 +114,6 @@ public class IndexManager {
     protected int takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
         int index = freeIndexes[freeIndexPointer--];
-        /**
-         * The below check will cause reInitialization to fail
-         */
-        // checkState(!occupied.get(index), "store tried to return an index marked
-        // occupied");
         occupied.set(index);
         return index;
     }
@@ -149,11 +143,4 @@ public class IndexManager {
         return freeIndexes;
     }
 
-    public void initializeIndices(List<Integer> freeList) {
-        freeIndexPointer = freeList.size() - 1;
-        for (int i = 0; i < freeList.size(); i++) {
-            freeIndexes[i] = freeList.get(i);
-            occupied.clear(i);
-        }
-    }
 }

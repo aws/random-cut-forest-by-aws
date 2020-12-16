@@ -103,7 +103,7 @@ public class ForestUpdateExecutorBenchmark {
                 ComponentList<Integer> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble(sampleSize, random.nextLong(),
-                            store);
+                            store, true);
                     SimpleStreamSampler<Integer> sampler = new SimpleStreamSampler<>(sampleSize, lambda,
                             random.nextLong(), false);
                     SamplerPlusTree<Integer> samplerTree = new SamplerPlusTree<>(sampler, tree);

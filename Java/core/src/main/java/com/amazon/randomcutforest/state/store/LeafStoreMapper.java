@@ -26,7 +26,7 @@ public class LeafStoreMapper implements IStateMapper<LeafStore, LeafStoreState> 
         int capacity = state.getPointIndex().length;
         int[] pointIndex = Arrays.copyOf(state.getPointIndex(), capacity);
         short[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
+        short[] mass = Arrays.copyOf(state.getMass(), capacity);
 
         short freeIndexPointer = (short) (state.getFreeIndexes().length - 1);
         short[] freeIndexes = new short[capacity];

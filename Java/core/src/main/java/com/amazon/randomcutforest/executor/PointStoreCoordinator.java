@@ -20,13 +20,14 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.List;
 import java.util.Optional;
 
+import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
 public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
 
-    private final PointStoreDouble store;
+    private final IPointStore<?> store;
 
-    public PointStoreCoordinator(PointStoreDouble store) {
+    public PointStoreCoordinator(IPointStore<?> store) {
         checkNotNull(store, "store must not be null");
         this.store = store;
     }
@@ -47,6 +48,6 @@ public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
     }
 
     public PointStoreDouble getStore() {
-        return store;
+        return (PointStoreDouble) store;
     }
 }

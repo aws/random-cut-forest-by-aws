@@ -59,8 +59,7 @@ public class AttributionExamplesFunctionalTest {
         randomSeed = 101;
         sampleSize = 256;
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(sampleSize)
-                .dimensions(newDimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(newDimensions).randomSeed(randomSeed).compactEnabled(true).build();
 
         dataSize = 2000 + 5;
 
@@ -162,8 +161,8 @@ public class AttributionExamplesFunctionalTest {
         randomSeed = 179;
         sampleSize = 256;
         DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().numberOfTrees(100)
-                .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).lambda(1e-5).build();
+                .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).compactEnabled(true)
+                .lambda(1e-5).build();
 
         dataSize = 2000 + 5;
 

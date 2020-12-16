@@ -16,23 +16,28 @@
 package com.amazon.randomcutforest.store;
 
 /**
- * A read-only point store interface.
+ * A store for points of precision type P, which can be double[] or float[]
+ * which can be added to a store by the update coordinator and made accessible
+ * to the trees in a read only manner.
+ * 
+ * @param <P> precision type
  */
-public interface IPointStore<P> {
-    int getDimensions();
-
-    int getCapacity();
-
-    boolean pointEquals(int index, P point);
-
-    P get(int index);
-
+public interface IPointStore<P> extends IPointStoreView<P> {
     /**
-     * Prints the point given the index, irrespective of the encoding of the point.
-     * Used in exceptions and error messages
+     * Adds to the store; there may be a loss of precision if enableFloat is on in
+     * the Forest level. But external interface of the forest is double[]
+     *
+     * Note that delete is automatic, that is when no trees are accessing the point
      * 
-     * @param index index of the point in the store
-     * @return a string that can be printed
+     * @param point point to be added
+     * @return index of the stored point
      */
-    String getString(int index);
+    int add(double[] point);
+
+    // increments and returns the incremented value
+    int incrementRefCount(int index);
+
+    // decrements and returns the decremented value
+    int decrementRefCount(int index);
+
 }

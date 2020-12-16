@@ -222,7 +222,7 @@ public class RandomCutForestMapper
                 if (treeStates != null) {
                     tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
                 } else {
-                    tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(), pointStore);
+                    tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(), pointStore, true);
                 }
 
                 CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), state, rng.nextLong());

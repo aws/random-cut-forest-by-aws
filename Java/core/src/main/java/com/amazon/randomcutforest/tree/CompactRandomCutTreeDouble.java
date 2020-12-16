@@ -25,38 +25,36 @@ import com.amazon.randomcutforest.store.NodeStore;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore) {
-        super(maxSize, seed);
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, boolean cacheEnabled) {
+        super(maxSize, seed, cacheEnabled);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
-        cachedBoxes = new BoundingBox[maxSize - 1];
+        if (cacheEnabled) {
+            cachedBoxes = new BoundingBox[maxSize - 1];
+        }
     }
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, LeafStore leafStore,
-            NodeStore nodeStore, short rootIndex) {
-        super(maxSize, seed, leafStore, nodeStore, rootIndex);
+            NodeStore nodeStore, int rootIndex) {
+        super(maxSize, seed, leafStore, nodeStore, rootIndex, true);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         cachedBoxes = new BoundingBox[maxSize - 1];
     }
 
     @Override
-    String printString(double[] point) {
+    String toString(double[] point) {
         return Arrays.toString(point);
     }
 
     @Override
-    IBox<double[]> getLeafBox(int offset) {
-        return new BoundingBox(pointStore.get(leafNodes.pointIndex[offset]));
+    IBoundingBox<double[]> getLeafBoxFromPoint(int pointIndex) {
+        return new BoundingBox(pointStore.get(pointIndex));
     }
 
     @Override
-    IBox<double[]> getInternalMergedBox(double[] point, double[] oldPoint) {
+    IBoundingBox<double[]> getInternalMergedBox(double[] point, double[] oldPoint) {
         return BoundingBox.getMergedBox(point, oldPoint);
-    }
-
-    protected boolean leftOf(double[] point, short nodeOffset) {
-        return leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset]);
     }
 
     @Override
@@ -70,26 +68,28 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    protected double[] getLeafPoint(short nodeOffset) {
-        return pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
+    protected double[] getLeafPoint(int nodeOffset) {
+        double[] internal = pointStore.get(leafNodes.getPointIndex(nodeOffset));
+        return Arrays.copyOf(internal, internal.length);
     }
 
     /**
      * creates the bounding box of a node/leaf
      *
-     * @param offset node in question
+     * @param nodeReference node in question
      * @return the bounding box
      */
 
     @Override
-    BoundingBox reflateNode(short offset) {
-        if (offset - maxSize >= 0) {
-            return new BoundingBox(getLeafPoint(offset));
+    IBoundingBox<double[]> reflateNode(int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return new BoundingBox(getLeafPoint(nodeReference));
         }
-        BoundingBox newBox = reflateNode(internalNodes.leftIndex[offset])
-                .getMergedBox(reflateNode(internalNodes.rightIndex[offset]));
-        cachedBoxes[offset] = newBox;
-        return newBox;
+        if (cachedBoxes[nodeReference] == null) {
+            cachedBoxes[nodeReference] = reflateNode(internalNodes.getLeftIndex(nodeReference))
+                    .getMergedBox(reflateNode(internalNodes.getRightIndex(nodeReference)));
+        }
+        return cachedBoxes[nodeReference];
     }
 
 }

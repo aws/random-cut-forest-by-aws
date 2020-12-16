@@ -55,7 +55,9 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
@@ -103,9 +105,21 @@ public class RandomCutForest {
     public static final boolean DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED = false;
 
     /**
-     * By default, trees will not create indexable references.
+     * By default, trees will not create indexed references.
      */
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
+
+    /**
+     * By default, trees will not use float[] to save space. Enabling this will
+     * force enableCompact
+     */
+    public static final boolean DEFAULT_FLOAT_ENABLED = false;
+
+    /**
+     * By default, bounding boxes will be used. Disabling this will force
+     * enableCompact .
+     */
+    public static final boolean DEFAULT_BOUNDING_BOX_CACHE_ENABLED = true;
 
     public static final boolean DEFAULT_TREE_SAVE = false;
 
@@ -154,9 +168,21 @@ public class RandomCutForest {
      */
     protected final boolean storeSequenceIndexesEnabled;
     /**
-     * Store the time information
+     * Enable compact representation
      */
     protected final boolean compactEnabled;
+    /**
+     * Enable float representation; the input/output is double[] but the internal
+     * representation would be float[]. There will be loss of precision in near
+     * neighbors because of the truncation. Otherwise, unless all numbers are in a
+     * very small range, the loss of precision is unlikely to have larger impact
+     * than changing the random seed.
+     */
+    protected final boolean singlePrecisionEnabled;
+    /**
+     * The following set to false saves space, but enforces compact representation.
+     */
+    protected final boolean boundingBoxCachingEnabled;
     /**
      * Enable center of mass at internal nodes
      */
@@ -166,7 +192,7 @@ public class RandomCutForest {
      */
     protected final boolean parallelExecutionEnabled;
     /**
-     * Number of threads to use in the threadpool if parallel execution is enabled.
+     * Number of threads to use in the thread pool if parallel execution is enabled.
      */
     protected final int threadPoolSize;
 
@@ -182,8 +208,6 @@ public class RandomCutForest {
      * An implementation of forest update algorithms.
      */
     protected AbstractForestUpdateExecutor<?> updateExecutor;
-
-    protected PointStoreDouble pointStore;
 
     public <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components,
             Random rng) {
@@ -202,19 +226,23 @@ public class RandomCutForest {
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
         rng = builder.getRandom();
-        if (compactEnabled) {
-            initCompact();
+        if (singlePrecisionEnabled) {
+            initCompactFloat();
+        } else if (compactEnabled) {
+            initCompactDouble();
         } else {
-            initNoncompact();
+            initNonCompact();
         }
     }
 
-    private void initCompact() {
-        pointStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
-        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(pointStore);
+    private void initCompactDouble() {
+        PointStoreDouble tempStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
+        // pointStore = tempStore;
+        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), pointStore);
+            ITree<Integer> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
+                    boundingBoxCachingEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -224,7 +252,24 @@ public class RandomCutForest {
         initExecutors(updateCoordinator, components);
     }
 
-    private void initNoncompact() {
+    private void initCompactFloat() {
+        PointStoreFloat tempStore = new PointStoreFloat(dimensions, sampleSize * numberOfTrees + 1);
+        // pointStore = tempStore;
+        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
+        ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
+        for (int i = 0; i < numberOfTrees; i++) {
+            ITree<Integer> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
+                    boundingBoxCachingEnabled);
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
+                    storeSequenceIndexesEnabled);
+            components.add(new SamplerPlusTree<>(sampler, tree));
+        }
+        this.updateCoordinator = updateCoordinator;
+        this.components = components;
+        initExecutors(updateCoordinator, components);
+    }
+
+    private void initNonCompact() {
         IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
         ComponentList<double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -283,6 +328,10 @@ public class RandomCutForest {
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         compactEnabled = builder.compactEnabled;
+        singlePrecisionEnabled = builder.singlePrecisionEnabled;
+        checkArgument(!singlePrecisionEnabled || compactEnabled, "float representation requires compact trees");
+        boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
+        checkArgument(boundingBoxCachingEnabled || compactEnabled, "eliminating bounding boxes requires compact trees");
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -425,7 +474,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -460,7 +509,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -492,7 +541,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    An accumulator that combines the results from
      *                       individual trees into an aggregate result and checks to
      *                       see if the result can be returned without further
@@ -528,7 +577,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a multi-vistor.
+     *                       construct a multi-visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -563,7 +612,7 @@ public class RandomCutForest {
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -589,7 +638,7 @@ public class RandomCutForest {
      * compared with the points in the sample to compute a measure of how anomalous
      * it is. Scores are greater than 0, with higher scores corresponding to bing
      * more anomalous. A threshold of 1.0 is commonly used to distinguish anomalous
-     * points from non-anomolous ones.
+     * points from non-anomalous ones.
      * <p>
      * See {@link AnomalyScoreVisitor} for more details about the anomaly score
      * algorithm.
@@ -737,8 +786,8 @@ public class RandomCutForest {
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
 
-        // We check this condition in traverseForest, but we need to check it here s
-        // wellin case we need to copy the
+        // We check this condition in traverseForest, but we need to check it here as
+        // well in case we need to copy the
         // point in the next block
         checkNotNull(point, "point must not be null");
 
@@ -999,6 +1048,8 @@ public class RandomCutForest {
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
+        private boolean singlePrecisionEnabled = DEFAULT_FLOAT_ENABLED;
+        private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -1051,7 +1102,27 @@ public class RandomCutForest {
         }
 
         public T compactEnabled(boolean compactEnabled) {
-            this.compactEnabled = compactEnabled;
+            if (!this.compactEnabled) {
+                // the above implies that if other flags are set to enable compact
+                // representation then this setting will be ignored.
+                this.compactEnabled = compactEnabled;
+            }
+            return (T) this;
+        }
+
+        public T singlePrecisionEnabled(boolean singlePrecisionEnabled) {
+            this.singlePrecisionEnabled = singlePrecisionEnabled;
+            if (singlePrecisionEnabled) {
+                this.compactEnabled = true;
+            }
+            return (T) this;
+        }
+
+        public T boundingBoxCachingEnabled(boolean boundingBoxCachingEnabled) {
+            this.boundingBoxCachingEnabled = boundingBoxCachingEnabled;
+            if (boundingBoxCachingEnabled) {
+                this.compactEnabled = true;
+            }
             return (T) this;
         }
 

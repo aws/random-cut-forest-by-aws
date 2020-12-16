@@ -25,7 +25,7 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 public class CompactRandomCutTreeState {
     public LeafStoreState leafStoreState;
     public NodeStoreState nodeStoreState;
-    public short rootIndex;
+    public int rootIndex;
 
     public CompactRandomCutTreeState() {
 

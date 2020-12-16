@@ -27,7 +27,7 @@ import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.state.store.LeafStoreState;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
-import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 
@@ -46,26 +46,26 @@ import com.amazon.randomcutforest.store.NodeStore;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> {
+public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integer> {
 
     /**
      * The index value used to represent the absence of a node. For example, when
      * the tree is created the root node index will be NULL. After a point is added
      * and a root node is created, the root node's parent will be NULL, and so on.
      */
-    public static final short NULL = -1;
+    public static final int NULL = -1;
 
-    private Random random;
+    private final Random random;
     protected int maxSize;
     protected NodeStore internalNodes;
     protected LeafStore leafNodes;
-    protected IPointStore<P> pointStore;
-    protected short rootIndex;
-    private CompactNodeView nodeView;
-    private AddPointState<P> addPointState = new AddPointState<>();
-    protected IBox<P>[] cachedBoxes;
+    protected IPointStoreView<Point> pointStore;
+    protected int rootIndex;
+    private final CompactNodeView nodeView;
+    protected IBoundingBox<Point>[] cachedBoxes;
+    protected boolean enableCache;
 
-    public AbstractCompactRandomCutTree(int maxSize, long seed) {
+    public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         this.maxSize = maxSize;
         internalNodes = new NodeStore((short) (this.maxSize - 1));
@@ -73,10 +73,11 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         random = new Random(seed);
         rootIndex = NULL;
         nodeView = new CompactNodeView(this, NULL);
+        this.enableCache = enableCache;
     }
 
-    public AbstractCompactRandomCutTree(int maxSize, long seed, LeafStore leafStore, NodeStore nodeStore,
-            short rootIndex) {
+    public AbstractCompactRandomCutTree(int maxSize, long seed, LeafStore leafStore, NodeStore nodeStore, int rootIndex,
+            boolean enableCache) {
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         checkNotNull(leafStore, "leafStore must not be null");
         checkNotNull(nodeStore, "nodeStore must not be null");
@@ -87,10 +88,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         internalNodes = nodeStore;
         leafNodes = leafStore;
         nodeView = new CompactNodeView(this, rootIndex);
-    }
-
-    protected boolean isLeaf(short index) {
-        return index - maxSize >= 0;
+        this.enableCache = enableCache;
     }
 
     /**
@@ -101,7 +99,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    static Cut randomCut(Random random, IBox box) {
+    static Cut randomCut(Random random, IBoundingBox<?> box) {
         double rangeSum = box.getRangeSum();
         checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
 
@@ -128,13 +126,6 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
     }
 
     /**
-     * returns the boundingbox
-     */
-    BoundingBox getBoundingBox(short nodeOffset) {
-        return getInternalBoundingBox(nodeOffset).convertBoxToDouble();
-    }
-
-    /**
      * Replace a Node in the tree structure. This method replaces oldNode with
      * newNode as a child of oldNode.getParent().
      *
@@ -142,54 +133,35 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * @param newNodeOffset The new node we are inserting into the tree.
      */
 
-    void replaceNode(short oldNodeOffset, short newNodeOffset) {
+    void replaceNode(int oldNodeOffset, int newNodeOffset) {
 
-        short parent;
-        if (isLeaf(oldNodeOffset)) {
-            parent = leafNodes.parentIndex[oldNodeOffset - maxSize];
-        } else {
-            parent = internalNodes.parentIndex[oldNodeOffset];
-        }
-
+        int parent = getParent(oldNodeOffset);
         if (parent != NULL) {
-            checkState(parent < maxSize, "incorrect");
-            if (internalNodes.leftIndex[parent] == oldNodeOffset) {
-                internalNodes.leftIndex[parent] = newNodeOffset;
-            } else {
-                internalNodes.rightIndex[parent] = newNodeOffset;
-            }
+            // checkState(!leafNodes.isLeaf(parent), "incorrect");
+            internalNodes.replaceNode(parent, oldNodeOffset, newNodeOffset);
         }
 
-        if (isLeaf(newNodeOffset)) {
-            leafNodes.parentIndex[newNodeOffset - maxSize] = parent;
-        } else {
-            internalNodes.parentIndex[newNodeOffset] = parent;
-        }
+        setParent(newNodeOffset, parent);
     }
 
     /**
      * Return the sibling of a non-root node. Note that every non-leaf node in a
      * Random Cut Tree has two children.
      *
-     * @param nodeOffset The node whose sibling we are requesting.
+     * @param nodeReference The node whose sibling we are requesting.
      * @return the sibling of node in the tree.
      */
 
-    short getSibling(short nodeOffset) {
-        checkArgument(nodeOffset >= 0, " cannotbe negative");
-        int parent;
-        if (isLeaf(nodeOffset)) {
-            parent = leafNodes.parentIndex[nodeOffset - maxSize];
-        } else {
-            parent = internalNodes.parentIndex[nodeOffset];
-        }
+    int getSibling(int nodeReference) {
+        checkArgument(nodeReference >= 0, " cannot be negative");
+        int parent = getParent(nodeReference);
 
         if (parent != NULL) {
-            checkArgument(parent < maxSize, "incorrect");
-            if (internalNodes.leftIndex[parent] == nodeOffset) {
-                return internalNodes.rightIndex[parent];
-            } else if (internalNodes.rightIndex[parent] == nodeOffset) {
-                return internalNodes.leftIndex[parent];
+            // checkState(!leafNodes.isLeaf(parent), "incorrect");
+            if (internalNodes.getLeftIndex(parent) == nodeReference) {
+                return internalNodes.getRightIndex(parent);
+            } else if (internalNodes.getRightIndex(parent) == nodeReference) {
+                return internalNodes.getLeftIndex(parent);
             } else {
                 throw new IllegalArgumentException("node parent does not link back to node");
             }
@@ -197,36 +169,81 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
             return NULL; // root is leaf
     }
 
-    abstract protected boolean leftOf(double[] point, short nodeOffset);
-
-    abstract protected boolean leftOf(P point, int cutDimension, double cutValue);
-
-    // abstract boolean updateBoxAfterDelete(short nodeOffset, P point, boolean
-    // resolvedDelete);
-
-    abstract boolean checkEqual(P oldPoint, P point);
-
-    abstract String printString(P point);
-
-    abstract IBox<P> getLeafBox(int offset);
-
-    abstract IBox<P> reflateNode(short nodeOffset);
-
-    IBox<P> getInternalBoundingBox(short nodeOffset) {
-        if (nodeOffset - maxSize >= 0) {
-            return getLeafBox(nodeOffset - maxSize);
+    void setParent(int siblingOffset, int mergedNode) {
+        if (leafNodes.isLeaf(siblingOffset)) {
+            leafNodes.setParent(siblingOffset, mergedNode);
         } else {
-            if (cachedBoxes[nodeOffset] == null) {
-                cachedBoxes[nodeOffset] = reflateNode(nodeOffset);
-            }
-            return cachedBoxes[nodeOffset];
+            internalNodes.setParent(siblingOffset, mergedNode);
         }
     }
 
-    abstract IBox<P> getInternalMergedBox(P point, P oldPoint);
+    int getParent(int siblingOffset) {
+        if (leafNodes.isLeaf(siblingOffset)) {
+            return leafNodes.getParent(siblingOffset);
+        } else {
+            return internalNodes.getParent(siblingOffset);
+        }
+    }
 
-    IBox<P> getBoundingBoxLeaveNull(short nodeOffset) {
-        return (nodeOffset - maxSize >= 0) ? getLeafBox(nodeOffset - maxSize) : cachedBoxes[nodeOffset];
+    protected boolean leftOf(double[] point, int nodeReference) {
+        return point[internalNodes.getCutDimension(nodeReference)] <= internalNodes.getCutValue(nodeReference);
+    }
+
+    abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
+
+    abstract boolean checkEqual(Point oldPoint, Point point);
+
+    abstract String toString(Point point);
+
+    IBoundingBox<Point> getInternalBoundingBox(int nodeReference) {
+        IBoundingBox<Point> answer = getBoundingBoxLeaveNull(nodeReference);
+        if (answer == null) {
+            answer = (enableCache) ? reflateNode(nodeReference) : constructBoxInPlace(nodeReference);
+        }
+        return answer;
+    }
+
+    abstract IBoundingBox<Point> getLeafBoxFromPoint(int pointIndex);
+
+    IBoundingBox<Point> getBoundingBoxLeaveNull(int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return getLeafBoxFromPoint(leafNodes.getPointIndex(nodeReference));
+        } else if (enableCache) {
+            return cachedBoxes[nodeReference];
+        } else {
+            return null;
+        }
+    }
+
+    abstract IBoundingBox<Point> reflateNode(int nodeReference);
+
+    IBoundingBox<Point> constructBoxInPlace(int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return getLeafBoxFromPoint(leafNodes.getPointIndex(nodeReference));
+        } else {
+            IBoundingBox<Point> currentBox = constructBoxInPlace(internalNodes.getLeftIndex(nodeReference));
+            return constructBoxInPlace(currentBox, internalNodes.getRightIndex(nodeReference));
+
+        }
+    }
+
+    IBoundingBox<Point> constructBoxInPlace(IBoundingBox<Point> currentBox, int nodeReference) {
+        if (leafNodes.isLeaf(nodeReference)) {
+            return currentBox.addPoint(pointStore.get(leafNodes.getPointIndex(nodeReference)));
+        } else {
+            IBoundingBox<Point> tempBox = constructBoxInPlace(currentBox, internalNodes.getLeftIndex(nodeReference));
+            // the box may be changed for single points
+            return constructBoxInPlace(tempBox, internalNodes.getRightIndex(nodeReference));
+        }
+    }
+
+    abstract IBoundingBox<Point> getInternalMergedBox(Point point, Point oldPoint);
+
+    /**
+     * returns the bounding box
+     */
+    BoundingBox getBoundingBox(int nodeReference) {
+        return getInternalBoundingBox(nodeReference).copyBoxToDouble();
     }
 
     /**
@@ -246,75 +263,70 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * node. We then delete the leaf node if the mass of the node is 1, otherwise we
      * reduce the mass by 1. The bounding boxes continue
      *
-     * @param nodeOffset node that we are visiting in the tree.
-     * @param point      the point that is being deleted from the tree.
-     * @param level      the level (i.e., the length of the path to the root) of the
-     *                   node being evaluated.
+     * @param nodeReference node that we are visiting in the tree.
+     * @param point         the point that is being deleted from the tree.
+     * @param level         the level (i.e., the length of the path to the root) of
+     *                      the node being evaluated.
      * @return if the point is within the bounding box of the remaining points (in
      *         which case the bounding boxes of the ancestors would not need to be
      *         updated)
      */
 
-    private boolean deletePoint(short nodeOffset, P point, int level) {
+    private boolean deletePoint(int nodeReference, Point point, int level) {
 
-        if (isLeaf(nodeOffset)) {
-            short leafOffset = (short) (nodeOffset - maxSize);
-            P oldPoint = pointStore.get(leafNodes.pointIndex[leafOffset]);
+        if (leafNodes.isLeaf(nodeReference)) {
+            Point oldPoint = pointStore.get(leafNodes.getPointIndex(nodeReference));
             if (!checkEqual(oldPoint, point)) {
                 throw new IllegalStateException(
-                        printString(point) + " " + pointStore.getString(leafNodes.pointIndex[leafOffset]) + " "
-                                + leafOffset + " node " + leafNodes.pointIndex[leafOffset] + " " + false
+                        toString(point) + " " + pointStore.toString(leafNodes.getPointIndex(nodeReference)) + " "
+                                + nodeReference + " node " + leafNodes.getPointIndex(nodeReference) + " " + false
                                 + " Inconsistency in trees in delete step here.");
             }
 
-            if (leafNodes.mass[leafOffset] > 1) {
-                --leafNodes.mass[leafOffset];
+            if (leafNodes.getMass(nodeReference) > 1) {
+                leafNodes.decrementMass(nodeReference);
                 return true;
             }
 
-            short parent = leafNodes.parentIndex[leafOffset];
-            int saved = leafNodes.pointIndex[leafOffset];
+            int parent = leafNodes.getParent(nodeReference);
+
             if (parent == NULL) {
                 rootIndex = NULL;
-                leafNodes.delete(leafOffset);
+                leafNodes.delete(nodeReference);
                 return true;
             }
 
-            int grandParent = internalNodes.parentIndex[parent];
+            int grandParent = internalNodes.getParent(parent);
             if (grandParent == NULL) {
-                rootIndex = getSibling(nodeOffset);
-                if (isLeaf(rootIndex)) {
-                    leafNodes.parentIndex[rootIndex - maxSize] = NULL;
-                } else {
-                    internalNodes.parentIndex[rootIndex] = NULL;
-                }
+                rootIndex = getSibling(nodeReference);
+                setParent(rootIndex, NULL);
             } else {
-                short sibling = getSibling(nodeOffset);
-                replaceNode(parent, sibling);
+                replaceNode(parent, getSibling(nodeReference));
             }
-            leafNodes.delete(leafOffset);
+            leafNodes.delete(nodeReference);
             internalNodes.delete(parent);
             return false;
         }
 
         // node is not a leaf, and is an internal node
-        boolean resolvedDelete = leftOf(point, internalNodes.cutDimension[nodeOffset],
-                internalNodes.cutValue[nodeOffset]) ? deletePoint(internalNodes.leftIndex[nodeOffset], point, level + 1)
-                        : deletePoint(internalNodes.rightIndex[nodeOffset], point, level + 1);
+        boolean resolvedDelete = leftOf(point, internalNodes.getCutDimension(nodeReference),
+                internalNodes.getCutValue(nodeReference))
+                        ? deletePoint(internalNodes.getLeftIndex(nodeReference), point, level + 1)
+                        : deletePoint(internalNodes.getRightIndex(nodeReference), point, level + 1);
 
-        if (!resolvedDelete && cachedBoxes[nodeOffset] != null) {
-            IBox<P> leftBox = getBoundingBoxLeaveNull(internalNodes.leftIndex[nodeOffset]);
-            IBox<P> rightBox = getBoundingBoxLeaveNull(internalNodes.rightIndex[nodeOffset]);
+        if (!resolvedDelete && (cachedBoxes != null) && cachedBoxes[nodeReference] != null) {
+            IBoundingBox<Point> leftBox = getBoundingBoxLeaveNull(internalNodes.getLeftIndex(nodeReference));
+            IBoundingBox<Point> rightBox = getBoundingBoxLeaveNull(internalNodes.getRightIndex(nodeReference));
             if ((rightBox != null) && (leftBox != null)) {
-                cachedBoxes[nodeOffset] = leftBox.getMergedBox(rightBox);
-                if (cachedBoxes[nodeOffset].contains(point)) {
+                cachedBoxes[nodeReference] = leftBox.getMergedBox(rightBox);
+                if (cachedBoxes[nodeReference].contains(point)) {
                     resolvedDelete = true;
                 }
             } else {
-                cachedBoxes[nodeOffset] = null;
+                cachedBoxes[nodeReference] = null;
             }
         }
-        --internalNodes.mass[nodeOffset];
+        internalNodes.decrementMass(nodeReference);
         return resolvedDelete;
     }
 
@@ -324,106 +336,59 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      * particulars of the cut and the node that is being separated by the cut as a
      * sibling of the point
      *
-     * @param pointIndex    the index of the point being inserted
      * @param point         the actual values
      * @param parentIndex   index of the ancestor node (can be NULL for root) above
      *                      which no changes need to be made
-     * @param addPointState the in formation about the cut.
+     * @param addPointState the information about the cut.
      */
 
-    void resolve(int pointIndex, P point, short parentIndex, AddPointState addPointState) {
+    void resolve(Point point, int parentIndex, AddPointState<Point> addPointState) {
         if (!addPointState.getResolved()) {
             addPointState.setResolved();
-            short siblingOffset = addPointState.getSiblingOffset();
+            int siblingOffset = addPointState.getSiblingOffset();
             int cutDimension = addPointState.getCutDimension();
             double cutValue = addPointState.getCutValue();
-            int oldmass = (isLeaf(siblingOffset)) ? leafNodes.mass[siblingOffset - maxSize]
-                    : internalNodes.mass[siblingOffset];
-            short leafOffset = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
-            short mergedNode = leftOf(point, cutDimension, cutValue)
-                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, oldmass + 1)
-                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, oldmass + 1);
+            int oldMass = getMass(siblingOffset);
+            int leafOffset = leafNodes.addLeaf(NULL, addPointState.getPointIndex(), 1);
+            int mergedNode = leftOf(point, cutDimension, cutValue)
+                    ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, (oldMass + 1))
+                    : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, (oldMass + 1));
 
-            int parent;
-            if (isLeaf(siblingOffset)) {
-                parent = leafNodes.parentIndex[siblingOffset - maxSize];
-            } else {
-                parent = internalNodes.parentIndex[siblingOffset];
-            }
+            int parent = getParent(siblingOffset);
+
             if (parent == NULL) {
                 rootIndex = mergedNode;
             } else {
                 replaceNode(siblingOffset, mergedNode);
             }
-            leafNodes.parentIndex[leafOffset - maxSize] = mergedNode;
-            if (isLeaf(siblingOffset)) {
-                leafNodes.parentIndex[siblingOffset - maxSize] = mergedNode;
-            } else {
-                internalNodes.parentIndex[siblingOffset] = mergedNode;
+
+            leafNodes.setParent(leafOffset, mergedNode);
+            setParent(siblingOffset, mergedNode);
+
+            if (cachedBoxes != null) {
+                cachedBoxes[mergedNode] = addPointState.getSavedBox();
+                int tempNode = mergedNode;
+                while (internalNodes.getParent(tempNode) != parentIndex) {
+                    tempNode = internalNodes.getParent(tempNode);
+                    cachedBoxes[tempNode].addPoint(point);
+                }
             }
-
-            cachedBoxes[mergedNode] = addPointState.getSavedBox();
-            short tempNode = mergedNode;
-            while (internalNodes.parentIndex[tempNode] != parentIndex) {
-                tempNode = internalNodes.parentIndex[tempNode];
-                cachedBoxes[tempNode].addPoint(point);
-            }
-
-        }
-    }
-
-    /**
-     * The following method corresponds to visiting a set of nodes along the path
-     * from a leaf to the root with increasing BoundingBoxes. For each new
-     * BoundingBox seen. If there is a cut that separates the point and the node
-     * then the method remembers the node, bounding box and the particulars of the
-     * new cut. If there is no possibility of a cut (when the point belongs to the
-     * box) the state is resolved by adjusting the tree.
-     *
-     * @param pointIndex    index of the point to be added
-     * @param point         actual value of the point
-     * @param nodeOffset    offset of the current node
-     * @param addPointState store to remember the most recent cut
-     */
-    void checkContainsAndUpdateState(int pointIndex, P point, short nodeOffset, AddPointState addPointState) {
-        if (!addPointState.getResolved()) {
-            IBox<P> existingBox = getInternalBoundingBox(nodeOffset);
-            if (existingBox.contains(point)) {
-                resolve(pointIndex, point, nodeOffset, addPointState);
-                return;
-            }
-            IBox<P> mergedBox = existingBox.getMergedBox(point);
-            Cut cut = randomCut(random, mergedBox);
-            short splitDimension = (short) cut.getDimension();
-            double splitValue = cut.getValue();
-            double minValue = existingBox.getMinValue(splitDimension);
-            double maxValue = existingBox.getMaxValue(splitDimension);
-
-            if (minValue > splitValue || maxValue <= splitValue) {
-                addPointState.initialize(nodeOffset, splitDimension, splitValue, mergedBox);
+            int tempNode = mergedNode;
+            while (internalNodes.getParent(tempNode) != NULL) {
+                tempNode = internalNodes.getParent(tempNode);
+                internalNodes.incrementMass(tempNode);
             }
         }
     }
 
     /**
      * This function adds a point to the tree recursively starting from the leaf
-     * node. The algorithm for adding a point is as follows:
-     * <ol>
-     * <li>At the current node we create a new bounding box by merging the point
-     * with the existing box.</li>
-     * <li>We pick a dimension and a value of cut.</li>
-     * <li>If the cut falls outside the existing box we record the most recent
-     * location.</li>
-     * <li>We proceed to the parent.</li>
-     * <li>If the point is within the current bounding box then make the change
-     * corresponding to the most recent location and "resolve" the situation. If the
-     * point is outside the bounding box of the tree then this step is taken at the
-     * root node in addpoint(Sequential seg)</li>
-     * </ol>
+     * node.
      *
-     * @param nodeOffset the current node in the tree we are on
-     * @param point      the point that we want to add to the tree
-     * @param pointIndex is the location of the new copy of the point in pointstore
+     * @param nodeReference the current node in the tree we are on
+     * @param point         the point that we want to add to the tree
+     * @param pointIndex    is the location of the new copy of the point in point
+     *                      store
      *
      * @return the integer index of the inserted point. If a previous copy is found
      *         then the index of the previous copy is returned. That helps in
@@ -431,33 +396,82 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
      *         some tree. If no duplicate is found then pointIndex is returned.
      */
 
-    private int addPoint(short nodeOffset, P point, int pointIndex, AddPointState addPointState) {
+    private AddPointState<Point> addPoint(int nodeReference, Point point, int pointIndex) {
 
-        if (isLeaf(nodeOffset)) {
-            P oldPoint = pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]);
+        if (leafNodes.isLeaf(nodeReference)) {
+            int oldPointIndex = leafNodes.getPointIndex(nodeReference);
+            Point oldPoint = pointStore.get(oldPointIndex);
             if (checkEqual(oldPoint, point)) {
                 // the inserted point is equal to an existing leaf point
-                ++leafNodes.mass[nodeOffset - maxSize];
-                addPointState.setResolved();
-                return leafNodes.pointIndex[nodeOffset - maxSize];
+                leafNodes.incrementMass(nodeReference);
+                AddPointState<Point> newState = new AddPointState<>(oldPointIndex);
+                // the following will ensure that no further processing happens
+                // note that boxes (if present) do not need to be updated
+                // the index of the duplicate point is saved
+                newState.setResolved();
+                int node = leafNodes.getParent(nodeReference);
+                while (node != NULL) {
+                    internalNodes.incrementMass(node);
+                    node = getParent(node);
+                }
+                return newState;
             } else {
-                IBox<P> mergedBox = getInternalMergedBox(point, oldPoint);
+                IBoundingBox<Point> mergedBox = getInternalMergedBox(point, oldPoint);
                 Cut cut = randomCut(random, mergedBox);
-                addPointState.initialize(nodeOffset, (short) cut.getDimension(), cut.getValue(), mergedBox);
-                return pointIndex;
+                // the cut is between a leaf node and the new point; it must exist
+                AddPointState<Point> newState = new AddPointState<>(pointIndex);
+                newState.initialize(nodeReference, cut.getDimension(), cut.getValue(), mergedBox);
+                return newState;
             }
         }
 
-        int ret;
-        if (leftOf(point, internalNodes.cutDimension[nodeOffset], internalNodes.cutValue[nodeOffset])) {
-            ret = addPoint(internalNodes.leftIndex[nodeOffset], point, pointIndex, addPointState);
+        int nextNode;
+        int sibling;
+        if (leftOf(point, internalNodes.getCutDimension(nodeReference), internalNodes.getCutValue(nodeReference))) {
+            nextNode = internalNodes.getLeftIndex(nodeReference);
+            sibling = internalNodes.getRightIndex(nodeReference);
         } else {
-            ret = addPoint(internalNodes.rightIndex[nodeOffset], point, pointIndex, addPointState);
+            sibling = internalNodes.getLeftIndex(nodeReference);
+            nextNode = internalNodes.getRightIndex(nodeReference);
         }
+        // we recurse in a preorder traversal ove the tree
+        AddPointState<Point> addPointState = addPoint(nextNode, point, pointIndex);
 
-        checkContainsAndUpdateState(pointIndex, point, nodeOffset, addPointState);
-        ++internalNodes.mass[nodeOffset];
-        return ret;
+        if (!addPointState.getResolved()) {
+            IBoundingBox<Point> existingBox;
+            if (enableCache) {
+                // if the boxes are being cached, use the box if present, otherwise
+                // generate and cache the box
+                existingBox = getInternalBoundingBox(nodeReference);
+            } else {
+                // the boxes are not present, merge the bounding box of the sibling of the last
+                // seen child (nextNode) to the stored box in the state and save it
+                // we can change the current box in addPointState
+                existingBox = addPointState.getCurrentBox().addBox(getInternalBoundingBox(sibling));
+                addPointState.setCurrentBox(existingBox);
+            }
+
+            if (existingBox.contains(point)) {
+                // resolve the add, by modifying (if present) the bounding boxes corresponding
+                // to current node (nodeReference) all the way to the root
+                resolve(point, nodeReference, addPointState);
+                return addPointState;
+            }
+            // generate a new cut and see if it separates the new point
+            IBoundingBox<Point> mergedBox = existingBox.getMergedBox(point);
+            Cut cut = randomCut(random, mergedBox);
+            int splitDimension = cut.getDimension();
+            double splitValue = cut.getValue();
+            double minValue = existingBox.getMinValue(splitDimension);
+            double maxValue = existingBox.getMaxValue(splitDimension);
+
+            if (minValue > splitValue || maxValue <= splitValue) {
+                // the cut separates the new point; update the state to store information
+                // about the most recent cut
+                addPointState.initialize(nodeReference, splitDimension, splitValue, mergedBox);
+            }
+        }
+        return addPointState;
     }
 
     /**
@@ -472,14 +486,14 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
 
     public Integer addPoint(Sequential<Integer> seq) {
         int pointIndex = seq.getValue();
-        P pointValue = pointStore.get(pointIndex);
+        Point pointValue = pointStore.get(pointIndex);
         if (rootIndex == NULL) {
-            rootIndex = (short) (leafNodes.add(NULL, pointIndex, 1) + maxSize);
+            rootIndex = leafNodes.addLeaf(NULL, pointIndex, 1);
             return pointIndex;
         } else {
-            int ret = addPoint(rootIndex, pointValue, pointIndex, addPointState);
-            resolve(pointIndex, pointValue, NULL, addPointState);
-            return ret;
+            AddPointState<Point> addPointState = addPoint(rootIndex, pointValue, pointIndex);
+            resolve(pointValue, NULL, addPointState);
+            return addPointState.getPointIndex();
         }
     }
 
@@ -510,14 +524,14 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         return visitor.getResult();
     }
 
-    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, short currentNode,
+    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, int currentNode,
             CompactNodeView nodeView, int depthOfNode) {
-        if (isLeaf(currentNode)) {
+        if (leafNodes.isLeaf(currentNode)) {
             nodeView.setCurrentNodeIndex(currentNode);
             visitor.acceptLeaf(nodeView, depthOfNode);
         } else {
-            short childNode = leftOf(point, currentNode) ? internalNodes.leftIndex[currentNode]
-                    : internalNodes.rightIndex[currentNode];
+            int childNode = leftOf(point, currentNode) ? internalNodes.getLeftIndex(currentNode)
+                    : internalNodes.getRightIndex(currentNode);
             traversePathToLeafAndVisitNodes(point, visitor, childNode, nodeView, depthOfNode + 1);
             nodeView.setCurrentNodeIndex(currentNode);
             visitor.accept(nodeView, depthOfNode);
@@ -525,11 +539,11 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
     }
 
     /**
-     * This is a traversal method which follows the standard traveral path (defined
+     * This is a traversal method which follows the standard traversal path (defined
      * in {@link #traverse(double[], Function)}) but at Node in checks to see
      * whether the visitor should split. If a split is triggered, then independent
      * copies of the visitor are sent down each branch of the tree and then merged
-     * before propogating the result.
+     * before propagating the result.
      *
      * @param point          A point which determines the traversal path from the
      *                       root to a leaf node.
@@ -549,28 +563,27 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         return visitor.getResult();
     }
 
-    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, short currentNode,
+    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, int currentNode,
             CompactNodeView nodeView, int depthOfNode) {
-        if (isLeaf(currentNode)) {
+        if (leafNodes.isLeaf(currentNode)) {
             nodeView.setCurrentNodeIndex(currentNode);
             visitor.acceptLeaf(nodeView, depthOfNode);
         } else {
             nodeView.setCurrentNodeIndex(currentNode);
             if (visitor.trigger(nodeView)) {
-                traverseTreeMulti(point, visitor, internalNodes.leftIndex[currentNode], nodeView, depthOfNode + 1);
+                traverseTreeMulti(point, visitor, internalNodes.getLeftIndex(currentNode), nodeView, depthOfNode + 1);
                 MultiVisitor<R> newVisitor = visitor.newCopy();
-                nodeView.setCurrentNodeIndex(internalNodes.rightIndex[currentNode]);
-                traverseTreeMulti(point, newVisitor, internalNodes.rightIndex[currentNode], nodeView, depthOfNode + 1);
+                nodeView.setCurrentNodeIndex(internalNodes.getRightIndex(currentNode));
+                traverseTreeMulti(point, newVisitor, internalNodes.getRightIndex(currentNode), nodeView,
+                        depthOfNode + 1);
                 visitor.combine(newVisitor);
-                nodeView.setCurrentNodeIndex(currentNode);
-                visitor.accept(nodeView, depthOfNode);
             } else {
-                short childNode = leftOf(point, currentNode) ? internalNodes.leftIndex[currentNode]
-                        : internalNodes.rightIndex[currentNode];
+                int childNode = leftOf(point, currentNode) ? internalNodes.getLeftIndex(currentNode)
+                        : internalNodes.getRightIndex(currentNode);
                 traverseTreeMulti(point, visitor, childNode, nodeView, depthOfNode + 1);
-                nodeView.setCurrentNodeIndex(currentNode);
-                visitor.accept(nodeView, depthOfNode);
             }
+            nodeView.setCurrentNodeIndex(currentNode);
+            visitor.accept(nodeView, depthOfNode);
         }
     }
 
@@ -579,15 +592,17 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         return (rootIndex == NULL) ? 0 : getMass(rootIndex);
     }
 
-    protected int getMass(short nodeOffset) {
-        return (nodeOffset - maxSize >= 0) ? leafNodes.mass[nodeOffset - maxSize] : internalNodes.mass[nodeOffset];
+    protected int getMass(int nodeReference) {
+        return leafNodes.isLeaf(nodeReference) ? leafNodes.getMass(nodeReference)
+                : internalNodes.getMass(nodeReference);
     }
 
-    abstract protected double[] getLeafPoint(short nodeOffset);
+    abstract protected double[] getLeafPoint(int nodeReference);
 
     public void reflateTree() {
-        if ((rootIndex == NULL) || (rootIndex >= maxSize))
+        if ((rootIndex == NULL) || (leafNodes.isLeaf(rootIndex))) {
             return;
+        }
         reflateNode(rootIndex);
     }
 
@@ -599,7 +614,7 @@ public abstract class AbstractCompactRandomCutTree<P> implements ITree<Integer> 
         return new LeafStoreState(leafNodes);
     }
 
-    public short getRootIndex() {
+    public int getRootIndex() {
         return rootIndex;
     }
 
