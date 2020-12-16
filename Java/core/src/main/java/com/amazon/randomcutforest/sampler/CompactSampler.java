@@ -93,34 +93,47 @@ public class CompactSampler implements IStreamSampler<Integer> {
     /**
      * Construct a new CompactSampler.
      *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param seed       The seed value used to create a random number generator.
+     * @param sampleSize                  The number of points in the sampler when
+     *                                    full.
+     * @param lambda                      The decay factor used for generating the
+     *                                    weight of the point. For greater values of
+     *                                    lambda we become more biased in favor of
+     *                                    recent points.
+     * @param seed                        The seed value used to create a random
+     *                                    number generator.
+     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
+     *                                    sampled points will be stored in the
+     *                                    sampler.
      */
-    public CompactSampler(final int sampleSize, final double lambda, long seed, boolean storeSeq) {
-        this(sampleSize, lambda, new Random(seed), storeSeq);
+    public CompactSampler(final int sampleSize, final double lambda, long seed, boolean storeSequenceIndexesEnabled) {
+        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled);
     }
 
     /**
      * Construct a new OffsetSampler. This constructor exposes the Random argument
      * so that it can be mocked for testing.
      *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param random     A random number generator that will be used in sampling.
+     * @param sampleSize                  The number of points in the sampler when
+     *                                    full.
+     * @param lambda                      The decay factor used for generating the
+     *                                    weight of the point. For greater values of
+     *                                    lambda we become more biased in favor of
+     *                                    recent points.
+     * @param random                      A random number generator that will be
+     *                                    used in sampling.
+     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
+     *                                    sampled points will be stored in the
+     *                                    sampler.
      */
-    public CompactSampler(final int sampleSize, final double lambda, Random random, boolean storeSeq) {
+    public CompactSampler(final int sampleSize, final double lambda, Random random,
+            boolean storeSequenceIndexesEnabled) {
         this.capacity = sampleSize;
         entriesSeen = 0;
         size = 0;
         weightArray = new float[sampleSize];
         referenceArray = new int[sampleSize];
-        this.storeSequenceIndexesEnabled = storeSeq;
-        if (storeSeq) {
+        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+        if (storeSequenceIndexesEnabled) {
             this.sequenceArray = new long[sampleSize];
         } else {
             this.sequenceArray = null;
@@ -133,12 +146,17 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * This convenience constructor creates a SimpleStreamSampler with lambda equal
      * to 0, which is equivalent to uniform sampling on the stream.
      *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param seed       The seed value used to create a random number generator.
+     * @param sampleSize                  The number of points in the sampler when
+     *                                    full.
+     * @param seed                        The seed value used to create a random
+     *                                    number generator.
+     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
+     *                                    sampled points will be stored in the
+     *                                    sampler.
      * @return a new SimpleStreamSampler which samples uniformly from its input.
      */
-    public static CompactSampler uniformSampler(int sampleSize, long seed, boolean storeSeq) {
-        return new CompactSampler(sampleSize, 0.0, seed, storeSeq);
+    public static CompactSampler uniformSampler(int sampleSize, long seed, boolean storeSequenceIndexesEnabled) {
+        return new CompactSampler(sampleSize, 0.0, seed, storeSequenceIndexesEnabled);
     }
 
     @Override
