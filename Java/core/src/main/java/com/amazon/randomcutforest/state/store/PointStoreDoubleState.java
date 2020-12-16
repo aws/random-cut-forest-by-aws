@@ -37,7 +37,7 @@ public class PointStoreDoubleState {
      * freeIndexPointer is an index into an array [0:capacity-1] and can be -1 when
      * everything is occupied.
      *
-     * @param pointStoreDouble
+     * @param pointStoreDouble A point store.
      */
     public PointStoreDoubleState(PointStoreDouble pointStoreDouble) {
         store = Arrays.copyOf(pointStoreDouble.getStore(), pointStoreDouble.getStore().length);
