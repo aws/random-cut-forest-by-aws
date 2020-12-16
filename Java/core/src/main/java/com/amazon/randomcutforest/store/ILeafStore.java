@@ -19,25 +19,94 @@ package com.amazon.randomcutforest.store;
  * An interface for accessing leafstore for different trees. While the library
  * provides a LeafStore, the interface will allow extensions to other
  * implementations as well as unification with pointer based nodes.
+ *
+ * * This handles leaf nodes which corresponds to [lowerRangeLimit .. max
+ * (short)]
  */
 public interface ILeafStore {
 
-    int add(int parentIndex, int pointIndex, int mass);
+    /**
+     * adds a leaf node
+     * 
+     * @param parentIndex parent of the leaf
+     * @param pointIndex  index in point store determining the associated point
+     * @param mass        number of copies
+     * @return index of the leaf node
+     */
+
+    int addLeaf(int parentIndex, int pointIndex, int mass);
+
+    /**
+     * adds parent of the node
+     * 
+     * @param index  leaf node
+     * @param parent parent of the leaf (not a leaf node, can be NULL)
+     */
 
     void setParent(int index, int parent);
 
+    /**
+     * returns the parent of the node
+     * 
+     * @param index node
+     * @return index of parent (either NULL or an internal node)
+     */
     int getParent(int index);
 
+    /**
+     * delets the leaf node
+     * 
+     * @param index node
+     */
     void delete(int index);
 
+    /**
+     * gets the index of the point associated with the leaf
+     * 
+     * @param index node
+     * @return index of the point in Point Store
+     */
     int getPointIndex(int index);
 
+    /**
+     * is the node a leaf? Should be in agreement with the corresponding node store
+     * 
+     * @param index node
+     * @return yes/no
+     */
     boolean isLeaf(int index);
 
-    void incrementMass(int index);
+    /**
+     * increases the mass of the leaf and returns the value
+     * 
+     * @param index node
+     * @return current mass (number of copies of the point in the tree)
+     */
 
-    void decrementMass(int index);
+    int incrementMass(int index);
 
+    /**
+     * returns the new mass of the leaf (does not delete)
+     * 
+     * @param index node
+     * @return new mass after decrement by 1
+     */
+
+    int decrementMass(int index);
+
+    /**
+     * return current number of copies of the point in the tree
+     * 
+     * @param index node
+     * @return current mass
+     */
     int getMass(int index);
+
+    /**
+     * returns the smallest index considered a leaf node
+     * 
+     * @return value of index
+     */
+    int getMinIndex();
 
 }

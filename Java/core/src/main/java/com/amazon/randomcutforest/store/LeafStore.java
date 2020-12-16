@@ -24,6 +24,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
  * store these field values for a collection of nodes. An index in the store can
  * be used to look up the field values for a particular leaf node.
  *
+ * This handles leaf nodes which corresponds to [lowerRangeLimit .. max (short)]
+ *
  * If we think of an array of Node objects as being row-oriented (where each row
  * is a Node), then this class is analogous to a column-oriented database of
  * leaf Nodes.
@@ -60,7 +62,7 @@ public class LeafStore extends SmallIndexManager implements ILeafStore {
         this.mass = mass;
     }
 
-    public int add(int parentIndex, int pointIndex, int mass) {
+    public int addLeaf(int parentIndex, int pointIndex, int mass) {
         short index = takeIndex();
         this.parentIndex[index] = (short) parentIndex;
         this.mass[index] = (short) mass;
@@ -93,18 +95,23 @@ public class LeafStore extends SmallIndexManager implements ILeafStore {
     }
 
     @Override
-    public void incrementMass(int index) {
-        ++mass[index - super.capacity];
+    public int incrementMass(int index) {
+        return ++mass[index - super.capacity];
     }
 
     @Override
-    public void decrementMass(int index) {
-        --mass[index - super.capacity];
+    public int decrementMass(int index) {
+        return --mass[index - super.capacity];
     }
 
     @Override
     public int getMass(int index) {
         return mass[index - super.capacity];
+    }
+
+    @Override
+    public int getMinIndex() {
+        return super.capacity;
     }
 
 }

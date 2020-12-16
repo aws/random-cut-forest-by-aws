@@ -22,6 +22,9 @@ package com.amazon.randomcutforest.store;
  * values for a collection of nodes. An index in the store can be used to look
  * up the field values for a particular node.
  *
+ * The internal nodes (handled by this store) corresponds to
+ * [0..upperRangeLimit]
+ *
  * If we think of an array of Node objects as being row-oriented (where each row
  * is a Node), then this class is analogous to a column-oriented database of
  * Nodes.
@@ -122,13 +125,13 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
-    public void incrementMass(int index) {
-        ++mass[index];
+    public int incrementMass(int index) {
+        return ++mass[index];
     }
 
     @Override
-    public void decrementMass(int index) {
-        --mass[index];
+    public int decrementMass(int index) {
+        return --mass[index];
     }
 
     @Override
@@ -144,6 +147,17 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
     @Override
     public int getMass(int index) {
         return mass[index];
+    }
+
+    // technically the number of internal nodes is sampleSize - 1
+    @Override
+    public boolean isLeaf(int index) {
+        return index >= super.capacity + 1;
+    }
+
+    @Override
+    public int getMaxIndex() {
+        return super.capacity;
     }
 
 }

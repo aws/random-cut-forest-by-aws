@@ -349,7 +349,7 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
             int cutDimension = addPointState.getCutDimension();
             double cutValue = addPointState.getCutValue();
             int oldMass = getMass(siblingOffset);
-            int leafOffset = leafNodes.add(NULL, addPointState.getPointIndex(), 1);
+            int leafOffset = leafNodes.addLeaf(NULL, addPointState.getPointIndex(), 1);
             int mergedNode = leftOf(point, cutDimension, cutValue)
                     ? internalNodes.addNode(NULL, leafOffset, siblingOffset, cutDimension, cutValue, (oldMass + 1))
                     : internalNodes.addNode(NULL, siblingOffset, leafOffset, cutDimension, cutValue, (oldMass + 1));
@@ -488,7 +488,7 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
         int pointIndex = seq.getValue();
         Point pointValue = pointStore.get(pointIndex);
         if (rootIndex == NULL) {
-            rootIndex = leafNodes.add(NULL, pointIndex, 1);
+            rootIndex = leafNodes.addLeaf(NULL, pointIndex, 1);
             return pointIndex;
         } else {
             AddPointState<Point> addPointState = addPoint(rootIndex, pointValue, pointIndex);
