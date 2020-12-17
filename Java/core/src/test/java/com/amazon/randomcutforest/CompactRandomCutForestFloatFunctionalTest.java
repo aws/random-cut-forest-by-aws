@@ -35,6 +35,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
@@ -68,11 +69,11 @@ public class CompactRandomCutForestFloatFunctionalTest {
 
         parallelExecutionForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .singlePrecisionEnabled(true).boundingBoxCachingEnabled(false).build();
+                .precision(Precision.SINGLE).boundingBoxCachingEnabled(false).build();
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .singlePrecisionEnabled(true).boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).build();
+                .precision(Precision.SINGLE).boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).build();
 
         dataSize = 10_000;
 
