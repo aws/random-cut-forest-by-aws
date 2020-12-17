@@ -15,65 +15,180 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.amazon.randomcutforest.TestUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.executor.Sequential;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 public class CompactSamplerTest {
 
-    private int sampleSize;
-    private double lambda;
-    private long seed;
-    private Random random;
-    private CompactSampler sampler;
+    private static int sampleSize = 101;
+    private static double lambda = 0.01;
+    private static long seed = 42L;
 
-    @BeforeEach
-    public void setUp() {
-        sampleSize = 101;
-        lambda = 0.01;
-        seed = 42L;
-        random = spy(new Random(seed));
-        sampler = new CompactSampler(sampleSize, lambda, random, false);
+    private static class SamplerProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            Random random1 = spy(new Random(seed));
+            CompactSampler sampler1 = new CompactSampler(sampleSize, lambda, random1, false);
+
+            Random random2 = spy(new Random(seed));
+            CompactSampler sampler2 = new CompactSampler(sampleSize, lambda, random2, true);
+            return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2));
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testNew(Random random, CompactSampler sampler) {
+        // test CompactSampler fields not defined in the IStreamSampler interface
+        assertEquals(lambda, sampler.getLambda());
+        assertNotNull(sampler.getWeightArray());
+        assertNotNull(sampler.getPointIndexArray());
+
+        if (sampler.isStoreSequenceIndexesEnabled()) {
+            assertNotNull(sampler.getSequenceIndexArray());
+        } else {
+            assertNull(sampler.getSequenceIndexArray());
+        }
     }
 
     @Test
-    public void testNew() {
-        assertFalse(sampler.getEvictedPoint().isPresent());
-        assertFalse(sampler.isReady());
-        assertFalse(sampler.isFull());
-        assertEquals(sampleSize, sampler.getCapacity());
-        assertEquals(0, sampler.size());
-        assertEquals(lambda, sampler.getLambda());
+    public void testNewFromExistingWeights() {
+        int sampleSize = 10;
+        double lambda = 0.1;
 
-        CompactSampler uniformSampler = new CompactSampler(11, 0, 14, false);
+        // weight array is valid heap
+        float[] weight = { 0.4f, 0.3f, 0.2f };
+        int[] pointIndex = { 1, 2, 3 };
+        CompactSampler sampler = new CompactSampler(sampleSize, lambda, new Random(), weight, pointIndex, null, true);
+
+        assertFalse(sampler.getEvictedPoint().isPresent());
+        assertFalse(sampler.isStoreSequenceIndexesEnabled());
+        assertEquals(3, sampler.size());
+        assertNull(sampler.getSequenceIndexArray());
+
+        for (int i = 0; i < 3; i++) {
+            assertEquals(weight[i], sampler.weight[i]);
+            assertEquals(pointIndex[i], sampler.pointIndex[i]);
+        }
+    }
+
+    @Test
+    public void testUniformSampler() {
+        CompactSampler uniformSampler = CompactSampler.uniformSampler(sampleSize, seed, false);
         assertFalse(uniformSampler.getEvictedPoint().isPresent());
         assertFalse(uniformSampler.isReady());
         assertFalse(uniformSampler.isFull());
-        assertEquals(11, uniformSampler.getCapacity());
+        assertEquals(sampleSize, uniformSampler.getCapacity());
         assertEquals(0, uniformSampler.size());
         assertEquals(0.0, uniformSampler.getLambda());
     }
 
-    @Test
-    public void testPointComparator() {
-        Sequential<double[]> point1 = new Sequential(new double[] { 0.99, -55.2 }, 1.23, 999L);
-        Sequential<double[]> point2 = new Sequential(new double[] { 2.2, 87.0 }, -77, 1000L);
-        Sequential<double[]> point3 = new Sequential(new double[] { -2.1, 99.4 }, -77, 1001L);
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testAddSample(Random random, CompactSampler sampler) {
+        sampler.addSample(1, 0.5f, 10L);
+        sampler.addSample(12, 1.2f, 11L);
+        sampler.addSample(123, 0.03f, 12L);
 
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point1, point2) < 0);
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point3, point1) > 0);
-        assertTrue(Comparator.comparingDouble(Weighted<double[]>::getWeight).reversed().compare(point2, point3) == 0);
+        assertEquals(3, sampler.size());
+        assertEquals(sampleSize, sampler.getCapacity());
+
+        List<Weighted<Integer>> samples = sampler.getWeightedSamples();
+        samples.sort(Comparator.comparing(Weighted<Integer>::getWeight));
+        assertEquals(3, samples.size());
+
+        assertEquals(123, samples.get(0).getValue());
+        assertEquals(0.03f, samples.get(0).getWeight());
+
+        assertEquals(1, samples.get(1).getValue());
+        assertEquals(0.5f, samples.get(1).getWeight());
+
+        assertEquals(12, samples.get(2).getValue());
+        assertEquals(1.2f, samples.get(2).getWeight());
     }
 
-    @Test
-    public void testGetScore() {
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testAcceptSample(Random random, CompactSampler sampler) {
+        // The sampler should accept all samples until the sampler is full
+        for (int i = 0; i < sampleSize; i++) {
+            Optional<Float> weight = sampler.acceptSample(i);
+            assertTrue(weight.isPresent());
+            sampler.addSample(i, weight.get(), i);
+        }
+
+        // In subsequent calls to sample, either the result is empty or else
+        // the new weight is smaller than the evicted weight
+
+        int numAccepted = 0;
+        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+            Optional<Float> weight = sampler.acceptSample(i);
+            if (weight.isPresent()) {
+                numAccepted++;
+                assertTrue(sampler.getEvictedPoint().isPresent());
+                assertTrue(weight.get() < sampler.getEvictedPoint().get().getWeight());
+                sampler.addSample(i, weight.get(), i);
+            }
+        }
+        assertTrue(numAccepted > 0, "the sampler did not accept any points");
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testSample(Random random, CompactSampler compactSampler) {
+        CompactSampler sampler = spy(compactSampler);
+        for (int i = 0; i < sampleSize; i++) {
+            assertTrue(sampler.sample(i, i));
+        }
+
+        // all points should be added to the sampler until the sampler is full
+        assertEquals(sampleSize, sampler.size());
+        verify(sampler, times(sampleSize)).addSample(any(), anyFloat(), anyLong());
+
+        reset(sampler);
+
+        int numSampled = 0;
+        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+            if (sampler.sample(i, i)) {
+                numSampled++;
+            }
+        }
+        assertTrue(numSampled > 0, "no new values were sampled");
+        assertTrue(numSampled < sampleSize, "all values were sampled");
+
+        verify(sampler, times(numSampled)).addSample(any(), anyFloat(), anyLong());
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testGetScore(Random random, CompactSampler sampler) {
         when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
 
         sampler.sample(1, 101);
@@ -87,127 +202,30 @@ public class CompactSamplerTest {
         Arrays.sort(expectedScores);
 
         List<Weighted<Integer>> samples = sampler.getWeightedSamples();
-        // samples.sort(Comparator.comparing(Weighted::getWeight).reversed());
+        samples.sort(Comparator.comparing(Weighted<Integer>::getWeight));
 
-        // for (int i = 0; i < 3; i++) {
-        // assertEquals(expectedScores[i], samples.get(i).getWeight(), EPSILON);
-        // }
-    }
-
-    @Test
-    public void testIsReadyIsFull() {
-        int i;
-        for (i = 1; i < sampleSize / 4; i++) {
-            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
-            assertFalse(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        for (i = sampleSize / 4; i < sampleSize; i++) {
-            assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), i));
-            assertTrue(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        assertTrue(sampler.sample((int) Math.ceil(Math.random() * 100), sampleSize));
-        assertTrue(sampler.isReady());
-        assertTrue(sampler.isFull());
-        assertEquals(i, sampler.size());
-        assertFalse(sampler.getEvictedPoint().isPresent());
-
-        java.util.Optional<Sequential<double[]>> evicted;
-        for (i = sampleSize + 1; i < 2 * sampleSize; i++) {
-            // Either the sampling and the evicted point are both null or both non-null
-            assertTrue(
-                    sampler.sample((int) Math.ceil(Math.random() * 100), i) == sampler.getEvictedPoint().isPresent());
-
-            assertTrue(sampler.isReady());
-            assertTrue(sampler.isFull());
-            assertEquals(sampleSize, sampler.size());
-
+        for (int i = 0; i < 3; i++) {
+            assertEquals(expectedScores[i], samples.get(i).getWeight(), EPSILON);
         }
     }
 
-    @Test
-    public void testCompareSampling() {
-        CompactSampler compact = new CompactSampler(10, 0.001, 10, false);
-        SimpleStreamSampler<double[]> simple = new SimpleStreamSampler<>(10, 0.001, 10, false);
-
-        for (int i = 0; i < 100000; i++) {
-            Optional<Float> weightOne = compact.acceptSample(i);
-            Optional<Float> weightTwo = simple.acceptSample(i);
-            assertEquals(weightOne.isPresent(), weightTwo.isPresent());
-            if (weightOne.isPresent()) {
-                assertEquals(weightOne.get(), weightTwo.get(), 1E-10);
-                compact.addSample(i, weightOne.get(), i);
-                simple.addSample(new double[] { i }, weightTwo.get(), i);
-            }
-            assertEquals(compact.getEvictedPoint().isPresent(), simple.getEvictedPoint().isPresent());
-            if (compact.getEvictedPoint().isPresent()) {
-                // assertEquals(compact.getEvictedPoint().get().getWeight(),simple.getEvictedPoint().get().getWeight(),1E-10);
-                int y = compact.getEvictedPoint().get().getValue();
-                double[] x = simple.getEvictedPoint().get().getValue();
-                assertEquals(x[0], y);
-                assertEquals(compact.getEvictedPoint().get().getWeight(), simple.getEvictedPoint().get().getWeight(),
-                        1E-10);
-
-            }
-
+    @ParameterizedTest
+    @ArgumentsSource(SamplerProvider.class)
+    public void testValidateHeap(Random random, CompactSampler sampler) {
+        // populate the heap
+        for (int i = 0; i < 2 * sampleSize; i++) {
+            sampler.sample(i, i);
         }
-    }
-    /*
-     * @Test public void testSample() { // first populate the sampler:
-     * 
-     * int entriesSeen; for (entriesSeen = 0; entriesSeen < 2 * sampleSize;
-     * entriesSeen++) { sampler.sample(new double[] { Math.random() }, entriesSeen);
-     * }
-     * 
-     * assertEquals(entriesSeen, 2 * sampleSize); assertTrue(sampler.isFull());
-     * 
-     * // find the lowest weight currently in the sampler // double maxWeight = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new);
-     * 
-     * // First choose a random value U so that // -lambda * entriesSeen +
-     * log(-log(U)) > maxWeight // which is equivalent to // U < exp(-exp(maxWeight
-     * + lambda * entriesSeen)) // using this formula results in an underflow, so
-     * just use a very small number
-     * 
-     * double u = 10e-100; when(random.nextDouble()).thenReturn(u);
-     * 
-     * // With this choice of u, the next sample should be rejected
-     * 
-     * assertFalse(sampler.sample(new double[] { Math.random() }, ++entriesSeen));
-     * assertFalse(sampler.getEvictedPoint().isPresent());
-     * 
-     * // double maxWeight2 = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new);
-     * 
-     * // assertEquals(maxWeight, maxWeight2);
-     * 
-     * // Next choose a large value of u (i.e., close to 1) // For this choice of U,
-     * the new point should be accepted
-     * 
-     * u = 1 - 10e-100; when(random.nextDouble()).thenReturn(u);
-     * 
-     * double point = Math.random(); Optional<Double> weight =
-     * sampler.acceptSample(++entriesSeen); assertTrue(sampler.sample(new double[] {
-     * point }, ++entriesSeen)); Optional<Sequential<double[]>> evicted =
-     * sampler.getEvictedPoint(); assertTrue(evicted.isPresent());
-     * assertTrue(weight.get() < evicted.get().getWeight()); //
-     * assertEquals(maxWeight, evicted.get().getWeight(), EPSILON);
-     * 
-     * // maxWeight2 = //
-     * sampler.getWeightedSamples().stream().mapToDouble(Sequential::getWeight).max(
-     * ) // .orElseThrow(IllegalStateException::new); // assertTrue(maxWeight2 <
-     * maxWeight); //
-     * assertTrue(sampler.getWeightedSamples().stream().anyMatch((Sequential) array
-     * // -> array.getValue() == point)); }
-     */
 
+        float[] weightArray = sampler.getWeightArray();
+
+        // swapping a weight value with one of its children will break the heap property
+        int i = sampleSize / 4;
+        float f = weightArray[i];
+        weightArray[i] = weightArray[2 * i + 1];
+        weightArray[2 * i + 1] = f;
+
+        assertThrows(IllegalStateException.class, () -> new CompactSampler(sampleSize, lambda, random, weightArray,
+                sampler.getPointIndexArray(), sampler.getSequenceIndexArray(), true));
+    }
 }
