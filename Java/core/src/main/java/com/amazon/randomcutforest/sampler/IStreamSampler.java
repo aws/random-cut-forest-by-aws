@@ -61,10 +61,9 @@ public interface IStreamSampler<P> {
      *
      * @param seqNum sequence number
      *
-     * @return returns Optional.empty() if the entry is noe accepted; otherwise
+     * @return returns Optional.empty() if the entry is not accepted; otherwise
      *         returns the weight
      */
-
     Optional<Float> acceptSample(long seqNum);
 
     /**
@@ -84,4 +83,29 @@ public interface IStreamSampler<P> {
      */
 
     Optional<Sequential<P>> getEvictedPoint();
+
+    /**
+     * @return true if this sampler contains enough points to support the anomaly
+     *         score computation, false otherwise. By default, this will
+     */
+    default boolean isReady() {
+        return size() >= getCapacity() / 4;
+    }
+
+    /**
+     * @return true if the sampler has reached it's full capacity, false otherwise.
+     */
+    default boolean isFull() {
+        return size() >= getCapacity();
+    }
+
+    /**
+     * @return the number of points contained by the sampler when full.
+     */
+    int getCapacity();
+
+    /**
+     * @return the number of points currently contained by the sampler.
+     */
+    int size();
 }

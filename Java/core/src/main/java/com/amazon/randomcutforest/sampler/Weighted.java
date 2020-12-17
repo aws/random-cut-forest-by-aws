@@ -15,70 +15,25 @@
 
 package com.amazon.randomcutforest.sampler;
 
+import lombok.Data;
+
 /**
- * A container class representing a weighted sequential value. This generic type
- * is used by {@link SimpleStreamSampler} to store weighted points of arbitrary
- * type.
- * 
+ * A container class representing a weighted value. This generic type is used in
+ * sampler implementations to store points along with weights that were computed
+ * as part of sampling.
+ *
  * @param <P> The representation of the point value.
  */
+@Data
 public class Weighted<P> {
 
-    public P value;
-    private float weight;
+    /**
+     * The contained value.
+     */
+    private final P value;
 
     /**
-     * Create a new weighted value from a point value of type P.
-     * 
-     * @param point  A value.
-     * @param weight The weight value.
+     * The weight assigned to this value.
      */
-    public Weighted(P point, float weight) {
-        this.value = point;
-        this.weight = weight;
-    }
-
-    /**
-     * copy constructor
-     * 
-     * @param other weighted point being copied
-     */
-    public Weighted(Weighted<P> other) {
-        this.value = other.getValue();
-        this.weight = other.getWeight();
-    }
-
-    /**
-     * @return the weight value.
-     */
-    public float getWeight() {
-        return weight;
-    }
-
-    /**
-     *
-     * @return the value
-     */
-    public P getValue() {
-        return value;
-    }
-
-    /**
-     * copy operation
-     * 
-     * @param other is another point
-     */
-    public void setValue(P other) {
-        value = other;
-    }
-
-    /**
-     * sets the weight
-     * 
-     * @param otherWeight new weight
-     */
-    public void setWeight(float otherWeight) {
-        this.weight = otherWeight;
-    }
-
+    private final float weight;
 }

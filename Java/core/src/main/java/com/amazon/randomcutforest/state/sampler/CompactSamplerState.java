@@ -15,50 +15,17 @@
 
 package com.amazon.randomcutforest.state.sampler;
 
-import java.util.Arrays;
-
 import lombok.Data;
-
-import com.amazon.randomcutforest.sampler.CompactSampler;
 
 @Data
 public class CompactSamplerState {
+    private float[] weight;
 
-    public float[] weightArray;
+    private int[] pointIndex;
 
-    public int[] referenceArray;
+    private long[] sequenceIndex;
 
-    public long[] sequenceArray;
+    private int size;
 
-    public int size;
-
-    public int capacity;
-
-    public CompactSamplerState() {
-
-    }
-
-    public CompactSamplerState(CompactSampler sampler) {
-        size = sampler.size();
-        capacity = sampler.getCapacity();
-        weightArray = Arrays.copyOf(sampler.getWeightArray(), size);
-        referenceArray = Arrays.copyOf(sampler.getReferenceArray(), size);
-        if (sampler.getSequenceArray() != null) {
-            sequenceArray = Arrays.copyOf(sampler.getSequenceArray(), size);
-        } else {
-            sequenceArray = null;
-        }
-    }
-
-    public CompactSamplerState(int size, int capacity, boolean storeSeq) {
-        this.size = size;
-        this.capacity = capacity;
-        weightArray = new float[size];
-        referenceArray = new int[size];
-        if (storeSeq) {
-            sequenceArray = new long[size];
-        } else {
-            sequenceArray = null;
-        }
-    }
+    private int capacity;
 }

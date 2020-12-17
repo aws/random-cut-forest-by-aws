@@ -31,9 +31,11 @@ public class CommonUtils {
      * Throws an {@link IllegalArgumentException} with the specified message if the
      * specified input is false.
      *
-     * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not
-     *                  met
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalArgumentException} if {@code condition} is
+     *                  false.
+     * @throws IllegalArgumentException if {@code condition} is false.
      */
     public static void checkArgument(boolean condition, String message) {
         if (!condition) {
@@ -45,9 +47,10 @@ public class CommonUtils {
      * Throws an {@link IllegalStateException} with the specified message if the
      * specified input is false.
      *
-     * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not
-     *                  met
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @throws IllegalStateException if {@code condition} is false.
      */
     public static void checkState(boolean condition, String message) {
         if (!condition) {
@@ -59,9 +62,12 @@ public class CommonUtils {
      * Throws a {@link NullPointerException} with the specified message if the
      * specified input is null.
      *
-     * @param object  a condition to test
-     * @param message the error message that will be used if the condition is not
-     *                met
+     * @param <T>     An arbitrary type.
+     * @param object  An object reference to test for nullity.
+     * @param message The error message to include in the
+     *                {@code NullPointerException} if {@code object} is null.
+     * @return {@code object} if not null.
+     * @throws NullPointerException if the supplied object is null.
      */
     public static <T> T checkNotNull(T object, String message) {
         Objects.requireNonNull(object, message);
