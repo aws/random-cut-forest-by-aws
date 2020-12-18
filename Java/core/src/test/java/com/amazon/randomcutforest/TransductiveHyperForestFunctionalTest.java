@@ -15,14 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.HyperTree;
-import com.amazon.randomcutforest.tree.IBoundingBoxView;
-import com.amazon.randomcutforest.tree.ITree;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +24,15 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.HyperTree;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.ITree;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
