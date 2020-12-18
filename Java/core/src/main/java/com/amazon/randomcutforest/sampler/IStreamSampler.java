@@ -18,71 +18,98 @@ package com.amazon.randomcutforest.sampler;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazon.randomcutforest.executor.Sequential;
-
 /**
- * A sampler that samples from an ordered sequence of points.
- * 
- * @param <P> The type representing the points
+ * <p>
+ * A sampler that can be updated iteratively from a stream of data points. The
+ * update operation is broken into two steps: an "accept" step and an "add"
+ * step. During the "accept" step, the sampler decides whether to accept a new
+ * point into sample. The decision rule will depend on the sampler
+ * implementation If the sampler is full, accepting a new point requires the
+ * sampler to evict a point currently in the sample. This operation is also part
+ * of the accept step.
+ * </p>
+ *
+ * <p>
+ * If the outcome of the accept step is to accept a new point, then the sampler
+ * continues to the second step to add a point to the sample (if the outcome is
+ * not to accept a new point, then this step is not invoked). The reason for
+ * this two-step process is because sampler update steps may be interleaved with
+ * model update steps in
+ * {@link com.amazon.randomcutforest.executor.IUpdatable#update} (see
+ * {@link com.amazon.randomcutforest.executor.SamplerPlusTree#update}, for
+ * example). In particular, if a new point is accepted into the sampler whose
+ * value is equal to an existing point in the sample, then the model may choose
+ * to increment the count on the existing point rather than allocate new storage
+ * for the duplicate point.
+ * </p>
+ *
+ * @param <P> The point type.
  */
 public interface IStreamSampler<P> {
     /**
-     * Submit a point to the sampler. The sampler implementation determines whether
-     * the point is added to the sample or not.
+     * Submit a point to the sampler and return true if the point is accepted into
+     * the sample. By default this method chains together the {@link #acceptPoint}
+     * and {@link #addPoint} methods. If a point was evicted from the sample as a
+     * side effect, then the evicted point will be available in
+     * {@link #getEvictedPoint()} until the next call to {@link #addPoint}.
      *
-     * This function is not used explicitly in RandomCutForest but is helpful in
-     * testing the samplers.
-     * 
-     * @param point  The point submitted to the sampler.
-     * @param seqNum the sequence number
+     * @param point         The point submitted to the sampler.
+     * @param sequenceIndex the sequence number
      * @return true if the point is accepted and added to the sample, false if the
      *         point is rejected.
      */
-    default boolean sample(P point, long seqNum) {
-        Optional<Float> result = acceptSample(seqNum);
-        if (result.isPresent()) {
-            addSample(point, result.get(), seqNum);
+    default boolean update(P point, long sequenceIndex) {
+        if (acceptPoint(sequenceIndex)) {
+            addPoint(point);
             return true;
         }
         return false;
     }
 
     /**
-     * the function that adds to the sampler
+     * This is the first step in a two-step sample operation. In this step, the
+     * sampler makes a decision about whether to accept a new point into the sample.
+     * If it decides to accept the point, then a new point can be added by calling
+     * {@link #addPoint}.
+     *
+     * If a point needs to be evicted before a new point is added, eviction should
+     * happen in this method. If a point is evicted during a call to
+     * {@code acceptSample}, it will be available by calling
+     * {@link #getEvictedPoint()} until the next time {@code acceptSample} is
+     * called.
+     *
+     * @param sequenceIndex The sequence of the the point being submitted to the
+     *                      sampler.
+     * @return true if the point should be added to the sample.
+     */
+    boolean acceptPoint(long sequenceIndex);
+
+    /**
+     * This is the second step in a two-step sample operation. If the
+     * {@link #acceptPoint} method was called and returned true, then this method
+     * should be called to complete the sampling operation by adding the point to
+     * the sample. If a call to {@code addPoint} is not preceded by a successful
+     * call to {@code acceptPoint}, then it may fail with an
+     * {@code IllegalStateException}.
      * 
-     * @param point  reference of point
-     * @param weight weight value in sampler
-     * @param seqNum the sequence number
+     * @param point The point being added to the sample.
      */
-    void addSample(P point, float weight, long seqNum);
+    void addPoint(P point);
 
     /**
-     * The function decides if the new object elem would be added to the queue.
-     *
-     * @param seqNum sequence number
-     *
-     * @return returns Optional.empty() if the entry is not accepted; otherwise
-     *         returns the weight
+     * Return the list of sampled points.
+     * 
+     * @return the list of sampled points.
      */
-    Optional<Float> acceptSample(long seqNum);
-
-    /**
-     * @return the list of weighted points currently making up the sample.
-     */
-    List<Weighted<P>> getWeightedSamples();
-
-    /**
-     * @return the list of Sequential points currently making up the sample. If the
-     *         sequence number is not present then a dummy variable is added.
-     */
-    List<Sequential<P>> getSequentialSamples();
+    List<ISampled<P>> getSample();
 
     /**
      * @return the point that was evicted from the sample in the most recent call to
-     *         {@link #sample}, or {@code Optional.empty()} if no point was evicted.
+     *         {@link #acceptPoint}, or {@code Optional.empty()} if no point was
+     *         evicted.
      */
 
-    Optional<Sequential<P>> getEvictedPoint();
+    Optional<ISampled<P>> getEvictedPoint();
 
     /**
      * @return true if this sampler contains enough points to support the anomaly

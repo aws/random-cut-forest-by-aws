@@ -23,8 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyFloat;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -34,7 +32,6 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Stream;
 
@@ -112,36 +109,44 @@ public class CompactSamplerTest {
 
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
-    public void testAddSample(Random random, CompactSampler sampler) {
-        sampler.addSample(1, 0.5f, 10L);
-        sampler.addSample(12, 1.2f, 11L);
-        sampler.addSample(123, 0.03f, 12L);
+    public void testAddPoint(Random random, CompactSampler sampler) {
+        when(random.nextDouble()).thenReturn(0.5).thenReturn(0.01).thenReturn(0.99);
+
+        sampler.acceptPoint(10L);
+        double weight1 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(1);
+        sampler.acceptPoint(11L);
+        double weight2 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(12);
+        sampler.acceptPoint(12L);
+        double weight3 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(123);
 
         assertEquals(3, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
 
-        List<Weighted<Integer>> samples = sampler.getWeightedSamples();
+        List<Weighted<Integer>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<Integer>::getWeight));
         assertEquals(3, samples.size());
 
         assertEquals(123, samples.get(0).getValue());
-        assertEquals(0.03f, samples.get(0).getWeight());
+        assertEquals(weight3, samples.get(0).getWeight());
 
         assertEquals(1, samples.get(1).getValue());
-        assertEquals(0.5f, samples.get(1).getWeight());
+        assertEquals(weight1, samples.get(1).getWeight());
 
         assertEquals(12, samples.get(2).getValue());
-        assertEquals(1.2f, samples.get(2).getWeight());
+        assertEquals(weight2, samples.get(2).getWeight());
     }
 
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
-    public void testAcceptSample(Random random, CompactSampler sampler) {
+    public void testAcceptPoint(Random random, CompactSampler sampler) {
         // The sampler should accept all samples until the sampler is full
         for (int i = 0; i < sampleSize; i++) {
-            Optional<Float> weight = sampler.acceptSample(i);
-            assertTrue(weight.isPresent());
-            sampler.addSample(i, weight.get(), i);
+            assertTrue(sampler.acceptPoint(i));
+            assertNotNull(sampler.acceptPointState);
+            sampler.addPoint(i);
         }
 
         // In subsequent calls to sample, either the result is empty or else
@@ -149,12 +154,13 @@ public class CompactSamplerTest {
 
         int numAccepted = 0;
         for (int i = sampleSize; i < 2 * sampleSize; i++) {
-            Optional<Float> weight = sampler.acceptSample(i);
-            if (weight.isPresent()) {
+            if (sampler.acceptPoint(i)) {
                 numAccepted++;
                 assertTrue(sampler.getEvictedPoint().isPresent());
-                assertTrue(weight.get() < sampler.getEvictedPoint().get().getWeight());
-                sampler.addSample(i, weight.get(), i);
+                assertNotNull(sampler.acceptPointState);
+                Weighted<Integer> evictedPoint = (Weighted<Integer>) sampler.getEvictedPoint().get();
+                assertTrue(sampler.acceptPointState.getWeight() < evictedPoint.getWeight());
+                sampler.addPoint(i);
             }
         }
         assertTrue(numAccepted > 0, "the sampler did not accept any points");
@@ -162,28 +168,28 @@ public class CompactSamplerTest {
 
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
-    public void testSample(Random random, CompactSampler compactSampler) {
+    public void testUpdate(Random random, CompactSampler compactSampler) {
         CompactSampler sampler = spy(compactSampler);
         for (int i = 0; i < sampleSize; i++) {
-            assertTrue(sampler.sample(i, i));
+            assertTrue(sampler.update(i, i));
         }
 
         // all points should be added to the sampler until the sampler is full
         assertEquals(sampleSize, sampler.size());
-        verify(sampler, times(sampleSize)).addSample(any(), anyFloat(), anyLong());
+        verify(sampler, times(sampleSize)).addPoint(any());
 
         reset(sampler);
 
         int numSampled = 0;
         for (int i = sampleSize; i < 2 * sampleSize; i++) {
-            if (sampler.sample(i, i)) {
+            if (sampler.update(i, i)) {
                 numSampled++;
             }
         }
         assertTrue(numSampled > 0, "no new values were sampled");
         assertTrue(numSampled < sampleSize, "all values were sampled");
 
-        verify(sampler, times(numSampled)).addSample(any(), anyFloat(), anyLong());
+        verify(sampler, times(numSampled)).addPoint(any());
     }
 
     @ParameterizedTest
@@ -191,9 +197,9 @@ public class CompactSamplerTest {
     public void testGetScore(Random random, CompactSampler sampler) {
         when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
 
-        sampler.sample(1, 101);
-        sampler.sample(2, 102);
-        sampler.sample(3, 103);
+        sampler.update(1, 101);
+        sampler.update(2, 102);
+        sampler.update(3, 103);
 
         double[] expectedScores = new double[3];
         expectedScores[0] = -lambda * 101L + Math.log(-Math.log(0.25));
@@ -201,7 +207,7 @@ public class CompactSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
-        List<Weighted<Integer>> samples = sampler.getWeightedSamples();
+        List<Weighted<Integer>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<Integer>::getWeight));
 
         for (int i = 0; i < 3; i++) {
@@ -214,7 +220,7 @@ public class CompactSamplerTest {
     public void testValidateHeap(Random random, CompactSampler sampler) {
         // populate the heap
         for (int i = 0; i < 2 * sampleSize; i++) {
-            sampler.sample(i, i);
+            sampler.update(i, i);
         }
 
         float[] weightArray = sampler.getWeightArray();

@@ -31,7 +31,6 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
-import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
@@ -228,12 +227,7 @@ public class RandomCutForestMapper
                 CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), state, rng.nextLong());
 
                 if (treeStates == null) {
-                    if (sampler.isStoreSequenceIndexesEnabled()) {
-                        sampler.getSequentialSamples().forEach(tree::addPoint);
-                    } else {
-                        sampler.getWeightedSamples()
-                                .forEach(s -> tree.addPoint(new Sequential<>(s.getValue(), s.getWeight(), 0L)));
-                    }
+                    sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
                 }
 
                 components.add(new SamplerPlusTree<>(sampler, tree));
@@ -253,18 +247,10 @@ public class RandomCutForestMapper
                 SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(state.getSampleSize(),
                         state.getLambda(), rng.nextLong());
 
-                if (compactData.isStoreSequenceIndexesEnabled()) {
-                    for (Sequential<Integer> seq : compactData.getSequentialSamples()) {
-                        double[] point = pointStore.get(seq.getValue());
-                        sampler.addSample(point, seq.getWeight(), seq.getSequenceIndex());
-                        tree.addPoint(new Sequential<>(point, seq.getWeight(), seq.getSequenceIndex()));
-                    }
-                } else {
-                    for (Weighted<Integer> wtd : compactData.getWeightedSamples()) {
-                        double[] point = pointStore.get(wtd.getValue());
-                        sampler.addSample(point, wtd.getWeight(), 0L);
-                        tree.addPoint(new Sequential<>(point, wtd.getWeight(), 0L));
-                    }
+                for (Weighted<Integer> sample : compactData.getWeightedSample()) {
+                    double[] point = pointStore.get(sample.getValue());
+                    sampler.addSample(new Weighted<>(point, sample.getWeight(), sample.getSequenceIndex()));
+                    tree.addPoint(point, sample.getSequenceIndex());
                 }
 
                 components.add(new SamplerPlusTree<>(sampler, tree));
