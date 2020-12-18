@@ -18,8 +18,6 @@ package com.amazon.randomcutforest.sampler;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyFloat;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -29,7 +27,6 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -68,38 +65,46 @@ public class SimpleStreamSamplerTest {
     }
 
     @Test
-    public void testAddSample() {
+    public void testAddPoint() {
         assertEquals(0, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
 
-        sampler.addSample(new double[] { 1.1 }, 0.5f, 10L);
-        sampler.addSample(new double[] { -2.2 }, 1.2f, 11L);
-        sampler.addSample(new double[] { 3.3 }, 0.03f, 12L);
+        when(random.nextDouble()).thenReturn(0.5).thenReturn(0.01).thenReturn(0.99);
+
+        sampler.acceptPoint(10L);
+        double weight1 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(new double[] { 1.1 });
+        sampler.acceptPoint(11L);
+        double weight2 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(new double[] { -2.2 });
+        sampler.acceptPoint(12L);
+        double weight3 = sampler.acceptPointState.getWeight();
+        sampler.addPoint(new double[] { 3.3 });
 
         assertEquals(3, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
 
-        List<Weighted<double[]>> samples = sampler.getWeightedSamples();
+        List<Weighted<double[]>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
         assertEquals(3, samples.size());
 
         assertArrayEquals(new double[] { 3.3 }, samples.get(0).getValue());
-        assertEquals(0.03f, samples.get(0).getWeight());
+        assertEquals(weight3, samples.get(0).getWeight());
 
         assertArrayEquals(new double[] { 1.1 }, samples.get(1).getValue());
-        assertEquals(0.5f, samples.get(1).getWeight());
+        assertEquals(weight1, samples.get(1).getWeight());
 
         assertArrayEquals(new double[] { -2.2 }, samples.get(2).getValue());
-        assertEquals(1.2f, samples.get(2).getWeight());
+        assertEquals(weight2, samples.get(2).getWeight());
     }
 
     @Test
-    public void testAcceptSample() {
+    public void testAcceptPoint() {
         // The sampler should accept all samples until the sampler is full
         for (int i = 0; i < sampleSize; i++) {
-            Optional<Float> weight = sampler.acceptSample(i);
-            assertTrue(weight.isPresent());
-            sampler.addSample(new double[] { Math.random() }, weight.get(), i);
+            assertTrue(sampler.acceptPoint(i));
+            assertNotNull(sampler.acceptPointState);
+            sampler.addPoint(new double[] { Math.random() });
         }
 
         // In subsequent calls to sample, either the result is empty or else
@@ -107,49 +112,50 @@ public class SimpleStreamSamplerTest {
 
         int numAccepted = 0;
         for (int i = sampleSize; i < 2 * sampleSize; i++) {
-            Optional<Float> weight = sampler.acceptSample(i);
-            if (weight.isPresent()) {
+            if (sampler.acceptPoint(i)) {
                 numAccepted++;
                 assertTrue(sampler.getEvictedPoint().isPresent());
-                assertTrue(weight.get() < sampler.getEvictedPoint().get().getWeight());
-                sampler.addSample(new double[] { Math.random() }, weight.get(), i);
+                assertNotNull(sampler.acceptPointState);
+                Weighted<double[]> evictedPoint = (Weighted<double[]>) sampler.getEvictedPoint().get();
+                assertTrue(sampler.acceptPointState.getWeight() < evictedPoint.getWeight());
+                sampler.addPoint(new double[] { Math.random() });
             }
         }
         assertTrue(numAccepted > 0, "the sampler did not accept any points");
     }
 
     @Test
-    public void testSample() {
+    public void testUpdate() {
         SimpleStreamSampler<double[]> samplerSpy = spy(sampler);
         for (int i = 0; i < sampleSize; i++) {
-            assertTrue(samplerSpy.sample(new double[] { i + 0.0 }, i));
+            assertTrue(samplerSpy.update(new double[] { i + 0.0 }, i));
         }
 
         // all points should be added to the sampler until the sampler is full
         assertEquals(sampleSize, samplerSpy.size());
-        verify(samplerSpy, times(sampleSize)).addSample(any(), anyFloat(), anyLong());
+        verify(samplerSpy, times(sampleSize)).addPoint(any(double[].class));
 
         reset(samplerSpy);
 
         int numSampled = 0;
         for (int i = sampleSize; i < 2 * sampleSize; i++) {
-            if (samplerSpy.sample(new double[] { i + 0.0 }, i)) {
+            if (samplerSpy.update(new double[] { i + 0.0 }, i)) {
                 numSampled++;
             }
         }
         assertTrue(numSampled > 0, "no new values were sampled");
         assertTrue(numSampled < sampleSize, "all values were sampled");
 
-        verify(samplerSpy, times(numSampled)).addSample(any(), anyFloat(), anyLong());
+        verify(samplerSpy, times(numSampled)).addPoint(any(double[].class));
     }
 
     @Test
     public void testGetScore() {
         when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
 
-        sampler.sample(new double[] { 1.0 }, 101);
-        sampler.sample(new double[] { 2.0 }, 102);
-        sampler.sample(new double[] { 3.0 }, 103);
+        sampler.update(new double[] { 1.0 }, 101);
+        sampler.update(new double[] { 2.0 }, 102);
+        sampler.update(new double[] { 3.0 }, 103);
 
         double[] expectedScores = new double[3];
         expectedScores[0] = -lambda * 101L + Math.log(-Math.log(0.25));
@@ -157,7 +163,7 @@ public class SimpleStreamSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
-        List<Weighted<double[]>> samples = sampler.getWeightedSamples();
+        List<Weighted<double[]>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
 
         for (int i = 0; i < 3; i++) {

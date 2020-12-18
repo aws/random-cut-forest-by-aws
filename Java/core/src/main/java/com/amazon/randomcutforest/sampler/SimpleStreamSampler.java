@@ -17,21 +17,26 @@ package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.*;
-
-import com.amazon.randomcutforest.executor.Sequential;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Random;
 
 /**
- * SimpleStreamSamplerV2 is a sampler with a fixed sample size. Once the sampler
- * is full, when a new point is submitted to the sampler decision is made to
- * accept or reject the new point. If the point is accepted, then an older point
- * is removed from the sampler. This class implements time-based reservoir
- * sampling, which means that newer points are given more weight than older
- * points in the randomized decision.
+ * <p>
+ * SimpleStreamSampler is an implementation of time-based reservoir sampling.
+ * When a point is submitted to the sampler, the decision to accept the point
+ * gives more weight to newer points compared to older points. The newness of a
+ * point is determined by its sequence index, and larger sequence indexes are
+ * considered newer.
+ * </p>
  * <p>
  * The sampler algorithm is an example of the general weighted reservoir
  * sampling algorithm, which works like this:
- *
+ * </p>
  * <ol>
  * <li>For each item i choose a random number u(i) uniformly from the interval
  * (0, 1) and compute the weight function <code>-(1 / c(i)) * log u(i)</code>,
@@ -44,8 +49,13 @@ import com.amazon.randomcutforest.executor.Sequential;
  * new item.</li>
  * </ol>
  * <p>
- * The SimpleStreamSampler creates a time-decayed sample by using the
- * coefficient function: <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * The coefficient function used by SimpleStreamSampler is:
+ * <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * </p>
+ * <p>
+ * For a specialized version of this algorithm that uses less runtime memory,
+ * see {@link CompactSampler}.
+ * </p>
  */
 public class SimpleStreamSampler<P> implements IStreamSampler<P> {
 
@@ -54,7 +64,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * element is the lowest priority point in the sample (or, equivalently, is the
      * point with the greatest weight).
      */
-    private final Queue<Weighted<P>> weightedSamples;
+    private final Queue<Weighted<P>> sample;
 
     /**
      * The number of points in the sample when full.
@@ -70,21 +80,23 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     private final Random random;
     /**
-     * The point evicted by the last call to {@link #sample}, or if the new point
+     * The point evicted by the last call to {@link #update}, or if the new point
      * was not accepted by the sampler.
      */
-    private transient Sequential<P> evictedPoint;
+    private transient ISampled<P> evictedPoint;
     /**
-     * A flag to determine if the sequence information is to be stored
+     * This field is used to temporarily store the result from a call to
+     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
+     *
+     * Visible for testing.
      */
-    private boolean storeSequenceIndices;
+    protected AcceptPointState acceptPointState;
 
     public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
         this.sampleSize = sampleSize;
-        weightedSamples = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
+        sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
         this.lambda = lambda;
-        this.storeSequenceIndices = storeSequenceIndices;
     }
 
     public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
@@ -102,121 +114,71 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * new point is accepted into the sampler and the point corresponding to the
      * largest weight is evicted.
      *
-     * @param seqIndex The timestamp value being submitted.
+     * @param sequenceIndex The timestamp value being submitted.
      * @return A weighted point that can be added to the sampler or null
      */
-    public Optional<Float> acceptSample(long seqIndex) {
+    public boolean acceptPoint(long sequenceIndex) {
         evictedPoint = null;
-        float weight = computeWeight(seqIndex);
+        float weight = computeWeight(sequenceIndex);
 
-        if (weightedSamples.size() < sampleSize || weight < weightedSamples.element().getWeight()) {
+        if (sample.size() < sampleSize || weight < sample.element().getWeight()) {
             if (isFull()) {
-                Weighted<P> tmp = weightedSamples.poll();
-                if (storeSequenceIndices) {
-                    checkState(tmp instanceof Sequential, "incorrect use");
-                    evictedPoint = (Sequential<P>) tmp;
-                } else {
-                    evictedPoint = new Sequential<>(tmp.getValue(), tmp.getWeight(), 1L);
-                }
+                evictedPoint = sample.poll();
             }
-            return Optional.of(weight);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * adds the sample to sampler; if the sampler was full, then the sampler has
-     * already evicted a point in determining the weight.
-     * 
-     * @param point  to be entered in sampler
-     * @param weight computed by acceptSample
-     * @param seqNum timestamp
-     */
-
-    @Override
-    public void addSample(P point, float weight, long seqNum) {
-        if (storeSequenceIndices) {
-            weightedSamples.add(new Sequential<>(point, weight, seqNum));
-        } else {
-            weightedSamples.add(new Weighted<>(point, weight));
-        }
-        checkState(weightedSamples.size() <= sampleSize,
-                "The number of points in the sampler is greater than the sample size");
-    }
-
-    /**
-     * The basic sampling broken down into a proposal/acceptance and a commit. This
-     * breakdown allows the Tree to be in sync with the sampler when duplicates are
-     * present.
-     *
-     * @param point  entry for sample
-     * @param seqNum sequential stamp
-     * @return true if the point is accepted and added, false otherwise
-     */
-    public boolean sample(P point, long seqNum) {
-        Optional<Float> preSample = acceptSample(seqNum);
-        if (preSample.isPresent()) {
-            addSample(point, preSample.get(), seqNum);
+            acceptPointState = new AcceptPointState(sequenceIndex, weight);
             return true;
         }
         return false;
     }
 
     /**
-     * @return the point evicted by the most recent call to {@link #sample}, or null
+     * adds the sample to sampler; if the sampler was full, then the sampler has
+     * already evicted a point in determining the weight.
+     * 
+     * @param point to be entered in sampler
+     */
+
+    @Override
+    public void addPoint(P point) {
+        checkState(acceptPointState != null,
+                "this method should only be called after a successful call to acceptSample(long)");
+        sample.add(new Weighted<>(point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
+        acceptPointState = null;
+        checkState(sample.size() <= sampleSize, "The number of points in the sampler is greater than the sample size");
+    }
+
+    /**
+     * Add a Weighted value directly to the sample. This method is intended to be
+     * used to restore a sampler to a pre-existing state.
+     * 
+     * @param point A weighted point.
+     */
+    public void addSample(Weighted<P> point) {
+        sample.add(point);
+    }
+
+    /**
+     * @return the point evicted by the most recent call to {@link #update}, or null
      *         if no point was evicted.
      */
     @Override
-    public Optional<Sequential<P>> getEvictedPoint() {
+    public Optional<ISampled<P>> getEvictedPoint() {
         return Optional.ofNullable(evictedPoint);
     }
 
     /**
-     * @return the list of weighted points currently in the sample. If there is no
-     *         sequential information then a dummy variable is placed.
+     * @return the list of sampled points with weights.
+     */
+    public List<Weighted<P>> getWeightedSample() {
+        return new ArrayList<>(sample);
+    }
+
+    /**
+     * @return the list of sampled points.
      */
     @Override
-    public List<Weighted<P>> getWeightedSamples() {
-        List<Weighted<P>> result;
-        if (!storeSequenceIndices) {
-            result = new ArrayList<>(weightedSamples);
-        } else {
-            result = new ArrayList<>();
-            weightedSamples.forEach(e -> result.add(new Weighted<>(e.getValue(), e.getWeight())));
-        }
-        return result;
-
-    }
-
-    /**
-     * @return the list of weighted points currently in the sample. If there is no
-     *         sequential information then a dummy variable is placed.
-     */
-    public List<Sequential<P>> getSequentialSamples() {
-        ArrayList<Sequential<P>> result = new ArrayList<>();
-        for (Weighted<P> e : weightedSamples) {
-            if (storeSequenceIndices) {
-                result.add((Sequential<P>) e);
-            } else {
-                result.add(new Sequential<>(e.getValue(), e.getWeight(), 1L));
-            }
-        }
-        return result;
-    }
-
-    /**
-     * @return true if this sampler contains enough points to support the anomaly
-     *         score computation, false otherwise.
-     */
-    public boolean isReady() {
-        return weightedSamples.size() >= sampleSize / 4;
-    }
-
-    /**
-     * @return true if the sampler has reached it's full capacity, false otherwise.
-     */
-    public boolean isFull() {
-        return weightedSamples.size() == sampleSize;
+    public List<ISampled<P>> getSample() {
+        return new ArrayList<>(sample);
     }
 
     /**
@@ -256,7 +218,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     @Override
     public int size() {
-        return weightedSamples.size();
+        return sample.size();
     }
 
     /**

@@ -24,7 +24,6 @@ import java.util.function.Function;
 
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.state.store.LeafStoreState;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStoreView;
@@ -247,14 +246,15 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
     }
 
     /**
-     * method to delete a point from the tree
+     * Delete a point from the tree.
      * 
-     * @param sequential the descriptor of the point
+     * @param pointIndex    The index of the point in the point store.
+     * @param sequenceIndex The sequence index of the point.
      */
-
-    public void deletePoint(Sequential<Integer> sequential) {
+    @Override
+    public void deletePoint(Integer pointIndex, long sequenceIndex) {
         checkState(rootIndex != NULL, "root must not be null");
-        deletePoint(rootIndex, pointStore.get(sequential.getValue()), 0);
+        deletePoint(rootIndex, pointStore.get(pointIndex), 0);
     }
 
     /**
@@ -475,17 +475,16 @@ public abstract class AbstractCompactRandomCutTree<Point> implements ITree<Integ
     }
 
     /**
-     * adds a point to the tree
+     * Add a point to the tree.
      * 
-     * @param seq the index of the point in PointStore and the corresponding
-     *            timestamp
+     * @param pointIndex    the index of the point in the point store.
+     * @param sequenceIndex the sequence index of the point.
      *
      * @return the index of the inserted point, which can be the input or the index
      *         of a previously seen copy
      */
-
-    public Integer addPoint(Sequential<Integer> seq) {
-        int pointIndex = seq.getValue();
+    @Override
+    public Integer addPoint(Integer pointIndex, long sequenceIndex) {
         Point pointValue = pointStore.get(pointIndex);
         if (rootIndex == NULL) {
             rootIndex = leafNodes.addLeaf(NULL, pointIndex, 1);

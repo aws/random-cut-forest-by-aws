@@ -21,12 +21,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.executor.Sequential;
+import com.amazon.randomcutforest.sampler.Weighted;
 
 public class RandomCutTreeTest {
 
@@ -68,19 +70,19 @@ public class RandomCutTreeTest {
         // divides its parent in half.
         // The random values are used to set the cut dimensions and values.
 
-        tree.addPoint(new Sequential(new double[] { -1, -1 }, 0, 1));
+        tree.addPoint(new double[] { -1, -1 }, 1);
 
         when(rng.nextDouble()).thenReturn(0.625);
-        tree.addPoint(new Sequential(new double[] { 1, 1 }, 0, 2));
+        tree.addPoint(new double[] { 1, 1 }, 2);
 
         when(rng.nextDouble()).thenReturn(0.5);
-        tree.addPoint(new Sequential(new double[] { -1, 0 }, 0, 3));
+        tree.addPoint(new double[] { -1, 0 }, 3);
 
         when(rng.nextDouble()).thenReturn(0.25);
-        tree.addPoint(new Sequential(new double[] { 0, 1 }, 0, 4));
+        tree.addPoint(new double[] { 0, 1 }, 4);
 
         // add mass to 0,1
-        tree.addPoint(new Sequential(new double[] { 0, 1 }, 0, 5));
+        tree.addPoint(new double[] { 0, 1 }, 5);
     }
 
     @Test
@@ -146,7 +148,7 @@ public class RandomCutTreeTest {
 
     @Test
     public void testDeletePointWithLeafSibling() {
-        tree.deletePoint(new Sequential(new double[] { -1, 0 }, 0, 3));
+        tree.deletePoint(new double[] { -1, 0 }, 3);
 
         // root node bounding box and cut remains unchanged, mass and centerOfMass are
         // updated
@@ -184,7 +186,7 @@ public class RandomCutTreeTest {
 
     @Test
     public void testDeletePointWithNonLeafSibling() {
-        tree.deletePoint(new Sequential(new double[] { 1, 1 }, 0, 2));
+        tree.deletePoint(new double[] { 1, 1 }, 2);
 
         // root node bounding box recomputed
 
@@ -217,7 +219,7 @@ public class RandomCutTreeTest {
 
     @Test
     public void testDeletePointWithMassGreaterThan1() {
-        tree.deletePoint(new Sequential(new double[] { 0, 1 }, 0, 4));
+        tree.deletePoint(new double[] { 0, 1 }, 4);
 
         // same as initial state except mass at 0,1 is 1
 
@@ -266,8 +268,8 @@ public class RandomCutTreeTest {
     public void testDeleteRoot() {
         RandomCutTree tree = RandomCutTree.defaultTree();
         double[] point = new double[] { -0.1, 0.1 };
-        tree.addPoint(new Sequential(point, 0.1, 1));
-        tree.deletePoint(new Sequential(point, 0.1, 1));
+        tree.addPoint(point, 1);
+        tree.deletePoint(point, 1);
 
         assertThat(tree.getRoot(), is(nullValue()));
     }
@@ -277,9 +279,9 @@ public class RandomCutTreeTest {
         RandomCutTree tree = RandomCutTree.defaultTree();
         double[] point1 = new double[] { -0.1, 0.2 };
         double[] point2 = new double[] { -0.3, 0.4 };
-        tree.addPoint(new Sequential(point1, 1.2, 1));
-        tree.addPoint(new Sequential(point2, 2.3, 2));
-        tree.deletePoint(new Sequential(point1, 1.2, 1));
+        tree.addPoint(point1, 1);
+        tree.addPoint(point2, 2);
+        tree.deletePoint(point1, 1);
 
         Node root = tree.getRoot();
         assertThat(root.isLeaf(), is(true));
@@ -289,19 +291,17 @@ public class RandomCutTreeTest {
     @Test
     public void testDeletePointInvalid() {
         // specified sequence index does not exist
-        assertThrows(IllegalStateException.class,
-                () -> tree.deletePoint(new Sequential(new double[] { -1, 0 }, 0.0, 99)));
+        assertThrows(IllegalStateException.class, () -> tree.deletePoint(new double[] { -1, 0 }, 99));
 
         // point does not exist in tree
-        assertThrows(IllegalStateException.class,
-                () -> tree.deletePoint(new Sequential(new double[] { -1.01, 0.01 }, 0.0, 3)));
+        assertThrows(IllegalStateException.class, () -> tree.deletePoint(new double[] { -1.01, 0.01 }, 3));
     }
 
     @Test
     public void testAddPointToEmptyTree() {
         RandomCutTree tree = RandomCutTree.defaultTree();
         double[] point = new double[] { 111, -111 };
-        tree.addPoint(new Sequential(point, 1.23, 1));
+        tree.addPoint(point, 1);
         assertArrayEquals(point, tree.getRoot().getLeafPoint());
     }
 
@@ -428,14 +428,14 @@ public class RandomCutTreeTest {
         double[] point1 = new double[] { 0.1, 108.4, -42.2 };
         double[] point2 = new double[] { -0.1, 90.6, -30.7 };
 
-        tree1.addPoint(new Sequential(point1, 0.0, 1L));
-        tree1.addPoint(new Sequential(point2, 0.0, 2L));
+        tree1.addPoint(point1, 1L);
+        tree1.addPoint(point2, 2L);
 
-        tree2.addPoint(new Sequential(point1, 0.0, 1L));
-        tree2.addPoint(new Sequential(point2, 0.0, 2L));
+        tree2.addPoint(point1, 1L);
+        tree2.addPoint(point2, 2L);
 
-        tree3.addPoint(new Sequential(point1, 0.0, 1L));
-        tree3.addPoint(new Sequential(point2, 0.0, 2L));
+        tree3.addPoint(point1, 1L);
+        tree3.addPoint(point2, 2L);
 
         Cut cut1 = tree1.getRoot().getCut();
         Cut cut2 = tree2.getRoot().getCut();
@@ -453,16 +453,17 @@ public class RandomCutTreeTest {
         // verifies on small bounding boxes random cuts and tree updates are functional
         RandomCutTree tree = RandomCutTree.defaultTree();
 
-        Sequential[] points = new Sequential[] { new Sequential(new double[] { 48.08 }, 0, 1L),
-                new Sequential(new double[] { 48.08000000000001 }, 0, 2L) };
+        List<Weighted<double[]>> points = new ArrayList<>();
+        points.add(new Weighted<>(new double[] { 48.08 }, 0, 1L));
+        points.add(new Weighted<>(new double[] { 48.08000000000001 }, 0, 2L));
 
-        tree.addPoint(points[0]);
-        tree.addPoint(points[1]);
+        tree.addPoint(points.get(0).getValue(), points.get(0).getSequenceIndex());
+        tree.addPoint(points.get(1).getValue(), points.get(1).getSequenceIndex());
 
         for (int i = 0; i < 10000; i++) {
-            Sequential point = points[i % points.length];
-            tree.deletePoint(point);
-            tree.addPoint(point);
+            Weighted<double[]> point = points.get(i % points.size());
+            tree.deletePoint(point.getValue(), point.getSequenceIndex());
+            tree.addPoint(point.getValue(), point.getSequenceIndex());
         }
     }
 }

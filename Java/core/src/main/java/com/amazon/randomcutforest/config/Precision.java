@@ -13,14 +13,11 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest.config;
 
-import com.amazon.randomcutforest.executor.ITraversable;
-
-public interface ITree<P> extends ITraversable {
-    int getMass();
-
-    P addPoint(P point, long sequenceIndex);
-
-    void deletePoint(P point, long sequenceIndex);
+/**
+ * Options for floating-point precision.
+ */
+public enum Precision {
+    SINGLE, DOUBLE
 }

@@ -31,6 +31,7 @@ import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.IUpdateCoordinator;
@@ -110,18 +111,15 @@ public class RandomCutForest {
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
 
     /**
-     * By default, trees will not use float[] to save space. Enabling this will
-     * force enableCompact
+     * Default floating-point precision for internal data structures.
      */
-    public static final boolean DEFAULT_FLOAT_ENABLED = false;
+    public static final Precision DEFAULT_PRECISION = Precision.DOUBLE;
 
     /**
      * By default, bounding boxes will be used. Disabling this will force
      * enableCompact .
      */
     public static final boolean DEFAULT_BOUNDING_BOX_CACHE_ENABLED = true;
-
-    public static final boolean DEFAULT_TREE_SAVE = false;
 
     /**
      * By default, nodes will not store center of mass.
@@ -172,13 +170,10 @@ public class RandomCutForest {
      */
     protected final boolean compactEnabled;
     /**
-     * Enable float representation; the input/output is double[] but the internal
-     * representation would be float[]. There will be loss of precision in near
-     * neighbors because of the truncation. Otherwise, unless all numbers are in a
-     * very small range, the loss of precision is unlikely to have larger impact
-     * than changing the random seed.
+     * The preferred floating point precision to use in internal data structures.
+     * This will affect runtime memory and the size of a serialized model.
      */
-    protected final boolean singlePrecisionEnabled;
+    protected final Precision precision;
     /**
      * The following set to false saves space, but enforces compact representation.
      */
@@ -226,7 +221,7 @@ public class RandomCutForest {
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
         rng = builder.getRandom();
-        if (singlePrecisionEnabled) {
+        if (precision == Precision.SINGLE) {
             initCompactFloat();
         } else if (compactEnabled) {
             initCompactDouble();
@@ -237,7 +232,6 @@ public class RandomCutForest {
 
     private void initCompactDouble() {
         PointStoreDouble tempStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
-        // pointStore = tempStore;
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -254,7 +248,6 @@ public class RandomCutForest {
 
     private void initCompactFloat() {
         PointStoreFloat tempStore = new PointStoreFloat(dimensions, sampleSize * numberOfTrees + 1);
-        // pointStore = tempStore;
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -318,6 +311,10 @@ public class RandomCutForest {
         });
         builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
+        checkArgument(builder.precision == Precision.DOUBLE || builder.compactEnabled,
+                "single precision is only supported for compact trees");
+        checkArgument(builder.boundingBoxCachingEnabled || builder.compactEnabled,
+                "bounding box caching is only supported for compact trees");
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
@@ -328,10 +325,8 @@ public class RandomCutForest {
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         compactEnabled = builder.compactEnabled;
-        singlePrecisionEnabled = builder.singlePrecisionEnabled;
-        checkArgument(!singlePrecisionEnabled || compactEnabled, "float representation requires compact trees");
+        precision = builder.precision;
         boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
-        checkArgument(boundingBoxCachingEnabled || compactEnabled, "eliminating bounding boxes requires compact trees");
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -1048,7 +1043,7 @@ public class RandomCutForest {
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
-        private boolean singlePrecisionEnabled = DEFAULT_FLOAT_ENABLED;
+        private Precision precision = DEFAULT_PRECISION;
         private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
 
         public T dimensions(int dimensions) {
@@ -1102,19 +1097,12 @@ public class RandomCutForest {
         }
 
         public T compactEnabled(boolean compactEnabled) {
-            if (!this.compactEnabled) {
-                // the above implies that if other flags are set to enable compact
-                // representation then this setting will be ignored.
-                this.compactEnabled = compactEnabled;
-            }
+            this.compactEnabled = compactEnabled;
             return (T) this;
         }
 
-        public T singlePrecisionEnabled(boolean singlePrecisionEnabled) {
-            this.singlePrecisionEnabled = singlePrecisionEnabled;
-            if (singlePrecisionEnabled) {
-                this.compactEnabled = true;
-            }
+        public T precision(Precision precision) {
+            this.precision = precision;
             return (T) this;
         }
 

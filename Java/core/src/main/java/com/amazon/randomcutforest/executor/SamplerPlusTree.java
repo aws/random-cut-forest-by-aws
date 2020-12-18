@@ -23,6 +23,7 @@ import java.util.function.Function;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
 
@@ -56,26 +57,30 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
      * sampler entry is modified and added to the sampler. The pair of the newRef
      * and deleteRef are returned for plausible bookkeeping in update executors.
      *
-     * @param point  point in consideration for updating the sampler plus tree
-     * @param seqNum a time stamp that is used to generate weight in the timed
-     *               sampling
+     * @param point         point in consideration for updating the sampler plus
+     *                      tree
+     * @param sequenceIndex a time stamp that is used to generate weight in the
+     *                      timed sampling
      * @return the pair of (newRef,deleteRef) with potential Optional.empty()
      */
 
     @Override
-    public Optional<UpdateReturn<P>> update(P point, long seqNum) {
+    public Optional<UpdateReturn<P>> update(P point, long sequenceIndex) {
         P deleteRef = null;
-        Optional<Float> presampleResult = sampler.acceptSample(seqNum);
-        if (presampleResult.isPresent()) {
-            Optional<Sequential<P>> deletedPoint = sampler.getEvictedPoint();
+        if (sampler.acceptPoint(sequenceIndex)) {
+            Optional<ISampled<P>> deletedPoint = sampler.getEvictedPoint();
             if (deletedPoint.isPresent()) {
-                tree.deletePoint(deletedPoint.get());
-                deleteRef = deletedPoint.get().getValue();
+                ISampled<P> p = deletedPoint.get();
+                deleteRef = p.getValue();
+                tree.deletePoint(deleteRef, p.getSequenceIndex());
             }
-            P newRef = (P) tree.addPoint(new Sequential(point, presampleResult.get(), seqNum));
 
-            sampler.addSample(newRef, presampleResult.get(), seqNum);
-            return Optional.ofNullable(new UpdateReturn(newRef, Optional.ofNullable(deleteRef)));
+            // the tree may choose to return a reference to an existing point
+            // whose value is equal to `point`
+            P addedPoint = tree.addPoint(point, sequenceIndex);
+
+            sampler.addPoint(addedPoint);
+            return Optional.of(new UpdateReturn<>(addedPoint, Optional.ofNullable(deleteRef)));
         }
         return Optional.empty();
     }

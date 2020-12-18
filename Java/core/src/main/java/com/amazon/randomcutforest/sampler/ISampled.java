@@ -13,14 +13,26 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.tree;
+package com.amazon.randomcutforest.sampler;
 
-import com.amazon.randomcutforest.executor.ITraversable;
+/**
+ * A simple wrapper class representing a point that has been sampled by a
+ * sampler. A sampled point can be added to or removed from a tree.
+ * 
+ * @param <P> The point representation used by this sampled point.
+ */
+public interface ISampled<P> {
+    /**
+     * Return the sampled value.
+     * 
+     * @return the sampled value.
+     */
+    P getValue();
 
-public interface ITree<P> extends ITraversable {
-    int getMass();
-
-    P addPoint(P point, long sequenceIndex);
-
-    void deletePoint(P point, long sequenceIndex);
+    /**
+     * Return the sequence index of the sampled value.
+     * 
+     * @return the sequence index of the sampled value.
+     */
+    long getSequenceIndex();
 }

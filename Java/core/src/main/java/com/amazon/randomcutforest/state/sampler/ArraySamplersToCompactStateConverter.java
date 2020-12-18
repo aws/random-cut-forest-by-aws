@@ -20,8 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazon.randomcutforest.executor.Sequential;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
@@ -58,7 +58,7 @@ public class ArraySamplersToCompactStateConverter {
         long[] sequenceIndex = storeSequences ? new long[sampler.size()] : null;
 
         int i = 0;
-        for (Sequential<double[]> sample : sampler.getSequentialSamples()) {
+        for (Weighted<double[]> sample : sampler.getWeightedSample()) {
             double[] index = sample.getValue();
 
             if (pointMap.containsKey(index)) {
