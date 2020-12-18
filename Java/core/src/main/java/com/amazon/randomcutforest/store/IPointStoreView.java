@@ -18,14 +18,14 @@ package com.amazon.randomcutforest.store;
 /**
  * A view of the PointStore that forces a read only access to the store.
  */
-public interface IPointStoreView<P> {
+public interface IPointStoreView<Point> {
     int getDimensions();
 
     int getCapacity();
 
-    boolean pointEquals(int index, P point);
+    boolean pointEquals(int index, Point point);
 
-    P get(int index);
+    Point get(int index);
 
     /**
      * Prints the point given the index, irrespective of the encoding of the point.

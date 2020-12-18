@@ -28,7 +28,7 @@ import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
-import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 
 /**
@@ -125,7 +125,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
 
     public double getDynamicSimulatedScore(double[] point, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp,
-            Function<BoundingBox, double[]> vecSep) {
+            Function<IBoundingBoxView, double[]> vecSep) {
 
         if (!isOutputReady()) {
             return 0.0;

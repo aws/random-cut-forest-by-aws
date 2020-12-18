@@ -22,8 +22,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.amazon.randomcutforest.Visitor;
-
 /**
  * A Node in a {@link RandomCutTree}. All nodes contain references to the parent
  * and children nodes (which may be null, in the case of the root node or a leaf
@@ -31,7 +29,7 @@ import com.amazon.randomcutforest.Visitor;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node implements INodeView {
+public class Node implements INodeView<Node> {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value
@@ -61,7 +59,6 @@ public class Node implements INodeView {
      * box into two sections. This cut also determines the canonical root-to-leaf
      * traversal path for a given point.
      *
-     * @see RandomCutTree#traverseTree(double[], Visitor)
      */
     private Cut cut;
     /**
@@ -127,7 +124,8 @@ public class Node implements INodeView {
         this.leafPoint = leafPoint;
         this.sequenceIndexes = null;
         this.pointSum = null;
-        boundingBox = new BoundingBox(leafPoint);
+        boundingBox = null;
+        leftChild = rightChild = null;
     }
 
     /**
@@ -203,7 +201,13 @@ public class Node implements INodeView {
      * @return this node's bounding box.
      */
     public BoundingBox getBoundingBox() {
-        return boundingBox;
+        if (isLeaf()) {
+            return new BoundingBox(getLeafPoint());
+        }
+        if (boundingBox != null) { // cache is enabled
+            return boundingBox;
+        }
+        return constructBoxInPlace();
     }
 
     /**
@@ -244,7 +248,7 @@ public class Node implements INodeView {
      * For a leaf node, return the value of the leaf point at the ith coordinate.
      * 
      * @param i A coordinate value.
-     * @return the value of the leaf point at the ith coordinage.
+     * @return the value of the leaf point at the ith coordinate.
      * @throws IllegalStateException if this is not a leaf node.
      */
     public double getLeafPoint(int i) {
@@ -284,15 +288,17 @@ public class Node implements INodeView {
     /**
      * Increment this node's mass by 1.
      */
-    protected void incrementMass() {
+    protected int incrementMass() {
         addMass(1);
+        return getMass();
     }
 
     /**
      * Decrement this node's mass by 1.
      */
-    protected void decrementMass() {
+    protected int decrementMass() {
         addMass(-1);
+        return getMass();
     }
 
     /**
@@ -343,15 +349,18 @@ public class Node implements INodeView {
      * @return the value of this node's point sum.
      */
     public double[] getPointSum() {
-        double[] result = new double[boundingBox.getDimensions()];
+        // if pointsum is set, then a point is either a leafnode or has the pointsum set
+        int dimensions = isLeaf() ? leafPoint.length
+                : (pointSum != null) ? pointSum.length : boundingBox.getDimensions();
+        double[] result = new double[dimensions];
         // makes a new copy to avoid altering the sum
         if (leafPoint != null) {
-            for (int i = 0; i < boundingBox.getDimensions(); i++) {
+            for (int i = 0; i < dimensions; i++) {
                 result[i] = mass * leafPoint[i];
             }
         } else {
             if (pointSum != null) {
-                if (boundingBox.getDimensions() >= 0) {
+                if (pointSum.length >= 0) {
                     System.arraycopy(pointSum, 0, result, 0, pointSum.length);
                 }
             }
@@ -370,13 +379,15 @@ public class Node implements INodeView {
      */
     public double[] getCenterOfMass() {
         // this will be 0 if the corresponding flag is not set in the forest
-        double[] result = new double[boundingBox.getDimensions()];
+        int dimensions = isLeaf() ? leafPoint.length
+                : (pointSum != null) ? pointSum.length : boundingBox.getDimensions();
+        double[] result = new double[dimensions];
         // makes a new copy to avoid altering the sum
         if (leafPoint != null) {
-            System.arraycopy(leafPoint, 0, result, 0, boundingBox.getDimensions());
+            System.arraycopy(leafPoint, 0, result, 0, dimensions);
         } else {
             if (pointSum != null) {
-                for (int i = 0; i < boundingBox.getDimensions(); i++) {
+                for (int i = 0; i < dimensions; i++) {
                     result[i] = pointSum[i] / mass;
                 }
             }
@@ -398,6 +409,11 @@ public class Node implements INodeView {
         } else {
             return Collections.emptySet();
         }
+    }
+
+    @Override
+    public INodeView<Node> getNodeView(Node node) {
+        return node;
     }
 
     /**
@@ -441,4 +457,24 @@ public class Node implements INodeView {
     public int getCutDimension() {
         return getCut().getDimension();
     }
+
+    public BoundingBox constructBoxInPlace() {
+        if (isLeaf()) {
+            return new BoundingBox(getLeafPoint());
+        } else {
+            BoundingBox currentBox = getLeftChild().constructBoxInPlace();
+            return getRightChild().constructBoxInPlace(currentBox);
+        }
+    }
+
+    BoundingBox constructBoxInPlace(BoundingBox currentBox) {
+        if (isLeaf()) {
+            return currentBox.addPoint(getLeafPoint());
+        } else {
+            BoundingBox tempBox = getLeftChild().constructBoxInPlace(currentBox);
+            // the box may be changed for single points
+            return getRightChild().constructBoxInPlace(tempBox);
+        }
+    }
+
 }

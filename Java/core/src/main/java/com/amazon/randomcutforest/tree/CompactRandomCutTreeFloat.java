@@ -26,12 +26,16 @@ import com.amazon.randomcutforest.store.NodeStore;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
-    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, boolean cacheEnabled) {
-        super(maxSize, seed, cacheEnabled);
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, boolean cacheEnabled,
+            boolean centerOfMassEnabled, boolean enableSequenceIndices) {
+        super(maxSize, seed, cacheEnabled, centerOfMassEnabled, enableSequenceIndices);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
             cachedBoxes = new BoundingBoxFloat[maxSize - 1];
+        }
+        if (centerOfMassEnabled) {
+            pointSum = new float[maxSize - 1][];
         }
     }
 
@@ -49,13 +53,13 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    IBoundingBox<float[]> getLeafBoxFromPoint(int pointIndex) {
-        return new BoundingBoxFloat(pointStore.get(pointIndex));
+    AbstractBoundingBox<float[]> getLeafBoxFromLeafNode(Integer pointIndex) {
+        return new BoundingBoxFloat(pointStore.get(nodeManager.getPointIndex(pointIndex)));
     }
 
     @Override
-    IBoundingBox<float[]> getInternalMergedBox(float[] point, float[] oldPoint) {
-        return BoundingBoxFloat.getMergedBox(point, oldPoint);
+    AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
+        return new BoundingBoxFloat(first, second);
     }
 
     @Override
@@ -69,27 +73,56 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    protected double[] getLeafPoint(int nodeOffset) {
-        return toDoubleArray(pointStore.get(leafNodes.pointIndex[nodeOffset - maxSize]));
+    protected float[] getPointFromLeafNode(Integer nodeOffset) {
+        return pointStore.get(nodeManager.getPointIndex(nodeOffset));
     }
 
-    /**
-     * The following creates the bounding box corresponding to a node and populates
-     * cache for all sub boxes that are built.
-     *
-     * @param nodeReference identifier of the node
-     * @return bounding box
-     */
     @Override
-    IBoundingBox<float[]> reflateNode(int nodeReference) {
-        if (leafNodes.isLeaf(nodeReference)) {
-            return new BoundingBoxFloat(pointStore.get(leafNodes.getPointIndex(nodeReference)));
+    protected double[] getPoint(Integer nodeOffset) {
+        return toDoubleArray(getPointFromLeafNode(nodeOffset));
+    }
+
+    AbstractBoundingBox<float[]> getBoundingBoxReflate(Integer nodeReference) {
+        if (isLeaf(nodeReference)) {
+            return new BoundingBoxFloat(getPointFromLeafNode(nodeReference));
         }
         if (cachedBoxes[nodeReference] == null) {
-            cachedBoxes[nodeReference] = reflateNode(internalNodes.getLeftIndex(nodeReference))
-                    .getMergedBox(reflateNode(internalNodes.getRightIndex(nodeReference)));
+            cachedBoxes[nodeReference] = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference))
+                    .getMergedBox(getBoundingBoxReflate(nodeManager.getRightChild(nodeReference)));
         }
         return cachedBoxes[nodeReference];
     }
 
+    @Override
+    void updateDeletePointSum(int nodeRef, float[] point) {
+        if (pointSum[nodeRef] == null) {
+            pointSum[nodeRef] = new float[point.length];
+        }
+        for (int i = 0; i < point.length; i++) {
+            pointSum[nodeRef][i] += point[i];
+        }
+    }
+
+    float[] getPointSum(int ref) {
+        return nodeManager.isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
+    }
+
+    @Override
+    void updateAddPointSum(Integer mergedNode, float[] point) {
+        if (pointSum[mergedNode] == null) {
+            pointSum[mergedNode] = new float[point.length];
+        }
+        float[] leftSum = getPointSum(nodeManager.getLeftChild(mergedNode));
+        float[] rightSum = getPointSum(nodeManager.getRightChild(mergedNode));
+        for (int i = 0; i < point.length; i++) {
+            pointSum[mergedNode][i] = leftSum[i] + rightSum[i];
+        }
+        int tempNode = mergedNode;
+        while (nodeManager.getParent(tempNode) != NULL) {
+            tempNode = nodeManager.getParent(tempNode);
+            for (int i = 0; i < point.length; i++) {
+                pointSum[tempNode][i] += point[i];
+            }
+        }
+    }
 }

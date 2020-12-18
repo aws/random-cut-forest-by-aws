@@ -16,7 +16,7 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
@@ -31,11 +31,9 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStoreFloat extends IndexManager implements IPointStore<float[]> {
+public class PointStoreFloat extends PointStore<float[]> implements IPointStore<float[]> {
 
-    private final float[] store;
-    private final short[] refCount;
-    private final int dimensions;
+    protected final float[] store;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -44,29 +42,19 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
      * @param capacity   The maximum number of points that can be stored.
      */
     public PointStoreFloat(int dimensions, int capacity) {
-        super(capacity);
+        super(dimensions, capacity);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
-
-        this.dimensions = dimensions;
         store = new float[capacity * dimensions];
-        refCount = new short[capacity];
     }
 
-    /**
-     * @return the number of dimensions in stored points for this PointStore.
-     */
-    @Override
-    public int getDimensions() {
-        return dimensions;
-    }
+    public PointStoreFloat(float[] store, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
+        super(store.length / refCount.length, refCount, freeIndexes, freeIndexPointer);
+        checkNotNull(store, "store must not be null");
+        checkNotNull(refCount, "refCount must not be null");
+        checkArgument(refCount.length == capacity, "refCount.length must equal capacity");
+        checkArgument(store.length % capacity == 0, "store.length must be an exact multiple of capacity");
 
-    /**
-     * @param index The index value.
-     * @return the reference count for the given index. The value 0 indicates that
-     *         there is no point stored at that index.
-     */
-    public int getRefCount(int index) {
-        return refCount[index];
+        this.store = store;
     }
 
     /**
@@ -91,41 +79,8 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
     }
 
     /**
-     * Increment the reference count for the given index. This operation assumes
-     * that there is currently a point stored at the given index and will throw an
-     * exception if that's not the case.
-     *
-     * @param index The index value.
-     * @throws IllegalArgumentException if the index value is not valid.
-     * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
-     */
-    public int incrementRefCount(int index) {
-        checkValidIndex(index);
-        return ++refCount[index];
-    }
-
-    /**
-     * Decrement the reference count for the given index.
-     *
-     * @param index The index value.
-     * @throws IllegalArgumentException if the index value is not valid.
-     * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
-     */
-    public int decrementRefCount(int index) {
-        checkValidIndex(index);
-
-        if (refCount[index] == 1) {
-            releaseIndex(index);
-        }
-
-        return --refCount[index];
-    }
-
-    /**
      * Test whether the given point is equal to the point stored at the given index.
-     * This operation uses pointwise <code>==</code> to test for equality.
+     * This operation uses point-wise <code>==</code> to test for equality.
      *
      * @param index The index value of the point we are comparing to.
      * @param point The point we are comparing for equality.
@@ -133,10 +88,11 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
      *         false otherwise.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non-positive.
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
+
     @Override
     public boolean pointEquals(int index, float[] point) {
         checkValidIndex(index);
@@ -153,13 +109,13 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
 
     /**
      * Get a copy of the point at the given index.
-     * 
+     *
      * @param index An index value corresponding to a storage location in this point
      *              store.
      * @return a copy of the point stored at the given index.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non-positive.
      */
     @Override
     public float[] get(int index) {
@@ -167,14 +123,19 @@ public class PointStoreFloat extends IndexManager implements IPointStore<float[]
         return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
     }
 
-    @Override
-    protected void checkValidIndex(int index) {
-        super.checkValidIndex(index);
-        checkState(refCount[index] > 0, "ref count at occupied index is 0");
-    }
-
+    /**
+     * print the point at location index
+     * 
+     * @param index index of the point in the store
+     * @return ascii output
+     */
     @Override
     public String toString(int index) {
         return Arrays.toString(get(index));
     }
+
+    public float[] getStore() {
+        return store;
+    }
+
 }

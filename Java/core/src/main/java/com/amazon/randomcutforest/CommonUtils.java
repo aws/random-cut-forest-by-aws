@@ -17,7 +17,7 @@ package com.amazon.randomcutforest;
 
 import java.util.Objects;
 
-import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 
 /**
  * A collection of common utility functions.
@@ -85,7 +85,7 @@ public class CommonUtils {
      * @return the probability of separation choosing a random cut
      */
 
-    public static double getProbabilityOfSeparation(final BoundingBox boundingBox, double[] queryPoint) {
+    public static double getProbabilityOfSeparation(final IBoundingBoxView boundingBox, double[] queryPoint) {
         double sumOfNewRange = 0d;
         double sumOfDifferenceInRange = 0d;
 
@@ -168,7 +168,7 @@ public class CommonUtils {
      * @return array of probabilities of cutting in that specific dimension
      */
 
-    public static double[] defaultRCFgVecFunction(BoundingBox boundingBox) {
+    public static double[] defaultRCFgVecFunction(IBoundingBoxView boundingBox) {
         double[] answer = new double[boundingBox.getDimensions()];
 
         for (int i = 0; i < boundingBox.getDimensions(); ++i) {

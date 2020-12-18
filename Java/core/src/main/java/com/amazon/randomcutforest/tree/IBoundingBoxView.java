@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
-public interface IBoundingBox<P> {
+public interface IBoundingBoxView {
 
     double getRangeSum();
 
@@ -27,23 +27,13 @@ public interface IBoundingBox<P> {
 
     double getMaxValue(int i);
 
-    boolean contains(P point);
-
     // duplicates
-    IBoundingBox<P> copyBox();
+    IBoundingBoxView copyBox();
 
     // below keeps the older box unchanged
-    IBoundingBox<P> getMergedBox(P point);
+    IBoundingBoxView getMergedBox(double[] point);
 
-    // merges in place
-    IBoundingBox<P> addPoint(P point);
-
-    // merges and keeops the older box unchaged
-    IBoundingBox<P> getMergedBox(IBoundingBox<P> otherBox);
-
-    // merges in place
-    IBoundingBox<P> addBox(IBoundingBox<P> otherBox);
-
-    BoundingBox copyBoxToDouble();
+    // merges and keeps the older box unchaged
+    IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);
 
 }

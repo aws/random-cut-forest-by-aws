@@ -15,10 +15,7 @@
 
 package com.amazon.randomcutforest.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-
-import java.util.Arrays;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -31,9 +28,10 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStoreDouble extends PointStore<double[]> implements IPointStore<double[]> {
+public abstract class PointStore<Point> extends IndexManager implements IPointStore<Point> {
 
-    protected final double[] store;
+    protected final short[] refCount;
+    protected final int dimensions;
 
     /**
      * Create a new PointStore with the given dimensions and capacity.
@@ -41,43 +39,71 @@ public class PointStoreDouble extends PointStore<double[]> implements IPointStor
      * @param dimensions The number of dimensions in stored points.
      * @param capacity   The maximum number of points that can be stored.
      */
-    public PointStoreDouble(int dimensions, int capacity) {
-        super(dimensions, capacity);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        store = new double[capacity * dimensions];
+    public PointStore(int dimensions, int capacity) {
+        super(capacity);
+        this.dimensions = dimensions;
+        refCount = new short[capacity];
     }
 
-    public PointStoreDouble(double[] store, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
-        super(store.length / refCount.length, refCount, freeIndexes, freeIndexPointer);
-        checkNotNull(store, "store must not be null");
-        checkNotNull(refCount, "refCount must not be null");
-        checkArgument(refCount.length == capacity, "refCount.length must equal capacity");
-        checkArgument(store.length % capacity == 0, "store.length must be an exact multiple of capacity");
-
-        this.store = store;
+    public PointStore(int dimensions, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
+        super(freeIndexes, freeIndexPointer);
+        this.dimensions = dimensions;
+        this.refCount = refCount;
     }
 
     /**
-     * Add a point to the point store and return the index of the stored point.
-     *
-     * @param point The point being added to the store.
-     * @return the index value of the stored point.
-     * @throws IllegalArgumentException if the length of the point does not match
-     *                                  the point store's dimensions.
-     * @throws IllegalStateException    if the point store is full.
+     * @return the number of dimensions in stored points for this PointStore.
      */
-    public int add(double[] point) {
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
+    @Override
+    public int getDimensions() {
+        return dimensions;
+    }
 
-        int nextIndex = takeIndex();
-        System.arraycopy(point, 0, store, nextIndex * dimensions, dimensions);
-        refCount[nextIndex] = 1;
-        return nextIndex;
+    /**
+     * @param index The index value.
+     * @return the reference count for the given index. The value 0 indicates that
+     *         there is no point stored at that index.
+     */
+    public int getRefCount(int index) {
+        return refCount[index];
+    }
+
+    /**
+     * Increment the reference count for the given index. This operation assumes
+     * that there is currently a point stored at the given index and will throw an
+     * exception if that's not the case.
+     *
+     * @param index The index value.
+     * @throws IllegalArgumentException if the index value is not valid.
+     * @throws IllegalArgumentException if the current reference count for this
+     *                                  index is nonpositive.
+     */
+    public int incrementRefCount(int index) {
+        checkValidIndex(index);
+        return ++refCount[index];
+    }
+
+    /**
+     * Decrement the reference count for the given index.
+     *
+     * @param index The index value.
+     * @throws IllegalArgumentException if the index value is not valid.
+     * @throws IllegalArgumentException if the current reference count for this
+     *                                  index is nonpositive.
+     */
+    public int decrementRefCount(int index) {
+        checkValidIndex(index);
+
+        if (refCount[index] == 1) {
+            releaseIndex(index);
+        }
+
+        return --refCount[index];
     }
 
     /**
      * Test whether the given point is equal to the point stored at the given index.
-     * This operation uses point-wise <code>==</code> to test for equality.
+     * This operation uses pointwise <code>==</code> to test for equality.
      *
      * @param index The index value of the point we are comparing to.
      * @param point The point we are comparing for equality.
@@ -91,22 +117,11 @@ public class PointStoreDouble extends PointStore<double[]> implements IPointStor
      */
 
     @Override
-    public boolean pointEquals(int index, double[] point) {
-        checkValidIndex(index);
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
-
-        for (int j = 0; j < dimensions; j++) {
-            if (point[j] != store[j + index * dimensions]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    public abstract boolean pointEquals(int index, Point point);
 
     /**
      * Get a copy of the point at the given index.
-     *
+     * 
      * @param index An index value corresponding to a storage location in this point
      *              store.
      * @return a copy of the point stored at the given index.
@@ -115,18 +130,18 @@ public class PointStoreDouble extends PointStore<double[]> implements IPointStor
      *                                  index is nonpositive.
      */
     @Override
-    public double[] get(int index) {
-        checkValidIndex(index);
-        return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
-    }
+    public abstract Point get(int index);
 
     @Override
-    public String toString(int index) {
-        return Arrays.toString(get(index));
+    public abstract String toString(int index);
+
+    @Override
+    protected void checkValidIndex(int index) {
+        super.checkValidIndex(index);
+        checkState(refCount[index] > 0, "ref count at occupied index is 0");
     }
 
-    public double[] getStore() {
-        return store;
+    public short[] getRefCount() {
+        return refCount;
     }
-
 }

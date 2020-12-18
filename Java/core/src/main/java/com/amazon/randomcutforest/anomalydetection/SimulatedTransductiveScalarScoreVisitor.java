@@ -18,12 +18,12 @@ package com.amazon.randomcutforest.anomalydetection;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
 
 public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarScoreVisitor {
 
-    private final Function<BoundingBox, double[]> vecSepBuild;
+    private final Function<IBoundingBoxView, double[]> vecSepBuild;
 
     /**
      * Construct a new SimulatedTransductiveScalarScoreVisitor
@@ -44,8 +44,8 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      */
     public SimulatedTransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            BiFunction<Double, Double, Double> damp, Function<BoundingBox, double[]> vecSepBuild,
-            Function<BoundingBox, double[]> vecSepScore) {
+            BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSepBuild,
+            Function<IBoundingBoxView, double[]> vecSepScore) {
         super(pointToScore, treeMass, scoreSeen, scoreUnseen, damp, vecSepScore);
         this.vecSepBuild = vecSepBuild;
     }
@@ -57,7 +57,7 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(INodeView node, int depthOfNode) {
+    public void accept(INodeView<?> node, int depthOfNode) {
         double weight = getWeight(node.getCutDimension(), vecSepBuild, node.getBoundingBox());
 
         if (pointInsideBox) {

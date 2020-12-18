@@ -20,9 +20,9 @@ package com.amazon.randomcutforest.store;
  * which can be added to a store by the update coordinator and made accessible
  * to the trees in a read only manner.
  * 
- * @param <P> precision type
+ * @param <Point> precision type
  */
-public interface IPointStore<P> extends IPointStoreView<P> {
+public interface IPointStore<Point> extends IPointStoreView<Point> {
     /**
      * Adds to the store; there may be a loss of precision if enableFloat is on in
      * the Forest level. But external interface of the forest is double[]

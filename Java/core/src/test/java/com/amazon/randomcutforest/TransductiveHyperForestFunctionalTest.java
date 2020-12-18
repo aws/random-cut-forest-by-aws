@@ -15,7 +15,14 @@
 
 package com.amazon.randomcutforest;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.HyperTree;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.ITree;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,15 +31,7 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.HyperTree;
-import com.amazon.randomcutforest.tree.ITree;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
@@ -56,9 +55,9 @@ public class TransductiveHyperForestFunctionalTest {
     private static int numTrials = 10;
     private static int numTest = 10;
 
-    public static Function<BoundingBox, double[]> LAlphaSeparation(final double alpha) {
+    public static Function<IBoundingBoxView, double[]> LAlphaSeparation(final double alpha) {
 
-        return (BoundingBox boundingBox) -> {
+        return (IBoundingBoxView boundingBox) -> {
             double[] answer = new double[boundingBox.getDimensions()];
 
             for (int i = 0; i < boundingBox.getDimensions(); ++i) {
@@ -78,9 +77,9 @@ public class TransductiveHyperForestFunctionalTest {
         };
     }
 
-    public static Function<BoundingBox, double[]> GTFSeparation(final double gauge) {
+    public static Function<IBoundingBoxView, double[]> GTFSeparation(final double gauge) {
 
-        return (BoundingBox boundingBox) -> {
+        return (IBoundingBoxView boundingBox) -> {
             double[] answer = new double[boundingBox.getDimensions()];
 
             for (int i = 0; i < boundingBox.getDimensions(); ++i) {
@@ -107,7 +106,7 @@ public class TransductiveHyperForestFunctionalTest {
         ArrayList<HyperTree> trees;
 
         public HyperForest(int dimensions, int numberOfTrees, int sampleSize, int seed,
-                Function<BoundingBox, double[]> vecSeparation) {
+                Function<IBoundingBoxView, double[]> vecSeparation) {
             this.numberOfTrees = numberOfTrees;
             this.seed = seed;
             this.sampleSize = sampleSize;
@@ -197,19 +196,19 @@ public class TransductiveHyperForestFunctionalTest {
     // ===========================================================
 
     public static double getSimulatedAnomalyScore(DynamicScoringRandomCutForest forest, double[] point,
-            Function<BoundingBox, double[]> gVec) {
+            Function<IBoundingBoxView, double[]> gVec) {
         return forest.getDynamicSimulatedScore(point, CommonUtils::defaultScoreSeenFunction,
                 CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction, gVec);
     }
 
     public static double getSimulatedHeightScore(DynamicScoringRandomCutForest forest, double[] point,
-            Function<BoundingBox, double[]> gvec) {
+            Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x,
                 (x, y) -> 1.0, gvec);
     }
 
     public static double getSimulatedDisplacementScore(DynamicScoringRandomCutForest forest, double[] point,
-            Function<BoundingBox, double[]> gvec) {
+            Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0, gvec);
     }
 
@@ -244,7 +243,7 @@ public class TransductiveHyperForestFunctionalTest {
         double sumRightHeight = 0;
     }
 
-    public static void runRCF(TestScores testScore, Function<BoundingBox, double[]> gVec) {
+    public static void runRCF(TestScores testScore, Function<IBoundingBoxView, double[]> gVec) {
         Random prg = new Random(randomSeed);
         for (int trials = 0; trials < numTrials; trials++) {
             double[][] data = generator.generateTestData(dataSize + numTest, dimensions, 100 + trials);
@@ -333,7 +332,7 @@ public class TransductiveHyperForestFunctionalTest {
     }
 
     public void simulateGTFLAlpha(TestScores testScore, boolean flag, double gaugeOrAlpha) {
-        Function<BoundingBox, double[]> gVec = LAlphaSeparation(gaugeOrAlpha);
+        Function<IBoundingBoxView, double[]> gVec = LAlphaSeparation(gaugeOrAlpha);
         if (flag)
             gVec = GTFSeparation(gaugeOrAlpha);
         runRCF(testScore, gVec);
@@ -372,11 +371,11 @@ public class TransductiveHyperForestFunctionalTest {
     public void LAlphaForestTest() {
 
         double alpha = 0;
-        for (int i = 0; i <= 20; i++) {
+        for (int i = 0; i <= 10; i++) {
 
             if (i > 0) {
                 if (alpha < 0.9)
-                    alpha += 0.1;
+                    alpha += 0.2;
                 else
                     alpha = Math.round(alpha + 1);
             }

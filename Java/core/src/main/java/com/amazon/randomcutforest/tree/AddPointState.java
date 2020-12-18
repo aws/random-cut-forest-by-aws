@@ -15,29 +15,32 @@
 
 package com.amazon.randomcutforest.tree;
 
-public class AddPointState<P> {
-    private int siblingOffset;
+public class AddPointState<Point, NodeReference, PointReference> {
+    private NodeReference siblingOffset;
     private int cutDimension;
     private double cutValue;
-    private IBoundingBox<P> savedBox;
-    private IBoundingBox<P> currentBox;
+    private AbstractBoundingBox<Point> savedBox;
+    private AbstractBoundingBox<Point> currentBox;
     private boolean resolved;
-    private final int pointIndex;
+    private final PointReference pointIndex;
+    private long sequenceNumber;
 
-    public void initialize(int sibling, int dim, double val, IBoundingBox<P> box) {
+    public void initialize(NodeReference sibling, int dim, double val, long sequenceNumber,
+            AbstractBoundingBox<Point> box) {
         siblingOffset = sibling;
         cutDimension = dim;
         cutValue = val;
         this.savedBox = box;
         this.currentBox = box.copyBox();
         resolved = false;
+        this.sequenceNumber = sequenceNumber;
     }
 
-    public AddPointState(int pointIndex) {
+    public AddPointState(PointReference pointIndex) {
         this.pointIndex = pointIndex;
     }
 
-    public int getPointIndex() {
+    public PointReference getPointIndex() {
         return pointIndex;
     }
 
@@ -49,7 +52,7 @@ public class AddPointState<P> {
         return resolved;
     }
 
-    public IBoundingBox<P> getSavedBox() {
+    public AbstractBoundingBox<Point> getSavedBox() {
         return savedBox;
     }
 
@@ -61,15 +64,19 @@ public class AddPointState<P> {
         return cutValue;
     }
 
-    public int getSiblingOffset() {
+    public NodeReference getSiblingOffset() {
         return siblingOffset;
     }
 
-    public IBoundingBox<P> getCurrentBox() {
+    public AbstractBoundingBox<Point> getCurrentBox() {
         return currentBox;
     }
 
-    public void setCurrentBox(IBoundingBox<P> currentBox) {
+    public void setCurrentBox(AbstractBoundingBox<Point> currentBox) {
         this.currentBox = currentBox;
+    }
+
+    public long getSequenceNumber() {
+        return sequenceNumber;
     }
 }

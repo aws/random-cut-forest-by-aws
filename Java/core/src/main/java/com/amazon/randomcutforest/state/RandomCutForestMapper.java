@@ -196,6 +196,7 @@ public class RandomCutForestMapper
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
+                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled())
                 .compactEnabled(state.isCompactEnabled());
 
         Random rng = builder.getRandom();
@@ -221,7 +222,9 @@ public class RandomCutForestMapper
                 if (treeStates != null) {
                     tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
                 } else {
-                    tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(), pointStore, true);
+                    tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(), pointStore,
+                            state.isBoundingBoxCachingEnabled(), state.isCenterOfMassEnabled(),
+                            state.isStoreSequenceIndexesEnabled());
                 }
 
                 CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), state, rng.nextLong());
