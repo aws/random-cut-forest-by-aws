@@ -116,8 +116,8 @@ public abstract class PointStore<Point> extends IndexManager implements IPointSt
      *                                  the point store's dimensions.
      */
 
-    @Override
-    public abstract boolean pointEquals(int index, Point point);
+    // @Override
+    // public abstract boolean pointEquals(int index, Point point);
 
     /**
      * Get a copy of the point at the given index.

@@ -50,7 +50,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     private final Random random;
     protected NodeReference rootIndex;
-    protected INodeView<NodeReference> nodeView;
+    protected INode<NodeReference> nodeView;
     public final boolean enableCache;
     public final boolean enableCenterOfMass;
     public final boolean enableSequenceIndices;
@@ -508,13 +508,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference currentNode,
-            INodeView<NodeReference> nodeView, int depthOfNode) {
+            INode<NodeReference> nodeView, int depthOfNode) {
         if (isLeaf(currentNode)) {
             visitor.acceptLeaf(nodeView.getNodeView(currentNode), depthOfNode);
         } else {
             NodeReference childNode = leftOf(point, currentNode) ? getLeftChild(currentNode)
                     : getRightChild(currentNode);
-            traversePathToLeafAndVisitNodes(point, visitor, childNode, nodeView, depthOfNode + 1);
+            traversePathToLeafAndVisitNodes(point, visitor, childNode, nodeView.getNodeView(childNode),
+                    depthOfNode + 1);
             visitor.accept(nodeView.getNodeView(currentNode), depthOfNode);
         }
     }
@@ -545,7 +546,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference currentNode,
-            INodeView<NodeReference> nodeView, int depthOfNode) {
+            INode<NodeReference> nodeView, int depthOfNode) {
         if (isLeaf(currentNode)) {
             visitor.acceptLeaf(nodeView.getNodeView(currentNode), depthOfNode);
         } else {
@@ -559,7 +560,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             } else {
                 NodeReference childNode = leftOf(point, currentNode) ? getLeftChild(currentNode)
                         : getRightChild(currentNode);
-                traverseTreeMulti(point, visitor, childNode, nodeView.getNodeView(currentNode), depthOfNode + 1);
+                traverseTreeMulti(point, visitor, childNode, nodeView.getNodeView(childNode), depthOfNode + 1);
             }
             visitor.accept(nodeView.getNodeView(currentNode), depthOfNode);
         }

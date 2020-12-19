@@ -67,7 +67,7 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
         rangeSum = sum;
     }
 
-    public abstract AbstractBoundingBox<Point> copyBox();
+    public abstract AbstractBoundingBox<Point> copy();
 
     /**
      * Return a new bounding box which is the smallest bounding box that contains
@@ -88,16 +88,6 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
      *         given point.
      */
     public abstract AbstractBoundingBox<Point> getMergedBox(Point point);
-
-    /**
-     * The following will attempt to perform merge in place; unless the current box
-     * is a point; in which case it would produce a new box. This is useful if we
-     * know that the current box is unlikely to be used any further.
-     * 
-     * @param otherBoundingBox box to be merged
-     * @return merged bounding box
-     */
-    public abstract AbstractBoundingBox<Point> addBox(final AbstractBoundingBox<Point> otherBoundingBox);
 
     /**
      * The following will attempt to perform merge in place; unless the current box

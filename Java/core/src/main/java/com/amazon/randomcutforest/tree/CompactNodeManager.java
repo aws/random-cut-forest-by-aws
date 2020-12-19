@@ -39,16 +39,20 @@ public class CompactNodeManager {
         this.capacity = capacity;
     }
 
+    protected int intValue(Integer ref) {
+        return ref == null ? NULL : ref.intValue();
+    }
+
     public Integer addNode(Integer parent, Integer leftChild, Integer rightChild, int cutDimension, double cutValue,
             int mass) {
-        int parentIndex = (parent != null) ? parent.intValue() : NULL;
-        int leftIndex = (leftChild != null) ? leftChild.intValue() : NULL;
-        int rightIndex = (rightChild != null) ? rightChild.intValue() : NULL;
+        int parentIndex = intValue(parent);
+        int leftIndex = intValue(leftChild);
+        int rightIndex = intValue(rightChild);
         return nodeStore.addNode(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass);
     }
 
     public void setParent(Integer child, Integer parent) {
-        int parentIndex = (parent != null) ? parent.intValue() : NULL;
+        int parentIndex = intValue(parent);
         if (isLeaf(child)) {
             leafstore.setParent(child, parentIndex);
         } else {
@@ -138,7 +142,7 @@ public class CompactNodeManager {
         } else {
             boxParent = nodeStore.getParent(node);
         }
-        return (boxParent == null) ? NULL : boxParent;
+        return intValue(boxParent);
     }
 
     public Integer getSibling(Integer node) {
@@ -153,7 +157,7 @@ public class CompactNodeManager {
     }
 
     public Integer addLeaf(Integer parent, Integer pointIndex, int mass) {
-        int parentIndex = (parent != null) ? parent : NULL;
+        int parentIndex = intValue(parent);
         return leafstore.addLeaf(parentIndex, pointIndex, mass);
     }
 

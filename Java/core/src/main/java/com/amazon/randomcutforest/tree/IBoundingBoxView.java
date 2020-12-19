@@ -28,7 +28,7 @@ public interface IBoundingBoxView {
     double getMaxValue(int i);
 
     // duplicates
-    IBoundingBoxView copyBox();
+    IBoundingBoxView copy();
 
     // below keeps the older box unchanged
     IBoundingBoxView getMergedBox(double[] point);

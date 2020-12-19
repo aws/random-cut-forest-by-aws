@@ -267,9 +267,6 @@ public class RandomCutForest {
         IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
         ComponentList<double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            // ITree<double[]> tree =
-            // RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-            // .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
             ITree<double[]> tree = new PointerTree(rng.nextLong(), boundingBoxCachingEnabled, centerOfMassEnabled,
                     storeSequenceIndexesEnabled);
             IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
@@ -317,8 +314,6 @@ public class RandomCutForest {
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
         checkArgument(builder.precision == Precision.DOUBLE || builder.compactEnabled,
                 "single precision is only supported for compact trees");
-        // checkArgument(builder.boundingBoxCachingEnabled || builder.compactEnabled,
-        // "bounding box caching is only supported for compact trees");
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;

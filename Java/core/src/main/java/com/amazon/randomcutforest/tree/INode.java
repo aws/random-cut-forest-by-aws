@@ -15,21 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
-import java.util.Set;
+public interface INode<NodeReference> extends INodeView<NodeReference> {
 
-public interface INodeView<NodeReference> {
-    int getMass();
+    INode<NodeReference> getNodeView(NodeReference node);
 
-    IBoundingBoxView getBoundingBox();
+    INode<NodeReference> getLeftChild();
 
-    IBoundingBoxView getSiblingBoundingBox(double[] point);
+    INode<NodeReference> getRightChild();
 
-    boolean leafPointEquals(double[] point);
-
-    int getCutDimension();
-
-    double[] getLeafPoint();
-
-    Set<Long> getSequenceIndexes();
+    INode<NodeReference> getParent();
 
 }

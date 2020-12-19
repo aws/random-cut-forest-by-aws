@@ -15,12 +15,10 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
 import java.util.Arrays;
 import java.util.Set;
 
-public class CompactNodeView implements INodeView<Integer> {
+public class CompactNodeView implements INode<Integer> {
     final AbstractCompactRandomCutTree<?> tree;
     int currentNodeOffset;
 
@@ -62,10 +60,23 @@ public class CompactNodeView implements INodeView<Integer> {
     }
 
     @Override
-    public INodeView<Integer> getNodeView(Integer node) {
-        checkState(node != null, " incorrect node in nodeview");
-        currentNodeOffset = node.intValue();
-        return this;
+    public INode<Integer> getNodeView(Integer node) {
+        return new CompactNodeView(tree, node);
+    }
+
+    @Override
+    public INode<Integer> getLeftChild() {
+        return new CompactNodeView(tree, tree.nodeManager.getLeftChild(currentNodeOffset));
+    }
+
+    @Override
+    public INode<Integer> getRightChild() {
+        return new CompactNodeView(tree, tree.nodeManager.getRightChild(currentNodeOffset));
+    }
+
+    @Override
+    public INode<Integer> getParent() {
+        return new CompactNodeView(tree, tree.nodeManager.getParent(currentNodeOffset));
     }
 
 }

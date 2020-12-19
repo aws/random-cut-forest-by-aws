@@ -29,7 +29,7 @@ import java.util.Set;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node implements INodeView<Node> {
+public class Node implements INode<Node> {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value
@@ -360,7 +360,7 @@ public class Node implements INodeView<Node> {
             }
         } else {
             if (pointSum != null) {
-                if (pointSum.length >= 0) {
+                if (pointSum.length > 0) {
                     System.arraycopy(pointSum, 0, result, 0, pointSum.length);
                 }
             }
@@ -412,7 +412,7 @@ public class Node implements INodeView<Node> {
     }
 
     @Override
-    public INodeView<Node> getNodeView(Node node) {
+    public INode<Node> getNodeView(Node node) {
         return node;
     }
 

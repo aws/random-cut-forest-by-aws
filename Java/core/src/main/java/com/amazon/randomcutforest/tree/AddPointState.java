@@ -31,7 +31,7 @@ public class AddPointState<Point, NodeReference, PointReference> {
         cutDimension = dim;
         cutValue = val;
         this.savedBox = box;
-        this.currentBox = box.copyBox();
+        this.currentBox = box.copy();
         resolved = false;
         this.sequenceNumber = sequenceNumber;
     }

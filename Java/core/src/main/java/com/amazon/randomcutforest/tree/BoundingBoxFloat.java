@@ -24,7 +24,7 @@ import java.util.Arrays;
  * A single precision implementation of AbstractBoundingBox which also satisfies
  * the interface for Visitor classes
  */
-public class BoundingBoxFloat extends AbstractBoundingBox<float[]> implements IBoundingBoxView {
+public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
 
     public BoundingBoxFloat(float[] point) {
         super(point);
@@ -45,7 +45,7 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> implements IB
     }
 
     @Override
-    public AbstractBoundingBox<float[]> copyBox() {
+    public AbstractBoundingBox<float[]> copy() {
         return new BoundingBoxFloat(Arrays.copyOf(minValues, minValues.length),
                 Arrays.copyOf(maxValues, maxValues.length), rangeSum);
     }
@@ -118,21 +118,6 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> implements IB
         return minValues.length;
     }
 
-    @Override
-    public AbstractBoundingBox<float[]> addBox(AbstractBoundingBox<float[]> otherBox) {
-        checkArgument(minValues.length == otherBox.minValues.length, "incorrect length");
-        if (maxValues == minValues) {
-            return getMergedBox(otherBox);
-        }
-        rangeSum = 0;
-        for (int i = 0; i < minValues.length; ++i) {
-            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
-            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
-            rangeSum += maxValues[i] - minValues[i];
-        }
-        return this;
-    }
-
     /**
      * @return the sum of side lengths for this BoundingBox.
      */
@@ -203,7 +188,7 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> implements IB
             return false;
         }
 
-        AbstractBoundingBox<float[]> otherBox = (AbstractBoundingBox<float[]>) other;
+        AbstractBoundingBox<float[]> otherBox = (BoundingBoxFloat) other;
         return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 

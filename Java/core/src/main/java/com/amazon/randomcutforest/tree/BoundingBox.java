@@ -29,7 +29,7 @@ import java.util.Arrays;
  * always the smallest BoundingBox that contains all leaf points which are
  * descendents of the Node.
  */
-public class BoundingBox extends AbstractBoundingBox<double[]> implements IBoundingBoxView {
+public class BoundingBox extends AbstractBoundingBox<double[]> {
 
     public BoundingBox(double[] point) {
         super(point);
@@ -56,7 +56,7 @@ public class BoundingBox extends AbstractBoundingBox<double[]> implements IBound
     }
 
     @Override
-    public BoundingBox copyBox() {
+    public BoundingBox copy() {
         return new BoundingBox(Arrays.copyOf(minValues, minValues.length), Arrays.copyOf(maxValues, maxValues.length),
                 rangeSum);
     }
@@ -124,21 +124,6 @@ public class BoundingBox extends AbstractBoundingBox<double[]> implements IBound
         return minValues.length;
     }
 
-    @Override
-    public BoundingBox addBox(AbstractBoundingBox<double[]> otherBox) {
-        checkArgument(minValues.length == otherBox.minValues.length, "incorrect length");
-        if (maxValues == minValues) {
-            return getMergedBox(otherBox);
-        }
-        rangeSum = 0;
-        for (int i = 0; i < minValues.length; ++i) {
-            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
-            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
-            rangeSum += maxValues[i] - minValues[i];
-        }
-        return this;
-    }
-
     public double getMaxValue(final int dimension) {
         return maxValues[dimension];
     }
@@ -188,7 +173,7 @@ public class BoundingBox extends AbstractBoundingBox<double[]> implements IBound
             return false;
         }
 
-        AbstractBoundingBox<double[]> otherBox = (AbstractBoundingBox<double[]>) other;
+        AbstractBoundingBox<double[]> otherBox = (BoundingBox) other;
         return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 
