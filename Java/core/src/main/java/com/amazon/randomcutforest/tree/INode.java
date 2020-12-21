@@ -17,7 +17,7 @@ package com.amazon.randomcutforest.tree;
 
 public interface INode<NodeReference> extends INodeView<NodeReference> {
 
-    INode<NodeReference> getNodeView(NodeReference node);
+    boolean isLeaf();
 
     INode<NodeReference> getLeftChild();
 

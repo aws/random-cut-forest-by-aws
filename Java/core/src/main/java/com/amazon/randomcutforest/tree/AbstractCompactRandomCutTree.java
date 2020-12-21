@@ -69,7 +69,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                 new LeafStore((short) this.maxSize), this.maxSize);
         // random = new Random(seed);
         rootIndex = null;
-        nodeView = new CompactNodeView(this, NULL);
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
             sequenceIndexes = new HashSet[maxSize];
@@ -87,8 +86,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         this.rootIndex = rootIndex;
         // random = new Random(seed);
         nodeManager = new CompactNodeManager(nodeStore, leafStore, maxSize);
-        nodeView = new CompactNodeView(this, rootIndex);
         this.enableCache = enableCache;
+    }
+
+    @Override
+    INode<Integer> getRootView() {
+        return new CompactNodeView(this, rootIndex);
     }
 
     @Override

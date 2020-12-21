@@ -28,6 +28,8 @@ public interface INodeView<NodeReference> {
 
     int getCutDimension();
 
+    double getCutValue();
+
     double[] getLeafPoint();
 
     Set<Long> getSequenceIndexes();

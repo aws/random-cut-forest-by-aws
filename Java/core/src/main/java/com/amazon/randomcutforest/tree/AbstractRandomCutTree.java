@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 
 import java.util.Random;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Visitor;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -50,7 +50,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     private final Random random;
     protected NodeReference rootIndex;
-    protected INode<NodeReference> nodeView;
     public final boolean enableCache;
     public final boolean enableCenterOfMass;
     public final boolean enableSequenceIndices;
@@ -476,9 +475,17 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param nodeReference identifier of the node
      * @return left/right decision
      */
+    protected boolean leftOf(double[] point, INodeView nodeReference) {
+        return point[nodeReference.getCutDimension()] <= nodeReference.getCutValue();
+    }
+
+    // Same, used internal to the tree
     protected boolean leftOf(double[] point, NodeReference nodeReference) {
         return point[getCutDimension(nodeReference)] <= getCutValue(nodeReference);
     }
+
+    // provides a view of the root node
+    abstract INode<NodeReference> getRootView();
 
     /**
      * Starting from the root, traverse the canonical path to a leaf node and visit
@@ -503,20 +510,21 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
         checkState(rootIndex != null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.apply(this);
-        traversePathToLeafAndVisitNodes(point, visitor, rootIndex, nodeView, 0);
+        traversePathToLeafAndVisitNodes(point, visitor, getRootView(), 0);
         return visitor.getResult();
     }
 
-    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference currentNode,
-            INode<NodeReference> nodeView, int depthOfNode) {
-        if (isLeaf(currentNode)) {
-            visitor.acceptLeaf(nodeView.getNodeView(currentNode), depthOfNode);
+    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, INode<NodeReference> node,
+            int depthOfNode) {
+        if (node.isLeaf()) {
+            visitor.acceptLeaf(node, depthOfNode);
         } else {
-            NodeReference childNode = leftOf(point, currentNode) ? getLeftChild(currentNode)
-                    : getRightChild(currentNode);
-            traversePathToLeafAndVisitNodes(point, visitor, childNode, nodeView.getNodeView(childNode),
-                    depthOfNode + 1);
-            visitor.accept(nodeView.getNodeView(currentNode), depthOfNode);
+            if (leftOf(point, node)) {
+                traversePathToLeafAndVisitNodes(point, visitor, node.getLeftChild(), depthOfNode + 1);
+            } else {
+                traversePathToLeafAndVisitNodes(point, visitor, node.getRightChild(), depthOfNode + 1);
+            }
+            visitor.accept(node, depthOfNode);
         }
     }
 
@@ -541,28 +549,29 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(rootIndex != null, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.apply(this);
-        traverseTreeMulti(point, visitor, rootIndex, nodeView, 0);
+        traverseTreeMulti(point, visitor, getRootView(), 0);
         return visitor.getResult();
     }
 
-    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference currentNode,
-            INode<NodeReference> nodeView, int depthOfNode) {
-        if (isLeaf(currentNode)) {
-            visitor.acceptLeaf(nodeView.getNodeView(currentNode), depthOfNode);
+    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, INode<NodeReference> node,
+            int depthOfNode) {
+        if (node.isLeaf()) {
+            visitor.acceptLeaf(node, depthOfNode);
         } else {
-            if (visitor.trigger(nodeView.getNodeView(currentNode))) {
-                NodeReference leftChild = getLeftChild(currentNode);
-                traverseTreeMulti(point, visitor, leftChild, nodeView.getNodeView(leftChild), depthOfNode + 1);
+            if (visitor.trigger(node)) {
+                traverseTreeMulti(point, visitor, node.getLeftChild(), depthOfNode + 1);
                 MultiVisitor<R> newVisitor = visitor.newCopy();
-                NodeReference rightChild = getRightChild(currentNode);
-                traverseTreeMulti(point, newVisitor, rightChild, nodeView.getNodeView(rightChild), depthOfNode + 1);
+                traverseTreeMulti(point, newVisitor, node.getRightChild(), depthOfNode + 1);
                 visitor.combine(newVisitor);
             } else {
-                NodeReference childNode = leftOf(point, currentNode) ? getLeftChild(currentNode)
-                        : getRightChild(currentNode);
-                traverseTreeMulti(point, visitor, childNode, nodeView.getNodeView(childNode), depthOfNode + 1);
+
+                if (leftOf(point, node)) {
+                    traverseTreeMulti(point, visitor, node.getLeftChild(), depthOfNode + 1);
+                } else {
+                    traverseTreeMulti(point, visitor, node.getRightChild(), depthOfNode + 1);
+                }
             }
-            visitor.accept(nodeView.getNodeView(currentNode), depthOfNode);
+            visitor.accept(node, depthOfNode);
         }
     }
 

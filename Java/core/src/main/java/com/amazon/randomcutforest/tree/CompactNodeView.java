@@ -51,6 +51,11 @@ public class CompactNodeView implements INode<Integer> {
         return tree.nodeManager.getCutDimension(currentNodeOffset);
     }
 
+    @Override
+    public double getCutValue() {
+        return tree.nodeManager.getCutValue(currentNodeOffset);
+    }
+
     public double[] getLeafPoint() {
         return tree.getPoint(currentNodeOffset);
     }
@@ -60,8 +65,8 @@ public class CompactNodeView implements INode<Integer> {
     }
 
     @Override
-    public INode<Integer> getNodeView(Integer node) {
-        return new CompactNodeView(tree, node);
+    public boolean isLeaf() {
+        return tree.isLeaf(currentNodeOffset);
     }
 
     @Override

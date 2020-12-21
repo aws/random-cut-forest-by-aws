@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.Visitor;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.Visitor;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Random Cut Tree is a tree data structure whose leaves represent points
@@ -40,7 +40,6 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
 
     public PointerTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
-        nodeView = new Node(null);
         rootIndex = null;
     }
 
@@ -94,6 +93,11 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     @Override
     protected double[] getPoint(Node node) {
         return new double[0];
+    }
+
+    @Override
+    INode<Node> getRootView() {
+        return rootIndex;
     }
 
     @Override
