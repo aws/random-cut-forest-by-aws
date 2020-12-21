@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
  * defined by its location in the tree (parent and child nodes), its random cut,
@@ -158,6 +160,17 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
     @Override
     public int getMaxIndex() {
         return super.capacity;
+    }
+
+    public void increaseMassOfAncestorsAndItselfRecursively(int index) {
+        while (index != NULL) {
+            ++mass[index];
+            index = parentIndex[index];
+        }
+    }
+
+    public int getSibling(int parent, int node) {
+        return leftIndex[parent] == (short) node ? rightIndex[parent] : leftIndex[parent];
     }
 
 }

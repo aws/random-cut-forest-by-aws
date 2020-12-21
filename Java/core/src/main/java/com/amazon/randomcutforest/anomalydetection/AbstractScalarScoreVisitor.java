@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
 
 /**
@@ -75,7 +75,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     /**
      * shadowbox used in attribution and ignoring the leaf to simulate a deletion
      */
-    protected BoundingBox shadowBox = null;
+    protected IBoundingBoxView shadowBox = null;
 
     /**
      * The function used to compute the base score in the case where the point being
@@ -146,7 +146,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(INodeView node, int depthOfNode) {
+    public void accept(INodeView<?> node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -174,7 +174,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the leaf node
      */
     @Override
-    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView<?> leafNode, int depthOfNode) {
         if (leafNode.leafPointEquals(pointToScore)
                 && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             pointInsideBox = true;
@@ -227,7 +227,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      *                    separation from.
      * @return is the probability
      */
-    protected double getProbabilityOfSeparation(final BoundingBox boundingBox) {
+    protected double getProbabilityOfSeparation(final IBoundingBoxView boundingBox) {
         double sumOfNewRange = 0d;
         double sumOfDifferenceInRange = 0d;
 

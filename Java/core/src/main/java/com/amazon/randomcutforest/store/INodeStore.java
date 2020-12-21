@@ -143,4 +143,24 @@ public interface INodeStore {
      * @return
      */
     int getMaxIndex();
+
+    /**
+     * increases the mass of node as well as all its ancestors by 1 note that all
+     * these nodes are internal nodes and we eliminate the back and forth in a
+     * single call
+     * 
+     * @param index node
+     */
+    void increaseMassOfAncestorsAndItselfRecursively(int index);
+
+    /**
+     * returns the sibling of node, both of whom save the same parent
+     * 
+     * @param parent the parent
+     * @param node   the node
+     * @return the sibling
+     */
+
+    public int getSibling(int parent, int node);
+
 }

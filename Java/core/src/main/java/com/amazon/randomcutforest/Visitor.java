@@ -34,7 +34,7 @@ public interface Visitor<R> {
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
      */
-    void accept(INodeView node, int depthOfNode);
+    void accept(INodeView<?> node, int depthOfNode);
 
     /**
      * Visit the leaf node in the traversal path. By default this method proxies to
@@ -43,7 +43,7 @@ public interface Visitor<R> {
      * @param leafNode    the leaf node being visited
      * @param depthOfNode the depth of the leaf node
      */
-    default void acceptLeaf(INodeView leafNode, final int depthOfNode) {
+    default void acceptLeaf(INodeView<?> leafNode, final int depthOfNode) {
         accept(leafNode, depthOfNode);
     }
 

@@ -15,35 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
-public interface IBoundingBox<P> {
+public interface INode<NodeReference> extends INodeView<NodeReference> {
 
-    double getRangeSum();
+    INode<NodeReference> getNodeView(NodeReference node);
 
-    int getDimensions();
+    INode<NodeReference> getLeftChild();
 
-    double getRange(int i);
+    INode<NodeReference> getRightChild();
 
-    double getMinValue(int i);
-
-    double getMaxValue(int i);
-
-    boolean contains(P point);
-
-    // duplicates
-    IBoundingBox<P> copyBox();
-
-    // below keeps the older box unchanged
-    IBoundingBox<P> getMergedBox(P point);
-
-    // merges in place
-    IBoundingBox<P> addPoint(P point);
-
-    // merges and keeops the older box unchaged
-    IBoundingBox<P> getMergedBox(IBoundingBox<P> otherBox);
-
-    // merges in place
-    IBoundingBox<P> addBox(IBoundingBox<P> otherBox);
-
-    BoundingBox copyBoxToDouble();
+    INode<NodeReference> getParent();
 
 }

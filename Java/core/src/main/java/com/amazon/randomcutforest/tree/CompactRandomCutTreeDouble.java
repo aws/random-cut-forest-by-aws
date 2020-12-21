@@ -25,12 +25,16 @@ import com.amazon.randomcutforest.store.NodeStore;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, boolean cacheEnabled) {
-        super(maxSize, seed, cacheEnabled);
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, boolean cacheEnabled,
+            boolean centerOfMassEnabled, boolean enableSequenceIndices) {
+        super(maxSize, seed, cacheEnabled, centerOfMassEnabled, enableSequenceIndices);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
             cachedBoxes = new BoundingBox[maxSize - 1];
+        }
+        if (centerOfMassEnabled) {
+            pointSum = new double[maxSize - 1][];
         }
     }
 
@@ -48,13 +52,8 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    IBoundingBox<double[]> getLeafBoxFromPoint(int pointIndex) {
-        return new BoundingBox(pointStore.get(pointIndex));
-    }
-
-    @Override
-    IBoundingBox<double[]> getInternalMergedBox(double[] point, double[] oldPoint) {
-        return BoundingBox.getMergedBox(point, oldPoint);
+    AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+        return new BoundingBox(first, second);
     }
 
     @Override
@@ -63,31 +62,74 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
+    AbstractBoundingBox<double[]> getLeafBoxFromLeafNode(Integer nodeReference) {
+        return new BoundingBox(pointStore.get(nodeManager.getPointIndex(nodeReference)));
+    }
+
+    @Override
+    void updateDeletePointSum(int nodeRef, double[] point) {
+        if (pointSum[nodeRef] == null) {
+            pointSum[nodeRef] = new double[point.length];
+        }
+        for (int i = 0; i < point.length; i++) {
+            pointSum[nodeRef][i] += point[i];
+        }
+    }
+
+    double[] getPointSum(int ref) {
+        return nodeManager.isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
+    }
+
+    @Override
+    void updateAddPointSum(Integer mergedNode, double[] point) {
+        if (pointSum[mergedNode] == null) {
+            pointSum[mergedNode] = new double[point.length];
+        }
+        double[] leftSum = getPointSum(nodeManager.getLeftChild(mergedNode));
+        double[] rightSum = getPointSum(nodeManager.getRightChild(mergedNode));
+        for (int i = 0; i < point.length; i++) {
+            pointSum[mergedNode][i] = leftSum[i] + rightSum[i];
+        }
+        int tempNode = mergedNode;
+        while (nodeManager.getParent(tempNode) != NULL) {
+            tempNode = nodeManager.getParent(tempNode);
+            for (int i = 0; i < point.length; i++) {
+                pointSum[tempNode][i] += point[i];
+            }
+        }
+    }
+
+    @Override
     protected boolean leftOf(double[] point, int dimension, double val) {
         return point[dimension] <= val;
     }
 
+    // the following is for visitors
     @Override
-    protected double[] getLeafPoint(int nodeOffset) {
-        double[] internal = pointStore.get(leafNodes.getPointIndex(nodeOffset));
+    protected double[] getPoint(Integer node) {
+        double[] internal = pointStore.get(nodeManager.getPointIndex(node));
         return Arrays.copyOf(internal, internal.length);
     }
 
+    @Override
+    double[] getPointFromLeafNode(Integer node) {
+        return pointStore.get(nodeManager.getPointIndex(node));
+    }
+
     /**
-     * creates the bounding box of a node/leaf
+     * creates the bounding box of a node/leaf assuming that caching is enabled
      *
      * @param nodeReference node in question
      * @return the bounding box
      */
 
-    @Override
-    IBoundingBox<double[]> reflateNode(int nodeReference) {
-        if (leafNodes.isLeaf(nodeReference)) {
-            return new BoundingBox(getLeafPoint(nodeReference));
+    AbstractBoundingBox<double[]> getBoundingBoxReflate(Integer nodeReference) {
+        if (isLeaf(nodeReference)) {
+            return new BoundingBox(getPointFromLeafNode(nodeReference));
         }
         if (cachedBoxes[nodeReference] == null) {
-            cachedBoxes[nodeReference] = reflateNode(internalNodes.getLeftIndex(nodeReference))
-                    .getMergedBox(reflateNode(internalNodes.getRightIndex(nodeReference)));
+            cachedBoxes[nodeReference] = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference))
+                    .getMergedBox(getBoundingBoxReflate(nodeManager.getRightChild(nodeReference)));
         }
         return cachedBoxes[nodeReference];
     }

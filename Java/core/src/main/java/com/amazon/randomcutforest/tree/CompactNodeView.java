@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.tree;
 import java.util.Arrays;
 import java.util.Set;
 
-public class CompactNodeView implements INodeView {
+public class CompactNodeView implements INode<Integer> {
     final AbstractCompactRandomCutTree<?> tree;
     int currentNodeOffset;
 
@@ -27,23 +27,19 @@ public class CompactNodeView implements INodeView {
         this.currentNodeOffset = initialNodeIndex;
     }
 
-    public void setCurrentNodeIndex(int newOffset) {
-        currentNodeOffset = newOffset;
-    }
-
     public int getMass() {
         return tree.getMass(currentNodeOffset);
     }
 
-    public BoundingBox getBoundingBox() {
+    public IBoundingBoxView getBoundingBox() {
         return tree.getBoundingBox(currentNodeOffset);
     }
 
-    public BoundingBox getSiblingBoundingBox(double[] point) {
+    public IBoundingBoxView getSiblingBoundingBox(double[] point) {
         if (tree.leftOf(point, currentNodeOffset)) {
-            return tree.getBoundingBox(tree.internalNodes.getRightIndex(currentNodeOffset));
+            return tree.getBoundingBox(tree.nodeManager.getRightChild(currentNodeOffset));
         } else {
-            return tree.getBoundingBox(tree.internalNodes.getLeftIndex(currentNodeOffset));
+            return tree.getBoundingBox(tree.nodeManager.getLeftChild(currentNodeOffset));
         }
     }
 
@@ -52,15 +48,35 @@ public class CompactNodeView implements INodeView {
     }
 
     public int getCutDimension() {
-        return tree.internalNodes.cutDimension[currentNodeOffset];
+        return tree.nodeManager.getCutDimension(currentNodeOffset);
     }
 
     public double[] getLeafPoint() {
-        return tree.getLeafPoint(currentNodeOffset);
+        return tree.getPoint(currentNodeOffset);
     }
 
     public Set<Long> getSequenceIndexes() {
         return null;
+    }
+
+    @Override
+    public INode<Integer> getNodeView(Integer node) {
+        return new CompactNodeView(tree, node);
+    }
+
+    @Override
+    public INode<Integer> getLeftChild() {
+        return new CompactNodeView(tree, tree.nodeManager.getLeftChild(currentNodeOffset));
+    }
+
+    @Override
+    public INode<Integer> getRightChild() {
+        return new CompactNodeView(tree, tree.nodeManager.getRightChild(currentNodeOffset));
+    }
+
+    @Override
+    public INode<Integer> getParent() {
+        return new CompactNodeView(tree, tree.nodeManager.getParent(currentNodeOffset));
     }
 
 }

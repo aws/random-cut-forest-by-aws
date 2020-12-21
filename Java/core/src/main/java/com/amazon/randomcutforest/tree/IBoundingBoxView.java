@@ -15,21 +15,25 @@
 
 package com.amazon.randomcutforest.tree;
 
-import java.util.Set;
+public interface IBoundingBoxView {
 
-public interface INodeView<NodeReference> {
-    int getMass();
+    double getRangeSum();
 
-    IBoundingBoxView getBoundingBox();
+    int getDimensions();
 
-    IBoundingBoxView getSiblingBoundingBox(double[] point);
+    double getRange(int i);
 
-    boolean leafPointEquals(double[] point);
+    double getMinValue(int i);
 
-    int getCutDimension();
+    double getMaxValue(int i);
 
-    double[] getLeafPoint();
+    // duplicates
+    IBoundingBoxView copy();
 
-    Set<Long> getSequenceIndexes();
+    // below keeps the older box unchanged
+    IBoundingBoxView getMergedBox(double[] point);
+
+    // merges and keeps the older box unchaged
+    IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);
 
 }
