@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.Visitor;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.Visitor;
 
 /**
  * A Random Cut Tree is a tree data structure whose leaves represent points
