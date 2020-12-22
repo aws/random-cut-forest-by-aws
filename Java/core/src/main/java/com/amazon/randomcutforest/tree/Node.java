@@ -411,11 +411,6 @@ public class Node implements INode<Node> {
         }
     }
 
-    @Override
-    public INode<Node> getNodeView(Node node) {
-        return node;
-    }
-
     /**
      * Add a new sequence index to this node.
      * 
@@ -456,6 +451,11 @@ public class Node implements INode<Node> {
     @Override
     public int getCutDimension() {
         return getCut().getDimension();
+    }
+
+    @Override
+    public double getCutValue() {
+        return getCut().getValue();
     }
 
     public BoundingBox constructBoxInPlace() {

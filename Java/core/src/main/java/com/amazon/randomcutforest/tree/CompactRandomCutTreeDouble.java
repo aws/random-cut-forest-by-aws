@@ -47,7 +47,7 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    String toString(double[] point) {
+    protected String toString(double[] point) {
         return Arrays.toString(point);
     }
 
@@ -57,7 +57,7 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    boolean checkEqual(double[] oldPoint, double[] point) {
+    protected boolean checkEqual(double[] oldPoint, double[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
