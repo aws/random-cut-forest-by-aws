@@ -17,7 +17,6 @@ package com.amazon.randomcutforest.executor;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import com.amazon.randomcutforest.ComponentList;
 
@@ -55,7 +54,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
     public void update(double[] point) {
         double[] pointCopy = cleanCopy(point);
         P updateInput = updateCoordinator.initUpdate(pointCopy);
-        List<Optional<UpdateReturn<P>>> results = update(updateInput, updateCoordinator.getTotalUpdates());
+        List<UpdateResult<P>> results = update(updateInput, updateCoordinator.getTotalUpdates());
         updateCoordinator.completeUpdate(results, updateInput);
     }
 
@@ -69,7 +68,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * @return a list of points that were deleted from the model as part of the
      *         update.
      */
-    protected abstract List<Optional<UpdateReturn<P>>> update(P updateInput, long currentIndex);
+    protected abstract List<UpdateResult<P>> update(P updateInput, long currentIndex);
 
     /**
      * Returns a clean deep copy of the point.

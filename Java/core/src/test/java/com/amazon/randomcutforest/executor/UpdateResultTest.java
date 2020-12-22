@@ -15,14 +15,16 @@
 
 package com.amazon.randomcutforest.executor;
 
-public interface IUpdatable<P> {
-    /**
-     * result of an update on a sampler plus tree
-     * 
-     * @param point  to be considered for updating the sampler plus tree
-     * @param seqNum timestamp
-     * @return the (inserted,deleted) pair of handles in the tree for eventual
-     *         bookkeeping
-     */
-    UpdateResult<P> update(P point, long seqNum);
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.junit.jupiter.api.Test;
+
+public class UpdateResultTest {
+    @Test
+    public void testNoop() {
+        UpdateResult<Integer> result = UpdateResult.noop();
+        assertFalse(result.getAddedPoint().isPresent());
+        assertFalse(result.getDeletedPoint().isPresent());
+        assertFalse(result.isStateChange());
+    }
 }

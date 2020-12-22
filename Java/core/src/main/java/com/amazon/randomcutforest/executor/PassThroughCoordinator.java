@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.executor;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * A minimal implementation of {@link IUpdateCoordinator} that does not
@@ -40,10 +39,9 @@ public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]> 
      * @param updateResults A list of points that were deleted.
      * @param updateInput   The corresponding output from {@link #initUpdate}, which
      *                      was passed into the update method for each component
-     *                      model.
      */
     @Override
-    public void completeUpdate(List<Optional<UpdateReturn<double[]>>> updateResults, double[] updateInput) {
+    public void completeUpdate(List<UpdateResult<double[]>> updateResults, double[] updateInput) {
         totalUpdates++;
     }
 }

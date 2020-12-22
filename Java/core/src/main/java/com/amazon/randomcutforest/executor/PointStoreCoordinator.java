@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.executor;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
@@ -38,10 +37,10 @@ public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
     }
 
     @Override
-    public void completeUpdate(List<Optional<UpdateReturn<Integer>>> updateResults, Integer updateInput) {
-        updateResults.stream().filter(Optional::isPresent).map(Optional::get).forEach(result -> {
-            store.incrementRefCount(result.getFirst());
-            result.getSecond().ifPresent(store::decrementRefCount);
+    public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
+        updateResults.forEach(result -> {
+            result.getAddedPoint().ifPresent(store::incrementRefCount);
+            result.getDeletedPoint().ifPresent(store::decrementRefCount);
         });
         store.decrementRefCount(updateInput);
         totalUpdates++;
