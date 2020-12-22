@@ -133,5 +133,4 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
         return cachedBoxes[nodeReference];
     }
-
 }

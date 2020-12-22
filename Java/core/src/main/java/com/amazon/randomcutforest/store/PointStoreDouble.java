@@ -31,7 +31,7 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStoreDouble extends PointStore<double[]> implements IPointStore<double[]> {
+public class PointStoreDouble extends PointStore<double[]> {
 
     protected final double[] store;
 

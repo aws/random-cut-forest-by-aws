@@ -21,8 +21,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.HashSet;
 
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.state.store.LeafStoreState;
-import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
@@ -150,12 +148,8 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    public NodeStoreState getNodes() {
-        return new NodeStoreState((NodeStore) nodeManager.getNodeStore());
-    }
-
-    public LeafStoreState getLeaves() {
-        return new LeafStoreState((LeafStore) nodeManager.getLeafStore());
+    public CompactNodeManager getNodeManager() {
+        return nodeManager;
     }
 
     public int getRootIndex() {

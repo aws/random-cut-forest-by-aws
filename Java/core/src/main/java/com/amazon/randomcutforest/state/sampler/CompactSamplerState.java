@@ -17,15 +17,31 @@ package com.amazon.randomcutforest.state.sampler;
 
 import lombok.Data;
 
+/**
+ * A data object representing the state of a
+ * {@link com.amazon.randomcutforest.sampler.CompactSampler}.
+ */
 @Data
 public class CompactSamplerState {
+    /**
+     * An array of sampler weights.
+     */
     private float[] weight;
-
+    /**
+     * An array of index values identifying the points in the sample. These indexes
+     * will correspond to a {@link com.amazon.randomcutforest.store.PointStore}.
+     */
     private int[] pointIndex;
-
+    /**
+     * The sequence indexes of points in the sample.
+     */
     private long[] sequenceIndex;
-
+    /**
+     * The number of points in the sample.
+     */
     private int size;
-
+    /**
+     * The maximum number of points taht the sampler can contain.
+     */
     private int capacity;
 }

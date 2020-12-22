@@ -20,6 +20,7 @@ import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.tree.CompactNodeManager;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 public class CompactRandomCutTreeMapper implements
@@ -37,9 +38,16 @@ public class CompactRandomCutTreeMapper implements
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeDouble model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        state.setLeafStoreState(model.getLeaves());
-        state.setNodeStoreState(model.getNodes());
         state.setRootIndex(model.getRootIndex());
+
+        CompactNodeManager nodeManager = model.getNodeManager();
+
+        LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+        state.setLeafStoreState(leafStoreMapper.toState(nodeManager.getLeafStore()));
+
+        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        state.setNodeStoreState(nodeStoreMapper.toState(nodeManager.getNodeStore()));
+
         return state;
     }
 }

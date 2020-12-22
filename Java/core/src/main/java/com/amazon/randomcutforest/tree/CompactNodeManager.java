@@ -17,8 +17,6 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import com.amazon.randomcutforest.store.ILeafStore;
-import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 
@@ -28,8 +26,8 @@ import com.amazon.randomcutforest.store.NodeStore;
  */
 public class CompactNodeManager {
 
-    private final ILeafStore leafstore;
-    private final INodeStore nodeStore;
+    private final LeafStore leafstore;
+    private final NodeStore nodeStore;
     private final int capacity;
     private final short NULL = -1;
 
@@ -161,11 +159,11 @@ public class CompactNodeManager {
         return leafstore.addLeaf(parentIndex, pointIndex, mass);
     }
 
-    public INodeStore getNodeStore() {
+    public NodeStore getNodeStore() {
         return nodeStore;
     }
 
-    public ILeafStore getLeafStore() {
+    public LeafStore getLeafStore() {
         return leafstore;
     }
 }

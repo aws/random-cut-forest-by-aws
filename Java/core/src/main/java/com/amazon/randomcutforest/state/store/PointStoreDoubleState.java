@@ -15,33 +15,11 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import java.util.Arrays;
-
 import lombok.Data;
-
-import com.amazon.randomcutforest.store.PointStoreDouble;
 
 @Data
 public class PointStoreDoubleState {
-
-    public double[] store;
-    public short[] refCount;
-    public int[] freeIndexes;
-
-    public PointStoreDoubleState() {
-
-    }
-
-    /**
-     * Takes a PointStoreDouble and stores the information. Note that
-     * freeIndexPointer is an index into an array [0:capacity-1] and can be -1 when
-     * everything is occupied.
-     *
-     * @param pointStoreDouble A point store.
-     */
-    public PointStoreDoubleState(PointStoreDouble pointStoreDouble) {
-        store = Arrays.copyOf(pointStoreDouble.getStore(), pointStoreDouble.getStore().length);
-        refCount = Arrays.copyOf(pointStoreDouble.getRefCount(), pointStoreDouble.getRefCount().length);
-    }
-
+    private double[] store;
+    private short[] refCount;
+    private int[] freeIndexes;
 }

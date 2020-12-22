@@ -15,11 +15,7 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import java.util.Arrays;
-
 import lombok.Data;
-
-import com.amazon.randomcutforest.store.NodeStore;
 
 @Data
 public class NodeStoreState {
@@ -30,18 +26,4 @@ public class NodeStoreState {
     public double[] cutValue;
     public short[] mass;
     public short[] freeIndexes;
-
-    public NodeStoreState() {
-    }
-
-    public NodeStoreState(NodeStore nodeStore) {
-        leftIndex = Arrays.copyOf(nodeStore.leftIndex, nodeStore.leftIndex.length);
-        rightIndex = Arrays.copyOf(nodeStore.rightIndex, nodeStore.rightIndex.length);
-        parentIndex = Arrays.copyOf(nodeStore.parentIndex, nodeStore.parentIndex.length);
-        mass = Arrays.copyOf(nodeStore.mass, nodeStore.mass.length);
-        cutDimension = Arrays.copyOf(nodeStore.cutDimension, nodeStore.cutDimension.length);
-        cutValue = Arrays.copyOf(nodeStore.cutValue, nodeStore.cutValue.length);
-        freeIndexes = Arrays.copyOf(nodeStore.getFreeIndexes(), nodeStore.getFreeIndexPointer() + 1);
-    }
-
 }

@@ -49,9 +49,6 @@ public class PointStoreDoubleMapperTest {
         assertEquals(capacity, store2.getCapacity());
         assertEquals(3, store2.size());
         assertEquals(dimensions, store2.getDimensions());
-
-        assertArrayEquals(point1, store2.get(index1));
-        assertArrayEquals(point2, store2.get(index2));
-        assertArrayEquals(point3, store2.get(index3));
+        assertArrayEquals(store.getStore(), store2.getStore());
     }
 }

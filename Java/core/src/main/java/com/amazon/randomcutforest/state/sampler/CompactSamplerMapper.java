@@ -18,22 +18,25 @@ package com.amazon.randomcutforest.state.sampler;
 import java.util.Arrays;
 import java.util.Random;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 
+@Getter
+@Setter
 public class CompactSamplerMapper
         implements IContextualStateMapper<CompactSampler, CompactSamplerState, RandomCutForestState> {
 
+    /**
+     * This flag is passed to the constructor for {@code CompactSampler} when a new
+     * sampler is constructed in {@link #toModel}. If true, then the sampler will
+     * validate that the weight array in a {@code CompactSamplerState} instance
+     * satisfies the heap property.
+     */
     private boolean validateHeap;
-
-    public CompactSamplerMapper(boolean validateHeap) {
-        this.validateHeap = validateHeap;
-    }
-
-    public CompactSamplerMapper() {
-        this(false);
-    }
 
     @Override
     public CompactSampler toModel(CompactSamplerState state, RandomCutForestState forestState, long seed) {
