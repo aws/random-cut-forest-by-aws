@@ -96,7 +96,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         throw new IllegalStateException("The break point did not lie inside the expected range");
     }
 
-    // decides the path taken in the abstract tree
+    // decides the path taken in the abstract tree at update time
     abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
 
     // checks equality based on precision
@@ -475,17 +475,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param nodeReference identifier of the node
      * @return left/right decision
      */
-    protected boolean leftOf(double[] point, INodeView nodeReference) {
-        return point[nodeReference.getCutDimension()] <= nodeReference.getCutValue();
-    }
-
-    // Same, used internal to the tree
     protected boolean leftOf(double[] point, NodeReference nodeReference) {
         return point[getCutDimension(nodeReference)] <= getCutValue(nodeReference);
     }
 
     // provides a view of the root node
-    abstract INode<NodeReference> getRootView();
+    abstract INode<NodeReference> getNodeView(NodeReference node);
 
     /**
      * Starting from the root, traverse the canonical path to a leaf node and visit
@@ -510,21 +505,21 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
         checkState(rootIndex != null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.apply(this);
-        traversePathToLeafAndVisitNodes(point, visitor, getRootView(), 0);
+        traversePathToLeafAndVisitNodes(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }
 
-    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, INode<NodeReference> node,
+    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference node,
             int depthOfNode) {
-        if (node.isLeaf()) {
-            visitor.acceptLeaf(node, depthOfNode);
+        if (isLeaf(node)) {
+            visitor.acceptLeaf(getNodeView(node), depthOfNode);
         } else {
             if (leftOf(point, node)) {
-                traversePathToLeafAndVisitNodes(point, visitor, node.getLeftChild(), depthOfNode + 1);
+                traversePathToLeafAndVisitNodes(point, visitor, getLeftChild(node), depthOfNode + 1);
             } else {
-                traversePathToLeafAndVisitNodes(point, visitor, node.getRightChild(), depthOfNode + 1);
+                traversePathToLeafAndVisitNodes(point, visitor, getRightChild(node), depthOfNode + 1);
             }
-            visitor.accept(node, depthOfNode);
+            visitor.accept(getNodeView(node), depthOfNode);
         }
     }
 
@@ -549,29 +544,28 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(rootIndex != null, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.apply(this);
-        traverseTreeMulti(point, visitor, getRootView(), 0);
+        traverseTreeMulti(point, visitor, rootIndex, 0);
         return visitor.getResult();
     }
 
-    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, INode<NodeReference> node,
-            int depthOfNode) {
-        if (node.isLeaf()) {
-            visitor.acceptLeaf(node, depthOfNode);
+    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {
+        if (isLeaf(node)) {
+            visitor.acceptLeaf(getNodeView(node), depthOfNode);
         } else {
-            if (visitor.trigger(node)) {
-                traverseTreeMulti(point, visitor, node.getLeftChild(), depthOfNode + 1);
+            if (visitor.trigger(getNodeView(node))) {
+                traverseTreeMulti(point, visitor, getLeftChild(node), depthOfNode + 1);
                 MultiVisitor<R> newVisitor = visitor.newCopy();
-                traverseTreeMulti(point, newVisitor, node.getRightChild(), depthOfNode + 1);
+                traverseTreeMulti(point, newVisitor, getRightChild(node), depthOfNode + 1);
                 visitor.combine(newVisitor);
             } else {
 
                 if (leftOf(point, node)) {
-                    traverseTreeMulti(point, visitor, node.getLeftChild(), depthOfNode + 1);
+                    traverseTreeMulti(point, visitor, getLeftChild(node), depthOfNode + 1);
                 } else {
-                    traverseTreeMulti(point, visitor, node.getRightChild(), depthOfNode + 1);
+                    traverseTreeMulti(point, visitor, getRightChild(node), depthOfNode + 1);
                 }
             }
-            visitor.accept(node, depthOfNode);
+            visitor.accept(getNodeView(node), depthOfNode);
         }
     }
 

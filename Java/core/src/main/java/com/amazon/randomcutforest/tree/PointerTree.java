@@ -96,8 +96,8 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    INode<Node> getRootView() {
-        return rootIndex;
+    INode<Node> getNodeView(Node node) {
+        return node;
     }
 
     @Override

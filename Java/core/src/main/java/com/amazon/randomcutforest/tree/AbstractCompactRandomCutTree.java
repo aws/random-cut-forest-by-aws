@@ -90,8 +90,8 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    INode<Integer> getRootView() {
-        return new CompactNodeView(this, rootIndex);
+    INode<Integer> getNodeView(Integer node) {
+        return new CompactNodeView(this, node);
     }
 
     @Override
