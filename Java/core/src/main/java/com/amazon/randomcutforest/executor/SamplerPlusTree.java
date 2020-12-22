@@ -20,6 +20,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.Optional;
 import java.util.function.Function;
 
+import lombok.Getter;
+
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
@@ -29,7 +31,9 @@ import com.amazon.randomcutforest.tree.ITree;
 
 public class SamplerPlusTree<P> implements IComponentModel<P> {
 
+    @Getter
     private ITree<P> tree;
+    @Getter
     private IStreamSampler<P> sampler;
 
     /**
@@ -65,7 +69,7 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
      */
 
     @Override
-    public Optional<UpdateReturn<P>> update(P point, long sequenceIndex) {
+    public UpdateResult<P> update(P point, long sequenceIndex) {
         P deleteRef = null;
         if (sampler.acceptPoint(sequenceIndex)) {
             Optional<ISampled<P>> deletedPoint = sampler.getEvictedPoint();
@@ -80,25 +84,9 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
             P addedPoint = tree.addPoint(point, sequenceIndex);
 
             sampler.addPoint(addedPoint);
-            return Optional.of(new UpdateReturn<>(addedPoint, Optional.ofNullable(deleteRef)));
+            return UpdateResult.<P>builder().addedPoint(addedPoint).deletedPoint(deleteRef).build();
         }
-        return Optional.empty();
-    }
-
-    /**
-     *
-     * @return the sampler
-     */
-    public IStreamSampler<P> getSampler() {
-        return sampler;
-    }
-
-    /**
-     *
-     * @return the tree
-     */
-    public ITree<P> getTree() {
-        return tree;
+        return UpdateResult.noop();
     }
 
     @Override

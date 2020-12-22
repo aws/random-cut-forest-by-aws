@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.executor;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.amazon.randomcutforest.ComponentList;
@@ -31,7 +30,8 @@ public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecu
     }
 
     @Override
-    protected List<Optional<UpdateReturn<P>>> update(P point, long seqNum) {
-        return components.stream().map(t -> t.update(point, seqNum)).collect(Collectors.toList());
+    protected List<UpdateResult<P>> update(P point, long seqNum) {
+        return components.stream().map(t -> t.update(point, seqNum)).filter(UpdateResult::isStateChange)
+                .collect(Collectors.toList());
     }
 }

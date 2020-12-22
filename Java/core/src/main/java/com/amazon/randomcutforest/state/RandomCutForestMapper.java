@@ -240,6 +240,7 @@ public class RandomCutForestMapper
         } else {
 
             PassThroughCoordinator coordinator = new PassThroughCoordinator();
+            coordinator.setTotalUpdates(state.getTotalUpdates());
             ComponentList<double[]> components = new ComponentList<>();
 
             for (int i = 0; i < state.getNumberOfTrees(); i++) {
