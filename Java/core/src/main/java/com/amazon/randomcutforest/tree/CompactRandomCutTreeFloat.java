@@ -48,7 +48,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    String toString(float[] point) {
+    protected String toString(float[] point) {
         return Arrays.toString(point);
     }
 
@@ -63,7 +63,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    boolean checkEqual(float[] oldPoint, float[] point) {
+    protected boolean checkEqual(float[] oldPoint, float[] point) {
         return Arrays.equals(oldPoint, point);
     }
 

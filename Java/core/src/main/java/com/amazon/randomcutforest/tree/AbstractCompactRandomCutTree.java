@@ -90,12 +90,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    INode<Integer> getNodeView(Integer node) {
+    protected INode<Integer> getNode(Integer node) {
         return new CompactNodeView(this, node);
     }
 
     @Override
-    void addSequences(Integer nodeRef, long sequenceIndex) {
+    protected void addSequenceIndex(Integer nodeRef, long sequenceIndex) {
         if (sequenceIndexes[nodeRef] == null) {
             sequenceIndexes[nodeRef] = new HashSet<Long>();
         }
@@ -103,7 +103,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    void deleteSequences(Integer nodeRef, long sequenceIndex) {
+    protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
         if (sequenceIndexes[nodeRef] != null) {
             sequenceIndexes[nodeRef].remove(sequenceIndex);
         }
@@ -166,10 +166,10 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
 
     @Override
-    abstract boolean checkEqual(Point oldPoint, Point point);
+    abstract protected boolean checkEqual(Point oldPoint, Point point);
 
     @Override
-    abstract String toString(Point point);
+    abstract protected String toString(Point point);
 
     // returns the point based on position in the store
     @Override
@@ -186,88 +186,88 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    boolean isLeaf(Integer node) {
+    protected boolean isLeaf(Integer node) {
         return nodeManager.isLeaf(node);
     }
 
     @Override
-    int decrementMass(Integer node) {
+    protected int decrementMass(Integer node) {
         return nodeManager.decrementMass(node);
     }
 
     @Override
-    int incrementMass(Integer node) {
+    protected int incrementMass(Integer node) {
         return nodeManager.incrementMass(node);
     }
 
     @Override
-    Integer getSibling(Integer node) {
+    protected Integer getSibling(Integer node) {
         return nodeManager.getSibling(node);
     }
 
     @Override
-    Integer getParent(Integer node) {
+    protected Integer getParent(Integer node) {
         return nodeManager.getParent(node);
     }
 
     @Override
-    void setParent(Integer node, Integer parent) {
+    protected void setParent(Integer node, Integer parent) {
         nodeManager.setParent(node, parent);
     }
 
     @Override
-    void delete(Integer node) {
+    protected void delete(Integer node) {
         nodeManager.delete(node);
     }
 
     @Override
-    int getCutDimension(Integer node) {
+    protected int getCutDimension(Integer node) {
         return nodeManager.getCutDimension(node);
     }
 
     @Override
-    double getCutValue(Integer node) {
+    protected double getCutValue(Integer node) {
         return nodeManager.getCutValue(node);
     }
 
     @Override
-    Integer getLeftChild(Integer node) {
+    protected Integer getLeftChild(Integer node) {
         return nodeManager.getLeftChild(node);
     }
 
     @Override
-    Integer getRightChild(Integer node) {
+    protected Integer getRightChild(Integer node) {
         return nodeManager.getRightChild(node);
     }
 
     @Override
-    void replaceNode(Integer parent, Integer child, Integer otherNode) {
+    protected void replaceNode(Integer parent, Integer child, Integer otherNode) {
         nodeManager.replaceNode(parent, child, otherNode);
     }
 
     @Override
-    void replaceNodeBySibling(Integer grandParent, Integer parent, Integer node) {
+    protected void replaceNodeBySibling(Integer grandParent, Integer parent, Integer node) {
         nodeManager.replaceParentBySiblingOfNode(grandParent, parent, node);
     }
 
     @Override
-    Integer addLeaf(Integer parent, Integer pointIndex, int mass) {
+    protected Integer addLeaf(Integer parent, Integer pointIndex, int mass) {
         return nodeManager.addLeaf(parent, pointIndex, mass);
     }
 
     @Override
-    Integer addNode(Integer parent, Integer leftChild, Integer rightChild, int cutDimension, double cutValue,
+    protected Integer addNode(Integer parent, Integer leftChild, Integer rightChild, int cutDimension, double cutValue,
             int mass) {
         return nodeManager.addNode(parent, leftChild, rightChild, cutDimension, cutValue, mass);
     }
 
     @Override
-    void increaseMassOfAncestorsRecursively(Integer mergedNode) {
+    protected void increaseMassOfAncestorsRecursively(Integer mergedNode) {
         nodeManager.increaseMassOfAncestorsRecursively(mergedNode);
     }
 
     @Override
-    int getMass(Integer node) {
+    protected int getMass(Integer node) {
         return nodeManager.getMass(node);
     }
 

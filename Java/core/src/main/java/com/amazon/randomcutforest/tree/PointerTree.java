@@ -49,12 +49,12 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    boolean checkEqual(double[] oldPoint, double[] point) {
+    protected boolean checkEqual(double[] oldPoint, double[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
     @Override
-    String toString(double[] doubles) {
+    protected String toString(double[] doubles) {
         return Arrays.toString(doubles);
     }
 
@@ -92,11 +92,11 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
 
     @Override
     protected double[] getPoint(Node node) {
-        return new double[0];
+        return node.getLeafPoint();
     }
 
     @Override
-    INode<Node> getNodeView(Node node) {
+    protected INode<Node> getNode(Node node) {
         return node;
     }
 
@@ -141,22 +141,22 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    boolean isLeaf(Node node) {
+    protected boolean isLeaf(Node node) {
         return node.isLeaf();
     }
 
     @Override
-    int decrementMass(Node node) {
+    protected int decrementMass(Node node) {
         return node.decrementMass();
     }
 
     @Override
-    int incrementMass(Node node) {
+    protected int incrementMass(Node node) {
         return node.incrementMass();
     }
 
     @Override
-    Node getSibling(Node node) {
+    protected Node getSibling(Node node) {
         Node parent = node.getParent();
         if (parent.getLeftChild() == node) {
             return parent.getRightChild();
@@ -167,36 +167,36 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    Node getParent(Node node) {
+    protected Node getParent(Node node) {
         return node.getParent();
     }
 
     @Override
-    void setParent(Node node, Node parent) {
+    protected void setParent(Node node, Node parent) {
         node.setParent(parent);
     }
 
     @Override
-    void delete(Node node) {
+    protected void delete(Node node) {
     }
 
     @Override
-    int getCutDimension(Node node) {
+    protected int getCutDimension(Node node) {
         return node.getCutDimension();
     }
 
     @Override
-    double getCutValue(Node node) {
+    protected double getCutValue(Node node) {
         return node.getCut().getValue();
     }
 
     @Override
-    Node getLeftChild(Node node) {
+    protected Node getLeftChild(Node node) {
         return node.getLeftChild();
     }
 
     @Override
-    Node getRightChild(Node node) {
+    protected Node getRightChild(Node node) {
         return node.getRightChild();
     }
 
@@ -213,12 +213,12 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    void replaceNodeBySibling(Node grandParent, Node parent, Node node) {
+    protected void replaceNodeBySibling(Node grandParent, Node parent, Node node) {
         replaceNode(grandParent, parent, getSibling(node));
     }
 
     @Override
-    Node addLeaf(Node parent, double[] pointIndex, int mass) {
+    protected Node addLeaf(Node parent, double[] pointIndex, int mass) {
         Node candidate = new Node(pointIndex);
         candidate.setMass(mass);
         candidate.setParent(parent);
@@ -226,7 +226,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    Node addNode(Node parent, Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
+    protected Node addNode(Node parent, Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
         Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, false);
         candidate.setParent(parent);
         candidate.setMass(mass);
@@ -234,7 +234,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    void increaseMassOfAncestorsRecursively(Node mergedNode) {
+    protected void increaseMassOfAncestorsRecursively(Node mergedNode) {
         Node parent = mergedNode.getParent();
         while (parent != null) {
             parent.incrementMass();
@@ -243,17 +243,17 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    int getMass(Node node) {
+    protected int getMass(Node node) {
         return node.getMass();
     }
 
     @Override
-    void addSequences(Node node, long uniqueSequenceNumber) {
+    protected void addSequenceIndex(Node node, long uniqueSequenceNumber) {
         node.addSequenceIndex(uniqueSequenceNumber);
     }
 
     @Override
-    void deleteSequences(Node node, long uniqueSequenceNumber) {
+    protected void deleteSequenceIndex(Node node, long uniqueSequenceNumber) {
         node.deleteSequenceIndex(uniqueSequenceNumber);
     }
 

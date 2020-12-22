@@ -100,10 +100,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
 
     // checks equality based on precision
-    abstract boolean checkEqual(Point oldPoint, Point point);
+    abstract protected boolean checkEqual(Point oldPoint, Point point);
 
     // prints a point based on precision
-    abstract String toString(Point point);
+    abstract protected String toString(Point point);
 
     // creates a bounding box based on two points, it is a very common occurrence
     abstract AbstractBoundingBox<Point> getInternalTwoPointBox(Point first, Point second);
@@ -117,7 +117,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param nodeReference reference of node
      * @return
      */
-    AbstractBoundingBox<Point> getBoundingBox(NodeReference nodeReference) {
+    protected AbstractBoundingBox<Point> getBoundingBox(NodeReference nodeReference) {
         if (isLeaf(nodeReference)) {
             return getLeafBoxFromLeafNode(nodeReference);
         }
@@ -165,56 +165,56 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract PointReference getPointReference(NodeReference node);
 
     // is a leaf or otherwise
-    abstract boolean isLeaf(NodeReference node);
+    abstract protected boolean isLeaf(NodeReference node);
 
     // decreases mass of a node and returns it
-    abstract int decrementMass(NodeReference node);
+    abstract protected int decrementMass(NodeReference node);
 
     // increases mass of a node and returns it
-    abstract int incrementMass(NodeReference node);
+    abstract protected int incrementMass(NodeReference node);
 
     // returns the sibling of a node
-    abstract NodeReference getSibling(NodeReference nodeReference);
+    abstract protected NodeReference getSibling(NodeReference nodeReference);
 
-    abstract NodeReference getParent(NodeReference nodeReference);
+    abstract protected NodeReference getParent(NodeReference nodeReference);
 
-    abstract void setParent(NodeReference nodeReference, NodeReference parent);
+    abstract protected void setParent(NodeReference nodeReference, NodeReference parent);
 
-    abstract void delete(NodeReference nodeReference);
-
-    // only valid for internal nodes
-    abstract int getCutDimension(NodeReference nodeReference);
+    abstract protected void delete(NodeReference nodeReference);
 
     // only valid for internal nodes
-    abstract double getCutValue(NodeReference nodeReference);
+    abstract protected int getCutDimension(NodeReference nodeReference);
 
-    abstract NodeReference getLeftChild(NodeReference nodeReference);
+    // only valid for internal nodes
+    abstract protected double getCutValue(NodeReference nodeReference);
 
-    abstract NodeReference getRightChild(NodeReference nodeReference);
+    abstract protected NodeReference getLeftChild(NodeReference nodeReference);
+
+    abstract protected NodeReference getRightChild(NodeReference nodeReference);
 
     // replaces child (with designated parent) by otherNode
     abstract void replaceNode(NodeReference parent, NodeReference child, NodeReference otherNode);
 
     // implements the delete step in RCF
-    abstract void replaceNodeBySibling(NodeReference grandParent, NodeReference Parent, NodeReference node);
+    abstract protected void replaceNodeBySibling(NodeReference grandParent, NodeReference Parent, NodeReference node);
 
     // creates a new leaf node
-    abstract NodeReference addLeaf(NodeReference parent, PointReference pointIndex, int mass);
+    abstract protected NodeReference addLeaf(NodeReference parent, PointReference pointIndex, int mass);
 
     // creates an internal node
-    abstract NodeReference addNode(NodeReference parent, NodeReference leftChild, NodeReference rightChild,
+    abstract protected NodeReference addNode(NodeReference parent, NodeReference leftChild, NodeReference rightChild,
             int cutDimension, double cutValue, int mass);
 
     // increases the mass of all ancestor nodes when an added point is internal to
     // some bounding box
     // note the bounding boxes of these ancestor nodes will remain unchanged
-    abstract void increaseMassOfAncestorsRecursively(NodeReference mergedNode);
+    abstract protected void increaseMassOfAncestorsRecursively(NodeReference mergedNode);
 
-    abstract int getMass(NodeReference nodeReference);
+    abstract protected int getMass(NodeReference nodeReference);
 
-    abstract void addSequences(NodeReference node, long uniqueSequenceNumber);
+    abstract protected void addSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
-    abstract void deleteSequences(NodeReference node, long uniqueSequenceNumber);
+    abstract protected void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
     /**
      * method to delete a point from the tree
@@ -254,7 +254,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                         + " " + nodeReference + " node " + false + " Inconsistency in trees in delete step here.");
             }
             if (enableSequenceIndices) {
-                deleteSequences(nodeReference, sequenceNumber);
+                deleteSequenceIndex(nodeReference, sequenceNumber);
             }
             // decrease mass for the delete
             if (decrementMass(nodeReference) > 0) {
@@ -334,7 +334,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             // manage mass of points
             increaseMassOfAncestorsRecursively(mergedNode);
             if (enableSequenceIndices) {
-                addSequences(leafNode, addPointState.getSequenceNumber());
+                addSequenceIndex(leafNode, addPointState.getSequenceNumber());
             }
         }
 
@@ -480,7 +480,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // provides a view of the root node
-    abstract INode<NodeReference> getNodeView(NodeReference node);
+    abstract protected INode<NodeReference> getNode(NodeReference node);
 
     /**
      * Starting from the root, traverse the canonical path to a leaf node and visit
@@ -512,14 +512,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference node,
             int depthOfNode) {
         if (isLeaf(node)) {
-            visitor.acceptLeaf(getNodeView(node), depthOfNode);
+            visitor.acceptLeaf(getNode(node), depthOfNode);
         } else {
             if (leftOf(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, getLeftChild(node), depthOfNode + 1);
             } else {
                 traversePathToLeafAndVisitNodes(point, visitor, getRightChild(node), depthOfNode + 1);
             }
-            visitor.accept(getNodeView(node), depthOfNode);
+            visitor.accept(getNode(node), depthOfNode);
         }
     }
 
@@ -550,9 +550,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {
         if (isLeaf(node)) {
-            visitor.acceptLeaf(getNodeView(node), depthOfNode);
+            visitor.acceptLeaf(getNode(node), depthOfNode);
         } else {
-            if (visitor.trigger(getNodeView(node))) {
+            if (visitor.trigger(getNode(node))) {
                 traverseTreeMulti(point, visitor, getLeftChild(node), depthOfNode + 1);
                 MultiVisitor<R> newVisitor = visitor.newCopy();
                 traverseTreeMulti(point, newVisitor, getRightChild(node), depthOfNode + 1);
@@ -565,7 +565,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                     traverseTreeMulti(point, visitor, getRightChild(node), depthOfNode + 1);
                 }
             }
-            visitor.accept(getNodeView(node), depthOfNode);
+            visitor.accept(getNode(node), depthOfNode);
         }
     }
 
