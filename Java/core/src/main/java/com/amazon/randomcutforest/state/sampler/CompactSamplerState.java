@@ -41,7 +41,11 @@ public class CompactSamplerState {
      */
     private int size;
     /**
-     * The maximum number of points taht the sampler can contain.
+     * The maximum number of points that the sampler can contain.
      */
     private int capacity;
+    /**
+     * The lambda time-decay parameter for this sampler
+     */
+    private double lambda;
 }

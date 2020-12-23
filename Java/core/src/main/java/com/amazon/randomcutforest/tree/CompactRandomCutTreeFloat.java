@@ -21,8 +21,6 @@ import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import java.util.Arrays;
 
 import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.LeafStore;
-import com.amazon.randomcutforest.store.NodeStore;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
@@ -39,12 +37,14 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
     }
 
-    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, LeafStore leafStore,
-            NodeStore nodeStore, int rootIndex, boolean cacheEnabled) {
-        super(maxSize, seed, leafStore, nodeStore, rootIndex, cacheEnabled);
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore,
+            CompactNodeManager nodeManager, int rootIndex, boolean cacheEnabled) {
+        super(maxSize, seed, nodeManager, rootIndex, cacheEnabled);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
-        cachedBoxes = new BoundingBoxFloat[maxSize - 1];
+        if (cacheEnabled) {
+            cachedBoxes = new BoundingBoxFloat[maxSize - 1];
+        }
     }
 
     @Override

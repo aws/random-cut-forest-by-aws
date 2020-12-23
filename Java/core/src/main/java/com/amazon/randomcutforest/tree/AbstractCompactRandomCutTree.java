@@ -22,8 +22,6 @@ import java.util.HashSet;
 
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.IPointStoreView;
-import com.amazon.randomcutforest.store.LeafStore;
-import com.amazon.randomcutforest.store.NodeStore;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -63,9 +61,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         this.maxSize = maxSize;
-        nodeManager = new CompactNodeManager(new NodeStore((short) (this.maxSize - 1)),
-                new LeafStore((short) this.maxSize), this.maxSize);
-        // random = new Random(seed);
+        nodeManager = new CompactNodeManager(maxSize);
         rootIndex = null;
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
@@ -73,17 +69,15 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    public AbstractCompactRandomCutTree(int maxSize, long seed, LeafStore leafStore, NodeStore nodeStore, int rootIndex,
+    public AbstractCompactRandomCutTree(int maxSize, long seed, CompactNodeManager nodeManager, int rootIndex,
             boolean enableCache) {
         super(seed, enableCache, false, false);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
-        checkNotNull(leafStore, "leafStore must not be null");
-        checkNotNull(nodeStore, "nodeStore must not be null");
+        checkNotNull(nodeManager, "nodeManager must not be null");
 
         this.maxSize = maxSize;
         this.rootIndex = rootIndex;
-        // random = new Random(seed);
-        nodeManager = new CompactNodeManager(nodeStore, leafStore, maxSize);
+        this.nodeManager = nodeManager;
         this.enableCache = enableCache;
     }
 
@@ -264,5 +258,4 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected int getMass(Integer node) {
         return nodeManager.getMass(node);
     }
-
 }

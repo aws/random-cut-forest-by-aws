@@ -33,14 +33,9 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
-import com.amazon.randomcutforest.state.RandomCutForestState;
 
 public class CompactSamplerMapperTest {
     private CompactSamplerMapper mapper;
-    private RandomCutForestState forestState;
-
-    private static int sampleSize = 20;
-    private static double lambda = 0.01;
 
     private static class SamplerProvider implements ArgumentsProvider {
         @Override
@@ -67,15 +62,12 @@ public class CompactSamplerMapperTest {
     public void setUp() {
         mapper = new CompactSamplerMapper();
         mapper.setValidateHeap(true);
-        forestState = new RandomCutForestState();
-        forestState.setSampleSize(sampleSize);
-        forestState.setLambda(lambda);
     }
 
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
     public void testRoundTrip(CompactSampler sampler) {
-        CompactSampler sampler2 = mapper.toModel(mapper.toState(sampler), forestState);
+        CompactSampler sampler2 = mapper.toModel(mapper.toState(sampler));
         assertArrayEquals(sampler.getWeightArray(), sampler2.getWeightArray());
         assertArrayEquals(sampler.getPointIndexArray(), sampler2.getPointIndexArray());
         assertEquals(sampler.getCapacity(), sampler2.getCapacity());
@@ -105,10 +97,10 @@ public class CompactSamplerMapperTest {
         weights[index] = weights[2 * index + 1];
         weights[2 * index + 1] = temp;
 
-        assertThrows(IllegalStateException.class, () -> mapper.toModel(state, forestState));
+        assertThrows(IllegalStateException.class, () -> mapper.toModel(state));
 
         mapper.setValidateHeap(false);
-        CompactSampler sampler2 = mapper.toModel(state, forestState);
+        CompactSampler sampler2 = mapper.toModel(state);
         assertArrayEquals(sampler.getWeightArray(), sampler2.getWeightArray());
     }
 }

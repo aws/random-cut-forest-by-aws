@@ -20,7 +20,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.List;
 
 import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.PointStoreDouble;
 
 public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
 
@@ -46,7 +45,7 @@ public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
         totalUpdates++;
     }
 
-    public PointStoreDouble getStore() {
-        return (PointStoreDouble) store;
+    public IPointStore<?> getStore() {
+        return store;
     }
 }
