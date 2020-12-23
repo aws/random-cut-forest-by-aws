@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.executor;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * A partial implementation of the {@link IUpdateCoordinator} interface that
  * defines a protected instance variable to track total updates and implements
@@ -25,23 +28,11 @@ package com.amazon.randomcutforest.executor;
  * @param <P> An internal point representation.
  */
 public abstract class AbstractUpdateCoordinator<P> implements IUpdateCoordinator<P> {
+    @Getter
+    @Setter
     protected long totalUpdates;
 
-    public AbstractUpdateCoordinator(long totalUpdates) {
-        this.totalUpdates = totalUpdates;
-    }
-
     public AbstractUpdateCoordinator() {
-        this(0L);
-    }
-
-    @Override
-    public long getTotalUpdates() {
-        return totalUpdates;
-    }
-
-    @Override
-    public void setTotalUpdates(long totalUpdates) {
-        this.totalUpdates = totalUpdates;
+        totalUpdates = 0;
     }
 }

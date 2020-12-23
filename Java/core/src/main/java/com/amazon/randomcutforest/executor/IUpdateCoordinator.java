@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.executor;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * An IUpdateCoordinator is used in conjunction with a family of IUpdatable
@@ -46,9 +45,8 @@ public interface IUpdateCoordinator<P> {
      * @param updateResults A list of points that were deleted.
      * @param updateInput   The corresponding output from {@link #initUpdate}, which
      *                      was passed into the update method for each component
-     *                      model.
      */
-    void completeUpdate(List<Optional<UpdateReturn<P>>> updateResults, P updateInput);
+    void completeUpdate(List<UpdateResult<P>> updateResults, P updateInput);
 
     long getTotalUpdates();
 
