@@ -87,7 +87,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     }
 
     @Override
-    public void accept(INodeView<?> node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -136,7 +136,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     }
 
     @Override
-    public void acceptLeaf(INodeView<?> leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
         updateForCompute(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
         if (sumOfDifferenceInRange <= 0) { // values must be equal
@@ -223,27 +223,27 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      *         different Kernels can be expressed in this decomposed manner.
      */
 
-    double fieldExt(INodeView<?> node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double fieldExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influenceExt(INodeView<?> node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double influenceExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return 1.0;
     }
 
-    double fieldPoint(INodeView<?> node, double thisMass, double[] thislocation) {
+    double fieldPoint(INodeView node, double thisMass, double[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influencePoint(INodeView<?> node, double thisMass, double[] thislocation) {
+    double influencePoint(INodeView node, double thisMass, double[] thislocation) {
         return 1.0;
     }
 
-    double selfField(INodeView<?> leafNode, double mass) {
+    double selfField(INodeView leafNode, double mass) {
         return mass;
     }
 
-    double selfInfluence(INodeView<?> leafnode, double mass) {
+    double selfInfluence(INodeView leafnode, double mass) {
         return 1.0;
     }
 
