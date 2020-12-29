@@ -98,7 +98,9 @@ public class Node implements INode<Node> {
         if (!enableCenterOfMass) {
             this.pointSum = null;
         } else {
-            this.pointSum = new double[boundingBox.getDimensions()];
+            int dimensions = (getLeftChild().isLeaf()) ? getLeftChild().leafPoint.length
+                    : getLeftChild().pointSum.length;
+            this.pointSum = new double[dimensions];
         }
         leafPoint = null;
     }
@@ -348,6 +350,7 @@ public class Node implements INode<Node> {
      * 
      * @return the value of this node's point sum.
      */
+
     public double[] getPointSum() {
         // if pointsum is set, then a point is either a leafnode or has the pointsum set
         int dimensions = isLeaf() ? leafPoint.length
@@ -366,6 +369,16 @@ public class Node implements INode<Node> {
             }
         }
         return result;
+    }
+
+    void readjustPointSum(double[] point) {
+        if (isLeaf())
+            return;
+        double[] leftSum = getLeftChild().getPointSum();
+        double[] rightSum = getRightChild().getPointSum();
+        for (int i = 0; i < point.length; i++) {
+            pointSum[i] = leftSum[i] + rightSum[i];
+        }
     }
 
     /**

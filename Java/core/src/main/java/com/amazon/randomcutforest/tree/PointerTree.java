@@ -58,36 +58,14 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
         return Arrays.toString(doubles);
     }
 
-    void updateBox(Node nodeReference) {
-        checkState(enableCache, " incorrect invocation");
-        BoundingBox rightBox = nodeReference.getRightChild().getBoundingBox();
-        BoundingBox leftBox = nodeReference.getLeftChild().getBoundingBox();
-        nodeReference.setBoundingBox(leftBox.getMergedBox(rightBox));
+    @Override
+    void setCachedBoxes(Node node, AbstractBoundingBox<double[]> savedBox) {
+        node.setBoundingBox((BoundingBox) savedBox);
     }
 
     @Override
-    boolean updateDeletePointBoxes(Node nodeReference, double[] point, boolean isResolved) {
-        if (!isResolved && enableCache) {
-            updateBox(nodeReference);
-        } else {
-            nodeReference.setBoundingBox(null);
-        }
-        return isResolved;
-    }
-
-    @Override
-    void updateAddPointBoxes(AbstractBoundingBox<double[]> savedBox, Node mergedNode, double[] point,
-            Node parentIndex) {
-
-        if (enableCache) {
-            Node tempNode = mergedNode;
-            while (tempNode != parentIndex) {
-                updateBox(tempNode);
-                tempNode = tempNode.getParent();
-            }
-        } else {
-            mergedNode.setBoundingBox(null);
-        }
+    void addToBox(Node node, double[] point) {
+        node.setBoundingBox(node.getBoundingBox().getMergedBox(point));
     }
 
     @Override
@@ -227,7 +205,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
 
     @Override
     protected Node addNode(Node parent, Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
-        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, false);
+        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, enableCenterOfMass);
         candidate.setParent(parent);
         candidate.setMass(mass);
         return candidate;
@@ -255,6 +233,19 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     @Override
     protected void deleteSequenceIndex(Node node, long uniqueSequenceNumber) {
         node.deleteSequenceIndex(uniqueSequenceNumber);
+    }
+
+    @Override
+    boolean modifyBoxAndCheckContains(Node tempNode, double[] point) {
+        BoundingBox leftBox = tempNode.getLeftChild().getBoundingBox();
+        BoundingBox rightBox = tempNode.getRightChild().getBoundingBox();
+        tempNode.setBoundingBox(leftBox.getMergedBox(rightBox));
+        return tempNode.getBoundingBox().contains(point);
+    }
+
+    @Override
+    void readjustPointSum(Node node, double[] point) {
+        node.readjustPointSum(point);
     }
 
 }
