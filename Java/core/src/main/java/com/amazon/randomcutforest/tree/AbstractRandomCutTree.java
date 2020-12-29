@@ -443,7 +443,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 // generate and cache the box
                 existingBox = getBoundingBox(nodeReference);
                 // uncomment to test
-                checkState(existingBox.equals(constructBoxInPlace(nodeReference)), " error");
+                // checkState(existingBox.equals(constructBoxInPlace(nodeReference)), " error");
             } else {
                 // the boxes are not present, merge the bounding box of the sibling of the last
                 // seen child (nextNode) to the stored box in the state and save it
