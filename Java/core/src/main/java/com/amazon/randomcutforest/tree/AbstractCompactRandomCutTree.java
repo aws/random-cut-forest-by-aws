@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.store.IPointStoreView;
 
 import java.util.HashSet;
 
-import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.store.IPointStoreView;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -101,45 +101,31 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    abstract void updateDeletePointSum(int nodeRef, Point point);
-
-    @Override
-    boolean updateDeletePointBoxes(Integer nodeReference, Point point, boolean isResolved) {
-        if (!isResolved && (enableCache)) {
-            AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference));
-            AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(nodeManager.getRightChild(nodeReference));
-            cachedBoxes[nodeReference] = leftBox.getMergedBox(rightBox);
-            if (cachedBoxes[nodeReference].contains(point)) {
-                return true;
-            }
-        }
-
-        if (enableCenterOfMass) {
-            updateDeletePointSum(nodeReference, point);
-        }
-        return isResolved;
+    boolean modifyBoxAndCheckContains(Integer tempNode, Point point) {
+        AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(getLeftChild(tempNode));
+        AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(getRightChild(tempNode));
+        cachedBoxes[tempNode] = leftBox.getMergedBox(rightBox);
+        // modify in place?
+        return cachedBoxes[tempNode].contains(point);
     }
 
-    abstract void updateAddPointSum(Integer mergeNode, Point point);
+    AbstractBoundingBox<Point> getBoundingBoxReflate(Integer nodeReference) {
+        if (isLeaf(nodeReference)) {
+            return getLeafBoxFromLeafNode(nodeReference);
+        }
+        if (cachedBoxes[nodeReference] == null) {
+            cachedBoxes[nodeReference] = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference))
+                    .getMergedBox(getBoundingBoxReflate(nodeManager.getRightChild(nodeReference)));
+        }
+        return cachedBoxes[nodeReference];
+    }
 
-    @Override
-    void updateAddPointBoxes(AbstractBoundingBox<Point> savedBox, Integer mergedNode, Point point,
-            Integer parentIndex) {
-        if (enableCache) {
-            cachedBoxes[mergedNode] = savedBox;
-            int tempNode = mergedNode;
-            while (!nodeManager.parentEquals(tempNode, parentIndex)) {
-                Integer boxParent = nodeManager.getParent(tempNode);
-                if (boxParent == null) {
-                    break;
-                }
-                tempNode = nodeManager.getParent(tempNode);
-                cachedBoxes[tempNode].addPoint(point);
-            }
-        }
-        if (enableCenterOfMass) {
-            updateAddPointSum(mergedNode, point);
-        }
+    void setCachedBoxes(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
+        cachedBoxes[mergedNode] = savedBox;
+    }
+
+    void addToBox(Integer tempNode, Point point) {
+        cachedBoxes[tempNode].addPoint(point); // internal boxes should be updateable in place
     }
 
     public CompactNodeManager getNodeManager() {

@@ -477,4 +477,14 @@ public class Node implements INode<Node> {
         }
     }
 
+    void readjustPointSum(double[] point) {
+        if (!isLeaf()) {
+            double[] leftSum = getLeftChild().getPointSum();
+            double[] rightSum = getRightChild().getPointSum();
+            for (int i = 0; i < point.length; i++) {
+                pointSum[i] = leftSum[i] + rightSum[i];
+            }
+        }
+    }
+
 }

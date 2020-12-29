@@ -1111,9 +1111,6 @@ public class RandomCutForest {
 
         public T boundingBoxCachingEnabled(boolean boundingBoxCachingEnabled) {
             this.boundingBoxCachingEnabled = boundingBoxCachingEnabled;
-            if (boundingBoxCachingEnabled) {
-                this.compactEnabled = true;
-            }
             return (T) this;
         }
 

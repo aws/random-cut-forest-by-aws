@@ -26,12 +26,12 @@ public class AddPointState<Point, NodeReference, PointReference> {
     private long sequenceNumber;
 
     public void initialize(NodeReference sibling, int dim, double val, long sequenceNumber,
-            AbstractBoundingBox<Point> box) {
+            AbstractBoundingBox<Point> mergedBox, AbstractBoundingBox<Point> currentUnmergedBox) {
         siblingOffset = sibling;
         cutDimension = dim;
         cutValue = val;
-        this.savedBox = box;
-        this.currentBox = box.copy();
+        this.savedBox = mergedBox;
+        this.currentBox = currentUnmergedBox;
         resolved = false;
         this.sequenceNumber = sequenceNumber;
     }

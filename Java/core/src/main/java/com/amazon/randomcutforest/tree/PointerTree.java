@@ -58,36 +58,27 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
         return Arrays.toString(doubles);
     }
 
-    void updateBox(Node nodeReference) {
-        checkState(enableCache, " incorrect invocation");
-        BoundingBox rightBox = nodeReference.getRightChild().getBoundingBox();
-        BoundingBox leftBox = nodeReference.getLeftChild().getBoundingBox();
-        nodeReference.setBoundingBox(leftBox.getMergedBox(rightBox));
+    @Override
+    void setCachedBoxes(Node node, AbstractBoundingBox<double[]> savedBox) {
+        node.setBoundingBox((BoundingBox) savedBox);
     }
 
     @Override
-    boolean updateDeletePointBoxes(Node nodeReference, double[] point, boolean isResolved) {
-        if (!isResolved && enableCache) {
-            updateBox(nodeReference);
-        } else {
-            nodeReference.setBoundingBox(null);
-        }
-        return isResolved;
+    void addToBox(Node node, double[] point) {
+        node.setBoundingBox(node.getBoundingBox().getMergedBox(point));
     }
 
     @Override
-    void updateAddPointBoxes(AbstractBoundingBox<double[]> savedBox, Node mergedNode, double[] point,
-            Node parentIndex) {
+    boolean modifyBoxAndCheckContains(Node tempNode, double[] point) {
+        BoundingBox leftBox = tempNode.getLeftChild().getBoundingBox();
+        BoundingBox rightBox = tempNode.getRightChild().getBoundingBox();
+        tempNode.setBoundingBox(leftBox.getMergedBox(rightBox));
+        return tempNode.getBoundingBox().contains(point);
+    }
 
-        if (enableCache) {
-            Node tempNode = mergedNode;
-            while (tempNode != parentIndex) {
-                updateBox(tempNode);
-                tempNode = tempNode.getParent();
-            }
-        } else {
-            mergedNode.setBoundingBox(null);
-        }
+    @Override
+    void readjustPointSum(Node node, double[] point) {
+        node.readjustPointSum(point);
     }
 
     @Override
