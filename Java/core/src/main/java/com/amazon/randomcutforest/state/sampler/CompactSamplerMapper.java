@@ -18,27 +18,28 @@ package com.amazon.randomcutforest.state.sampler;
 import java.util.Arrays;
 import java.util.Random;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.sampler.CompactSampler;
-import com.amazon.randomcutforest.state.IContextualStateMapper;
-import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.amazon.randomcutforest.state.IStateMapper;
 
-public class CompactSamplerMapper
-        implements IContextualStateMapper<CompactSampler, CompactSamplerState, RandomCutForestState> {
+@Getter
+@Setter
+public class CompactSamplerMapper implements IStateMapper<CompactSampler, CompactSamplerState> {
 
+    /**
+     * This flag is passed to the constructor for {@code CompactSampler} when a new
+     * sampler is constructed in {@link #toModel}. If true, then the sampler will
+     * validate that the weight array in a {@code CompactSamplerState} instance
+     * satisfies the heap property.
+     */
     private boolean validateHeap;
 
-    public CompactSamplerMapper(boolean validateHeap) {
-        this.validateHeap = validateHeap;
-    }
-
-    public CompactSamplerMapper() {
-        this(false);
-    }
-
     @Override
-    public CompactSampler toModel(CompactSamplerState state, RandomCutForestState forestState, long seed) {
-        return new CompactSampler(forestState.getSampleSize(), forestState.getLambda(), new Random(seed),
-                state.getWeight(), state.getPointIndex(), state.getSequenceIndex(), validateHeap);
+    public CompactSampler toModel(CompactSamplerState state, long seed) {
+        return new CompactSampler(state.getCapacity(), state.getLambda(), new Random(seed), state.getWeight(),
+                state.getPointIndex(), state.getSequenceIndex(), validateHeap);
     }
 
     @Override
@@ -46,6 +47,7 @@ public class CompactSamplerMapper
         CompactSamplerState state = new CompactSamplerState();
         state.setSize(model.size());
         state.setCapacity(model.getCapacity());
+        state.setLambda(model.getLambda());
         state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
         state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
         if (model.isStoreSequenceIndexesEnabled()) {

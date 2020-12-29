@@ -15,31 +15,38 @@
 
 package com.amazon.randomcutforest.state.tree;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.state.IContextualStateMapper;
-import com.amazon.randomcutforest.state.store.LeafStoreMapper;
-import com.amazon.randomcutforest.state.store.NodeStoreMapper;
-import com.amazon.randomcutforest.store.LeafStore;
-import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.tree.CompactNodeManager;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
+@Getter
+@Setter
 public class CompactRandomCutTreeMapper implements
         IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
+
+    private boolean boundingBoxCacheEnabled;
 
     @Override
     public CompactRandomCutTreeDouble toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
             long seed) {
-        NodeStore nodeStore = new NodeStoreMapper().toModel(state.nodeStoreState);
-        LeafStore leafStore = new LeafStoreMapper().toModel(state.leafStoreState);
-        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, context.getPointStore(), leafStore, nodeStore,
-                state.rootIndex);
+        CompactNodeManagerMapper compactNodeManagerMapper = new CompactNodeManagerMapper();
+        CompactNodeManager nodeManager = compactNodeManagerMapper.toModel(state.getCompactNodeManagerState());
+
+        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, context.getPointStore(), nodeManager,
+                state.getRootIndex(), boundingBoxCacheEnabled);
     }
 
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeDouble model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        state.setLeafStoreState(model.getLeaves());
-        state.setNodeStoreState(model.getNodes());
         state.setRootIndex(model.getRootIndex());
+
+        CompactNodeManagerMapper compactNodeManagerMapper = new CompactNodeManagerMapper();
+        state.setCompactNodeManagerState(compactNodeManagerMapper.toState(model.getNodeManager()));
+
         return state;
     }
 }

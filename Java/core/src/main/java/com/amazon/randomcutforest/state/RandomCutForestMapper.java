@@ -109,6 +109,7 @@ public class RandomCutForestMapper
         state.setStoreSequenceIndexesEnabled(forest.isStoreSequenceIndexesEnabled());
         state.setTotalUpdates(forest.getTotalUpdates());
         state.setCompactEnabled(forest.isCompactEnabled());
+        state.setBoundingBoxCachingEnabled(forest.isBoundingBoxCachingEnabled());
 
         if (saveExecutorContext) {
             ExecutorContext executorContext = new ExecutorContext();
@@ -120,7 +121,7 @@ public class RandomCutForestMapper
         if (forest.isCompactEnabled()) {
             PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
             PointStoreDoubleState pointStoreState = new PointStoreDoubleMapper()
-                    .toState(pointStoreCoordinator.getStore());
+                    .toState((PointStoreDouble) pointStoreCoordinator.getStore());
             state.setPointStoreDoubleState(pointStoreState);
 
             List<CompactSamplerState> samplerStates = new ArrayList<>();
@@ -212,6 +213,7 @@ public class RandomCutForestMapper
 
             ComponentList<Integer> components = new ComponentList<>();
             CompactRandomCutTreeMapper treeMapper = new CompactRandomCutTreeMapper();
+            treeMapper.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
 
             CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
             context.setMaxSize(state.getSampleSize());
@@ -227,7 +229,7 @@ public class RandomCutForestMapper
                             state.isStoreSequenceIndexesEnabled());
                 }
 
-                CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), state, rng.nextLong());
+                CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), rng.nextLong());
 
                 if (treeStates == null) {
                     sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
@@ -244,7 +246,7 @@ public class RandomCutForestMapper
             ComponentList<double[]> components = new ComponentList<>();
 
             for (int i = 0; i < state.getNumberOfTrees(); i++) {
-                CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i), state);
+                CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i));
                 RandomCutTree tree = RandomCutTree.builder()
                         .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
                         .centerOfMassEnabled(state.isCenterOfMassEnabled()).randomSeed(rng.nextLong()).build();

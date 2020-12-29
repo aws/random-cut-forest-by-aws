@@ -13,17 +13,15 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state.store;
+package com.amazon.randomcutforest.state.tree;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.state.store.LeafStoreState;
+import com.amazon.randomcutforest.state.store.NodeStoreState;
+
 @Data
-public class NodeStoreState {
-    public short[] parentIndex;
-    public short[] leftIndex;
-    public short[] rightIndex;
-    public int[] cutDimension;
-    public double[] cutValue;
-    public short[] mass;
-    public short[] freeIndexes;
+public class CompactNodeManagerState {
+    private LeafStoreState leafStoreState;
+    private NodeStoreState nodeStoreState;
 }

@@ -33,10 +33,16 @@ public class CompactNodeManager {
     private final int capacity;
     private final short NULL = -1;
 
-    CompactNodeManager(NodeStore nodeStore, LeafStore leafStore, int capacity) {
+    public CompactNodeManager(int treeCapacity) {
+        leafstore = new LeafStore((short) treeCapacity);
+        nodeStore = new NodeStore((short) (treeCapacity - 1));
+        capacity = treeCapacity;
+    }
+
+    public CompactNodeManager(int treeCapacity, INodeStore nodeStore, ILeafStore leafStore) {
         this.leafstore = leafStore;
         this.nodeStore = nodeStore;
-        this.capacity = capacity;
+        this.capacity = treeCapacity;
     }
 
     protected int intValue(Integer ref) {
@@ -159,6 +165,10 @@ public class CompactNodeManager {
     public Integer addLeaf(Integer parent, Integer pointIndex, int mass) {
         int parentIndex = intValue(parent);
         return leafstore.addLeaf(parentIndex, pointIndex, mass);
+    }
+
+    public int getCapacity() {
+        return capacity;
     }
 
     public INodeStore getNodeStore() {

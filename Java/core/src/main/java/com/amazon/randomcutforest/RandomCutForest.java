@@ -428,6 +428,10 @@ public class RandomCutForest {
         return parallelExecutionEnabled;
     }
 
+    public boolean isBoundingBoxCachingEnabled() {
+        return boundingBoxCachingEnabled;
+    }
+
     /**
      * @return the number of threads in the thread pool if parallel execution is
      *         enabled, 0 otherwise.

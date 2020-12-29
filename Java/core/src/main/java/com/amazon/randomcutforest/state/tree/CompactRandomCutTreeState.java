@@ -17,23 +17,8 @@ package com.amazon.randomcutforest.state.tree;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.state.store.LeafStoreState;
-import com.amazon.randomcutforest.state.store.NodeStoreState;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
-
 @Data
 public class CompactRandomCutTreeState {
-    public LeafStoreState leafStoreState;
-    public NodeStoreState nodeStoreState;
-    public int rootIndex;
-
-    public CompactRandomCutTreeState() {
-
-    }
-
-    public CompactRandomCutTreeState(CompactRandomCutTreeDouble tree) {
-        leafStoreState = tree.getLeaves();
-        nodeStoreState = tree.getNodes();
-        rootIndex = tree.getRootIndex();
-    }
+    private int rootIndex;
+    private CompactNodeManagerState compactNodeManagerState;
 }

@@ -20,8 +20,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.Arrays;
 
 import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.LeafStore;
-import com.amazon.randomcutforest.store.NodeStore;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
@@ -38,12 +36,14 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
     }
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, LeafStore leafStore,
-            NodeStore nodeStore, int rootIndex) {
-        super(maxSize, seed, leafStore, nodeStore, rootIndex, true);
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore,
+            CompactNodeManager nodeManager, int rootIndex, boolean cacheEnabled) {
+        super(maxSize, seed, nodeManager, rootIndex, cacheEnabled);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
-        cachedBoxes = new BoundingBox[maxSize - 1];
+        if (cacheEnabled) {
+            cachedBoxes = new BoundingBox[maxSize - 1];
+        }
     }
 
     @Override
@@ -133,5 +133,4 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
         return cachedBoxes[nodeReference];
     }
-
 }

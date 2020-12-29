@@ -15,27 +15,12 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import java.util.Arrays;
-
 import lombok.Data;
-
-import com.amazon.randomcutforest.store.LeafStore;
 
 @Data
 public class LeafStoreState {
-
     public int[] pointIndex;
     public short[] parentIndex;
     public short[] mass;
     public short[] freeIndexes;
-
-    public LeafStoreState() {
-    }
-
-    public LeafStoreState(LeafStore leafStore) {
-        pointIndex = Arrays.copyOf(leafStore.pointIndex, leafStore.pointIndex.length);
-        parentIndex = Arrays.copyOf(leafStore.parentIndex, leafStore.parentIndex.length);
-        mass = Arrays.copyOf(leafStore.mass, leafStore.mass.length);
-        freeIndexes = Arrays.copyOf(leafStore.getFreeIndexes(), leafStore.getFreeIndexPointer() + 1);
-    }
 }
