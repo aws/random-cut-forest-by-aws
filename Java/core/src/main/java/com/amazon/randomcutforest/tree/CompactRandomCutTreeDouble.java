@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.store.IPointStore;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import com.amazon.randomcutforest.store.IPointStore;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
@@ -81,7 +81,6 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         double[] internal = pointStore.get(nodeManager.getPointIndex(node));
         return Arrays.copyOf(internal, internal.length);
     }
-
 
     double[] getPointSum(int ref, double[] point) {
         if (nodeManager.isLeaf(ref)) {

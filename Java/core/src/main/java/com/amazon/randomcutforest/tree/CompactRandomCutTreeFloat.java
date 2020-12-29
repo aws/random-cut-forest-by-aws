@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.store.IPointStore;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import com.amazon.randomcutforest.store.IPointStore;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
@@ -72,12 +72,10 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         return point[dimension] <= val;
     }
 
-
     @Override
     protected double[] getPoint(Integer nodeOffset) {
         return toDoubleArray(getPointFromLeafNode(nodeOffset));
     }
-
 
     float[] getPointSum(int ref, float[] point) {
         if (nodeManager.isLeaf(ref)) {

@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Visitor;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Random;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -162,7 +162,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract PointReference getPointReference(NodeReference node);
 
     // gets the leaf point associated with a leaf node
-    Point getPointFromLeafNode(NodeReference node){
+    Point getPointFromLeafNode(NodeReference node) {
         return getPointFromPointReference(getPointReference(node));
     }
 
@@ -222,6 +222,16 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     abstract void readjustPointSum(NodeReference node, Point point);
 
+    void recursivelyReadjustPointSum(NodeReference node, Point point) {
+        if (enableCenterOfMass) {
+            NodeReference tempNode = node;
+            while (tempNode != null) {
+                readjustPointSum(tempNode, point);
+                tempNode = getParent(tempNode);
+            }
+        }
+    }
+
     // manages the bounding boxes and center of mass
     void updateAncestorNodesAfterDelete(NodeReference nodeReference, Point point) {
         NodeReference tempNode = nodeReference;
@@ -230,14 +240,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             boxNeedsUpdate = !modifyBoxAndCheckContains(tempNode, point);
             tempNode = getParent(tempNode);
         }
-        if (enableCenterOfMass) {
-            tempNode = nodeReference;
-            while (tempNode != null) {
-                readjustPointSum(tempNode, point);
-                tempNode = getParent(tempNode);
 
-            }
-        }
+        recursivelyReadjustPointSum(nodeReference, point);
 
     }
 
@@ -280,7 +284,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             }
             // decrease mass for the delete
             if (decrementMass(nodeReference) > 0) {
-                return; // pointsum needs to be updated
+                recursivelyReadjustPointSum(nodeReference, point);
+                return;
             }
 
             NodeReference parent = getParent(nodeReference);
