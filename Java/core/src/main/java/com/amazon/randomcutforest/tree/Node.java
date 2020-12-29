@@ -98,7 +98,9 @@ public class Node implements INode<Node> {
         if (!enableCenterOfMass) {
             this.pointSum = null;
         } else {
-            this.pointSum = new double[boundingBox.getDimensions()];
+            int dimensions = (getLeftChild().isLeaf()) ? getLeftChild().leafPoint.length
+                    : getLeftChild().pointSum.length;
+            this.pointSum = new double[dimensions];
         }
         leafPoint = null;
     }

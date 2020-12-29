@@ -218,7 +218,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
 
     @Override
     protected Node addNode(Node parent, Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
-        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, false);
+        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, enableCenterOfMass);
         candidate.setParent(parent);
         candidate.setMass(mass);
         return candidate;
