@@ -210,7 +210,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // increases the mass of all ancestor nodes when an added point is internal to
     // some bounding box
     // note the bounding boxes of these ancestor nodes will remain unchanged
-    abstract protected void increaseMassOfAncestorsRecursively(NodeReference mergedNode);
+    abstract protected void increaseMassOfAncestors(NodeReference mergedNode);
 
     abstract protected int getMass(NodeReference nodeReference);
 
@@ -218,15 +218,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     abstract protected void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
-    abstract boolean modifyBoxAndCheckContains(NodeReference tempNode, Point point);
+    abstract void reComputePointSum(NodeReference node, Point point);
 
-    abstract void readjustPointSum(NodeReference node, Point point);
-
-    void recursivelyReadjustPointSum(NodeReference node, Point point) {
+    void updateAncestorPointSum(NodeReference node, Point point) {
         if (enableCenterOfMass) {
             NodeReference tempNode = node;
             while (tempNode != null) {
-                readjustPointSum(tempNode, point);
+                reComputePointSum(tempNode, point);
                 tempNode = getParent(tempNode);
             }
         }
@@ -237,12 +235,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         NodeReference tempNode = nodeReference;
         boolean boxNeedsUpdate = enableCache;
         while (boxNeedsUpdate && tempNode != null) {
-            boxNeedsUpdate = !modifyBoxAndCheckContains(tempNode, point);
+            setCachedBox(tempNode, null); // forcing recompute
+            boxNeedsUpdate = !getBoundingBoxReflate(tempNode).contains(point);
             tempNode = getParent(tempNode);
         }
-
-        recursivelyReadjustPointSum(nodeReference, point);
-
+        updateAncestorPointSum(nodeReference, point);
     }
 
     /**
@@ -284,7 +281,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             }
             // decrease mass for the delete
             if (decrementMass(nodeReference) > 0) {
-                recursivelyReadjustPointSum(nodeReference, point);
+                updateAncestorPointSum(nodeReference, point);
                 return;
             }
 
@@ -318,30 +315,23 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         deletePoint(child, point, sequenceNumber, level + 1);
     }
 
-    abstract void setCachedBoxes(NodeReference node, AbstractBoundingBox<Point> savedBox);
+    abstract void setCachedBox(NodeReference node, AbstractBoundingBox<Point> savedBox);
 
     abstract void addToBox(NodeReference node, Point point);
 
     void updateAncestorNodesAfterAdd(AbstractBoundingBox<Point> savedBox, NodeReference mergedNode, Point point,
             NodeReference parentIndex) {
-        NodeReference tempNode = getParent(mergedNode);
-        increaseMassOfAncestorsRecursively(mergedNode);
-        boolean boxNeedsUpdate = enableCache;
-        if (boxNeedsUpdate) {
-            setCachedBoxes(mergedNode, savedBox);
+        increaseMassOfAncestors(mergedNode);
+        if (enableCache) {
+            setCachedBox(mergedNode, savedBox);
+            NodeReference tempNode = getParent(mergedNode);
+            while (tempNode != null && !tempNode.equals(parentIndex)) {
+                addToBox(tempNode, point);
+                tempNode = getParent(tempNode);
+            }
         }
-        while (tempNode != null) {
-            if (boxNeedsUpdate) {
-                if (!tempNode.equals(parentIndex)) {
-                    addToBox(tempNode, point);
-                } else {
-                    boxNeedsUpdate = false;
-                }
-            }
-            if (enableCenterOfMass) {
-                readjustPointSum(tempNode, point);
-            }
-            tempNode = getParent(tempNode);
+        if (enableCenterOfMass) {
+            updateAncestorPointSum(mergedNode, point);
         }
     }
 
@@ -411,13 +401,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             if (checkEqual(oldPoint, point)) {
                 // the inserted point is equal to an existing leaf point
                 incrementMass(nodeReference);
+                increaseMassOfAncestors(nodeReference);
                 AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(
                         getPointReference(nodeReference));
                 // the following will ensure that no further processing happens
                 // note that boxes (if present) do not need to be updated
                 // the index of the duplicate point is saved
                 newState.setResolved();
-                increaseMassOfAncestorsRecursively(nodeReference);
                 return newState;
             } else {
                 AbstractBoundingBox<Point> mergedBox = getInternalTwoPointBox(point, oldPoint);

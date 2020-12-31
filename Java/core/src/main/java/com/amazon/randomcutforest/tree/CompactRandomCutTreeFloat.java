@@ -90,13 +90,13 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
             }
         }
         if (pointSum[ref] == null) {
-            readjustPointSum(ref, point);
+            reComputePointSum(ref, point);
         }
         return pointSum[ref];
     }
 
     @Override
-    void readjustPointSum(Integer node, float[] point) {
+    void reComputePointSum(Integer node, float[] point) {
         if (pointSum[node] == null) {
             pointSum[node] = new float[point.length];
         }

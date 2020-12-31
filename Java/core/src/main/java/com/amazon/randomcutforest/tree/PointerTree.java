@@ -59,7 +59,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    void setCachedBoxes(Node node, AbstractBoundingBox<double[]> savedBox) {
+    void setCachedBox(Node node, AbstractBoundingBox<double[]> savedBox) {
         node.setBoundingBox((BoundingBox) savedBox);
     }
 
@@ -69,16 +69,8 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    boolean modifyBoxAndCheckContains(Node tempNode, double[] point) {
-        BoundingBox leftBox = tempNode.getLeftChild().getBoundingBox();
-        BoundingBox rightBox = tempNode.getRightChild().getBoundingBox();
-        tempNode.setBoundingBox(leftBox.getMergedBox(rightBox));
-        return tempNode.getBoundingBox().contains(point);
-    }
-
-    @Override
-    void readjustPointSum(Node node, double[] point) {
-        node.readjustPointSum(point);
+    void reComputePointSum(Node node, double[] point) {
+        node.reComputePointSum(point);
     }
 
     @Override
@@ -225,7 +217,7 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
     }
 
     @Override
-    protected void increaseMassOfAncestorsRecursively(Node mergedNode) {
+    protected void increaseMassOfAncestors(Node mergedNode) {
         Node parent = mergedNode.getParent();
         while (parent != null) {
             parent.incrementMass();

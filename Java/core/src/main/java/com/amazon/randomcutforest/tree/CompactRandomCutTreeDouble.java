@@ -95,13 +95,13 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
             }
         }
         if (pointSum[ref] == null) {
-            readjustPointSum(ref, point);
+            reComputePointSum(ref, point);
         }
         return pointSum[ref];
     }
 
     @Override
-    void readjustPointSum(Integer node, double[] point) {
+    void reComputePointSum(Integer node, double[] point) {
         if (pointSum[node] == null) {
             pointSum[node] = new double[point.length];
         }

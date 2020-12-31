@@ -101,14 +101,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    boolean modifyBoxAndCheckContains(Integer tempNode, Point point) {
-        AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(getLeftChild(tempNode));
-        AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(getRightChild(tempNode));
-        cachedBoxes[tempNode] = leftBox.getMergedBox(rightBox);
-        // modify in place?
-        return cachedBoxes[tempNode].contains(point);
-    }
-
     AbstractBoundingBox<Point> getBoundingBoxReflate(Integer nodeReference) {
         if (isLeaf(nodeReference)) {
             return getLeafBoxFromLeafNode(nodeReference);
@@ -120,7 +112,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         return cachedBoxes[nodeReference];
     }
 
-    void setCachedBoxes(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
+    void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
         cachedBoxes[mergedNode] = savedBox;
     }
 
@@ -236,8 +228,8 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    protected void increaseMassOfAncestorsRecursively(Integer mergedNode) {
-        nodeManager.increaseMassOfAncestorsRecursively(mergedNode);
+    protected void increaseMassOfAncestors(Integer mergedNode) {
+        nodeManager.increaseMassOfAncestors(mergedNode);
     }
 
     @Override

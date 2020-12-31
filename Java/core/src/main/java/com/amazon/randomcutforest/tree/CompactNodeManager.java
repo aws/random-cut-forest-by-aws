@@ -125,9 +125,9 @@ public class CompactNodeManager {
         return index.intValue() >= capacity;
     }
 
-    public void increaseMassOfAncestorsRecursively(Integer node) {
+    public void increaseMassOfAncestors(Integer node) {
         int parent = getInternalParent(node);
-        nodeStore.increaseMassOfAncestorsAndItselfRecursively(parent);
+        nodeStore.increaseMassOfAncestorsAndItself(parent);
     }
 
     public void replaceNode(Integer parent, Integer firstNode, Integer secondNode) {
