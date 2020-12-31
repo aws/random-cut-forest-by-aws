@@ -462,7 +462,8 @@ public class Node implements INode<Node> {
 
     public BoundingBox constructBoxInPlace() {
         if (isLeaf()) {
-            return new BoundingBox(getLeafPoint());
+            return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length),
+                    Arrays.copyOf(leafPoint, leafPoint.length), 0);
         } else {
             BoundingBox currentBox = getLeftChild().constructBoxInPlace();
             return getRightChild().constructBoxInPlace(currentBox);
@@ -473,9 +474,7 @@ public class Node implements INode<Node> {
         if (isLeaf()) {
             return currentBox.addPoint(getLeafPoint());
         } else {
-            BoundingBox tempBox = getLeftChild().constructBoxInPlace(currentBox);
-            // the box may be changed for single points
-            return getRightChild().constructBoxInPlace(tempBox);
+            return getRightChild().constructBoxInPlace(getLeftChild().constructBoxInPlace(currentBox));
         }
     }
 

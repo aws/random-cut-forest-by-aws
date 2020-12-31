@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 
@@ -77,6 +78,18 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
     }
 
     @Override
+    public BoundingBox setAsUnion(AbstractBoundingBox<double[]> first, AbstractBoundingBox<double[]> second) {
+        checkArgument(minValues != maxValues, "incorrect box for union");
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(first.minValues[i], second.minValues[i]);
+            maxValues[i] = Math.max(first.maxValues[i], second.maxValues[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
     public IBoundingBoxView getMergedBox(IBoundingBoxView otherBox) {
         double[] minValuesMerged = new double[minValues.length];
         double[] maxValuesMerged = new double[minValues.length];
@@ -107,13 +120,26 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
     @Override
     public BoundingBox addPoint(double[] point) {
         checkArgument(minValues.length == point.length, "incorrect length");
-        if (maxValues == minValues) {
-            return new BoundingBox(minValues, point);
-        }
+        checkArgument(minValues != maxValues, "not a mutable box");
+        // if (maxValues == minValues) {
+        // return new BoundingBox(minValues, point);
+        // }
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
             maxValues[i] = Math.max(maxValues[i], point[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
+    public BoundingBox addBox(AbstractBoundingBox<double[]> otherBox) {
+        checkState(minValues != maxValues, "not a mutable box");
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
+            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

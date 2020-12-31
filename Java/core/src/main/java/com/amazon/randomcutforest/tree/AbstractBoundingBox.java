@@ -90,13 +90,28 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     public abstract AbstractBoundingBox<Point> getMergedBox(Point point);
 
     /**
-     * The following will attempt to perform merge in place; unless the current box
-     * is a point; in which case it would produce a new box
+     * Recomputes the bounding box to be the smallest bounding box that contains the
+     * two provided bounding boxes.
+     */
+    public abstract AbstractBoundingBox<Point> setAsUnion(AbstractBoundingBox<Point> first,
+            AbstractBoundingBox<Point> second);
+
+    /**
+     * The following will perform merge in place; unless the current box is a point;
+     * in which case it would produce a new box
      * 
      * @param point to be added to this box
      * @return merged bounding box
      */
     public abstract AbstractBoundingBox<Point> addPoint(final Point point);
+
+    /**
+     * The following will perform merge in place;
+     *
+     * @param otherBox to be added to this box
+     * @return merged bounding box
+     */
+    public abstract AbstractBoundingBox<Point> addBox(final AbstractBoundingBox<Point> otherBox);
 
     /**
      * @return dimensions of the box

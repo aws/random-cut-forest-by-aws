@@ -112,6 +112,13 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         return cachedBoxes[nodeReference];
     }
 
+    @Override
+    AbstractBoundingBox<Point> recomputeBox(Integer node) {
+        cachedBoxes[node].setAsUnion(getBoundingBoxReflate(nodeManager.getLeftChild(node)),
+                getBoundingBoxReflate(nodeManager.getRightChild(node)));
+        return cachedBoxes[node];
+    }
+
     void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
         cachedBoxes[mergedNode] = savedBox;
     }

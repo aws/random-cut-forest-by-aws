@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.Arrays;
@@ -101,13 +102,38 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
     @Override
     public AbstractBoundingBox<float[]> addPoint(float[] point) {
         checkArgument(minValues.length == point.length, "incorrect length");
-        if (maxValues == minValues) {
-            return getMergedBox(point);
-        }
+        checkArgument(minValues != maxValues, "not a mutable box");
+        // if (maxValues == minValues) {
+        // return getMergedBox(point);
+        // }
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
             maxValues[i] = Math.max(maxValues[i], point[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
+    public BoundingBoxFloat addBox(AbstractBoundingBox<float[]> otherBox) {
+        checkState(minValues != maxValues, "not a mutable box");
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
+            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
+    public BoundingBoxFloat setAsUnion(AbstractBoundingBox<float[]> first, AbstractBoundingBox<float[]> second) {
+        checkArgument(minValues != maxValues, "incorrect box for union");
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(first.minValues[i], second.minValues[i]);
+            maxValues[i] = Math.max(first.maxValues[i], second.maxValues[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

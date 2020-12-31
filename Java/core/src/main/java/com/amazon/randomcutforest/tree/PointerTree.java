@@ -94,15 +94,28 @@ public class PointerTree extends AbstractRandomCutTree<double[], Node, double[]>
             return new BoundingBox(nodeReference.getLeafPoint());
         }
         if (nodeReference.getBoundingBox() == null) {
-            nodeReference.setBoundingBox(getBoundingBoxReflate(nodeReference.getLeftChild())
-                    .getMergedBox(getBoundingBoxReflate(nodeReference.getRightChild())));
+            return recomputeBox(nodeReference);
         }
+        return nodeReference.getBoundingBox();
+    }
+
+    @Override
+    BoundingBox recomputeBox(Node nodeReference) {
+        nodeReference.setBoundingBox(getBoundingBoxReflate(nodeReference.getLeftChild())
+                .getMergedBox(getBoundingBoxReflate(nodeReference.getRightChild())));
         return nodeReference.getBoundingBox();
     }
 
     @Override
     AbstractBoundingBox<double[]> getLeafBoxFromLeafNode(Node node) {
         return new BoundingBox(node.getLeafPoint());
+    }
+
+    @Override
+    AbstractBoundingBox<double[]> getMutableLeafBoxFromLeafNode(Node node) {
+        double[] leafPoint = node.getLeafPoint();
+        return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length), Arrays.copyOf(leafPoint, leafPoint.length),
+                0);
     }
 
     // gets the actual point

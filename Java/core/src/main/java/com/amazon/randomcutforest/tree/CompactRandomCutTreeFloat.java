@@ -58,6 +58,13 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
+    AbstractBoundingBox<float[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
+        float[] leafpoint = pointStore.get(nodeManager.getPointIndex(nodeReference));
+        return new BoundingBoxFloat(Arrays.copyOf(leafpoint, leafpoint.length),
+                Arrays.copyOf(leafpoint, leafpoint.length), 0);
+    }
+
+    @Override
     AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
         return new BoundingBoxFloat(first, second);
     }

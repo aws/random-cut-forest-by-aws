@@ -66,6 +66,13 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         return new BoundingBox(pointStore.get(nodeManager.getPointIndex(nodeReference)));
     }
 
+    @Override
+    AbstractBoundingBox<double[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
+        double[] leafpoint = pointStore.get(nodeManager.getPointIndex(nodeReference));
+        return new BoundingBox(Arrays.copyOf(leafpoint, leafpoint.length), Arrays.copyOf(leafpoint, leafpoint.length),
+                0);
+    }
+
     double[] getPointSum(int ref) {
         return nodeManager.isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
     }

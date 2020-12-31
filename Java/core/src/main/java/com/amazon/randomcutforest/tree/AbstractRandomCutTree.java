@@ -133,10 +133,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // function for getting the bounding boxes for leaf nodes
     abstract AbstractBoundingBox<Point> getLeafBoxFromLeafNode(NodeReference nodeReference);
 
-    // constructing a bounding box (almost) in place
+    // function for getting the bounding boxes for leaf nodes that can be mutated in
+    // place
+    abstract AbstractBoundingBox<Point> getMutableLeafBoxFromLeafNode(NodeReference nodeReference);
+
+    // constructing a bounding box in place
     protected AbstractBoundingBox<Point> constructBoxInPlace(NodeReference nodeReference) {
         if (isLeaf(nodeReference)) {
-            return getLeafBoxFromLeafNode(nodeReference);
+            return getMutableLeafBoxFromLeafNode(nodeReference);
         } else {
             AbstractBoundingBox<Point> currentBox = constructBoxInPlace(getLeftChild(nodeReference));
             return constructBoxInPlace(currentBox, getRightChild(nodeReference));
@@ -230,16 +234,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         }
     }
 
+    abstract AbstractBoundingBox<Point> recomputeBox(NodeReference node);
+
     // manages the bounding boxes and center of mass
     void updateAncestorNodesAfterDelete(NodeReference nodeReference, Point point) {
         NodeReference tempNode = nodeReference;
         boolean boxNeedsUpdate = enableCache;
         while (boxNeedsUpdate && tempNode != null) {
-            AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(getLeftChild(tempNode));
-            AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(getRightChild(tempNode));
-            AbstractBoundingBox<Point> newBox = leftBox.getMergedBox(rightBox);
-            setCachedBox(tempNode, newBox);
-            boxNeedsUpdate = !newBox.contains(point);
+            boxNeedsUpdate = !(recomputeBox(tempNode).contains(point));
             tempNode = getParent(tempNode);
         }
         updateAncestorPointSum(nodeReference, point);
@@ -418,7 +420,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 // the cut is between a leaf node and the new point; it must exist
                 AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(pointIndex);
                 newState.initialize(nodeReference, cut.getDimension(), cut.getValue(), sequenceNumber, mergedBox,
-                        getLeafBoxFromLeafNode(nodeReference));
+                        getMutableLeafBoxFromLeafNode(nodeReference));
                 return newState;
             }
         }
@@ -449,8 +451,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             } else {
                 // the boxes are not present, merge the bounding box of the sibling of the last
                 // seen child (nextNode) to the stored box in the state and save it
-                existingBox = addPointState.getCurrentBox().getMergedBox(getBoundingBox(sibling));
-                addPointState.setCurrentBox(existingBox);
+                existingBox = addPointState.getCurrentBox().addBox(getBoundingBox(sibling));
+                // note that existingBox will remain mutable
             }
 
             if (existingBox.contains(point)) {
@@ -462,6 +464,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             // generate a new cut and see if it separates the new point
             AbstractBoundingBox<Point> mergedBox = existingBox.getMergedBox(point);
             Cut cut = randomCut(random, mergedBox);
+            // avoid generation of mergedBox?
             int splitDimension = cut.getDimension();
             double splitValue = cut.getValue();
             double minValue = existingBox.getMinValue(splitDimension);
