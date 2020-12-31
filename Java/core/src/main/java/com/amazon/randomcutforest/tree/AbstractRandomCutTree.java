@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
 
 import java.util.Random;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Visitor;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -235,8 +235,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         NodeReference tempNode = nodeReference;
         boolean boxNeedsUpdate = enableCache;
         while (boxNeedsUpdate && tempNode != null) {
-            setCachedBox(tempNode, null); // forcing recompute
-            boxNeedsUpdate = !getBoundingBoxReflate(tempNode).contains(point);
+            AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(getLeftChild(tempNode));
+            AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(getRightChild(tempNode));
+            AbstractBoundingBox<Point> newBox = leftBox.getMergedBox(rightBox);
+            setCachedBox(tempNode, newBox);
+            boxNeedsUpdate = !newBox.contains(point);
             tempNode = getParent(tempNode);
         }
         updateAncestorPointSum(nodeReference, point);
