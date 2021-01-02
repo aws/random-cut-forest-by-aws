@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.HashSet;
+import java.util.Random;
 
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.IPointStoreView;
@@ -55,6 +56,8 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected Point[] pointSum;
     protected boolean enableCache;
     protected HashSet[] sequenceIndexes;
+
+    Random cacheRandom = new Random(0);
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
@@ -96,9 +99,10 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     @Override
     protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
-        if (sequenceIndexes[nodeRef] != null) {
-            sequenceIndexes[nodeRef].remove(sequenceIndex);
+        if (sequenceIndexes[nodeRef] == null || !sequenceIndexes[nodeRef].contains(sequenceIndex)) {
+            throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
         }
+        sequenceIndexes[nodeRef].remove(sequenceIndex);
     }
 
     AbstractBoundingBox<Point> getBoundingBoxReflate(Integer nodeReference) {
@@ -114,13 +118,17 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     @Override
     AbstractBoundingBox<Point> recomputeBox(Integer node) {
+
         cachedBoxes[node].setAsUnion(getBoundingBoxReflate(nodeManager.getLeftChild(node)),
                 getBoundingBoxReflate(nodeManager.getRightChild(node)));
         return cachedBoxes[node];
+
     }
 
     void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
+        // if (cacheRandom.nextDouble() < 0.5) {
         cachedBoxes[mergedNode] = savedBox;
+        // }
     }
 
     void addToBox(Integer tempNode, Point point) {

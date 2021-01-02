@@ -60,7 +60,6 @@ import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.PointerTree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
@@ -267,7 +266,7 @@ public class RandomCutForest {
         IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
         ComponentList<double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[]> tree = new PointerTree(rng.nextLong(), boundingBoxCachingEnabled, centerOfMassEnabled,
+            ITree<double[]> tree = new RandomCutTree(rng.nextLong(), boundingBoxCachingEnabled, centerOfMassEnabled,
                     storeSequenceIndexesEnabled);
             IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);

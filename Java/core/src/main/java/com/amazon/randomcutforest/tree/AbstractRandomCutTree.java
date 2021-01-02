@@ -62,6 +62,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         this.enableSequenceIndices = enableSequenceIndices;
     }
 
+    public AbstractRandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
+            boolean enableSequenceIndices) {
+        this.random = random;
+        this.enableCache = enableCache;
+        this.enableCenterOfMass = enableCenterOfMass;
+        this.enableSequenceIndices = enableSequenceIndices;
+    }
+
     /**
      * Return a new {@link Cut}, which is chosen uniformly over the space of
      * possible cuts for the given bounding box.
@@ -407,6 +415,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 // the inserted point is equal to an existing leaf point
                 incrementMass(nodeReference);
                 increaseMassOfAncestors(nodeReference);
+                if (enableSequenceIndices) {
+                    addSequenceIndex(nodeReference, sequenceNumber);
+                }
+                updateAncestorPointSum(nodeReference, point);
                 AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(
                         getPointReference(nodeReference));
                 // the following will ensure that no further processing happens
@@ -495,6 +507,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         Point pointValue = getPointFromPointReference(pointReference);
         if (rootIndex == null) {
             rootIndex = addLeaf(null, pointReference, 1);
+            if (enableSequenceIndices) {
+                addSequenceIndex(rootIndex, sequenceNumber);
+            }
             checkState(saveMass + 1 == getMass(), "incorrect add");
             return pointReference;
         } else {
