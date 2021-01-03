@@ -58,7 +58,7 @@ public class HyperTree extends RandomCutTree {
 
         BoundingBox thisBox = new BoundingBox(pointList.get(0));
         for (int i = 1; i < pointList.size(); i++) {
-            thisBox = thisBox.getMergedBox(pointList.get(i));
+            thisBox = thisBox.addPoint(pointList.get(i));
         }
         if (thisBox.getRangeSum() <= 0) {
             double[] first = pointList.get(0);

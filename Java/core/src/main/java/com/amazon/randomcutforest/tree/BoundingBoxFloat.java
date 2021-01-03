@@ -70,42 +70,15 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
         return new BoundingBoxFloat(minValuesMerged, maxValuesMerged, sum);
     }
 
-    @Override
-    public AbstractBoundingBox<float[]> getMergedBox(float[] point) {
+    public IBoundingBoxView getMergedBox(float[] point) {
         checkArgument(point.length == minValues.length, "incorrect length");
-        float[] minValuesMerged = new float[minValues.length];
-        float[] maxValuesMerged = new float[minValues.length];
-        double sum = 0.0;
-
-        for (int i = 0; i < minValues.length; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], point[i]);
-            maxValuesMerged[i] = Math.max(maxValues[i], point[i]);
-            sum += maxValuesMerged[i] - minValuesMerged[i];
-        }
-        return new BoundingBoxFloat(minValuesMerged, maxValuesMerged, sum);
+        return copy().addPoint(point);
     }
 
     @Override
-    public AbstractBoundingBox<float[]> getMergedBox(AbstractBoundingBox<float[]> otherBox) {
-        float[] minValuesMerged = new float[minValues.length];
-        float[] maxValuesMerged = new float[minValues.length];
-        double sum = 0.0;
-
-        for (int i = 0; i < minValues.length; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], otherBox.minValues[i]);
-            maxValuesMerged[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
-            sum += maxValuesMerged[i] - minValuesMerged[i];
-        }
-        return new BoundingBoxFloat(minValuesMerged, maxValuesMerged, sum);
-    }
-
-    @Override
-    public AbstractBoundingBox<float[]> addPoint(float[] point) {
+    public BoundingBoxFloat addPoint(float[] point) {
         checkArgument(minValues.length == point.length, "incorrect length");
         checkArgument(minValues != maxValues, "not a mutable box");
-        // if (maxValues == minValues) {
-        // return getMergedBox(point);
-        // }
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
@@ -122,18 +95,6 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
         for (int i = 0; i < minValues.length; ++i) {
             minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
             maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
-            rangeSum += maxValues[i] - minValues[i];
-        }
-        return this;
-    }
-
-    @Override
-    public BoundingBoxFloat setAsUnion(AbstractBoundingBox<float[]> first, AbstractBoundingBox<float[]> second) {
-        checkArgument(minValues != maxValues, "incorrect box for union");
-        rangeSum = 0;
-        for (int i = 0; i < minValues.length; ++i) {
-            minValues[i] = Math.min(first.minValues[i], second.minValues[i]);
-            maxValues[i] = Math.max(first.maxValues[i], second.maxValues[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

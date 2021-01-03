@@ -72,10 +72,6 @@ public class AddPointState<Point, NodeReference, PointReference> {
         return currentBox;
     }
 
-    public void setCurrentBox(AbstractBoundingBox<Point> currentBox) {
-        this.currentBox = currentBox;
-    }
-
     public long getSequenceNumber() {
         return sequenceNumber;
     }

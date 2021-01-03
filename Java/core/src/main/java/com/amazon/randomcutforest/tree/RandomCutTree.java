@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
@@ -49,6 +48,11 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
      * By default, nodes will not store center of mass.
      */
     public static final boolean DEFAULT_CENTER_OF_MASS_ENABLED = false;
+
+    /**
+     * a random number generator to decide on storing the cached boxes for the new
+     * nodes.
+     */
 
     protected RandomCutTree(Builder<?> builder) {
         super(builder.random, builder.boundingBoxCachingEnabled, builder.centerOfMassEnabled,
@@ -100,6 +104,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
         rootIndex = null;
+        setBoundingBoxCacheFraction(1.0);
     }
 
     public RandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
@@ -125,12 +130,14 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     void setCachedBox(Node node, AbstractBoundingBox<double[]> savedBox) {
-        node.setBoundingBox((BoundingBox) savedBox);
+        if (cacheRandom.nextDouble() < boundingBoxCacheFraction) {
+            node.setBoundingBox((BoundingBox) savedBox);
+        }
     }
 
     @Override
     void addToBox(Node node, double[] point) {
-        node.setBoundingBox(node.getBoundingBox().getMergedBox(point));
+        node.setBoundingBox(node.getBoundingBox().addPoint(point));
     }
 
     @Override
@@ -153,34 +160,32 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
         return new BoundingBox(first, second);
     }
 
-    @Override
-    BoundingBox getBoundingBoxReflate(Node nodeReference) {
-        if (isLeaf(nodeReference)) {
-            return new BoundingBox(nodeReference.getLeafPoint());
-        }
-        if (nodeReference.getBoundingBox() == null) {
-            return recomputeBox(nodeReference);
-        }
-        return nodeReference.getBoundingBox();
+    BoundingBox constructBoxInPlace(BoundingBox currentBox, Node nodeReference) {
+        return nodeReference.constructBoxInPlace(currentBox);
     }
 
     @Override
     BoundingBox recomputeBox(Node nodeReference) {
-        nodeReference.setBoundingBox(getBoundingBoxReflate(nodeReference.getLeftChild())
-                .getMergedBox(getBoundingBoxReflate(nodeReference.getRightChild())));
+        nodeReference.setBoundingBox(
+                constructBoxInPlace(constructBoxInPlace(nodeReference.getLeftChild()), nodeReference.getRightChild()));
         return nodeReference.getBoundingBox();
     }
 
     @Override
-    AbstractBoundingBox<double[]> getLeafBoxFromLeafNode(Node node) {
+    BoundingBox getLeafBoxFromLeafNode(Node node) {
         return new BoundingBox(node.getLeafPoint());
     }
 
     @Override
-    AbstractBoundingBox<double[]> getMutableLeafBoxFromLeafNode(Node node) {
+    BoundingBox getMutableLeafBoxFromLeafNode(Node node) {
         double[] leafPoint = node.getLeafPoint();
         return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length), Arrays.copyOf(leafPoint, leafPoint.length),
                 0);
+    }
+
+    @Override
+    protected BoundingBox constructBoxInPlace(Node node) {
+        return node.constructBoxInPlace();
     }
 
     // gets the actual point
@@ -279,17 +284,15 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    protected Node addLeaf(Node parent, double[] pointIndex, int mass) {
+    protected Node addLeaf(double[] pointIndex) {
         Node candidate = new Node(pointIndex);
-        candidate.setMass(mass);
-        candidate.setParent(parent);
+        candidate.setMass(1);
         return candidate;
     }
 
     @Override
-    protected Node addNode(Node parent, Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
+    protected Node addNode(Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
         Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, enableCenterOfMass);
-        candidate.setParent(parent);
         candidate.setMass(mass);
         return candidate;
     }
@@ -361,26 +364,6 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
         public RandomCutTree build() {
             return new RandomCutTree(random, boundingBoxCachingEnabled, centerOfMassEnabled,
                     storeSequenceIndexesEnabled);
-        }
-    }
-
-    /**
-     * Return the sibling of a non-root node. Note that every non-leaf node in a
-     * Random Cut Tree has two children.
-     *
-     * @param node The node whose sibling we are requesting.
-     * @return the sibling of node in the tree.
-     */
-    static Node getSiblingStatic(Node node) {
-        checkNotNull(node.getParent(), "node parent must not be null");
-
-        Node parent = node.getParent();
-        if (parent.getLeftChild() == node) {
-            return parent.getRightChild();
-        } else if (parent.getRightChild() == node) {
-            return parent.getLeftChild();
-        } else {
-            throw new IllegalArgumentException("node parent does not link back to node");
         }
     }
 

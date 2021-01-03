@@ -77,24 +77,7 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
      * @return the smallest bounding box that contains this bounding box and
      *         otherBoundingBox;
      */
-    public abstract AbstractBoundingBox<Point> getMergedBox(AbstractBoundingBox<Point> otherBox);
-
-    /**
-     * Return a new bounding box which is the smallest bounding box that contains
-     * this bounding box and the given point.
-     *
-     * @param point the new point being added to the box
-     * @return the smallest bounding box that contains this bounding box and the
-     *         given point.
-     */
-    public abstract AbstractBoundingBox<Point> getMergedBox(Point point);
-
-    /**
-     * Recomputes the bounding box to be the smallest bounding box that contains the
-     * two provided bounding boxes.
-     */
-    public abstract AbstractBoundingBox<Point> setAsUnion(AbstractBoundingBox<Point> first,
-            AbstractBoundingBox<Point> second);
+    public abstract IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);
 
     /**
      * The following will perform merge in place; unless the current box is a point;

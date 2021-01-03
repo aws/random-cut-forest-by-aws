@@ -473,6 +473,8 @@ public class Node implements INode<Node> {
     BoundingBox constructBoxInPlace(BoundingBox currentBox) {
         if (isLeaf()) {
             return currentBox.addPoint(getLeafPoint());
+        } else if (boundingBox != null) {
+            return currentBox.addBox(boundingBox);
         } else {
             return getRightChild().constructBoxInPlace(getLeftChild().constructBoxInPlace(currentBox));
         }
