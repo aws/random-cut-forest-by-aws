@@ -23,7 +23,7 @@ import java.util.Map;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
+import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
 /**
@@ -44,7 +44,7 @@ public class ArraySamplersToCompactStateConverter {
         this.storeSequences = storeSequences;
     }
 
-    public PointStoreDoubleState getPointStoreDoubleState() {
+    public PointStoreState getPointStoreDoubleState() {
         return new PointStoreDoubleMapper().toState(pointStoreDouble);
     }
 

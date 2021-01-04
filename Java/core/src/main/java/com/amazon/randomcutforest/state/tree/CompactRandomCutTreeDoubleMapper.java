@@ -23,11 +23,12 @@ import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 @Getter
 @Setter
-public class CompactRandomCutTreeMapper implements
+public class CompactRandomCutTreeDoubleMapper implements
         IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
     private boolean boundingBoxCacheEnabled;
@@ -41,8 +42,8 @@ public class CompactRandomCutTreeMapper implements
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         NodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
-        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, context.getPointStore(), leafStore, nodeStore,
-                state.getRootIndex(), boundingBoxCacheEnabled);
+        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, (PointStoreDouble) context.getPointStore(),
+                leafStore, nodeStore, state.getRootIndex(), boundingBoxCacheEnabled);
     }
 
     @Override

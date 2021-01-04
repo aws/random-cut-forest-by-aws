@@ -407,6 +407,18 @@ public class RandomCutForest {
     }
 
     /**
+     * For compact forests, users can choose to specify the desired floating-point
+     * precision to use internally to store points. Choosing single-precision will
+     * reduce the memory size of the model at the cost of requiring double/float
+     * conversions.
+     *
+     * @return the desired precision to use internall to store points.
+     */
+    public Precision getPrecision() {
+        return precision;
+    }
+
+    /**
      * @return true if points are saved with sequence indexes, false otherwise.
      */
     public boolean isCompactEnabled() {

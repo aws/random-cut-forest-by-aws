@@ -20,7 +20,7 @@ import java.util.List;
 import lombok.Data;
 
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleState;
+import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 
 /**
@@ -50,7 +50,7 @@ public class RandomCutForestState {
 
     private boolean centerOfMassEnabled;
 
-    private PointStoreDoubleState pointStoreDoubleState;
+    private PointStoreState pointStoreState;
 
     private List<CompactSamplerState> compactSamplerStates;
 

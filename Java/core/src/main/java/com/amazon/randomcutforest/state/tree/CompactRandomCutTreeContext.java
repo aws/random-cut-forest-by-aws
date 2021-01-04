@@ -17,10 +17,12 @@ package com.amazon.randomcutforest.state.tree;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.IPointStore;
 
 @Data
 public class CompactRandomCutTreeContext {
     private int maxSize;
-    private IPointStore<double[]> pointStore;
+    private IPointStore<?> pointStore;
+    private Precision precision;
 }
