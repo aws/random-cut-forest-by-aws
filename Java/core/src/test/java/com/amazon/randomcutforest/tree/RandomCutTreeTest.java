@@ -16,8 +16,18 @@
 package com.amazon.randomcutforest.tree;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -361,7 +371,7 @@ public class RandomCutTreeTest {
         assertThat(node3.getParent(), is(nullValue()));
 
         // replace the left child
-        RandomCutTree.replaceNode(node1, node3);
+        tree.replaceNode(parent, node1, node3);
         assertThat(parent.getLeftChild(), sameInstance(node3));
         assertThat(parent.getRightChild(), sameInstance(node2));
         assertThat(node3.getParent(), sameInstance(parent));
@@ -374,7 +384,7 @@ public class RandomCutTreeTest {
         node3.setParent(null);
 
         // replace the right child
-        RandomCutTree.replaceNode(node2, node3);
+        tree.replaceNode(parent, node2, node3);
         assertThat(parent.getLeftChild(), sameInstance(node1));
         assertThat(parent.getRightChild(), sameInstance(node3));
         assertThat(node1.getParent(), sameInstance(parent));
@@ -391,14 +401,14 @@ public class RandomCutTreeTest {
         left.setParent(parent);
         right.setParent(parent);
 
-        assertThat(RandomCutTree.getSibling(left), sameInstance(right));
-        assertThat(RandomCutTree.getSibling(right), sameInstance(left));
+        assertThat(tree.getSibling(left), sameInstance(right));
+        assertThat(tree.getSibling(right), sameInstance(left));
     }
 
     @Test
     public void testGetSiblingNullParent() {
         Node node = new Node(new double[] { 0.0, 0.0 });
-        assertThrows(NullPointerException.class, () -> RandomCutTree.getSibling(node));
+        assertThrows(NullPointerException.class, () -> tree.getSibling(node));
     }
 
     @Test
@@ -413,7 +423,7 @@ public class RandomCutTreeTest {
         left.setParent(parent);
         right.setParent(parent);
 
-        assertThrows(IllegalArgumentException.class, () -> RandomCutTree.getSibling(left));
+        assertThrows(IllegalStateException.class, () -> tree.getSibling(left));
     }
 
     @Test

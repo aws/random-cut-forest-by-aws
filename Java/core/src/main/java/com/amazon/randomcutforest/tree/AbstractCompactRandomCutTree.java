@@ -67,6 +67,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         if (enableSequenceIndices) {
             sequenceIndexes = new HashSet[maxSize];
         }
+        // adjusting the below parameter in [0,1] may change the space time tradeoff
+        // but should not affect the computation in any manner
+        // setBoundingBoxCacheFraction(0.3);
     }
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, CompactNodeManager nodeManager, int rootIndex,
@@ -96,49 +99,80 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     @Override
     protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
-        if (sequenceIndexes[nodeRef] != null) {
-            sequenceIndexes[nodeRef].remove(sequenceIndex);
+        if (sequenceIndexes[nodeRef] == null || !sequenceIndexes[nodeRef].contains(sequenceIndex)) {
+            throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
         }
+        sequenceIndexes[nodeRef].remove(sequenceIndex);
     }
 
-    abstract void updateDeletePointSum(int nodeRef, Point point);
-
     @Override
-    boolean updateDeletePointBoxes(Integer nodeReference, Point point, boolean isResolved) {
-        if (!isResolved && (enableCache)) {
-            AbstractBoundingBox<Point> leftBox = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference));
-            AbstractBoundingBox<Point> rightBox = getBoundingBoxReflate(nodeManager.getRightChild(nodeReference));
-            cachedBoxes[nodeReference] = leftBox.getMergedBox(rightBox);
-            if (cachedBoxes[nodeReference].contains(point)) {
-                return true;
+    protected AbstractBoundingBox<Point> constructBoxInPlace(Integer nodeReference) {
+        if (isLeaf(nodeReference)) {
+            return getMutableLeafBoxFromLeafNode(nodeReference);
+        } else if (cachedBoxes != null && cachedBoxes[nodeReference] != null) {
+            return cachedBoxes[nodeReference].copy();
+        } else {
+            AbstractBoundingBox<Point> currentBox = constructBoxInPlace(
+                    constructBoxInPlace(getLeftChild(nodeReference)), getRightChild(nodeReference));
+            // the following is useful in cases where the forest is deserialized and
+            // even though caches may be set, the individual boxes are null
+            if (cachedBoxes != null && boundingBoxCacheFraction >= 1.0) {
+                cachedBoxes[nodeReference] = currentBox.copy();
             }
+            return currentBox;
         }
-
-        if (enableCenterOfMass) {
-            updateDeletePointSum(nodeReference, point);
-        }
-        return isResolved;
     }
 
-    abstract void updateAddPointSum(Integer mergeNode, Point point);
+    AbstractBoundingBox<Point> constructBoxInPlace(AbstractBoundingBox<Point> currentBox, Integer nodeReference) {
+        if (isLeaf(nodeReference)) {
+            return currentBox.addPoint(getPointFromLeafNode(nodeReference));
+        } else if (cachedBoxes != null && cachedBoxes[nodeReference] != null) {
+            // if a box is present for a node in use, that box must be correct
+            // this invariant is maintained throughout.
+            return currentBox.addBox(cachedBoxes[nodeReference]);
+        } else {
+            AbstractBoundingBox<Point> newBox = constructBoxInPlace(
+                    constructBoxInPlace(currentBox, getLeftChild(nodeReference)), getRightChild(nodeReference));
+            // the following is useful in cases where the forest is deserialized and
+            // even though caches may be set, the individual boxes are null
+            if (cachedBoxes != null && boundingBoxCacheFraction >= 1.0) {
+                cachedBoxes[nodeReference] = newBox;
+            }
+            return newBox;
+        }
+    }
 
     @Override
-    void updateAddPointBoxes(AbstractBoundingBox<Point> savedBox, Integer mergedNode, Point point,
-            Integer parentIndex) {
-        if (enableCache) {
+    AbstractBoundingBox<Point> recomputeBox(Integer node) {
+        if (cachedBoxes[node] != null) {
+            // cannot invoke constructBoxInPlace(node) because that would re-use the old
+            // box
+            cachedBoxes[node] = constructBoxInPlace(constructBoxInPlace(getLeftChild(node)), getRightChild(node));
+            return cachedBoxes[node];
+        }
+        return null;
+    }
+
+    /**
+     * saving bounding boxes for a newly created internal node. The decision is
+     * controlled by the allowed fraction of boxes to be saved. Setting the fraction
+     * to 1.0 saves all boxes. If the box is not saved then it must be made null to
+     * overwrite any prior information
+     * 
+     * @param mergedNode internal node
+     * @param savedBox   the newly created box for this node.
+     */
+    void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
+        if (cacheRandom.nextDouble() < boundingBoxCacheFraction) {
             cachedBoxes[mergedNode] = savedBox;
-            int tempNode = mergedNode;
-            while (!nodeManager.parentEquals(tempNode, parentIndex)) {
-                Integer boxParent = nodeManager.getParent(tempNode);
-                if (boxParent == null) {
-                    break;
-                }
-                tempNode = nodeManager.getParent(tempNode);
-                cachedBoxes[tempNode].addPoint(point);
-            }
+        } else {
+            cachedBoxes[mergedNode] = null;
         }
-        if (enableCenterOfMass) {
-            updateAddPointSum(mergedNode, point);
+    }
+
+    void addToBox(Integer tempNode, Point point) {
+        if (cachedBoxes[tempNode] != null) {
+            cachedBoxes[tempNode].addPoint(point); // internal boxes can be updated in place
         }
     }
 
@@ -239,19 +273,18 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    protected Integer addLeaf(Integer parent, Integer pointIndex, int mass) {
-        return nodeManager.addLeaf(parent, pointIndex, mass);
+    protected Integer addLeaf(Integer pointIndex) {
+        return nodeManager.addLeaf(null, pointIndex, 1);
     }
 
     @Override
-    protected Integer addNode(Integer parent, Integer leftChild, Integer rightChild, int cutDimension, double cutValue,
-            int mass) {
-        return nodeManager.addNode(parent, leftChild, rightChild, cutDimension, cutValue, mass);
+    protected Integer addNode(Integer leftChild, Integer rightChild, int cutDimension, double cutValue, int mass) {
+        return nodeManager.addNode(null, leftChild, rightChild, cutDimension, cutValue, mass);
     }
 
     @Override
-    protected void increaseMassOfAncestorsRecursively(Integer mergedNode) {
-        nodeManager.increaseMassOfAncestorsRecursively(mergedNode);
+    protected void increaseMassOfAncestors(Integer mergedNode) {
+        nodeManager.increaseMassOfAncestors(mergedNode);
     }
 
     @Override

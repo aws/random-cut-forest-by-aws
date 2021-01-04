@@ -151,7 +151,7 @@ public interface INodeStore {
      * 
      * @param index node
      */
-    void increaseMassOfAncestorsAndItselfRecursively(int index);
+    void increaseMassOfAncestorsAndItself(int index);
 
     /**
      * returns the sibling of node, both of whom save the same parent

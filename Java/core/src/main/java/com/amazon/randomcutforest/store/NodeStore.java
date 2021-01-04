@@ -162,7 +162,7 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
         return super.capacity;
     }
 
-    public void increaseMassOfAncestorsAndItselfRecursively(int index) {
+    public void increaseMassOfAncestorsAndItself(int index) {
         while (index != NULL) {
             ++mass[index];
             index = parentIndex[index];

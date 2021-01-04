@@ -98,7 +98,9 @@ public class Node implements INode<Node> {
         if (!enableCenterOfMass) {
             this.pointSum = null;
         } else {
-            this.pointSum = new double[boundingBox.getDimensions()];
+            int dimensions = (getLeftChild().isLeaf()) ? getLeftChild().leafPoint.length
+                    : getLeftChild().pointSum.length;
+            this.pointSum = new double[dimensions];
         }
         leafPoint = null;
     }
@@ -460,7 +462,8 @@ public class Node implements INode<Node> {
 
     public BoundingBox constructBoxInPlace() {
         if (isLeaf()) {
-            return new BoundingBox(getLeafPoint());
+            return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length),
+                    Arrays.copyOf(leafPoint, leafPoint.length), 0);
         } else {
             BoundingBox currentBox = getLeftChild().constructBoxInPlace();
             return getRightChild().constructBoxInPlace(currentBox);
@@ -470,10 +473,20 @@ public class Node implements INode<Node> {
     BoundingBox constructBoxInPlace(BoundingBox currentBox) {
         if (isLeaf()) {
             return currentBox.addPoint(getLeafPoint());
+        } else if (boundingBox != null) {
+            return currentBox.addBox(boundingBox);
         } else {
-            BoundingBox tempBox = getLeftChild().constructBoxInPlace(currentBox);
-            // the box may be changed for single points
-            return getRightChild().constructBoxInPlace(tempBox);
+            return getRightChild().constructBoxInPlace(getLeftChild().constructBoxInPlace(currentBox));
+        }
+    }
+
+    void reComputePointSum(double[] point) {
+        if (!isLeaf()) {
+            double[] leftSum = getLeftChild().getPointSum();
+            double[] rightSum = getRightChild().getPointSum();
+            for (int i = 0; i < point.length; i++) {
+                pointSum[i] = leftSum[i] + rightSum[i];
+            }
         }
     }
 

@@ -58,6 +58,13 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
+    AbstractBoundingBox<float[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
+        float[] leafpoint = pointStore.get(nodeManager.getPointIndex(nodeReference));
+        return new BoundingBoxFloat(Arrays.copyOf(leafpoint, leafpoint.length),
+                Arrays.copyOf(leafpoint, leafpoint.length), 0);
+    }
+
+    @Override
     AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
         return new BoundingBoxFloat(first, second);
     }
@@ -73,56 +80,38 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    protected float[] getPointFromLeafNode(Integer nodeOffset) {
-        return pointStore.get(nodeManager.getPointIndex(nodeOffset));
-    }
-
-    @Override
     protected double[] getPoint(Integer nodeOffset) {
         return toDoubleArray(getPointFromLeafNode(nodeOffset));
     }
 
-    AbstractBoundingBox<float[]> getBoundingBoxReflate(Integer nodeReference) {
-        if (isLeaf(nodeReference)) {
-            return new BoundingBoxFloat(getPointFromLeafNode(nodeReference));
-        }
-        if (cachedBoxes[nodeReference] == null) {
-            cachedBoxes[nodeReference] = getBoundingBoxReflate(nodeManager.getLeftChild(nodeReference))
-                    .getMergedBox(getBoundingBoxReflate(nodeManager.getRightChild(nodeReference)));
-        }
-        return cachedBoxes[nodeReference];
-    }
-
-    @Override
-    void updateDeletePointSum(int nodeRef, float[] point) {
-        if (pointSum[nodeRef] == null) {
-            pointSum[nodeRef] = new float[point.length];
-        }
-        for (int i = 0; i < point.length; i++) {
-            pointSum[nodeRef][i] += point[i];
-        }
-    }
-
-    float[] getPointSum(int ref) {
-        return nodeManager.isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
-    }
-
-    @Override
-    void updateAddPointSum(Integer mergedNode, float[] point) {
-        if (pointSum[mergedNode] == null) {
-            pointSum[mergedNode] = new float[point.length];
-        }
-        float[] leftSum = getPointSum(nodeManager.getLeftChild(mergedNode));
-        float[] rightSum = getPointSum(nodeManager.getRightChild(mergedNode));
-        for (int i = 0; i < point.length; i++) {
-            pointSum[mergedNode][i] = leftSum[i] + rightSum[i];
-        }
-        int tempNode = mergedNode;
-        while (nodeManager.getParent(tempNode) != NULL) {
-            tempNode = nodeManager.getParent(tempNode);
-            for (int i = 0; i < point.length; i++) {
-                pointSum[tempNode][i] += point[i];
+    float[] getPointSum(int ref, float[] point) {
+        if (nodeManager.isLeaf(ref)) {
+            if (getMass(ref) == 1) {
+                return getPointFromLeafNode(ref);
+            } else {
+                float[] answer = Arrays.copyOf(getPointFromLeafNode(ref), point.length);
+                for (int i = 0; i < point.length; i++) {
+                    answer[i] *= getMass(ref);
+                }
+                return answer;
             }
         }
+        if (pointSum[ref] == null) {
+            reComputePointSum(ref, point);
+        }
+        return pointSum[ref];
     }
+
+    @Override
+    void reComputePointSum(Integer node, float[] point) {
+        if (pointSum[node] == null) {
+            pointSum[node] = new float[point.length];
+        }
+        float[] leftSum = getPointSum(nodeManager.getLeftChild(node), point);
+        float[] rightSum = getPointSum(nodeManager.getRightChild(node), point);
+        for (int i = 0; i < point.length; i++) {
+            pointSum[node][i] = leftSum[i] + rightSum[i];
+        }
+    }
+
 }

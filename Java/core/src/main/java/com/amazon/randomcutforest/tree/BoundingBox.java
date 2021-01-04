@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 
@@ -61,23 +62,16 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
                 rangeSum);
     }
 
-    @Override
+    // the following needs to output BoundingBox for the older tests
     public BoundingBox getMergedBox(double[] point) {
         checkArgument(point.length == minValues.length, "incorrect length");
-        double[] minValuesMerged = new double[minValues.length];
-        double[] maxValuesMerged = new double[minValues.length];
-        double sum = 0.0;
-
-        for (int i = 0; i < minValues.length; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], point[i]);
-            maxValuesMerged[i] = Math.max(maxValues[i], point[i]);
-            sum += maxValuesMerged[i] - minValuesMerged[i];
-        }
-        return new BoundingBox(minValuesMerged, maxValuesMerged, sum);
+        return copy().addPoint(point);
     }
 
+    // the following needs to output BoundingBox for the older tests
+    // TODO: Clean up tests
     @Override
-    public IBoundingBoxView getMergedBox(IBoundingBoxView otherBox) {
+    public BoundingBox getMergedBox(IBoundingBoxView otherBox) {
         double[] minValuesMerged = new double[minValues.length];
         double[] maxValuesMerged = new double[minValues.length];
         double sum = 0.0;
@@ -91,29 +85,25 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
     }
 
     @Override
-    public BoundingBox getMergedBox(AbstractBoundingBox<double[]> otherBox) {
-        double[] minValuesMerged = new double[minValues.length];
-        double[] maxValuesMerged = new double[minValues.length];
-        double sum = 0.0;
-
-        for (int i = 0; i < minValues.length; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], otherBox.minValues[i]);
-            maxValuesMerged[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
-            sum += maxValuesMerged[i] - minValuesMerged[i];
-        }
-        return new BoundingBox(minValuesMerged, maxValuesMerged, sum);
-    }
-
-    @Override
     public BoundingBox addPoint(double[] point) {
         checkArgument(minValues.length == point.length, "incorrect length");
-        if (maxValues == minValues) {
-            return new BoundingBox(minValues, point);
-        }
+        checkArgument(minValues != maxValues, "not a mutable box");
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
             maxValues[i] = Math.max(maxValues[i], point[i]);
+            rangeSum += maxValues[i] - minValues[i];
+        }
+        return this;
+    }
+
+    @Override
+    public BoundingBox addBox(AbstractBoundingBox<double[]> otherBox) {
+        checkState(minValues != maxValues, "not a mutable box");
+        rangeSum = 0;
+        for (int i = 0; i < minValues.length; ++i) {
+            minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
+            maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;

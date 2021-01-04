@@ -44,9 +44,9 @@ public class HyperTree extends RandomCutTree {
         // this function allows a public call, which may be useful someday
         if (list.size() > 0) {
             // dimensions = list.get(0).length;
-            root = makeTreeInt(list, seed, 0, this.gVecBuild);
+            rootIndex = makeTreeInt(list, seed, 0, this.gVecBuild);
         } else {
-            root = null;
+            rootIndex = null;
         }
     }
 

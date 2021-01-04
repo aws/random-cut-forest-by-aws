@@ -24,6 +24,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Random;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
@@ -830,5 +832,39 @@ public class RandomCutForestFunctionalTest {
 
         }
         return shingledPoint;
+    }
+
+    @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
+            + "numTestSamples={4}, enableParallel={5}, numThreads={6}")
+    @CsvSource({ "10, 50, 256, 50000, 0, 0, 0" })
+    public void dynamicCachingChangeTest(int numDims, int numTrees, int numSamples, int numTrainSamples,
+            int numTestSamples, int enableParallel, int numThreads) {
+        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCachingEnabled(true).compactEnabled(false);
+        if (enableParallel == 0) {
+            forestBuilder.parallelExecutionEnabled(false);
+        }
+        if (numThreads > 0) {
+            forestBuilder.threadPoolSize(numThreads);
+        }
+        RandomCutForest forest = forestBuilder.build();
+        RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true).build();
+
+        int count = 0;
+        for (double[] point : generate(numTrainSamples, numDims, 0)) {
+            ++count;
+            double score = forest.getAnomalyScore(point);
+            double anotherScore = anotherForest.getAnomalyScore(point);
+            assertEquals(score, anotherScore, 1E-10);
+            forest.update(point);
+            anotherForest.update(point);
+        }
+
+    }
+
+    private double[][] generate(int numSamples, int numDimensions, int seed) {
+        return IntStream.range(0, numSamples).mapToObj(i -> new Random(seed + i).doubles(numDimensions).toArray())
+                .toArray(double[][]::new);
     }
 }
