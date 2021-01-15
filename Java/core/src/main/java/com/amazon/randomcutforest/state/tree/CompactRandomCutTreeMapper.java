@@ -19,7 +19,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
-import com.amazon.randomcutforest.tree.CompactNodeManager;
+import com.amazon.randomcutforest.state.store.LeafStoreMapper;
+import com.amazon.randomcutforest.state.store.NodeStoreMapper;
+import com.amazon.randomcutforest.store.LeafStore;
+import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 @Getter
@@ -32,10 +35,13 @@ public class CompactRandomCutTreeMapper implements
     @Override
     public CompactRandomCutTreeDouble toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
             long seed) {
-        CompactNodeManagerMapper compactNodeManagerMapper = new CompactNodeManagerMapper();
-        CompactNodeManager nodeManager = compactNodeManagerMapper.toModel(state.getCompactNodeManagerState());
+        LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+        LeafStore leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
-        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, context.getPointStore(), nodeManager,
+        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        NodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
+
+        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, context.getPointStore(), leafStore, nodeStore,
                 state.getRootIndex(), boundingBoxCacheEnabled);
     }
 
@@ -44,8 +50,11 @@ public class CompactRandomCutTreeMapper implements
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
         state.setRootIndex(model.getRootIndex());
 
-        CompactNodeManagerMapper compactNodeManagerMapper = new CompactNodeManagerMapper();
-        state.setCompactNodeManagerState(compactNodeManagerMapper.toState(model.getNodeManager()));
+        LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+        state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
+
+        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
 
         return state;
     }

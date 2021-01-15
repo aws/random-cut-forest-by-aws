@@ -15,10 +15,13 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
+import com.amazon.randomcutforest.store.ILeafStore;
+import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
@@ -36,9 +39,9 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
     }
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore,
-            CompactNodeManager nodeManager, int rootIndex, boolean cacheEnabled) {
-        super(maxSize, seed, nodeManager, rootIndex, cacheEnabled);
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, ILeafStore leafStore,
+            INodeStore nodeStore, int rootIndex, boolean cacheEnabled) {
+        super(maxSize, seed, leafStore, nodeStore, rootIndex, cacheEnabled);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
@@ -52,29 +55,38 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
         return new BoundingBox(first, second);
     }
 
     @Override
-    protected boolean checkEqual(double[] oldPoint, double[] point) {
+    protected boolean equals(double[] oldPoint, double[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
     @Override
-    AbstractBoundingBox<double[]> getLeafBoxFromLeafNode(Integer nodeReference) {
-        return new BoundingBox(pointStore.get(nodeManager.getPointIndex(nodeReference)));
+    protected AbstractBoundingBox<double[]> getLeafBoxFromLeafNode(Integer nodeReference) {
+        return new BoundingBox(pointStore.get(getPointReference(nodeReference)));
     }
 
     @Override
-    AbstractBoundingBox<double[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
-        double[] leafpoint = pointStore.get(nodeManager.getPointIndex(nodeReference));
+    protected AbstractBoundingBox<double[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
+        double[] leafpoint = pointStore.get(getPointReference(nodeReference));
         return new BoundingBox(Arrays.copyOf(leafpoint, leafpoint.length), Arrays.copyOf(leafpoint, leafpoint.length),
                 0);
     }
 
+    protected int getTreeIndexForLeafIndex(int leafIndex) {
+        return leafIndex + maxSize - 1;
+    }
+
+    protected int getLeafIndexForTreeIndex(int treeIndex) {
+        checkArgument(isLeaf(treeIndex), "treeIndex is not a valid leaf node index");
+        return treeIndex - maxSize + 1;
+    }
+
     double[] getPointSum(int ref) {
-        return nodeManager.isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
+        return isLeaf(ref) ? getPointFromLeafNode(ref) : pointSum[ref];
     }
 
     @Override
@@ -85,12 +97,12 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     // the following is for visitors
     @Override
     protected double[] getPoint(Integer node) {
-        double[] internal = pointStore.get(nodeManager.getPointIndex(node));
+        double[] internal = pointStore.get(getPointReference(node));
         return Arrays.copyOf(internal, internal.length);
     }
 
     double[] getPointSum(int ref, double[] point) {
-        if (nodeManager.isLeaf(ref)) {
+        if (isLeaf(ref)) {
             if (getMass(ref) == 1) {
                 return getPointFromLeafNode(ref);
             } else {
@@ -102,18 +114,18 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
             }
         }
         if (pointSum[ref] == null) {
-            reComputePointSum(ref, point);
+            recomputePointSum(ref, point);
         }
         return pointSum[ref];
     }
 
     @Override
-    void reComputePointSum(Integer node, double[] point) {
+    void recomputePointSum(Integer node, double[] point) {
         if (pointSum[node] == null) {
             pointSum[node] = new double[point.length];
         }
-        double[] leftSum = getPointSum(nodeManager.getLeftChild(node), point);
-        double[] rightSum = getPointSum(nodeManager.getRightChild(node), point);
+        double[] leftSum = getPointSum(getLeftChild(node), point);
+        double[] rightSum = getPointSum(getRightChild(node), point);
         for (int i = 0; i < point.length; i++) {
             pointSum[node][i] = leftSum[i] + rightSum[i];
         }

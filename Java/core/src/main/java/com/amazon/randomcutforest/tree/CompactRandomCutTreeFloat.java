@@ -20,6 +20,8 @@ import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
 
+import com.amazon.randomcutforest.store.ILeafStore;
+import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
@@ -37,9 +39,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
     }
 
-    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore,
-            CompactNodeManager nodeManager, int rootIndex, boolean cacheEnabled) {
-        super(maxSize, seed, nodeManager, rootIndex, cacheEnabled);
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, ILeafStore leafStore,
+            INodeStore nodeStore, int rootIndex, boolean cacheEnabled) {
+        super(maxSize, seed, leafStore, nodeStore, rootIndex, cacheEnabled);
         checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
@@ -53,24 +55,24 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    AbstractBoundingBox<float[]> getLeafBoxFromLeafNode(Integer pointIndex) {
-        return new BoundingBoxFloat(pointStore.get(nodeManager.getPointIndex(pointIndex)));
+    protected AbstractBoundingBox<float[]> getLeafBoxFromLeafNode(Integer pointIndex) {
+        return new BoundingBoxFloat(pointStore.get(getPointReference(pointIndex)));
     }
 
     @Override
-    AbstractBoundingBox<float[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
-        float[] leafpoint = pointStore.get(nodeManager.getPointIndex(nodeReference));
+    protected AbstractBoundingBox<float[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
+        float[] leafpoint = pointStore.get(getPointReference(nodeReference));
         return new BoundingBoxFloat(Arrays.copyOf(leafpoint, leafpoint.length),
                 Arrays.copyOf(leafpoint, leafpoint.length), 0);
     }
 
     @Override
-    AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
+    protected AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
         return new BoundingBoxFloat(first, second);
     }
 
     @Override
-    protected boolean checkEqual(float[] oldPoint, float[] point) {
+    protected boolean equals(float[] oldPoint, float[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
@@ -85,7 +87,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     float[] getPointSum(int ref, float[] point) {
-        if (nodeManager.isLeaf(ref)) {
+        if (isLeaf(ref)) {
             if (getMass(ref) == 1) {
                 return getPointFromLeafNode(ref);
             } else {
@@ -97,18 +99,18 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
             }
         }
         if (pointSum[ref] == null) {
-            reComputePointSum(ref, point);
+            recomputePointSum(ref, point);
         }
         return pointSum[ref];
     }
 
     @Override
-    void reComputePointSum(Integer node, float[] point) {
+    void recomputePointSum(Integer node, float[] point) {
         if (pointSum[node] == null) {
             pointSum[node] = new float[point.length];
         }
-        float[] leftSum = getPointSum(nodeManager.getLeftChild(node), point);
-        float[] rightSum = getPointSum(nodeManager.getRightChild(node), point);
+        float[] leftSum = getPointSum(getLeftChild(node), point);
+        float[] rightSum = getPointSum(getRightChild(node), point);
         for (int i = 0; i < point.length; i++) {
             pointSum[node][i] = leftSum[i] + rightSum[i];
         }

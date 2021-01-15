@@ -67,51 +67,40 @@ public class LeafStore extends SmallIndexManager implements ILeafStore {
         this.parentIndex[index] = (short) parentIndex;
         this.mass[index] = (short) mass;
         this.pointIndex[index] = pointIndex;
-        return index + super.capacity;
-    }
-
-    @Override
-    public boolean isLeaf(int index) {
-        return index >= super.capacity;
+        return index;
     }
 
     @Override
     public void setParent(int index, int parent) {
-        parentIndex[index - super.capacity] = (short) parent;
+        parentIndex[index] = (short) parent;
     }
 
     @Override
     public int getParent(int index) {
-        return parentIndex[index - super.capacity];
+        return parentIndex[index];
     }
 
     public void delete(int index) {
-        releaseIndex(index - super.capacity);
+        releaseIndex(index);
     }
 
     @Override
     public int getPointIndex(int index) {
-        return pointIndex[index - super.capacity];
+        return pointIndex[index];
     }
 
     @Override
     public int incrementMass(int index) {
-        return ++mass[index - super.capacity];
+        return ++mass[index];
     }
 
     @Override
     public int decrementMass(int index) {
-        return --mass[index - super.capacity];
+        return --mass[index];
     }
 
     @Override
     public int getMass(int index) {
-        return mass[index - super.capacity];
+        return mass[index];
     }
-
-    @Override
-    public int getMinIndex() {
-        return super.capacity;
-    }
-
 }

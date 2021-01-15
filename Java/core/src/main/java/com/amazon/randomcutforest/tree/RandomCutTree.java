@@ -119,7 +119,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    protected boolean checkEqual(double[] oldPoint, double[] point) {
+    protected boolean equals(double[] oldPoint, double[] point) {
         return Arrays.equals(oldPoint, point);
     }
 
@@ -141,7 +141,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    void reComputePointSum(Node node, double[] point) {
+    void recomputePointSum(Node node, double[] point) {
         node.reComputePointSum(point);
     }
 
@@ -156,7 +156,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
         return new BoundingBox(first, second);
     }
 
@@ -172,12 +172,12 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    BoundingBox getLeafBoxFromLeafNode(Node node) {
+    protected BoundingBox getLeafBoxFromLeafNode(Node node) {
         return new BoundingBox(node.getLeafPoint());
     }
 
     @Override
-    BoundingBox getMutableLeafBoxFromLeafNode(Node node) {
+    protected BoundingBox getMutableLeafBoxFromLeafNode(Node node) {
         double[] leafPoint = node.getLeafPoint();
         return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length), Arrays.copyOf(leafPoint, leafPoint.length),
                 0);
@@ -267,7 +267,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    void replaceNode(Node parent, Node child, Node otherNode) {
+    void replaceChild(Node parent, Node child, Node otherNode) {
         if (parent.getLeftChild() == child) {
             parent.setLeftChild(otherNode);
         } else if (parent.getRightChild() == child) {
@@ -280,7 +280,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     protected void replaceNodeBySibling(Node grandParent, Node parent, Node node) {
-        replaceNode(grandParent, parent, getSibling(node));
+        replaceChild(grandParent, parent, getSibling(node));
     }
 
     @Override
