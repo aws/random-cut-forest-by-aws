@@ -371,7 +371,7 @@ public class RandomCutTreeTest {
         assertThat(node3.getParent(), is(nullValue()));
 
         // replace the left child
-        tree.replaceNode(parent, node1, node3);
+        tree.replaceChild(parent, node1, node3);
         assertThat(parent.getLeftChild(), sameInstance(node3));
         assertThat(parent.getRightChild(), sameInstance(node2));
         assertThat(node3.getParent(), sameInstance(parent));
@@ -384,7 +384,7 @@ public class RandomCutTreeTest {
         node3.setParent(null);
 
         // replace the right child
-        tree.replaceNode(parent, node2, node3);
+        tree.replaceChild(parent, node2, node3);
         assertThat(parent.getLeftChild(), sameInstance(node1));
         assertThat(parent.getRightChild(), sameInstance(node3));
         assertThat(node1.getParent(), sameInstance(parent));

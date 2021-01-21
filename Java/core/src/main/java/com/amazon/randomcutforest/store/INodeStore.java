@@ -67,7 +67,7 @@ public interface INodeStore {
      * @param newIndex new node to take the same position of oldIndex in the tree
      */
 
-    void replaceNode(int parent, int oldIndex, int newIndex);
+    void replaceChild(int parent, int oldIndex, int newIndex);
 
     /**
      * gets rightChild
@@ -127,22 +127,6 @@ public interface INodeStore {
      * @return
      */
     int getMass(int index);
-
-    /**
-     * returns is the node a leaf (not handled by node store)
-     * 
-     * @param index node
-     * @return yes/no re leaf
-     */
-    boolean isLeaf(int index);
-
-    /**
-     * returns the maximum value of a node index to be considered as an internal
-     * nodes
-     * 
-     * @return
-     */
-    int getMaxIndex();
 
     /**
      * increases the mass of node as well as all its ancestors by 1 note that all

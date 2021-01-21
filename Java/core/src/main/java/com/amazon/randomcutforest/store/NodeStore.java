@@ -108,7 +108,7 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
-    public void replaceNode(int parent, int oldIndex, int newIndex) {
+    public void replaceChild(int parent, int oldIndex, int newIndex) {
         if (leftIndex[parent] == oldIndex) {
             leftIndex[parent] = (short) newIndex;
         } else {
@@ -149,17 +149,6 @@ public class NodeStore extends SmallIndexManager implements INodeStore {
     @Override
     public int getMass(int index) {
         return mass[index];
-    }
-
-    // technically the number of internal nodes is sampleSize - 1
-    @Override
-    public boolean isLeaf(int index) {
-        return index >= super.capacity + 1;
-    }
-
-    @Override
-    public int getMaxIndex() {
-        return super.capacity;
     }
 
     public void increaseMassOfAncestorsAndItself(int index) {

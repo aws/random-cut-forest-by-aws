@@ -37,9 +37,9 @@ public class CompactNodeView implements INode<Integer> {
 
     public IBoundingBoxView getSiblingBoundingBox(double[] point) {
         if (tree.leftOf(point, currentNodeOffset)) {
-            return tree.getBoundingBox(tree.nodeManager.getRightChild(currentNodeOffset));
+            return tree.getBoundingBox(tree.getRightChild(currentNodeOffset));
         } else {
-            return tree.getBoundingBox(tree.nodeManager.getLeftChild(currentNodeOffset));
+            return tree.getBoundingBox(tree.getLeftChild(currentNodeOffset));
         }
     }
 
@@ -48,12 +48,12 @@ public class CompactNodeView implements INode<Integer> {
     }
 
     public int getCutDimension() {
-        return tree.nodeManager.getCutDimension(currentNodeOffset);
+        return tree.getCutDimension(currentNodeOffset);
     }
 
     @Override
     public double getCutValue() {
-        return tree.nodeManager.getCutValue(currentNodeOffset);
+        return tree.getCutValue(currentNodeOffset);
     }
 
     public double[] getLeafPoint() {
@@ -71,17 +71,17 @@ public class CompactNodeView implements INode<Integer> {
 
     @Override
     public INode<Integer> getLeftChild() {
-        return new CompactNodeView(tree, tree.nodeManager.getLeftChild(currentNodeOffset));
+        return new CompactNodeView(tree, tree.getLeftChild(currentNodeOffset));
     }
 
     @Override
     public INode<Integer> getRightChild() {
-        return new CompactNodeView(tree, tree.nodeManager.getRightChild(currentNodeOffset));
+        return new CompactNodeView(tree, tree.getRightChild(currentNodeOffset));
     }
 
     @Override
     public INode<Integer> getParent() {
-        return new CompactNodeView(tree, tree.nodeManager.getParent(currentNodeOffset));
+        return new CompactNodeView(tree, tree.getParent(currentNodeOffset));
     }
 
 }

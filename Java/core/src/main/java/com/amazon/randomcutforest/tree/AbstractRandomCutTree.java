@@ -116,16 +116,16 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // decides the path taken in the abstract tree at update time
-    abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
+    protected abstract boolean leftOf(Point point, int cutDimension, double cutValue);
 
     // checks equality based on precision
-    abstract protected boolean checkEqual(Point oldPoint, Point point);
+    protected abstract boolean equals(Point oldPoint, Point point);
 
     // prints a point based on precision
-    abstract protected String toString(Point point);
+    protected abstract String toString(Point point);
 
     // creates a bounding box based on two points, it is a very common occurrence
-    abstract AbstractBoundingBox<Point> getInternalTwoPointBox(Point first, Point second);
+    protected abstract AbstractBoundingBox<Point> getInternalTwoPointBox(Point first, Point second);
 
     /**
      * Takes a node reference and produces a bounding box; cannot return null If
@@ -145,13 +145,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // function for getting the bounding boxes for leaf nodes
-    abstract AbstractBoundingBox<Point> getLeafBoxFromLeafNode(NodeReference nodeReference);
+    protected abstract AbstractBoundingBox<Point> getLeafBoxFromLeafNode(NodeReference nodeReference);
 
     // function for getting the bounding boxes for leaf nodes that can be mutated in
     // place
-    abstract AbstractBoundingBox<Point> getMutableLeafBoxFromLeafNode(NodeReference nodeReference);
+    protected abstract AbstractBoundingBox<Point> getMutableLeafBoxFromLeafNode(NodeReference nodeReference);
 
-    abstract protected AbstractBoundingBox<Point> constructBoxInPlace(NodeReference nodeReference);
+    protected abstract AbstractBoundingBox<Point> constructBoxInPlace(NodeReference nodeReference);
 
     /*
      * // constructing a bounding box in place protected AbstractBoundingBox<Point>
@@ -212,7 +212,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract protected NodeReference getRightChild(NodeReference nodeReference);
 
     // replaces child (with designated parent) by otherNode
-    abstract void replaceNode(NodeReference parent, NodeReference child, NodeReference otherNode);
+    abstract void replaceChild(NodeReference parent, NodeReference child, NodeReference otherNode);
 
     // implements the delete step in RCF
     abstract protected void replaceNodeBySibling(NodeReference grandParent, NodeReference Parent, NodeReference node);
@@ -235,13 +235,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     abstract protected void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
-    abstract void reComputePointSum(NodeReference node, Point point);
+    abstract void recomputePointSum(NodeReference node, Point point);
 
     void updateAncestorPointSum(NodeReference node, Point point) {
         if (enableCenterOfMass) {
             NodeReference tempNode = node;
             while (tempNode != null) {
-                reComputePointSum(tempNode, point);
+                recomputePointSum(tempNode, point);
                 tempNode = getParent(tempNode);
             }
         }
@@ -289,7 +289,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         if (isLeaf(nodeReference)) {
             Point oldPoint = getPointFromLeafNode(nodeReference);
-            if (!checkEqual(oldPoint, point)) {
+            if (!equals(oldPoint, point)) {
                 throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference))
                         + " " + nodeReference + " node " + false + " Inconsistency in trees in delete step here.");
             }
@@ -364,7 +364,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param addPointState the information about the cut.
      */
 
-    void resolve(Point point, NodeReference parentIndex,
+    protected void resolve(Point point, NodeReference parentIndex,
             AddPointState<Point, NodeReference, PointReference> addPointState) {
         if (!addPointState.getResolved()) {
             addPointState.setResolved();
@@ -381,7 +381,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             if (parent == null) {
                 rootIndex = mergedNode;
             } else {
-                replaceNode(parent, siblingNode, mergedNode);
+                replaceChild(parent, siblingNode, mergedNode);
             }
 
             setParent(leafNode, mergedNode);
@@ -415,7 +415,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         if (isLeaf(nodeReference)) {
             Point oldPoint = getPointFromLeafNode(nodeReference);
-            if (checkEqual(oldPoint, point)) {
+            if (equals(oldPoint, point)) {
                 // the inserted point is equal to an existing leaf point
                 incrementMass(nodeReference);
                 increaseMassOfAncestors(nodeReference);

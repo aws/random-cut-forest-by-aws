@@ -69,14 +69,6 @@ public interface ILeafStore {
     int getPointIndex(int index);
 
     /**
-     * is the node a leaf? Should be in agreement with the corresponding node store
-     * 
-     * @param index node
-     * @return yes/no
-     */
-    boolean isLeaf(int index);
-
-    /**
      * increases the mass of the leaf and returns the value
      * 
      * @param index node
@@ -101,12 +93,4 @@ public interface ILeafStore {
      * @return current mass
      */
     int getMass(int index);
-
-    /**
-     * returns the smallest index considered a leaf node
-     * 
-     * @return value of index
-     */
-    int getMinIndex();
-
 }

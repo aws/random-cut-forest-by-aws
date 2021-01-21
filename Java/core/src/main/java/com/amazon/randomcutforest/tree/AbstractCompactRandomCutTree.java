@@ -21,7 +21,11 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.HashSet;
 
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.store.ILeafStore;
+import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
+import com.amazon.randomcutforest.store.LeafStore;
+import com.amazon.randomcutforest.store.NodeStore;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -49,19 +53,21 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     public static final int NULL = -1;
 
     protected int maxSize;
-    protected final CompactNodeManager nodeManager;
+    protected final ILeafStore leafStore;
+    protected final INodeStore nodeStore;
     protected IPointStoreView<Point> pointStore;
     protected AbstractBoundingBox<Point>[] cachedBoxes;
     protected Point[] pointSum;
     protected boolean enableCache;
-    protected HashSet[] sequenceIndexes;
+    protected HashSet<Long>[] sequenceIndexes;
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         this.maxSize = maxSize;
-        nodeManager = new CompactNodeManager(maxSize);
+        leafStore = new LeafStore((short) maxSize);
+        nodeStore = new NodeStore((short) (maxSize - 1));
         rootIndex = null;
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
@@ -72,16 +78,26 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         // setBoundingBoxCacheFraction(0.3);
     }
 
-    public AbstractCompactRandomCutTree(int maxSize, long seed, CompactNodeManager nodeManager, int rootIndex,
-            boolean enableCache) {
+    public AbstractCompactRandomCutTree(int maxSize, long seed, ILeafStore leafStore, INodeStore nodeStore,
+            int rootIndex, boolean enableCache) {
         super(seed, enableCache, false, false);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
-        checkNotNull(nodeManager, "nodeManager must not be null");
+        checkNotNull(leafStore, "leafStore must not be null");
+        checkNotNull(nodeStore, "nodeStore must not be null");
 
         this.maxSize = maxSize;
+        this.leafStore = leafStore;
+        this.nodeStore = nodeStore;
         this.rootIndex = rootIndex;
-        this.nodeManager = nodeManager;
         this.enableCache = enableCache;
+    }
+
+    public ILeafStore getLeafStore() {
+        return leafStore;
+    }
+
+    public INodeStore getNodeStore() {
+        return nodeStore;
     }
 
     @Override
@@ -176,10 +192,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    public CompactNodeManager getNodeManager() {
-        return nodeManager;
-    }
-
     public int getRootIndex() {
         return rootIndex;
     }
@@ -188,7 +200,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
 
     @Override
-    abstract protected boolean checkEqual(Point oldPoint, Point point);
+    abstract protected boolean equals(Point oldPoint, Point point);
 
     @Override
     abstract protected String toString(Point point);
@@ -203,92 +215,176 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     // returns the position in the point store
     @Override
     Integer getPointReference(Integer node) {
-        checkArgument(node != null, "incorrect request");
-        return nodeManager.getPointIndex(node);
+        return getPointReference(intValue(node));
+    }
+
+    int getPointReference(int index) {
+        checkArgument(isLeaf(index), "index is not a valid leaf node index");
+        return leafStore.getPointIndex(getLeafIndexForTreeIndex(index));
     }
 
     @Override
     protected boolean isLeaf(Integer node) {
-        return nodeManager.isLeaf(node);
+        return isLeaf(intValue(node));
+    }
+
+    protected boolean isLeaf(int index) {
+        return index >= maxSize - 1;
     }
 
     @Override
     protected int decrementMass(Integer node) {
-        return nodeManager.decrementMass(node);
+        return decrementMass(intValue(node));
+    }
+
+    protected int decrementMass(int node) {
+        return isLeaf(node) ? leafStore.decrementMass(getLeafIndexForTreeIndex(node)) : nodeStore.decrementMass(node);
     }
 
     @Override
     protected int incrementMass(Integer node) {
-        return nodeManager.incrementMass(node);
+        return incrementMass(intValue(node));
+    }
+
+    protected int incrementMass(int node) {
+        return isLeaf(node) ? leafStore.incrementMass(getLeafIndexForTreeIndex(node)) : nodeStore.incrementMass(node);
     }
 
     @Override
     protected Integer getSibling(Integer node) {
-        return nodeManager.getSibling(node);
+        return getSibling(intValue(node));
+    }
+
+    protected int getSibling(int node) {
+        int parent = getParent(node);
+        checkArgument(parent != NULL, "node does not have a parent or a sibling");
+        return nodeStore.getSibling(parent, node);
     }
 
     @Override
     protected Integer getParent(Integer node) {
-        return nodeManager.getParent(node);
+        int parent = getParent(intValue(node));
+        return parent != NULL ? parent : null;
+    }
+
+    protected int getParent(int node) {
+        if (isLeaf(node)) {
+            return leafStore.getParent(getLeafIndexForTreeIndex(node));
+        } else {
+            return nodeStore.getParent(node);
+        }
     }
 
     @Override
-    protected void setParent(Integer node, Integer parent) {
-        nodeManager.setParent(node, parent);
+    protected void setParent(Integer child, Integer parent) {
+        setParent(intValue(child), intValue(parent));
+    }
+
+    protected void setParent(int child, int parent) {
+        if (isLeaf(child)) {
+            leafStore.setParent(getLeafIndexForTreeIndex(child), parent);
+        } else {
+            nodeStore.setParent(child, parent);
+        }
     }
 
     @Override
     protected void delete(Integer node) {
-        nodeManager.delete(node);
+        delete(intValue(node));
+    }
+
+    protected void delete(int node) {
+        if (isLeaf(node)) {
+            leafStore.delete(getLeafIndexForTreeIndex(node));
+        } else {
+            nodeStore.delete(node);
+        }
     }
 
     @Override
     protected int getCutDimension(Integer node) {
-        return nodeManager.getCutDimension(node);
+        return nodeStore.getCutDimension(node);
     }
 
     @Override
     protected double getCutValue(Integer node) {
-        return nodeManager.getCutValue(node);
+        return nodeStore.getCutValue(node);
     }
 
     @Override
     protected Integer getLeftChild(Integer node) {
-        return nodeManager.getLeftChild(node);
+        return nodeStore.getLeftIndex(node);
     }
 
     @Override
     protected Integer getRightChild(Integer node) {
-        return nodeManager.getRightChild(node);
+        return nodeStore.getRightIndex(node);
     }
 
     @Override
-    protected void replaceNode(Integer parent, Integer child, Integer otherNode) {
-        nodeManager.replaceNode(parent, child, otherNode);
+    void replaceChild(Integer parent, Integer child, Integer otherNode) {
+        replaceChild(intValue(parent), intValue(child), intValue(otherNode));
+    }
+
+    protected void replaceChild(int parent, int child, int otherNode) {
+        nodeStore.replaceChild(parent, child, otherNode);
+        setParent(otherNode, parent);
     }
 
     @Override
     protected void replaceNodeBySibling(Integer grandParent, Integer parent, Integer node) {
-        nodeManager.replaceParentBySiblingOfNode(grandParent, parent, node);
+        replaceNodeBySibling(intValue(grandParent), intValue(parent), intValue(node));
+
+    }
+
+    protected void replaceNodeBySibling(int grandParent, int parent, int node) {
+        int sibling = nodeStore.getSibling(parent, node);
+        nodeStore.replaceChild(grandParent, parent, sibling);
+        setParent(sibling, grandParent);
     }
 
     @Override
     protected Integer addLeaf(Integer pointIndex) {
-        return nodeManager.addLeaf(null, pointIndex, 1);
+        return getTreeIndexForLeafIndex(leafStore.addLeaf(NULL, pointIndex, 1));
     }
 
     @Override
     protected Integer addNode(Integer leftChild, Integer rightChild, int cutDimension, double cutValue, int mass) {
-        return nodeManager.addNode(null, leftChild, rightChild, cutDimension, cutValue, mass);
+        return addNode(intValue(leftChild), intValue(rightChild), cutDimension, cutValue, mass);
+    }
+
+    protected int addNode(int leftChild, int rightChild, int cutDimension, double cutValue, int mass) {
+        return nodeStore.addNode(NULL, leftChild, rightChild, cutDimension, cutValue, mass);
     }
 
     @Override
     protected void increaseMassOfAncestors(Integer mergedNode) {
-        nodeManager.increaseMassOfAncestors(mergedNode);
+        nodeStore.increaseMassOfAncestorsAndItself(getParent(mergedNode.intValue()));
     }
 
     @Override
     protected int getMass(Integer node) {
-        return nodeManager.getMass(node);
+        return getMass(intValue(node));
+    }
+
+    protected int getMass(int node) {
+        return isLeaf(node) ? leafStore.getMass(getLeafIndexForTreeIndex(node)) : nodeStore.getMass(node);
+    }
+
+    protected int getTreeIndexForLeafIndex(int leafIndex) {
+        return leafIndex + maxSize - 1;
+    }
+
+    protected int getLeafIndexForTreeIndex(int treeIndex) {
+        checkArgument(isLeaf(treeIndex), "treeIndex is not a valid leaf node index");
+        return treeIndex - maxSize + 1;
+    }
+
+    protected static int intValue(Integer i) {
+        return i == null ? NULL : i;
+    }
+
+    protected static short shortValue(Short s) {
+        return s == null ? (short) NULL : s;
     }
 }
