@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -47,6 +48,14 @@ public class RandomCutForestMapperTest {
         return Stream.of(cachedDouble, cachedFloat, uncachedDouble, uncachedFloat);
     }
 
+    private RandomCutForestMapper mapper;
+
+    @BeforeEach
+    public void setUp() {
+        mapper = new RandomCutForestMapper();
+        mapper.setSaveExecutorContext(true);
+    }
+
     @ParameterizedTest
     @MethodSource("compactForestProvider")
     public void testRoundTripForCompactForest(RandomCutForest forest) {
@@ -56,8 +65,6 @@ public class RandomCutForestMapperTest {
             forest.update(point);
         }
 
-        RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
         assertEquals(forest.getDimensions(), forest2.getDimensions());
@@ -101,5 +108,12 @@ public class RandomCutForestMapperTest {
                 assertEquals(store.getRefCount(i), store2.getRefCount(i));
             }
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("compactForestProvider")
+    public void testRoundTripForCompactForestSaveTreeState(RandomCutForest forest) {
+        mapper.setSaveTreeState(true);
+        testRoundTripForCompactForest(forest);
     }
 }
