@@ -20,33 +20,32 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.Arrays;
 
 import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
 
-public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, PointStoreState> {
+public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, PointStoreState> {
 
     @Override
-    public PointStoreDouble toModel(PointStoreState state, long seed) {
+    public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
-        checkNotNull(state.getDoubleData(), "doubleData must not be null");
+        checkNotNull(state.getFloatData(), "floatdata must not be null");
 
         int capacity = state.getRefCount().length;
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        double[] store = Arrays.copyOf(state.getDoubleData(), state.getDoubleData().length);
+        float[] store = Arrays.copyOf(state.getFloatData(), state.getFloatData().length);
 
         int freeIndexPointer = state.getFreeIndexes().length - 1;
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
 
-        return new PointStoreDouble(store, refCount, freeIndexes, freeIndexPointer);
+        return new PointStoreFloat(store, refCount, freeIndexes, freeIndexPointer);
     }
 
     @Override
-    public PointStoreState toState(PointStoreDouble model) {
+    public PointStoreState toState(PointStoreFloat model) {
         PointStoreState state = new PointStoreState();
-        state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStore().length));
+        state.setFloatData(Arrays.copyOf(model.getStore(), model.getStore().length));
         state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }
-
 }

@@ -107,18 +107,20 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     @Override
     protected void addSequenceIndex(Integer nodeRef, long sequenceIndex) {
-        if (sequenceIndexes[nodeRef] == null) {
-            sequenceIndexes[nodeRef] = new HashSet<Long>();
+        int leafRef = getLeafIndexForTreeIndex(nodeRef);
+        if (sequenceIndexes[leafRef] == null) {
+            sequenceIndexes[leafRef] = new HashSet<>();
         }
-        sequenceIndexes[nodeRef].add(sequenceIndex);
+        sequenceIndexes[leafRef].add(sequenceIndex);
     }
 
     @Override
     protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
-        if (sequenceIndexes[nodeRef] == null || !sequenceIndexes[nodeRef].contains(sequenceIndex)) {
+        int leafRef = getLeafIndexForTreeIndex(nodeRef);
+        if (sequenceIndexes[leafRef] == null || !sequenceIndexes[leafRef].contains(sequenceIndex)) {
             throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
         }
-        sequenceIndexes[nodeRef].remove(sequenceIndex);
+        sequenceIndexes[leafRef].remove(sequenceIndex);
     }
 
     @Override

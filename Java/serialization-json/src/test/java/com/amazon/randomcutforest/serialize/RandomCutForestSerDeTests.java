@@ -25,6 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 
@@ -59,6 +60,9 @@ public class RandomCutForestSerDeTests {
                 .sampleSize(numSamples).randomSeed(0).compactEnabled(false).boundingBoxCachingEnabled(true).build();
         RandomCutForest unCachedPointerForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
                 .sampleSize(numSamples).randomSeed(0).compactEnabled(false).boundingBoxCachingEnabled(false).build();
+        RandomCutForest singlePrecisionForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true)
+                .precision(Precision.SINGLE).build();
 
         int count = 0;
         for (double[] point : generate(numTrainSamples, numDims, 0)) {
@@ -68,10 +72,12 @@ public class RandomCutForestSerDeTests {
             assertEquals(score, anotherForest.getAnomalyScore(point), 1E-10);
             assertEquals(anotherScore, pointerForest.getAnomalyScore(point), 1E-10);
             assertEquals(score, unCachedPointerForest.getAnomalyScore(point), 1E-10);
+            assertEquals(anotherScore, singlePrecisionForest.getAnomalyScore(point), 0.1 * anotherScore);
             forest.update(point);
             anotherForest.update(point);
             pointerForest.update(point);
             unCachedPointerForest.update(point);
+            singlePrecisionForest.update(point);
         }
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
@@ -109,6 +115,7 @@ public class RandomCutForestSerDeTests {
             reForest.update(point);
             pointerForest.update(point);
             unCachedPointerForest.update(point);
+            singlePrecisionForest.update(point);
         }
         /**
          * It may be the case that more than epsilon = 0.05 fraction of the points are
