@@ -15,71 +15,110 @@
 
 package com.amazon.randomcutforest.serialize;
 
-import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
-import java.util.function.BiFunction;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.Getter;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.state.ExecutorContext;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
-import com.amazon.randomcutforest.tree.Node;
-import com.google.gson.ExclusionStrategy;
-import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 /**
- * {@link RandomCutForest} serialization.
+ * {@link RandomCutForest} serialization. Internally we use the
+ * {@link RandomCutForestMapper} class to convert a RandomCutForest into a
+ * corresponding state object, and we use
+ * <a href="https://github.com/google/gson">Gson</a> to write the state object
+ * as a JSON string. The choice to use Gson is an arbitrary implementation
+ * detail, but we expose it so users can customize the Gson output (e.g., by
+ * enabling pretty printing).
  */
+@Getter
 public class RandomCutForestSerDe {
 
+    private RandomCutForestMapper mapper;
     private final Gson gson;
 
     /**
      * Constructor instantiating objects for default serialization.
      */
     public RandomCutForestSerDe() {
-        Set<Class<?>> serializationSkipClasses = Stream.of(BiFunction.class, Node.class, ForkJoinPool.class)
-                .collect(Collectors.toSet());
-        this.gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
-            @Override
-            public boolean shouldSkipClass(Class<?> clazz) {
-                return serializationSkipClasses.contains(clazz);
-            }
+        this(new RandomCutForestMapper(), new Gson());
+    }
 
-            @Override
-            public boolean shouldSkipField(FieldAttributes field) {
-                return false;
-            }
-        }).create();
-        /*
-         * registerTypeAdapter(TreeUpdater.class, new TreeUpdaterAdapter())
-         * .registerTypeAdapter(AbstractForestTraversalExecutor.class, new
-         * AbstractForestTraversalExecutorAdapter())
-         * .registerTypeAdapter(RandomCutForest.class, new RandomCutForestAdapter())
-         * .registerTypeAdapter(Random.class, new RandomAdapter()).create();
-         * 
-         */
+    /**
+     * Create a SerDe instance using the provided mapper and Gson objects.
+     * 
+     * @param mapper A RandomCutForestMapper instance, used to convert a
+     *               RandomCutForest to a corresponding state object.
+     * @param gson   A Gson instance that will be used to generate JSON for a given
+     *               {@link RandomCutForestState} object.
+     */
+    public RandomCutForestSerDe(RandomCutForestMapper mapper, Gson gson) {
+        this.mapper = mapper;
+        this.gson = gson;
     }
 
     /**
      * Serializes a RCF object to a json string.
      *
-     * @param forestState a RCF ForestState object
-     * @return a json string serialized from the RCF
+     * @param forest A Random Cut Forest
+     * @return a json string serialized from the Random Cut Forest.
      */
-    public String toJson(RandomCutForestState forestState) {
-        return gson.toJson(forestState);
+    public String toJson(RandomCutForest forest) {
+        return gson.toJson(mapper.toState(forest));
     }
 
     /**
-     * Deserializes a serialized RCF json string to a RCF object.
+     * Deserializes a serialized Random Cut Forest JSON string to a Random Cut
+     * Forest object.
      *
      * @param json a json string serialized from a RCF
      * @return a RCF deserialized from the string
      */
-    public RandomCutForestState fromJson(String json) {
-        return gson.fromJson(json, RandomCutForestState.class);
+    public RandomCutForest fromJson(String json) {
+        RandomCutForestState state = gson.fromJson(json, RandomCutForestState.class);
+        return mapper.toModel(state);
+    }
+
+    /**
+     * Deserializes a serialized Random Cut Forest JSON string to a Random Cut
+     * Forest object.
+     *
+     * @param json A json string serialized from a RCF
+     * @param seed A random seed value used to initialize the forest.
+     * @return a RCF deserialized from the string
+     */
+    public RandomCutForest fromJson(String json, long seed) {
+        RandomCutForestState state = gson.fromJson(json, RandomCutForestState.class);
+        return mapper.toModel(state, seed);
+    }
+
+    /**
+     * Deserializes a serialized Random Cut Forest JSON string to a Random Cut
+     * Forest object.
+     *
+     * @param json    A json string serialized from a RCF
+     * @param context An executor context that determines the execution properties
+     *                of the deserialized forest.
+     * @return a RCF deserialized from the string
+     */
+    public RandomCutForest fromJson(String json, ExecutorContext context) {
+        RandomCutForestState state = gson.fromJson(json, RandomCutForestState.class);
+        return mapper.toModel(state, context);
+    }
+
+    /**
+     * Deserializes a serialized Random Cut Forest JSON string to a Random Cut
+     * Forest object.
+     *
+     * @param json    A json string serialized from a RCF
+     * @param context An executor context that determines the execution properties
+     *                of the deserialized forest.
+     * @param seed    A random seed value used to initialize the forest.
+     * @return a RCF deserialized from the string
+     */
+    public RandomCutForest fromJson(String json, ExecutorContext context, long seed) {
+        RandomCutForestState state = gson.fromJson(json, RandomCutForestState.class);
+        return mapper.toModel(state, context, seed);
     }
 }
