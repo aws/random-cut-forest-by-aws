@@ -15,169 +15,96 @@
 
 package com.amazon.randomcutforest.serialize;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Random;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.state.RandomCutForestState;
 
 public class RandomCutForestSerDeTests {
 
-    private RandomCutForestSerDe serializer = new RandomCutForestSerDe();
+    private static final int dimensions = 4;
+    private static final int numberOfTrees = 30;
+    private static final int sampleSize = 128;
+    private static double[][] testData;
 
-    @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
-            + "numTestSamples={4}, enableParallel={5}, numThreads={6}")
-
-    @CsvSource({ "1, 100, 256, 32, 1024, 0, 0", "1, 100, 256, 256, 1024, 0, 0", "1, 100, 256, 512, 1024, 0, 0",
-            "1, 100, 256, 1024, 1024, 0, 0", "10, 100, 256, 32, 1024, 0, 0", "10, 100, 256, 256, 1024, 0, 0",
-            "10, 100, 256, 512, 1024, 0, 0", "10, 100, 256, 1024, 1024, 0, 0", "1, 100, 256, 32, 1024, 1, 0",
-            "1, 100, 256, 256, 1024, 1, 1", "1, 100, 256, 512, 1024, 1, 2", "1, 100, 256, 1024, 1024, 1, 4",
-            "10, 100, 256, 32, 1024, 1, 0", "10, 100, 256, 1024, 1024, 1, 1", "4, 100, 256, 1024, 1024, 1, 2",
-            "10, 100, 256, 1024, 10240, 1, 6" })
-
-    public void toJsonString(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
-            int enableParallel, int numThreads) {
-        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).boundingBoxCachingEnabled(false).compactEnabled(true);
-        if (enableParallel == 0) {
-            forestBuilder.parallelExecutionEnabled(false);
-        }
-        if (numThreads > 0) {
-            forestBuilder.threadPoolSize(numThreads);
-        }
-        RandomCutForest forest = forestBuilder.build();
-        RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true).build();
-        RandomCutForest pointerForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(false).boundingBoxCachingEnabled(true).build();
-        RandomCutForest unCachedPointerForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(false).boundingBoxCachingEnabled(false).build();
-        RandomCutForest singlePrecisionForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true)
-                .precision(Precision.SINGLE).build();
-
-        int count = 0;
-        for (double[] point : generate(numTrainSamples, numDims, 0)) {
-            ++count;
-            double score = forest.getAnomalyScore(point);
-            double anotherScore = anotherForest.getAnomalyScore(point);
-            assertEquals(score, anotherForest.getAnomalyScore(point), 1E-10);
-            assertEquals(anotherScore, pointerForest.getAnomalyScore(point), 1E-10);
-            assertEquals(score, unCachedPointerForest.getAnomalyScore(point), 1E-10);
-            assertEquals(anotherScore, singlePrecisionForest.getAnomalyScore(point), 0.1 * anotherScore);
-            forest.update(point);
-            anotherForest.update(point);
-            pointerForest.update(point);
-            unCachedPointerForest.update(point);
-            singlePrecisionForest.update(point);
-        }
-
-        RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveTreeState(true);
-        mapper.setSaveExecutorContext(true);
-
-        RandomCutForestState forestState = mapper.toState(forest);
-        String json = serializer.toJson(forestState);
-
-        RandomCutForestState reForestState = serializer.fromJson(json);
-        System.out.println(" Size " + json.length());
-
-        RandomCutForest reForest = mapper.toModel(reForestState);
-
-        int num = 0;
-        int numForDimOne = 0;
-        double delta = Math.log(numSamples) / Math.log(2) * 0.05;
-        for (double[] point : generate(numTestSamples, numDims, numTrainSamples)) {
-            double score = forest.getAnomalyScore(point);
-            double newScore = reForest.getAnomalyScore(point);
-            double anotherScore = anotherForest.getAnomalyScore(point);
-            assertEquals(score, anotherScore, 1E-10);
-            assertEquals(score, unCachedPointerForest.getAnomalyScore(point), 1E-10);
-            assertEquals(score, pointerForest.getAnomalyScore(point), 1E-10);
-            if (numDims > 1) {
-                assertTrue(Math.abs(score - newScore) < delta);
-                if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > 0.05 * score))
-                    num++;
-            } else {
-                if (((score > 1) || (newScore > 1)) && (Math.abs(score - newScore) > delta))
-                    numForDimOne++;
+    @BeforeAll
+    public static void oneTimeSetUp() {
+        testData = new double[4 * sampleSize][dimensions];
+        for (int i = 0; i < 4 * sampleSize; i++) {
+            for (int j = 0; j < dimensions; j++) {
+                testData[i][j] = Math.random();
             }
-            anotherForest.update(point);
-            forest.update(point);
-            reForest.update(point);
-            pointerForest.update(point);
-            unCachedPointerForest.update(point);
-            singlePrecisionForest.update(point);
         }
-        /**
-         * It may be the case that more than epsilon = 0.05 fraction of the points are
-         * not within 5% of the score, but then all those scores are lower than 1. Note
-         * that for numDims>1 the difference never exceeds delta.
-         *
-         * For numDims == 1, there may be more noise; and hence the test corresponds to
-         */
-        if (numDims > 1) {
-            assertTrue(num < 0.05 * numTestSamples);
-        } else {
-            assertTrue(numForDimOne < 0.01 * numTestSamples);
-        }
-
     }
 
-    @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
-            + "numTestSamples={4}, enableParallel={5}, numThreads={6}")
-    @CsvSource({ "10, 100, 256, 2048, 100, 0, 0" })
-    public void timeTest(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
-            int enableParallel, int numThreads) {
-
-        RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
-
-        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true);
-
-        if (enableParallel == 0) {
-            forestBuilder.parallelExecutionEnabled(false);
-        }
-        if (numThreads > 0) {
-            forestBuilder.threadPoolSize(numThreads);
-        }
-        RandomCutForest forest = forestBuilder.build();
-
-        for (double[] point : generate(numTrainSamples, numDims, 0)) {
+    private static void initForest(RandomCutForest forest) {
+        for (double[] point : testData) {
             forest.update(point);
         }
+    }
 
-        RandomCutForestState forestState = mapper.toState(forest);
-        String json = serializer.toJson(forestState);
-        double delta = Math.log(numSamples) / Math.log(2) * 0.05;
-        System.out.println("Size " + json.length());
-        RandomCutForestState reForestState = serializer.fromJson(json);
+    public static Stream<RandomCutForest> forestProvider() {
+        RandomCutForest.Builder<?> builder = RandomCutForest.builder().dimensions(dimensions)
+                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).compactEnabled(true);
+
+        RandomCutForest pointerForest = builder.compactEnabled(false).build();
+        initForest(pointerForest);
+        RandomCutForest compactDouble = builder.compactEnabled(true).precision(Precision.DOUBLE).build();
+        initForest(compactDouble);
+        RandomCutForest compactSingle = builder.compactEnabled(true).precision(Precision.SINGLE).build();
+        initForest(compactSingle);
+
+        return Stream.of(pointerForest, compactDouble, compactSingle);
+    }
+
+    private RandomCutForestSerDe serializer;
+
+    @BeforeEach
+    public void setUp() {
+        serializer = new RandomCutForestSerDe();
+        serializer.getMapper().setSaveExecutorContext(true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("forestProvider")
+    public void testRoundTrip(RandomCutForest forest) {
+        String json = serializer.toJson(forest);
+        RandomCutForest forest2 = serializer.fromJson(json);
+
+        int numTestSamples = 100;
+        double delta = Math.log(sampleSize) / Math.log(2) * 0.05;
+
+        int differences = 0;
+        int anomalies = 0;
 
         for (int i = 0; i < numTestSamples; i++) {
-            reForestState = serializer.fromJson(json);
-            RandomCutForest reForest = mapper.toModel(reForestState);
+            double[] point = new double[dimensions];
+            for (int j = 0; j < dimensions; j++) {
+                point[j] = Math.random();
+            }
 
-            double[] point = generate(1, numDims, numTrainSamples + i)[0];
-            assertTrue(Math.abs(forest.getAnomalyScore(point) - reForest.getAnomalyScore(point)) < delta);
-            reForest.update(point);
+            double score = forest.getAnomalyScore(point);
+            double score2 = forest2.getAnomalyScore(point);
+
+            if (score > 1 || score2 > 1) {
+                anomalies++;
+                if (Math.abs(score - score2) > delta) {
+                    differences++;
+                }
+            }
+
             forest.update(point);
-
-            reForestState = mapper.toState(reForest);
-            json = serializer.toJson(reForestState);
+            forest2.update(point);
         }
-    }
 
-    private double[][] generate(int numSamples, int numDimensions, int seed) {
-        return IntStream.range(0, numSamples).mapToObj(i -> new Random(seed + i).doubles(numDimensions).toArray())
-                .toArray(double[][]::new);
+        assertTrue(anomalies > 0);
+        assertTrue(differences < 0.01 * numTestSamples);
     }
 }

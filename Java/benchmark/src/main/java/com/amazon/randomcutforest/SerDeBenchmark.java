@@ -38,7 +38,7 @@ import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 @State(Scope.Benchmark)
 public class SerDeBenchmark {
     public static final int NUM_TRAIN_SAMPLES = 2048;
-    public static final int NUM_TEST_SAMPLES = 100;
+    public static final int NUM_TEST_SAMPLES = 50;
 
     @State(Scope.Thread)
     public static class BenchmarkState {
@@ -77,7 +77,8 @@ public class SerDeBenchmark {
             forestState = mapper.toState(forest);
 
             RandomCutForestSerDe serDe = new RandomCutForestSerDe();
-            json = serDe.toJson(forestState);
+            serDe.getMapper().setSaveTreeState(true);
+            json = serDe.toJson(forest);
         }
     }
 
@@ -108,15 +109,12 @@ public class SerDeBenchmark {
 
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
             RandomCutForestSerDe serDe = new RandomCutForestSerDe();
-            RandomCutForestState forestState = serDe.fromJson(json);
-            RandomCutForestMapper mapper = new RandomCutForestMapper();
-            mapper.setSaveExecutorContext(true);
-            RandomCutForest forest = mapper.toModel(forestState);
+            serDe.getMapper().setSaveExecutorContext(true);
+            RandomCutForest forest = serDe.fromJson(json);
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);
             forest.update(testData[i]);
-            forestState = mapper.toState(forest);
-            json = serDe.toJson(forestState);
+            json = serDe.toJson(forest);
         }
 
         return json;

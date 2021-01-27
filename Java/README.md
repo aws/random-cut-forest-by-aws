@@ -181,3 +181,10 @@ benchmark methods will be executed.
 ```text
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
+
+If you are running the `SerDeOutputSizeBenchmark` to see the size of JSON strings created by `RandomCutForestSerDe` under 
+different configurations, then you'll need to enable the `StringSizeProfiler` in your command-line invocation:
+
+```text
+% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar SerDeOutputLengthBenchmark -prof com.amazon.randomcutforest.profilers.StringSizeProfiler
+```
