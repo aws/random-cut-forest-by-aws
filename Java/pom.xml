@@ -38,6 +38,7 @@
     <modules>
         <module>core</module>
         <module>benchmark</module>
+        <module>examples</module>
         <module>serialization-json</module>
         <module>testutils</module>
     </modules>

@@ -158,13 +158,13 @@ Test dependencies will be downloaded automatically when invoking `mvn test` or `
 
 ## Benchmarks
 
-The benchmark modules defines microbenchmarks using the [JMH](https://openjdk.java.net/projects/code-tools/jmh/) 
+The benchmark module defines microbenchmarks using the [JMH](https://openjdk.java.net/projects/code-tools/jmh/) 
 framework. Build an executable jar containing the benchmark code by running
 
 ```text
 % # (Optional) To benchmark the code in your local repository, build and install to your local Maven repository
 % # Otherwise, benchmark dependencies will be pulled from Maven central
-% mvn package install -DexcludedGroups=functional
+% mvn package install -DexcludedGroups=functional -Dgpg.skip
 % 
 % mvn -pl benchmark package assembly:single
 ```
@@ -187,4 +187,36 @@ different configurations, then you'll need to enable the `StringSizeProfiler` in
 
 ```text
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar SerDeOutputLengthBenchmark -prof com.amazon.randomcutforest.profilers.StringSizeProfiler
+```
+
+## Examples
+
+The examples module provides runnable code examples using the library. Build an executable jar containing the
+examples by running:
+
+```text
+% # (Optional) To run examples using code in your local repository, build and install to your local Maven repository
+% # Otherwise, dependencies will be pulled from Maven central
+% mvn package install -DexcludedGroups=functional -Dgpg.skip
+% 
+% mvn -pl examples package assembly:single
+```
+
+To see a list of examples:
+
+```text
+% java -jar examples/target/randomcutforest-examples-1.0-jar-with-dependencies.jar
+Usage: java -cp randomcutforest-examples-1.0.jar [example]
+Examples:
+               json - serialize a Random Cut Forest as a JSON string
+         protostuff - serialize a Random Cut Forest with the protostuff library
+```
+
+To run an example, provide the example name:
+
+```text
+% java -jar examples/target/randomcutforest-examples-1.0-alpha-jar-with-dependencies.jar json
+dimensions = 4, numberOfTrees = 50, sampleSize = 256, precision = DOUBLE
+JSON size = 550295 bytes
+Looks good!
 ```
