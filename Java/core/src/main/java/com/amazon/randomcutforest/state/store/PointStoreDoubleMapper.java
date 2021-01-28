@@ -19,10 +19,21 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
+@Getter
+@Setter
 public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, PointStoreState> {
+    /**
+     * If true, then model data will be copied (i.e., the state class will not share
+     * any data with the model). If false, some model data may be shared with the
+     * state class. Copying is enabled by default.
+     */
+    private boolean copy = true;
 
     @Override
     public PointStoreDouble toModel(PointStoreState state, long seed) {

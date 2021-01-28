@@ -17,10 +17,22 @@ package com.amazon.randomcutforest.state.store;
 
 import java.util.Arrays;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.LeafStore;
 
+@Getter
+@Setter
 public class LeafStoreMapper implements IStateMapper<LeafStore, LeafStoreState> {
+    /**
+     * If true, then model data will be copied (i.e., the state class will not share
+     * any data with the model). If false, some model data may be shared with the
+     * state class. Copying is enabled by default.
+     */
+    private boolean copy = true;
+
     @Override
     public LeafStore toModel(LeafStoreState state, long seed) {
         int capacity = state.getPointIndex().length;

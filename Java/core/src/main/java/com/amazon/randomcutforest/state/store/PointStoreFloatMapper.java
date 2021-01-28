@@ -19,10 +19,21 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 
+@Getter
+@Setter
 public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, PointStoreState> {
+    /**
+     * If true, then model data will be copied (i.e., the state class will not share
+     * any data with the model). If false, some model data may be shared with the
+     * state class. Copying is enabled by default.
+     */
+    private boolean copy = true;
 
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
