@@ -20,7 +20,11 @@ import lombok.Data;
 @Data
 public class LeafStoreState {
     public int[] pointIndex;
-    public short[] parentIndex;
-    public short[] mass;
-    public short[] freeIndexes;
+    public short[] smallParentIndex;
+    public short[] smallMass;
+    public short[] smallFreeIndexes;
+
+    public int[] parentIndex;
+    public int[] mass;
+    public int[] freeIndexes;
 }

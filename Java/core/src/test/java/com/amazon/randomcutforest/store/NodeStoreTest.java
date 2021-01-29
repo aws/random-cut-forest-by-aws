@@ -24,12 +24,12 @@ import org.junit.jupiter.api.Test;
 public class NodeStoreTest {
 
     private short capacity;
-    private NodeStore store;
+    private SmallNodeStore store;
 
     @BeforeEach
     public void setUp() {
         capacity = 3;
-        store = new NodeStore(capacity);
+        store = new SmallNodeStore(capacity);
     }
 
     @Test

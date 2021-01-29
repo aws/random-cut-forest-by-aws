@@ -26,6 +26,8 @@ import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.SmallLeafStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -66,8 +68,13 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         this.maxSize = maxSize;
-        leafStore = new LeafStore((short) maxSize);
-        nodeStore = new NodeStore((short) (maxSize - 1));
+        if (maxSize < SmallNodeStore.MAX_TREE_SIZE) { // max_short/2 because the tree is almost twice the size of leaves
+            leafStore = new SmallLeafStore((short) maxSize);
+            nodeStore = new SmallNodeStore((short) (maxSize - 1));
+        } else {
+            leafStore = new LeafStore(maxSize);
+            nodeStore = new NodeStore(maxSize - 1);
+        }
         rootIndex = null;
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
@@ -388,5 +395,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     protected static short shortValue(Short s) {
         return s == null ? (short) NULL : s;
+    }
+
+    public int getMaxSize() {
+        return maxSize;
     }
 }

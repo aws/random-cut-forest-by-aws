@@ -33,20 +33,21 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
  * The reference to the nodes will be offset by an amount that this ihe
  * capacity.
  */
-public class LeafStore extends IndexManager implements ILeafStore {
+public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
 
     public final int[] pointIndex;
-    public final int[] parentIndex;
-    public final int[] mass;
+    public final short[] parentIndex;
+    public final short[] mass;
 
-    public LeafStore(int capacity) {
+    public SmallLeafStore(short capacity) {
         super(capacity);
         pointIndex = new int[capacity];
-        parentIndex = new int[capacity];
-        mass = new int[capacity];
+        parentIndex = new short[capacity];
+        mass = new short[capacity];
     }
 
-    public LeafStore(int[] pointIndex, int[] parentIndex, int[] mass, int[] freeIndexes, int freeIndexPointer) {
+    public SmallLeafStore(int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes,
+            short freeIndexPointer) {
         super(freeIndexes, freeIndexPointer);
 
         checkNotNull(pointIndex, "pointIndex must not be null");
@@ -63,7 +64,7 @@ public class LeafStore extends IndexManager implements ILeafStore {
     }
 
     public int addLeaf(int parentIndex, int pointIndex, int mass) {
-        int index = takeIndex();
+        short index = takeIndex();
         this.parentIndex[index] = (short) parentIndex;
         this.mass[index] = (short) mass;
         this.pointIndex[index] = pointIndex;

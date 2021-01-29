@@ -31,7 +31,7 @@ public class RandomCutForestSerDeTests {
 
     private static final int dimensions = 4;
     private static final int numberOfTrees = 30;
-    private static final int sampleSize = 128;
+    private static final int sampleSize = 28000;
     private static double[][] testData;
 
     @BeforeAll

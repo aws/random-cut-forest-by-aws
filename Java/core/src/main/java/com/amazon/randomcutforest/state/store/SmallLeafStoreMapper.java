@@ -21,11 +21,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.LeafStore;
+import com.amazon.randomcutforest.store.SmallLeafStore;
 
 @Getter
 @Setter
-public class LeafStoreMapper implements IStateMapper<LeafStore, LeafStoreState> {
+public class SmallLeafStoreMapper implements IStateMapper<SmallLeafStore, LeafStoreState> {
     /**
      * If true, then model data will be copied (i.e., the state class will not share
      * any data with the model). If false, some model data may be shared with the
@@ -34,26 +34,26 @@ public class LeafStoreMapper implements IStateMapper<LeafStore, LeafStoreState> 
     private boolean copy = true;
 
     @Override
-    public LeafStore toModel(LeafStoreState state, long seed) {
+    public SmallLeafStore toModel(LeafStoreState state, long seed) {
         int capacity = state.getPointIndex().length;
         int[] pointIndex = Arrays.copyOf(state.getPointIndex(), capacity);
-        int[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
+        short[] parentIndex = Arrays.copyOf(state.getSmallParentIndex(), capacity);
+        short[] mass = Arrays.copyOf(state.getSmallMass(), capacity);
 
-        short freeIndexPointer = (short) (state.getFreeIndexes().length - 1);
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, state.getFreeIndexes().length);
+        short freeIndexPointer = (short) (state.getSmallFreeIndexes().length - 1);
+        short[] freeIndexes = new short[capacity];
+        System.arraycopy(state.getSmallFreeIndexes(), 0, freeIndexes, 0, state.getSmallFreeIndexes().length);
 
-        return new LeafStore(pointIndex, parentIndex, mass, freeIndexes, freeIndexPointer);
+        return new SmallLeafStore(pointIndex, parentIndex, mass, freeIndexes, freeIndexPointer);
     }
 
     @Override
-    public LeafStoreState toState(LeafStore model) {
+    public LeafStoreState toState(SmallLeafStore model) {
         LeafStoreState state = new LeafStoreState();
         state.setPointIndex(Arrays.copyOf(model.pointIndex, model.pointIndex.length));
-        state.setParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setMass(Arrays.copyOf(model.mass, model.mass.length));
-        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
+        state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
+        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }
 
