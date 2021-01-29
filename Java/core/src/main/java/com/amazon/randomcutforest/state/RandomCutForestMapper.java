@@ -67,24 +67,24 @@ public class RandomCutForestMapper
      * A flag indicating whether the structure of the trees in the forest should be
      * included in the state object. If true, then data describing the bounding
      * boxes and cuts defining each tree will be written to the
-     * {@link RandomCutForestState} object produced by the mapper.
+     * {@link RandomCutForestState} object produced by the mapper. Tree state is not
+     * saved by default.
      */
-    private boolean saveTreeState;
+    private boolean saveTreeState = false;
 
     /**
      * A flag indicating whether the executor context should be included in the
-     * {@link RandomCutForestState} object produced by the mapper.
+     * {@link RandomCutForestState} object produced by the mapper. Executor context
+     * is not saved by defalt.
      */
-    private boolean saveExecutorContext;
+    private boolean saveExecutorContext = false;
 
     /**
-     * Crate a new mapper with {@code saveTreeState} and {@code saveExecutorContext}
-     * set to false.
+     * If true, then model data will be copied (i.e., the state class will not share
+     * any data with the model). If false, some model data may be shared with the
+     * state class. Copying is enabled by default.
      */
-    public RandomCutForestMapper() {
-        saveTreeState = false;
-        saveExecutorContext = false;
-    }
+    private boolean copy = true;
 
     /**
      * Create a {@link RandomCutForestState} object representing the state of the

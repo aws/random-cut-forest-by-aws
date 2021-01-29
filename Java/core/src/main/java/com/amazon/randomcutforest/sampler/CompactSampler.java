@@ -181,6 +181,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * determining the heap structure.
      *
      * @param sampleSize    The number of points in the sampler when full.
+     * @param size          The number of points currently stored in the sample.
      * @param lambda        The decay factor used for generating the weight of the
      *                      point. For greater values of lambda the sampler is more
      *                      biased in favor of recent points.
@@ -195,19 +196,20 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                      IllegalArgumentException if the weight array doesn't
      *                      satisfy the heap property.
      */
-    public CompactSampler(int sampleSize, double lambda, Random random, float[] weight, int[] pointIndex,
+    public CompactSampler(int sampleSize, int size, double lambda, Random random, float[] weight, int[] pointIndex,
             long[] sequenceIndex, boolean validateHeap) {
-        this(sampleSize, lambda, random, sequenceIndex != null);
+
         checkNotNull(weight, "weight must not be null");
         checkNotNull(pointIndex, "pointIndex must not be null");
 
-        size = weight.length;
-        System.arraycopy(weight, 0, this.weight, 0, size);
-        System.arraycopy(pointIndex, 0, this.pointIndex, 0, size);
-
-        if (sequenceIndex != null) {
-            System.arraycopy(sequenceIndex, 0, this.sequenceIndex, 0, size);
-        }
+        this.capacity = sampleSize;
+        this.size = size;
+        storeSequenceIndexesEnabled = (sequenceIndex != null);
+        this.random = random;
+        this.lambda = lambda;
+        this.weight = weight;
+        this.pointIndex = pointIndex;
+        this.sequenceIndex = sequenceIndex;
 
         reheap(validateHeap);
     }

@@ -26,73 +26,106 @@ import java.util.Random;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
 
 public class CompactSamplerMapperTest {
-    private CompactSamplerMapper mapper;
 
-    private static class SamplerProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
-            int sampleSize = 20;
-            double lambda = 0.01;
-            long seed = 4444;
-            CompactSampler sampler1 = new CompactSampler(sampleSize, lambda, seed, false);
-            CompactSampler sampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+    private static int sampleSize = 20;
+    private static double lambda = 0.01;
+    private static long seed = 4444;
 
-            Random random = new Random();
-            long baseIndex = 10_000;
-            for (int i = 0; i < 100; i++) {
-                int pointReference = random.nextInt();
-                sampler1.update(pointReference, baseIndex + i);
-                sampler2.update(pointReference, baseIndex + i);
-            }
+    public static Stream<Arguments> nonemptySamplerProvider() {
+        CompactSampler fullSampler1 = new CompactSampler(sampleSize, lambda, seed, false);
+        CompactSampler fullSampler2 = new CompactSampler(sampleSize, lambda, seed, true);
 
-            return Stream.of(sampler1, sampler2).map(Arguments::of);
+        Random random = new Random();
+        long baseIndex = 10_000;
+        for (int i = 0; i < 100; i++) {
+            int pointReference = random.nextInt();
+            fullSampler1.update(pointReference, baseIndex + i);
+            fullSampler2.update(pointReference, baseIndex + i);
         }
+
+        CompactSampler partiallyFullSampler1 = new CompactSampler(sampleSize, lambda, seed, false);
+        CompactSampler partiallyFullSampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+
+        for (int i = 0; i < sampleSize / 2; i++) {
+            int pointReference = random.nextInt();
+            partiallyFullSampler1.update(pointReference, baseIndex + i);
+            partiallyFullSampler2.update(pointReference, baseIndex + i);
+        }
+
+        return Stream.of(Arguments.of("full sampler without sequence indexes", fullSampler1),
+                Arguments.of("full sampler with sequence indexes", fullSampler2),
+                Arguments.of("partially full sampler without sequence indexes", partiallyFullSampler1),
+                Arguments.of("partially full sampler with sequence indexes", partiallyFullSampler2));
     }
+
+    public static Stream<Arguments> samplerProvider() {
+        CompactSampler emptySampler1 = new CompactSampler(sampleSize, lambda, seed, false);
+        CompactSampler emptySampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+
+        return Stream.concat(nonemptySamplerProvider(),
+                Stream.of(Arguments.of("empty sampler without sequence indexes", emptySampler1),
+                        Arguments.of("empty sampler with sequence indexes", emptySampler2)));
+    }
+
+    private CompactSamplerMapper mapper;
 
     @BeforeEach
     public void setUp() {
         mapper = new CompactSamplerMapper();
-        mapper.setValidateHeap(true);
+        mapper.setValidateHeap(false);
     }
 
-    @ParameterizedTest
-    @ArgumentsSource(SamplerProvider.class)
-    public void testRoundTrip(CompactSampler sampler) {
-        CompactSampler sampler2 = mapper.toModel(mapper.toState(sampler));
-        assertArrayEquals(sampler.getWeightArray(), sampler2.getWeightArray());
-        assertArrayEquals(sampler.getPointIndexArray(), sampler2.getPointIndexArray());
-        assertEquals(sampler.getCapacity(), sampler2.getCapacity());
-        assertEquals(sampler.size(), sampler2.size());
-        assertEquals(sampler.getLambda(), sampler2.getLambda());
-        assertFalse(sampler2.getEvictedPoint().isPresent());
+    private void assertValidMapping(CompactSampler original, CompactSampler mapped) {
+        assertArrayEquals(original.getWeightArray(), mapped.getWeightArray(), "different weight arrays");
+        assertArrayEquals(original.getPointIndexArray(), mapped.getPointIndexArray(), "different point index arrays");
+        assertEquals(original.getCapacity(), mapped.getCapacity());
+        assertEquals(original.size(), mapped.size());
+        assertEquals(original.getLambda(), mapped.getLambda());
+        assertFalse(mapped.getEvictedPoint().isPresent());
 
-        if (sampler.isStoreSequenceIndexesEnabled()) {
-            assertTrue(sampler2.isStoreSequenceIndexesEnabled());
-            assertArrayEquals(sampler.getSequenceIndexArray(), sampler2.getSequenceIndexArray());
+        if (original.isStoreSequenceIndexesEnabled()) {
+            assertTrue(mapped.isStoreSequenceIndexesEnabled());
+            assertArrayEquals(original.getSequenceIndexArray(), mapped.getSequenceIndexArray(),
+                    "different sequence index arrays");
         } else {
-            assertFalse(sampler2.isStoreSequenceIndexesEnabled());
-            assertNull(sampler2.getSequenceIndexArray());
+            assertFalse(mapped.isStoreSequenceIndexesEnabled());
+            assertNull(mapped.getSequenceIndexArray());
         }
     }
 
     @ParameterizedTest
-    @ArgumentsSource(SamplerProvider.class)
-    public void testRoundTripInvalidHeap(CompactSampler sampler) {
+    @MethodSource("samplerProvider")
+    public void testRoundTripWithCopy(String description, CompactSampler sampler) {
+        mapper.setCopy(true);
+        CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
+        assertValidMapping(sampler, mapped);
+    }
+
+    @ParameterizedTest
+    @MethodSource("samplerProvider")
+    public void testRoundTripWithoutCopy(String description, CompactSampler sampler) {
+        mapper.setCopy(false);
+        CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
+        assertValidMapping(sampler, mapped);
+    }
+
+    @ParameterizedTest
+    @MethodSource("nonemptySamplerProvider")
+    public void testRoundTripInvalidHeap(String description, CompactSampler sampler) {
+        mapper.setCopy(true);
         mapper.setValidateHeap(true);
         CompactSamplerState state = mapper.toState(sampler);
 
         // swap to weights in the weight array in order to violate the heap property
         float[] weights = state.getWeight();
-        int index = weights.length / 4;
+        int index = state.getSize() / 4;
         float temp = weights[index];
         weights[index] = weights[2 * index + 1];
         weights[2 * index + 1] = temp;

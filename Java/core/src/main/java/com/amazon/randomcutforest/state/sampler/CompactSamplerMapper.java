@@ -32,14 +32,44 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
      * This flag is passed to the constructor for {@code CompactSampler} when a new
      * sampler is constructed in {@link #toModel}. If true, then the sampler will
      * validate that the weight array in a {@code CompactSamplerState} instance
-     * satisfies the heap property.
+     * satisfies the heap property. The heap property is not validated by default.
      */
-    private boolean validateHeap;
+    private boolean validateHeap = false;
+
+    /**
+     * If true, then model data will be copied (i.e., the state class will not share
+     * any data with the model). If false, some model data may be shared with the
+     * state class. Copying is enabled by default.
+     */
+    private boolean copy = true;
 
     @Override
     public CompactSampler toModel(CompactSamplerState state, long seed) {
-        return new CompactSampler(state.getCapacity(), state.getLambda(), new Random(seed), state.getWeight(),
-                state.getPointIndex(), state.getSequenceIndex(), validateHeap);
+        float[] weight;
+        int[] pointIndex;
+        long[] sequenceIndex;
+
+        if (copy) {
+            weight = new float[state.getCapacity()];
+            pointIndex = new int[state.getCapacity()];
+
+            int size = state.getSize();
+            System.arraycopy(state.getWeight(), 0, weight, 0, size);
+            System.arraycopy(state.getPointIndex(), 0, pointIndex, 0, size);
+            if (state.getSequenceIndex() != null) {
+                sequenceIndex = new long[state.getCapacity()];
+                System.arraycopy(state.getSequenceIndex(), 0, sequenceIndex, 0, size);
+            } else {
+                sequenceIndex = null;
+            }
+        } else {
+            weight = state.getWeight();
+            pointIndex = state.getPointIndex();
+            sequenceIndex = state.getSequenceIndex();
+        }
+
+        return new CompactSampler(state.getCapacity(), state.getSize(), state.getLambda(), new Random(seed), weight,
+                pointIndex, sequenceIndex, validateHeap);
     }
 
     @Override
@@ -48,10 +78,19 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setSize(model.size());
         state.setCapacity(model.getCapacity());
         state.setLambda(model.getLambda());
-        state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
-        state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
-        if (model.isStoreSequenceIndexesEnabled()) {
-            state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
+
+        if (copy) {
+            state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
+            state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
+            if (model.isStoreSequenceIndexesEnabled()) {
+                state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
+            }
+        } else {
+            state.setWeight(model.getWeightArray());
+            state.setPointIndex(model.getPointIndexArray());
+            if (model.isStoreSequenceIndexesEnabled()) {
+                state.setSequenceIndex(model.getSequenceIndexArray());
+            }
         }
         return state;
     }
