@@ -36,6 +36,8 @@ import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
  */
 public class SmallNodeStore extends SmallIndexManager implements INodeStore {
 
+    public static final int MAX_TREE_SIZE = 16383;
+
     public final short[] parentIndex;
     public final short[] leftIndex;
     public final short[] rightIndex;

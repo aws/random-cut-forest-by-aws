@@ -30,7 +30,6 @@ import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.store.SmallLeafStore;
 import com.amazon.randomcutforest.store.SmallNodeStore;
-import com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 @Getter
@@ -46,7 +45,7 @@ public class CompactRandomCutTreeDoubleMapper implements
 
         INodeStore nodeStore;
         ILeafStore leafStore;
-        if (context.getMaxSize() < AbstractCompactRandomCutTree.switchNodeStore) {
+        if (context.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
             leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
@@ -70,7 +69,7 @@ public class CompactRandomCutTreeDoubleMapper implements
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
         state.setRootIndex(model.getRootIndex());
 
-        if (model.getMaxSize() < AbstractCompactRandomCutTree.switchNodeStore) {
+        if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
             state.setLeafStoreState(leafStoreMapper.toState((SmallLeafStore) model.getLeafStore()));
 

@@ -54,8 +54,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      */
     public static final int NULL = -1;
 
-    public static final int switchNodeStore = 16383;
-
     protected int maxSize;
     protected final ILeafStore leafStore;
     protected final INodeStore nodeStore;
@@ -70,7 +68,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         this.maxSize = maxSize;
-        if (maxSize < switchNodeStore) { // max_short/2 because the tree is almost twice the size of leaves
+        if (maxSize < SmallNodeStore.MAX_TREE_SIZE) { // max_short/2 because the tree is almost twice the size of leaves
             leafStore = new SmallLeafStore((short) maxSize);
             nodeStore = new SmallNodeStore((short) (maxSize - 1));
         } else {
