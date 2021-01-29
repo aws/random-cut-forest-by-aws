@@ -24,12 +24,12 @@ import org.junit.jupiter.api.Test;
 public class LeafStoreTest {
 
     private short capacity;
-    private LeafStore store;
+    private SmallLeafStore store;
 
     @BeforeEach
     public void setUp() {
         capacity = 3;
-        store = new LeafStore(capacity);
+        store = new SmallLeafStore(capacity);
     }
 
     @Test

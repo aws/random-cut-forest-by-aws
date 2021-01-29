@@ -21,9 +21,16 @@ import lombok.Setter;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
+import com.amazon.randomcutforest.state.store.SmallLeafStoreMapper;
+import com.amazon.randomcutforest.state.store.SmallNodeStoreMapper;
+import com.amazon.randomcutforest.store.ILeafStore;
+import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.SmallLeafStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
+import com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 @Getter
@@ -36,14 +43,26 @@ public class CompactRandomCutTreeDoubleMapper implements
     @Override
     public CompactRandomCutTreeDouble toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
             long seed) {
-        LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-        LeafStore leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
-        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        NodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
+        INodeStore nodeStore;
+        ILeafStore leafStore;
+        if (context.getMaxSize() < AbstractCompactRandomCutTree.switchNodeStore) {
+            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
+            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
+
+            SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
+            nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
+        } else {
+            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
+
+            NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+            nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
+        }
 
         return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, (PointStoreDouble) context.getPointStore(),
                 leafStore, nodeStore, state.getRootIndex(), boundingBoxCacheEnabled);
+
     }
 
     @Override
@@ -51,11 +70,19 @@ public class CompactRandomCutTreeDoubleMapper implements
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
         state.setRootIndex(model.getRootIndex());
 
-        LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-        state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
+        if (model.getMaxSize() < AbstractCompactRandomCutTree.switchNodeStore) {
+            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
+            state.setLeafStoreState(leafStoreMapper.toState((SmallLeafStore) model.getLeafStore()));
 
-        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
+            SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
+            state.setNodeStoreState(nodeStoreMapper.toState((SmallNodeStore) model.getNodeStore()));
+        } else {
+            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+            state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
+
+            NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+            state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
+        }
 
         return state;
     }

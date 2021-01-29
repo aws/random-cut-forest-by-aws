@@ -21,11 +21,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
 @Getter
 @Setter
-public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> {
+public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeStoreState> {
     /**
      * If true, then model data will be copied (i.e., the state class will not share
      * any data with the model). If false, some model data may be shared with the
@@ -34,33 +34,33 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
     private boolean copy = true;
 
     @Override
-    public NodeStore toModel(NodeStoreState state, long seed) {
-        int capacity = state.getLeftIndex().length;
-        int[] leftIndex = Arrays.copyOf(state.getLeftIndex(), capacity);
-        int[] rightIndex = Arrays.copyOf(state.getRightIndex(), capacity);
-        int[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
+    public SmallNodeStore toModel(NodeStoreState state, long seed) {
+        int capacity = state.getSmallLeftIndex().length;
+        short[] leftIndex = Arrays.copyOf(state.getSmallLeftIndex(), capacity);
+        short[] rightIndex = Arrays.copyOf(state.getSmallRightIndex(), capacity);
+        short[] parentIndex = Arrays.copyOf(state.getSmallParentIndex(), capacity);
+        short[] mass = Arrays.copyOf(state.getSmallMass(), capacity);
         int[] cutDimension = Arrays.copyOf(state.getCutDimension(), capacity);
         double[] cutValue = Arrays.copyOf(state.getCutValue(), capacity);
 
-        short freeIndexPointer = (short) (state.getFreeIndexes().length - 1);
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        short freeIndexPointer = (short) (state.getSmallFreeIndexes().length - 1);
+        short[] freeIndexes = new short[capacity];
+        System.arraycopy(state.getSmallFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
 
-        return new NodeStore(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass, freeIndexes,
+        return new SmallNodeStore(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass, freeIndexes,
                 freeIndexPointer);
     }
 
     @Override
-    public NodeStoreState toState(NodeStore model) {
+    public NodeStoreState toState(SmallNodeStore model) {
         NodeStoreState state = new NodeStoreState();
-        state.setLeftIndex(Arrays.copyOf(model.leftIndex, model.leftIndex.length));
-        state.setRightIndex(Arrays.copyOf(model.rightIndex, model.rightIndex.length));
-        state.setParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setMass(Arrays.copyOf(model.mass, model.mass.length));
+        state.setSmallLeftIndex(Arrays.copyOf(model.leftIndex, model.leftIndex.length));
+        state.setSmallRightIndex(Arrays.copyOf(model.rightIndex, model.rightIndex.length));
+        state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
+        state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
         state.setCutDimension(Arrays.copyOf(model.cutDimension, model.cutDimension.length));
         state.setCutValue(Arrays.copyOf(model.cutValue, model.cutValue.length));
-        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }
 }

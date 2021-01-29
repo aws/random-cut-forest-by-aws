@@ -22,25 +22,25 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.store.LeafStore;
+import com.amazon.randomcutforest.store.SmallLeafStore;
 
 public class LeafStoreMapperTest {
-    private LeafStoreMapper mapper;
+    private SmallLeafStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        mapper = new LeafStoreMapper();
+        mapper = new SmallLeafStoreMapper();
     }
 
     @Test
     public void testRoundTrip() {
-        LeafStore store = new LeafStore((short) 10);
+        SmallLeafStore store = new SmallLeafStore((short) 10);
         int index1 = store.addLeaf(1, 2, 1);
         int index2 = store.addLeaf(1, 3, 2);
         int index3 = store.addLeaf(4, 5, 1);
         int index4 = store.addLeaf(4, 6, 3);
 
-        LeafStore store2 = mapper.toModel(mapper.toState(store));
+        SmallLeafStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
 

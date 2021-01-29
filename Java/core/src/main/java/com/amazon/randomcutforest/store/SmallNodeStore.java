@@ -34,32 +34,32 @@ import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
  * Note that a NodeStore does not store instances of the
  * {@link com.amazon.randomcutforest.tree.Node} class.
  */
-public class NodeStore extends IndexManager implements INodeStore {
+public class SmallNodeStore extends SmallIndexManager implements INodeStore {
 
-    public final int[] parentIndex;
-    public final int[] leftIndex;
-    public final int[] rightIndex;
+    public final short[] parentIndex;
+    public final short[] leftIndex;
+    public final short[] rightIndex;
     public final int[] cutDimension;
     public final double[] cutValue;
-    public final int[] mass;
+    public final short[] mass;
 
     /**
      * Create a new NodeStore with the given capacity.
      * 
      * @param capacity The maximum number of Nodes whose data can be stored.
      */
-    public NodeStore(int capacity) {
+    public SmallNodeStore(short capacity) {
         super(capacity);
-        parentIndex = new int[capacity];
-        leftIndex = new int[capacity];
-        rightIndex = new int[capacity];
+        parentIndex = new short[capacity];
+        leftIndex = new short[capacity];
+        rightIndex = new short[capacity];
         cutDimension = new int[capacity];
         cutValue = new double[capacity];
-        mass = new int[capacity];
+        mass = new short[capacity];
     }
 
-    public NodeStore(int[] parentIndex, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
-            int[] mass, int[] freeIndexes, int freeIndexPointer) {
+    public SmallNodeStore(short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension,
+            double[] cutValue, short[] mass, short[] freeIndexes, short freeIndexPointer) {
         // TODO validations
         super(freeIndexes, freeIndexPointer);
         this.parentIndex = parentIndex;
@@ -82,13 +82,13 @@ public class NodeStore extends IndexManager implements INodeStore {
      * @return the index of the newly stored node.
      */
     public int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass) {
-        int index = takeIndex();
+        short index = takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = cutDimension;
-        this.leftIndex[index] = leftIndex;
-        this.rightIndex[index] = rightIndex;
-        this.parentIndex[index] = parentIndex;
-        this.mass[index] = mass;
+        this.leftIndex[index] = (short) leftIndex;
+        this.rightIndex[index] = (short) rightIndex;
+        this.parentIndex[index] = (short) parentIndex;
+        this.mass[index] = (short) mass;
         return index;
     }
 
@@ -110,9 +110,9 @@ public class NodeStore extends IndexManager implements INodeStore {
     @Override
     public void replaceChild(int parent, int oldIndex, int newIndex) {
         if (leftIndex[parent] == oldIndex) {
-            leftIndex[parent] = newIndex;
+            leftIndex[parent] = (short) newIndex;
         } else {
-            rightIndex[parent] = newIndex;
+            rightIndex[parent] = (short) newIndex;
         }
     }
 
@@ -159,7 +159,7 @@ public class NodeStore extends IndexManager implements INodeStore {
     }
 
     public int getSibling(int parent, int node) {
-        return leftIndex[parent] == node ? rightIndex[parent] : leftIndex[parent];
+        return leftIndex[parent] == (short) node ? rightIndex[parent] : leftIndex[parent];
     }
 
 }
