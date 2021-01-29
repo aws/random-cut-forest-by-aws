@@ -18,6 +18,7 @@ package com.amazon.randomcutforest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.config.Precision;
@@ -28,6 +29,7 @@ import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
  * (sequential or parallel) or different internal data representations are
  * executing the algorithm steps in the same way.
  */
+@Tag("functional")
 public class RandomCutForestConsistencyFunctionalTest {
 
     private int dimensions = 5;

@@ -28,7 +28,7 @@ import java.util.function.Function;
  */
 public class ArgumentParser {
 
-    public static final String ARCHIVE_NAME = "target/random-cut-forest-1.0.jar";
+    public static final String ARCHIVE_NAME = "randomcutforest-core-1.0.jar";
     private final String runnerClass;
     private final String runnerDescription;
     private final Map<String, Argument<?>> shortFlags;
