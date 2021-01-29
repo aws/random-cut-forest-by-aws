@@ -28,6 +28,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <a href="https://github.com/FasterXML/jackson">Jackson</a>.
  */
 public class JsonExample implements Example {
+
+    public static void main(String[] args) throws Exception {
+        new JsonExample().run();
+    }
+
     @Override
     public String command() {
         return "json";

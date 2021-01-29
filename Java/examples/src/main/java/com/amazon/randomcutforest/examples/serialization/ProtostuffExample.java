@@ -32,6 +32,10 @@ import io.protostuff.runtime.RuntimeSchema;
  * <a href="https://github.com/protostuff/protostuff">protostuff</a> library.
  */
 public class ProtostuffExample implements Example {
+    public static void main(String[] args) throws Exception {
+        new ProtostuffExample().run();
+    }
+
     @Override
     public String command() {
         return "protostuff";
