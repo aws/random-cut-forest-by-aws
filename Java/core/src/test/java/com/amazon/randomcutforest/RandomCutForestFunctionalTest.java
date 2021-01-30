@@ -859,6 +859,16 @@ public class RandomCutForestFunctionalTest {
             assertEquals(score, anotherScore, 1E-10);
             forest.update(point);
             anotherForest.update(point);
+            if (count % 2000 == 1000) {
+                double fraction = Math.random();
+                // System.out.println(" second forest fraction " + fraction);
+                anotherForest.setBoundingBoxCacheFraction(fraction);
+            }
+            if (count % 2000 == 0) {
+                double fraction = Math.random();
+                // System.out.println(" first forest fraction " + fraction);
+                forest.setBoundingBoxCacheFraction(fraction);
+            }
         }
 
     }

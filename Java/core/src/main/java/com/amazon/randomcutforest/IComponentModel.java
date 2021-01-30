@@ -19,4 +19,5 @@ import com.amazon.randomcutforest.executor.ITraversable;
 import com.amazon.randomcutforest.executor.IUpdatable;
 
 public interface IComponentModel<P> extends ITraversable, IUpdatable<P> {
+    void setBoundingBoxCacheFraction(double fraction);
 }

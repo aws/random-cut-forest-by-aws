@@ -88,4 +88,8 @@ public abstract class AbstractForestUpdateExecutor<P> {
         return pointCopy;
     }
 
+    public void setBoundingBoxCacheFraction(double fraction) {
+        components.forEach(t -> t.setBoundingBoxCacheFraction(fraction));
+    }
+
 }

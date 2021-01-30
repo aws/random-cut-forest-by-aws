@@ -99,4 +99,8 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
         return tree.traverseMulti(point, visitorFactory);
     }
 
+    @Override
+    public void setBoundingBoxCacheFraction(double fraction) {
+        getTree().setBoundingBoxCacheFraction(fraction);
+    }
 }
