@@ -24,19 +24,22 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.serialize.RandomCutForestSerDe;
+import com.amazon.randomcutforest.profilers.StringSizeProfiler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 2)
+@Measurement(iterations = 5)
 @Fork(value = 1)
 @State(Scope.Benchmark)
-public class SerDeBenchmark {
+public class StateMapperBenchmark {
     public static final int NUM_TRAIN_SAMPLES = 2048;
     public static final int NUM_TEST_SAMPLES = 50;
 
@@ -45,7 +48,7 @@ public class SerDeBenchmark {
         @Param({ "10" })
         int dimensions;
 
-        @Param({ "100" })
+        @Param({ "50" })
         int numberOfTrees;
 
         @Param({ "256" })
@@ -64,9 +67,9 @@ public class SerDeBenchmark {
         }
 
         @Setup(Level.Invocation)
-        public void setUpForest() {
-            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(numberOfTrees)
-                    .sampleSize(sampleSize).build();
+        public void setUpForest() throws JsonProcessingException {
+            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).build();
 
             for (int i = 0; i < NUM_TRAIN_SAMPLES; i++) {
                 forest.update(trainingData[i]);
@@ -74,12 +77,19 @@ public class SerDeBenchmark {
 
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeState(true);
             forestState = mapper.toState(forest);
 
-            RandomCutForestSerDe serDe = new RandomCutForestSerDe();
-            serDe.getMapper().setSaveTreeState(true);
-            json = serDe.toJson(forest);
+            ObjectMapper jsonMapper = new ObjectMapper();
+            json = jsonMapper.writeValueAsString(forestState);
         }
+    }
+
+    private String json;
+
+    @TearDown(Level.Iteration)
+    public void tearDown() {
+        StringSizeProfiler.setTestString(json);
     }
 
     @Benchmark
@@ -103,18 +113,23 @@ public class SerDeBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(NUM_TEST_SAMPLES)
-    public String roundTripFromJson(BenchmarkState state, Blackhole blackhole) {
-        String json = state.json;
+    public String roundTripFromJson(BenchmarkState state, Blackhole blackhole) throws JsonProcessingException {
+        json = state.json;
         double[][] testData = state.testData;
 
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
-            RandomCutForestSerDe serDe = new RandomCutForestSerDe();
-            serDe.getMapper().setSaveExecutorContext(true);
-            RandomCutForest forest = serDe.fromJson(json);
+            ObjectMapper jsonMapper = new ObjectMapper();
+            RandomCutForestState forestState = jsonMapper.readValue(json, RandomCutForestState.class);
+
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeState(true);
+            RandomCutForest forest = mapper.toModel(forestState);
+
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);
             forest.update(testData[i]);
-            json = serDe.toJson(forest);
+            json = jsonMapper.writeValueAsString(mapper.toState(forest));
         }
 
         return json;

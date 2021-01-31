@@ -26,12 +26,10 @@ import org.openjdk.jmh.results.IterationResult;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.ScalarResult;
 
-import com.amazon.randomcutforest.SerDeOutputLengthBenchmark;
-
 /**
  * This simple profile outputs the size of a provided string in bytes as part of
  * the JMH metrics. We use it to measure the size of JSON output in
- * {@link SerDeOutputLengthBenchmark}.
+ * {@link com.amazon.randomcutforest.StateMapperBenchmark}.
  */
 public class StringSizeProfiler implements InternalProfiler {
 

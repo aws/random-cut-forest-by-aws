@@ -182,11 +182,12 @@ benchmark methods will be executed.
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
 
-If you are running the `SerDeOutputSizeBenchmark` to see the size of JSON strings created by `RandomCutForestSerDe` under 
-different configurations, then you'll need to enable the `StringSizeProfiler` in your command-line invocation:
+If you are running the `StateMapperBenchmark`, you can enable the String size profiler to measure the size of
+a state object encoded as a JSON string by the flag `-prof com.amazon.randomcutforest.profilers.StringSizeProfiler`
+to the command-line invocation. For example:
 
 ```text
-% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar SerDeOutputLengthBenchmark -prof com.amazon.randomcutforest.profilers.StringSizeProfiler
+% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.StringSizeProfiler
 ```
 
 ## Examples
