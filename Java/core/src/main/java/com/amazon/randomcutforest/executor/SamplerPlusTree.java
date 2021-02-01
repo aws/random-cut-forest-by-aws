@@ -15,18 +15,19 @@
 
 package com.amazon.randomcutforest.executor;
 
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
+import java.util.Optional;
+import java.util.function.Function;
+
+import lombok.Getter;
+
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
-import lombok.Getter;
-
-import java.util.Optional;
-import java.util.function.Function;
-
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 public class SamplerPlusTree<P> implements IComponentModel<P> {
 

@@ -22,5 +22,6 @@ import com.amazon.randomcutforest.tree.ITree;
 
 public interface IComponentModel<P> extends ITraversable, IUpdatable<P> {
     ITree<P> getTree();
+
     IStreamSampler<P> getSampler();
 }
