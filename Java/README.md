@@ -187,7 +187,7 @@ a state object encoded as a JSON string by the flag `-prof com.amazon.randomcutf
 to the command-line invocation. For example:
 
 ```text
-% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.StringSizeProfiler
+% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.OutputSizeProfiler
 ```
 
 ## Examples

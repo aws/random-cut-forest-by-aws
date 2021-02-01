@@ -27,16 +27,20 @@ import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.ScalarResult;
 
 /**
- * This simple profile outputs the size of a provided string in bytes as part of
- * the JMH metrics. We use it to measure the size of JSON output in
+ * This simple profile outputs the size of a provided byte array or string as
+ * part of the JMH metrics. We use it to measure the size of output in
  * {@link com.amazon.randomcutforest.StateMapperBenchmark}.
  */
-public class StringSizeProfiler implements InternalProfiler {
+public class OutputSizeProfiler implements InternalProfiler {
 
-    private static String testString;
+    private static byte[] bytes;
 
     public static void setTestString(String s) {
-        testString = s;
+        bytes = s.getBytes();
+    }
+
+    public static void setTestArray(byte[] bytes) {
+        OutputSizeProfiler.bytes = bytes;
     }
 
     @Override
@@ -47,11 +51,11 @@ public class StringSizeProfiler implements InternalProfiler {
     public Collection<? extends Result> afterIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams,
             IterationResult iterationResult) {
         int length = 0;
-        if (testString != null) {
-            length = testString.getBytes().length;
-            testString = null;
+        if (bytes != null) {
+            length = bytes.length;
+            bytes = null;
         }
-        ScalarResult result = new ScalarResult("+string-size.stringSize", length, "bytes", AggregationPolicy.AVG);
+        ScalarResult result = new ScalarResult("+output-size.bytes", length, "bytes", AggregationPolicy.AVG);
         return Collections.singleton(result);
     }
 

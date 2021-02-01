@@ -28,12 +28,17 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.profilers.StringSizeProfiler;
+import com.amazon.randomcutforest.profilers.OutputSizeProfiler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.protostuff.LinkedBuffer;
+import io.protostuff.ProtostuffIOUtil;
+import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
@@ -54,10 +59,14 @@ public class StateMapperBenchmark {
         @Param({ "256" })
         int sampleSize;
 
+        @Param({ "false", "true" })
+        boolean saveTreeState;
+
         double[][] trainingData;
         double[][] testData;
         RandomCutForestState forestState;
         String json;
+        byte[] protostuff;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -77,19 +86,27 @@ public class StateMapperBenchmark {
 
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
-            mapper.setSaveTreeState(true);
+            mapper.setSaveTreeState(saveTreeState);
             forestState = mapper.toState(forest);
 
             ObjectMapper jsonMapper = new ObjectMapper();
             json = jsonMapper.writeValueAsString(forestState);
+
+            Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
+            LinkedBuffer buffer = LinkedBuffer.allocate(512);
+            try {
+                protostuff = ProtostuffIOUtil.toByteArray(forestState, schema, buffer);
+            } finally {
+                buffer.clear();
+            }
         }
     }
 
-    private String json;
+    private byte[] bytes;
 
     @TearDown(Level.Iteration)
     public void tearDown() {
-        StringSizeProfiler.setTestString(json);
+        OutputSizeProfiler.setTestArray(bytes);
     }
 
     @Benchmark
@@ -101,6 +118,7 @@ public class StateMapperBenchmark {
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeState(state.saveTreeState);
             RandomCutForest forest = mapper.toModel(forestState);
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);
@@ -114,7 +132,7 @@ public class StateMapperBenchmark {
     @Benchmark
     @OperationsPerInvocation(NUM_TEST_SAMPLES)
     public String roundTripFromJson(BenchmarkState state, Blackhole blackhole) throws JsonProcessingException {
-        json = state.json;
+        String json = state.json;
         double[][] testData = state.testData;
 
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
@@ -123,7 +141,7 @@ public class StateMapperBenchmark {
 
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
-            mapper.setSaveTreeState(true);
+            mapper.setSaveTreeState(state.saveTreeState);
             RandomCutForest forest = mapper.toModel(forestState);
 
             double score = forest.getAnomalyScore(testData[i]);
@@ -132,6 +150,39 @@ public class StateMapperBenchmark {
             json = jsonMapper.writeValueAsString(mapper.toState(forest));
         }
 
+        bytes = json.getBytes();
         return json;
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(NUM_TEST_SAMPLES)
+    public byte[] roundTripFromProtostuff(BenchmarkState state, Blackhole blackhole) {
+        bytes = state.protostuff;
+        double[][] testData = state.testData;
+
+        for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
+            Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
+            RandomCutForestState forestState = schema.newMessage();
+            ProtostuffIOUtil.mergeFrom(bytes, forestState, schema);
+
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeState(state.saveTreeState);
+            RandomCutForest forest = mapper.toModel(forestState);
+
+            double score = forest.getAnomalyScore(testData[i]);
+            blackhole.consume(score);
+            forest.update(testData[i]);
+            forestState = mapper.toState(forest);
+
+            LinkedBuffer buffer = LinkedBuffer.allocate(512);
+            try {
+                bytes = ProtostuffIOUtil.toByteArray(forestState, schema, buffer);
+            } finally {
+                buffer.clear();
+            }
+        }
+
+        return bytes;
     }
 }
