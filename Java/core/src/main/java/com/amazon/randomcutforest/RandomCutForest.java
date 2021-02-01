@@ -473,6 +473,18 @@ public class RandomCutForest {
     }
 
     /**
+     * Update the forest such that each tree caches a fraction of the bounding
+     * boxes. This allows for a tradeoff between speed and storage.
+     *
+     * @param cacheFraction The (approximate) fraction of bounding boxes used in
+     *                      caching.
+     */
+    public void setBoundingBoxCacheFraction(double cacheFraction) {
+        checkArgument(0 <= cacheFraction && cacheFraction <= 1, String.format("fraction must be in [0,1]"));
+        updateExecutor.forEachTree(t -> t.setBoundingBoxCacheFraction(cacheFraction));
+    }
+
+    /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to

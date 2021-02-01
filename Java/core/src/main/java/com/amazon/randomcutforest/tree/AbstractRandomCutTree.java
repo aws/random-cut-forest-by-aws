@@ -76,6 +76,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // boxes
     // 0 would mean less space usage, but slower throughput
     // 1 would imply larger space but better throughput
+    @Override
     public void setBoundingBoxCacheFraction(double fraction) {
         checkArgument(0 <= fraction && fraction <= 1, "incorrect parameter");
         boundingBoxCacheFraction = fraction;

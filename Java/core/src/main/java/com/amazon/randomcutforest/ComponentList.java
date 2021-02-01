@@ -37,4 +37,5 @@ public class ComponentList<P> extends ArrayList<IComponentModel<P>> {
     public ComponentList(int initialCapacity) {
         super(initialCapacity);
     }
+
 }

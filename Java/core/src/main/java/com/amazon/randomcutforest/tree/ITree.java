@@ -23,4 +23,7 @@ public interface ITree<P> extends ITraversable {
     P addPoint(P point, long sequenceIndex);
 
     void deletePoint(P point, long sequenceIndex);
+
+    default void setBoundingBoxCacheFraction(double fraction) {
+    };
 }
