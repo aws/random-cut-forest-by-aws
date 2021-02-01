@@ -17,7 +17,10 @@ package com.amazon.randomcutforest;
 
 import com.amazon.randomcutforest.executor.ITraversable;
 import com.amazon.randomcutforest.executor.IUpdatable;
+import com.amazon.randomcutforest.sampler.IStreamSampler;
+import com.amazon.randomcutforest.tree.ITree;
 
 public interface IComponentModel<P> extends ITraversable, IUpdatable<P> {
-    void setBoundingBoxCacheFraction(double fraction);
+    ITree<P> getTree();
+    IStreamSampler<P> getSampler();
 }

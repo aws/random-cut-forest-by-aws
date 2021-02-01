@@ -15,10 +15,15 @@
 
 package com.amazon.randomcutforest.executor;
 
+import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.sampler.IStreamSampler;
+import com.amazon.randomcutforest.tree.ITree;
+
 import java.util.Arrays;
 import java.util.List;
-
-import com.amazon.randomcutforest.ComponentList;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -88,8 +93,20 @@ public abstract class AbstractForestUpdateExecutor<P> {
         return pointCopy;
     }
 
-    public void setBoundingBoxCacheFraction(double fraction) {
-        components.forEach(t -> t.setBoundingBoxCacheFraction(fraction));
+    public void forEachTree(Consumer<ITree<?>> function){
+        components.forEach(t -> function.accept(t.getTree()));
     }
 
+    public void forEachSampler(Consumer<IStreamSampler<?>> function){
+        components.forEach(t -> function.accept(t.getSampler()));
+    }
+
+
+    public <R> List<R> mapToTrees(Function<ITree<?>,R> function){
+        return components.stream().map(t -> function.apply(t.getTree())).collect(Collectors.toList());
+    }
+
+    public <R> List<R> mapToSamplers(Function<IStreamSampler<?>, R> function){
+        return components.stream().map(t -> function.apply(t.getSampler())).collect(Collectors.toList());
+    }
 }
