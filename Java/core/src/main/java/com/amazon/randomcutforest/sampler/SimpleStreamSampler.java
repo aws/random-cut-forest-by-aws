@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +22,8 @@ import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
+
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * <p>
@@ -215,7 +215,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
         }
 
         mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
-        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda + accumulatedLambda
+        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
 

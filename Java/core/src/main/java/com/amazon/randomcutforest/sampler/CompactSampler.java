@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * <p>
@@ -385,7 +385,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
             randomNumber = random.nextDouble();
         }
         mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
-        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda + accumulatedLambda
+        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
 
