@@ -485,6 +485,17 @@ public class RandomCutForest {
     }
 
     /**
+     * changes the setting of time dependent sampling on the fly
+     * 
+     * @param lambda new value of sampling rate
+     */
+
+    public void setLambda(double lambda) {
+        checkArgument(0 <= lambda, String.format("lambda cannot be negative"));
+        updateExecutor.forEachSampler(t -> t.setLambda(lambda));
+    }
+
+    /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to

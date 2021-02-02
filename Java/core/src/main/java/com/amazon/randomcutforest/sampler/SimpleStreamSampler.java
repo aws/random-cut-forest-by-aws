@@ -74,7 +74,19 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * The decay factor used for generating the weight of the point. For greater
      * values of lambda we become more biased in favor of recent points.
      */
-    private final double lambda;
+    private double lambda;
+    /**
+     * The last timestamp when lambda was changed
+     */
+    private long lastUpdateOflambda = 0;
+    /**
+     * most recent timestamp
+     */
+    private long mostRecentTimeStamp = 0;
+    /**
+     * The accumulated sum of lambda before the last update
+     */
+    private float accumulatedLambda = 0;
     /**
      * The random number generator used in sampling.
      */
@@ -202,7 +214,21 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
             randomNumber = random.nextDouble();
         }
 
-        return (float) (-sequenceIndex * lambda + Math.log(-Math.log(randomNumber)));
+        mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
+        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda + accumulatedLambda
+                + Math.log(-Math.log(randomNumber)));
+    }
+
+    /**
+     * sets the lambda on the fly
+     * 
+     * @param newLambda the new sampling rate
+     */
+    @Override
+    public void setLambda(double newLambda) {
+        accumulatedLambda += lastUpdateOflambda * lambda;
+        lambda = newLambda;
+        lastUpdateOflambda = mostRecentTimeStamp;
     }
 
     /**

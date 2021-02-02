@@ -47,6 +47,10 @@ public class NormalMixtureTestData {
         this(0.0, 1.0, 4.0, 2.0, 0.01, 0.3);
     }
 
+    public NormalMixtureTestData(double baseMu) {
+        this(baseMu, 1.0, 4.0, 2.0, 0.01, 0.3);
+    }
+
     public double[][] generateTestData(int numberOfRows, int numberOfColumns) {
         return generateTestData(numberOfRows, numberOfColumns, 0);
     }

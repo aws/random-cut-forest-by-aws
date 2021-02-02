@@ -135,4 +135,11 @@ public interface IStreamSampler<P> {
      * @return the number of points currently contained by the sampler.
      */
     int size();
+
+    /**
+     * changes the time dependent asmpling on the fly
+     * 
+     * @param lambda the rate of sampling
+     */
+    void setLambda(double lambda);
 }
