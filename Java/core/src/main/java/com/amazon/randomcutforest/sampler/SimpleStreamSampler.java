@@ -86,7 +86,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * The accumulated sum of lambda before the last update
      */
-    private float accumulatedLambda = 0;
+    private double accumulatedLambda = 0;
     /**
      * The random number generator used in sampling.
      */
@@ -213,20 +213,23 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
         while (randomNumber == 0d) {
             randomNumber = random.nextDouble();
         }
-
+        // mostRecentTimeStamp is the maximum sequenceIndex seen
         mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
         return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
 
     /**
-     * sets the lambda on the fly
+     * sets the lambda on the fly. Note that the assumption is that the times stamps
+     * corresponding to changes to lambda and sequenceIndexes are non-decreasing --
+     * the sequenceIndexes can be out of order among themselves within two different
+     * times when lambda was changed.
      * 
      * @param newLambda the new sampling rate
      */
     @Override
     public void setLambda(double newLambda) {
-        accumulatedLambda += lastUpdateOflambda * lambda;
+        accumulatedLambda += (mostRecentTimeStamp - lastUpdateOflambda) * lambda;
         lambda = newLambda;
         lastUpdateOflambda = mostRecentTimeStamp;
     }
@@ -255,5 +258,17 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     public double getLambda() {
         return lambda;
+    }
+
+    public double getAccumulatedLambda() {
+        return accumulatedLambda;
+    }
+
+    public long getLastUpdateOflambda() {
+        return lastUpdateOflambda;
+    }
+
+    public long getMostRecentTimeStamp() {
+        return mostRecentTimeStamp;
     }
 }

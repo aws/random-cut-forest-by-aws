@@ -55,7 +55,7 @@ public class DynamicSampling implements Example {
 
         int first_anomalies = 0;
         int second_anomalies = 0;
-        forest2.setLambda(50 * forest2.getLambda());
+        forest2.setLambda(10 * forest2.getLambda());
 
         for (double[] point : testData.generateTestData(dataSize, dimensions)) {
             if (forest.getAnomalyScore(point) > 1.0) {
@@ -90,8 +90,8 @@ public class DynamicSampling implements Example {
         mapper.setSaveExecutorContext(true);
         mapper.setCopy(true);
         RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
-        copyForest.setLambda(500 * forest.getLambda());
-        // force a very strong adjustment, to flush
+        copyForest.setLambda(10 * forest.getLambda());
+        // force an adjustment to catch up
         testData = new NormalMixtureTestData(-10);
         int forced_change_anomalies = 0;
         for (double[] point : testData.generateTestData(dataSize, dimensions)) {

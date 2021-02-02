@@ -76,49 +76,60 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * point with the greatest weight).
      */
     protected final float[] weight;
+
     /**
      * Index values identifying the points in the sample. See
      * {@link com.amazon.randomcutforest.store.IPointStore}.
      */
     protected final int[] pointIndex;
+
     /**
      * Sequence indexes of the points in the sample.
      */
     protected final long[] sequenceIndex;
+
     /**
      * The number of points in the sample when full.
      */
     protected final int capacity;
+
     /**
      * The number of points currently in the sample.
      */
     protected int size;
+
     /**
      * The decay factor used for generating the weight of the point. For greater
      * values of lambda we become more biased in favor of recent points.
      */
     private double lambda;
+
     /**
      * The last timestamp when lambda was changed
      */
     private long lastUpdateOflambda = 0;
+
     /**
-     * most recent timestamp
+     * most recent timestamp, used to determine lastUpdateOfLambda
      */
     private long mostRecentTimeStamp = 0;
+
     /**
      * The accumulated sum of lambda before the last update
      */
-    private float accumulatedLambda = 0;
+    private double accumulatedLambda = 0;
+
     /**
      * The random number generator used in sampling.
      */
     private final Random random;
+
     /**
      * The point evicted by the last call to {@link #update}, or null if the new
      * point was not accepted by the sampler.
      */
     private transient ISampled<Integer> evictedPoint;
+
     /**
      * This field is used to temporarily store the result from a call to
      * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
@@ -126,6 +137,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * Visible for testing.
      */
     protected AcceptPointState acceptPointState;
+
     /**
      * If true, then the sampler will store sequence indexes along with the sampled
      * points.
@@ -209,7 +221,8 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                      satisfy the heap property.
      */
     public CompactSampler(int sampleSize, int size, double lambda, Random random, float[] weight, int[] pointIndex,
-            long[] sequenceIndex, boolean validateHeap) {
+            long[] sequenceIndex, boolean validateHeap, long mostRecentTimeStamp, long lastUpdateOflambda,
+            double accumulatedLambda) {
 
         checkNotNull(weight, "weight must not be null");
         checkNotNull(pointIndex, "pointIndex must not be null");
@@ -222,6 +235,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
         this.weight = weight;
         this.pointIndex = pointIndex;
         this.sequenceIndex = sequenceIndex;
+        this.mostRecentTimeStamp = mostRecentTimeStamp;
+        this.lastUpdateOflambda = lastUpdateOflambda;
+        this.accumulatedLambda = accumulatedLambda;
 
         reheap(validateHeap);
     }
@@ -384,19 +400,23 @@ public class CompactSampler implements IStreamSampler<Integer> {
         while (randomNumber == 0d) {
             randomNumber = random.nextDouble();
         }
+        // mostRecentTimeStamp corresponds to the maximum sequenceIndex seen
         mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
         return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
 
     /**
-     * sets the lambda on the fly
+     * sets the lambda on the fly. Note that the assumption is that the times stamps
+     * corresponding to changes to lambda and sequenceIndexes are non-decreasing --
+     * the sequenceIndexes can be out of order among themselves within two different
+     * times when lambda was changed.
      * 
      * @param newLambda the new sampling rate
      */
     @Override
     public void setLambda(double newLambda) {
-        accumulatedLambda += lastUpdateOflambda * lambda;
+        accumulatedLambda += (mostRecentTimeStamp - lastUpdateOflambda) * lambda;
         lambda = newLambda;
         lastUpdateOflambda = mostRecentTimeStamp;
     }
@@ -437,6 +457,18 @@ public class CompactSampler implements IStreamSampler<Integer> {
      */
     public double getLambda() {
         return lambda;
+    }
+
+    public double getAccumulatedLambda() {
+        return accumulatedLambda;
+    }
+
+    public long getLastUpdateOflambda() {
+        return lastUpdateOflambda;
+    }
+
+    public long getMostRecentTimeStamp() {
+        return mostRecentTimeStamp;
     }
 
     public boolean isStoreSequenceIndexesEnabled() {

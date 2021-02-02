@@ -137,7 +137,7 @@ public interface IStreamSampler<P> {
     int size();
 
     /**
-     * changes the time dependent asmpling on the fly
+     * changes the time dependent sampling on the fly
      * 
      * @param lambda the rate of sampling
      */
