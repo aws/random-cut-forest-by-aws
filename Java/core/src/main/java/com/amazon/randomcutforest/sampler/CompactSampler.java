@@ -261,6 +261,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
 
     @Override
     public boolean acceptPoint(long sequenceIndex) {
+        checkState(sequenceIndex >= lastUpdateOflambda, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
         if (size < capacity) {

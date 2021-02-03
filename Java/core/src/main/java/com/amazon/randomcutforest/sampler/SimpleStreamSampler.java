@@ -130,6 +130,8 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * @return A weighted point that can be added to the sampler or null
      */
     public boolean acceptPoint(long sequenceIndex) {
+        checkState(sequenceIndex >= lastUpdateOflambda, "incorrect sequences submitted to sampler");
+
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
