@@ -103,8 +103,8 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
                 throw new IllegalStateException("Incorrect sampler state");
             }
             if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getMostRecentTimeStamp() != ((CompactSampler) forest.getComponents().get(i).getSampler())
-                            .getMostRecentTimeStamp()) {
+                    .getLargestSequenceIndexSeen() != ((CompactSampler) forest.getComponents().get(i).getSampler())
+                            .getLargestSequenceIndexSeen()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
             if (((CompactSampler) forest2.getComponents().get(i).getSampler())

@@ -112,7 +112,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
     /**
      * most recent timestamp, used to determine lastUpdateOfLambda
      */
-    private long mostRecentTimeStamp = 0;
+    private long largestSequenceIndexSeen = 0;
 
     /**
      * The accumulated sum of lambda before the last update
@@ -221,7 +221,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                      satisfy the heap property.
      */
     public CompactSampler(int sampleSize, int size, double lambda, Random random, float[] weight, int[] pointIndex,
-            long[] sequenceIndex, boolean validateHeap, long mostRecentTimeStamp, long lastUpdateOflambda,
+            long[] sequenceIndex, boolean validateHeap, long largestSequenceIndexSeen, long lastUpdateOflambda,
             double accumulatedLambda) {
 
         checkNotNull(weight, "weight must not be null");
@@ -235,7 +235,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
         this.weight = weight;
         this.pointIndex = pointIndex;
         this.sequenceIndex = sequenceIndex;
-        this.mostRecentTimeStamp = mostRecentTimeStamp;
+        this.largestSequenceIndexSeen = largestSequenceIndexSeen;
         this.lastUpdateOflambda = lastUpdateOflambda;
         this.accumulatedLambda = accumulatedLambda;
 
@@ -402,7 +402,8 @@ public class CompactSampler implements IStreamSampler<Integer> {
             randomNumber = random.nextDouble();
         }
         // mostRecentTimeStamp corresponds to the maximum sequenceIndex seen
-        mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
+        largestSequenceIndexSeen = (largestSequenceIndexSeen < sequenceIndex) ? sequenceIndex
+                : largestSequenceIndexSeen;
         return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
@@ -417,9 +418,9 @@ public class CompactSampler implements IStreamSampler<Integer> {
      */
     @Override
     public void setLambda(double newLambda) {
-        accumulatedLambda += (mostRecentTimeStamp - lastUpdateOflambda) * lambda;
+        accumulatedLambda += (largestSequenceIndexSeen - lastUpdateOflambda) * lambda;
         lambda = newLambda;
-        lastUpdateOflambda = mostRecentTimeStamp;
+        lastUpdateOflambda = largestSequenceIndexSeen;
     }
 
     /**
@@ -468,8 +469,15 @@ public class CompactSampler implements IStreamSampler<Integer> {
         return lastUpdateOflambda;
     }
 
-    public long getMostRecentTimeStamp() {
-        return mostRecentTimeStamp;
+    public long getLargestSequenceIndexSeen() {
+        return largestSequenceIndexSeen;
+    }
+
+    @Override
+    public void setLambdaParameters(long largestSequenceIndexSeen, long lastUpdateOflambda, double accumulatedLambda) {
+        this.accumulatedLambda = accumulatedLambda;
+        this.largestSequenceIndexSeen = largestSequenceIndexSeen;
+        this.lastUpdateOflambda = lastUpdateOflambda;
     }
 
     public boolean isStoreSequenceIndexesEnabled() {

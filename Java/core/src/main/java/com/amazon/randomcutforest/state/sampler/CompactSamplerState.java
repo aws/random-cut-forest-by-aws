@@ -55,7 +55,7 @@ public class CompactSamplerState {
     /**
      * maximum timestamp seen in update/computeWeight
      */
-    private long mostRecentTimeStamp;
+    private long largestSequenceIndexSeen;
     /**
      * accumulated lambda
      */

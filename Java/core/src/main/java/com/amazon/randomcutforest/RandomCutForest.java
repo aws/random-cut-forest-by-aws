@@ -489,7 +489,6 @@ public class RandomCutForest {
      * 
      * @param lambda new value of sampling rate
      */
-
     public void setLambda(double lambda) {
         checkArgument(0 <= lambda, String.format("lambda cannot be negative"));
         updateExecutor.forEachSampler(t -> t.setLambda(lambda));

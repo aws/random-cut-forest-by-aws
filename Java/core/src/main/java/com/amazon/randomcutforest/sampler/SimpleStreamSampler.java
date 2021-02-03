@@ -82,7 +82,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     /**
      * most recent timestamp
      */
-    private long mostRecentTimeStamp = 0;
+    private long largestSequenceIndexSeen = 0;
     /**
      * The accumulated sum of lambda before the last update
      */
@@ -216,7 +216,8 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
             randomNumber = random.nextDouble();
         }
         // mostRecentTimeStamp is the maximum sequenceIndex seen
-        mostRecentTimeStamp = (mostRecentTimeStamp < sequenceIndex) ? sequenceIndex : mostRecentTimeStamp;
+        largestSequenceIndexSeen = (largestSequenceIndexSeen < sequenceIndex) ? sequenceIndex
+                : largestSequenceIndexSeen;
         return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
                 + Math.log(-Math.log(randomNumber)));
     }
@@ -231,9 +232,9 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      */
     @Override
     public void setLambda(double newLambda) {
-        accumulatedLambda += (mostRecentTimeStamp - lastUpdateOflambda) * lambda;
+        accumulatedLambda += (largestSequenceIndexSeen - lastUpdateOflambda) * lambda;
         lambda = newLambda;
-        lastUpdateOflambda = mostRecentTimeStamp;
+        lastUpdateOflambda = largestSequenceIndexSeen;
     }
 
     /**
@@ -270,7 +271,15 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
         return lastUpdateOflambda;
     }
 
-    public long getMostRecentTimeStamp() {
-        return mostRecentTimeStamp;
+    public long getLargestSequenceIndexSeen() {
+        return largestSequenceIndexSeen;
     }
+
+    @Override
+    public void setLambdaParameters(long largestSequenceIndexSeen, long lastUpdateOflambda, double accumulatedLambda) {
+        this.accumulatedLambda = accumulatedLambda;
+        this.largestSequenceIndexSeen = largestSequenceIndexSeen;
+        this.lastUpdateOflambda = lastUpdateOflambda;
+    }
+
 }
