@@ -51,13 +51,9 @@ public class CompactSamplerState {
     /**
      * Last update of lambda
      */
-    private long lastUpdateOfLambda;
+    private long sequenceIndexOfMostRecentLambdaUpdate;
     /**
      * maximum timestamp seen in update/computeWeight
      */
-    private long largestSequenceIndexSeen;
-    /**
-     * accumulated lambda
-     */
-    private double accumulatedLambda;
+    private long maxSequenceIndex;
 }

@@ -143,14 +143,8 @@ public interface IStreamSampler<P> {
      */
     void setLambda(double lambda);
 
-    /**
-     * enables dynamic sampling, if lambda is ever changed
-     * 
-     * @param largestSequenceIndexSeen largest index seen by sampler
-     * @param lastUpdateOflambda       last index when lambda was changed
-     * @param accumulatedLambda        sum of lambda over indices till the last
-     *                                 index when lambda was changed
-     */
-    void setLambdaParameters(long largestSequenceIndexSeen, long lastUpdateOflambda, double accumulatedLambda);
+    void setMaxSequenceIndex(long maxSequenceIndex);
+
+    void setSequenceIndexOfMostRecentLambdaUpdate(long index);
 
 }

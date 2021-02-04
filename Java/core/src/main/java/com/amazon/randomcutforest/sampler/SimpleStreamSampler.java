@@ -57,7 +57,7 @@ import java.util.Random;
  * see {@link CompactSampler}.
  * </p>
  */
-public class SimpleStreamSampler<P> implements IStreamSampler<P> {
+public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
 
     /**
      * A min-heap containing the weighted points currently in sample. The head
@@ -70,27 +70,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * The number of points in the sample when full.
      */
     private final int sampleSize;
-    /**
-     * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
-     */
-    private double lambda;
-    /**
-     * The last timestamp when lambda was changed
-     */
-    private long lastUpdateOflambda = 0;
-    /**
-     * most recent timestamp
-     */
-    private long largestSequenceIndexSeen = 0;
-    /**
-     * The accumulated sum of lambda before the last update
-     */
-    private double accumulatedLambda = 0;
-    /**
-     * The random number generator used in sampling.
-     */
-    private final Random random;
+
     /**
      * The point evicted by the last call to {@link #update}, or if the new point
      * was not accepted by the sampler.
@@ -105,6 +85,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     protected AcceptPointState acceptPointState;
 
     public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
+        super();
         this.sampleSize = sampleSize;
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
@@ -121,16 +102,16 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
 
     /**
      * Submit a new point to the sampler. When the point is submitted, a new weight
-     * is computed for the point using the {@link #computeWeight} method. If the new
-     * weight is smaller than the largest weight currently in the sampler, then the
-     * new point is accepted into the sampler and the point corresponding to the
-     * largest weight is evicted.
+     * is computed for the point using the computeWeight method. If the new weight
+     * is smaller than the largest weight currently in the sampler, then the new
+     * point is accepted into the sampler and the point corresponding to the largest
+     * weight is evicted.
      *
      * @param sequenceIndex The timestamp value being submitted.
      * @return A weighted point that can be added to the sampler or null
      */
     public boolean acceptPoint(long sequenceIndex) {
-        checkState(sequenceIndex >= lastUpdateOflambda, "incorrect sequences submitted to sampler");
+        checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
 
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
@@ -196,48 +177,6 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     }
 
     /**
-     * Score is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
-     *
-     * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
-     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
-     * </ul>
-     * <p>
-     * A higher score means lower priority. So the points with the lower score have
-     * higher chance of making it to the sample.
-     *
-     * @param sequenceIndex The sequenceIndex of the point whose score is being
-     *                      computed.
-     * @return the weight value used to define point priority
-     */
-    protected float computeWeight(long sequenceIndex) {
-        double randomNumber = 0d;
-        while (randomNumber == 0d) {
-            randomNumber = random.nextDouble();
-        }
-        // mostRecentTimeStamp is the maximum sequenceIndex seen
-        largestSequenceIndexSeen = (largestSequenceIndexSeen < sequenceIndex) ? sequenceIndex
-                : largestSequenceIndexSeen;
-        return (float) (-(sequenceIndex - lastUpdateOflambda) * lambda - accumulatedLambda
-                + Math.log(-Math.log(randomNumber)));
-    }
-
-    /**
-     * sets the lambda on the fly. Note that the assumption is that the times stamps
-     * corresponding to changes to lambda and sequenceIndexes are non-decreasing --
-     * the sequenceIndexes can be out of order among themselves within two different
-     * times when lambda was changed.
-     * 
-     * @param newLambda the new sampling rate
-     */
-    @Override
-    public void setLambda(double newLambda) {
-        accumulatedLambda += (largestSequenceIndexSeen - lastUpdateOflambda) * lambda;
-        lambda = newLambda;
-        lastUpdateOflambda = largestSequenceIndexSeen;
-    }
-
-    /**
      * @return the number of points contained by the sampler when full.
      */
     @Override
@@ -251,35 +190,6 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     @Override
     public int size() {
         return sample.size();
-    }
-
-    /**
-     * @return the lambda value that determines the amount of bias given toward
-     *         recent points. Larger values of lambda indicate a greater bias toward
-     *         recent points. A value of 0 corresponds to a uniform sample over the
-     *         stream.
-     */
-    public double getLambda() {
-        return lambda;
-    }
-
-    public double getAccumulatedLambda() {
-        return accumulatedLambda;
-    }
-
-    public long getLastUpdateOflambda() {
-        return lastUpdateOflambda;
-    }
-
-    public long getLargestSequenceIndexSeen() {
-        return largestSequenceIndexSeen;
-    }
-
-    @Override
-    public void setLambdaParameters(long largestSequenceIndexSeen, long lastUpdateOflambda, double accumulatedLambda) {
-        this.accumulatedLambda = accumulatedLambda;
-        this.largestSequenceIndexSeen = largestSequenceIndexSeen;
-        this.lastUpdateOflambda = lastUpdateOflambda;
     }
 
 }

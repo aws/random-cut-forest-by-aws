@@ -69,8 +69,8 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         }
 
         return new CompactSampler(state.getCapacity(), state.getSize(), state.getLambda(), new Random(seed), weight,
-                pointIndex, sequenceIndex, validateHeap, state.getLargestSequenceIndexSeen(),
-                state.getLastUpdateOfLambda(), state.getAccumulatedLambda());
+                pointIndex, sequenceIndex, validateHeap, state.getMaxSequenceIndex(),
+                state.getSequenceIndexOfMostRecentLambdaUpdate());
     }
 
     @Override
@@ -79,9 +79,8 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setSize(model.size());
         state.setCapacity(model.getCapacity());
         state.setLambda(model.getLambda());
-        state.setLastUpdateOfLambda(model.getLastUpdateOflambda());
-        state.setAccumulatedLambda(model.getAccumulatedLambda());
-        state.setLargestSequenceIndexSeen(model.getLargestSequenceIndexSeen());
+        state.setSequenceIndexOfMostRecentLambdaUpdate(model.getSequenceIndexOfMostRecentLambdaUpdate());
+        state.setMaxSequenceIndex(model.getMaxSequenceIndex());
 
         if (copy) {
             state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));

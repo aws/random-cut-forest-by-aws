@@ -83,9 +83,8 @@ public class ArraySamplersToCompactStateConverter {
         samplerState.setPointIndex(pointIndex);
         samplerState.setWeight(weight);
         samplerState.setSequenceIndex(sequenceIndex);
-        samplerState.setAccumulatedLambda(sampler.getAccumulatedLambda());
-        samplerState.setLastUpdateOfLambda(sampler.getLastUpdateOflambda());
-        samplerState.setLargestSequenceIndexSeen(sampler.getLargestSequenceIndexSeen());
+        samplerState.setSequenceIndexOfMostRecentLambdaUpdate(sampler.getSequenceIndexOfMostRecentLambdaUpdate());
+        samplerState.setMaxSequenceIndex(sampler.getMaxSequenceIndex());
 
         compactSamplerStates.add(samplerState);
     }

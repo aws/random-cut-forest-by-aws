@@ -98,26 +98,17 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
 
         for (int i = 0; i < numberOfTrees; i++) {
             if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getAccumulatedLambda() != ((CompactSampler) forest.getComponents().get(i).getSampler())
-                            .getAccumulatedLambda()) {
+                    .getMaxSequenceIndex() != ((CompactSampler) forest.getComponents().get(i).getSampler())
+                            .getMaxSequenceIndex()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
             if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getLargestSequenceIndexSeen() != ((CompactSampler) forest.getComponents().get(i).getSampler())
-                            .getLargestSequenceIndexSeen()) {
+                    .getSequenceIndexOfMostRecentLambdaUpdate() != ((CompactSampler) forest.getComponents().get(i)
+                            .getSampler()).getSequenceIndexOfMostRecentLambdaUpdate()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
             if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getLastUpdateOflambda() != ((CompactSampler) forest.getComponents().get(i).getSampler())
-                            .getLastUpdateOflambda()) {
-                throw new IllegalStateException("Incorrect sampler state");
-            }
-            if (((CompactSampler) forest2.getComponents().get(i).getSampler()).getLastUpdateOflambda() != dataSize
-                    - 1) {
-                throw new IllegalStateException("Incorrect sampler state");
-            }
-            if (((CompactSampler) forest2.getComponents().get(i).getSampler()).getAccumulatedLambda() != (dataSize - 1)
-                    * saveLambda) {
+                    .getSequenceIndexOfMostRecentLambdaUpdate() != dataSize - 1) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
         }
