@@ -16,7 +16,11 @@
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -53,7 +57,7 @@ public class SimpleStreamSamplerTest {
     public void testNew() {
         // test fields defined in SimpleStreamSampler that aren't part of the
         // IStreamSampler interface
-        assertEquals(lambda, sampler.getLambda());
+        assertEquals(lambda, sampler.getTimeDecay());
 
         SimpleStreamSampler<double[]> uniformSampler = new SimpleStreamSampler<>(11, 0, 14, false);
         assertFalse(uniformSampler.getEvictedPoint().isPresent());
@@ -61,7 +65,7 @@ public class SimpleStreamSamplerTest {
         assertFalse(uniformSampler.isFull());
         assertEquals(11, uniformSampler.getCapacity());
         assertEquals(0, uniformSampler.size());
-        assertEquals(0.0, uniformSampler.getLambda());
+        assertEquals(0.0, uniformSampler.getTimeDecay());
     }
 
     @Test

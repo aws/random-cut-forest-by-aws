@@ -97,7 +97,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * @param newLambda the new sampling rate
      */
     @Override
-    public void setLambda(double newLambda) {
+    public void setTimeDecay(double newLambda) {
         // accumulatedLambda keeps track of adjustments and is zeroed out when the
         // arrays are
         // exported for some reason
@@ -111,7 +111,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      *         points. Larger values of lambda indicate a greater bias toward recent
      *         points. A value of 0 corresponds to a uniform sample over the stream.
      */
-    public double getLambda() {
+    public double getTimeDecay() {
         return lambda;
     }
 

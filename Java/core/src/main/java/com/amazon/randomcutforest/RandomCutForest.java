@@ -160,7 +160,7 @@ public class RandomCutForest {
     /**
      * The decay factor (lambda value) used by stream samplers in this forest.
      */
-    protected final double lambda;
+    protected double lambda;
     /**
      * Store the time information
      */
@@ -491,7 +491,8 @@ public class RandomCutForest {
      */
     public void setLambda(double lambda) {
         checkArgument(0 <= lambda, String.format("lambda cannot be negative"));
-        updateExecutor.forEachSampler(t -> t.setLambda(lambda));
+        this.lambda = lambda;
+        updateExecutor.forEachSampler(t -> t.setTimeDecay(lambda));
     }
 
     /**

@@ -64,7 +64,7 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testNew(Random random, CompactSampler sampler) {
         // test CompactSampler fields not defined in the IStreamSampler interface
-        assertEquals(lambda, sampler.getLambda());
+        assertEquals(lambda, sampler.getTimeDecay());
         assertNotNull(sampler.getWeightArray());
         assertNotNull(sampler.getPointIndexArray());
 
@@ -105,7 +105,7 @@ public class CompactSamplerTest {
         assertFalse(uniformSampler.isFull());
         assertEquals(sampleSize, uniformSampler.getCapacity());
         assertEquals(0, uniformSampler.size());
-        assertEquals(0.0, uniformSampler.getLambda());
+        assertEquals(0.0, uniformSampler.getTimeDecay());
     }
 
     @ParameterizedTest

@@ -87,7 +87,7 @@ public class CompactSamplerMapperTest {
         assertArrayEquals(original.getPointIndexArray(), mapped.getPointIndexArray(), "different point index arrays");
         assertEquals(original.getCapacity(), mapped.getCapacity());
         assertEquals(original.size(), mapped.size());
-        assertEquals(original.getLambda(), mapped.getLambda());
+        assertEquals(original.getTimeDecay(), mapped.getTimeDecay());
         assertFalse(mapped.getEvictedPoint().isPresent());
 
         if (original.isStoreSequenceIndexesEnabled()) {

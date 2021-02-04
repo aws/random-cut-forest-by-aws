@@ -142,7 +142,7 @@ public interface IStreamSampler<P> {
      * 
      * @param lambda the rate of sampling
      */
-    default void setLambda(double lambda) {
+    default void setTimeDecay(double lambda) {
     };
 
     void setMaxSequenceIndex(long maxSequenceIndex);
