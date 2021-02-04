@@ -31,7 +31,7 @@ public class DynamicThroughput implements Example {
 
     @Override
     public String command() {
-        return "dynamic caching";
+        return "dynamic_caching";
     }
 
     @Override

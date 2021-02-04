@@ -39,7 +39,7 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
 
     @Override
     public String command() {
-        return "protostuff";
+        return "protostuff_dynamic";
     }
 
     @Override

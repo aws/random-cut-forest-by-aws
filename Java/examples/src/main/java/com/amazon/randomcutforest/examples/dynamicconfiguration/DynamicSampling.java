@@ -29,7 +29,7 @@ public class DynamicSampling implements Example {
 
     @Override
     public String command() {
-        return "dynamic sampling";
+        return "dynamic_sampling";
     }
 
     @Override
@@ -71,7 +71,7 @@ public class DynamicSampling implements Example {
         // should be roughly equal
 
         first_anomalies = second_anomalies = 0;
-        testData = new NormalMixtureTestData(-3);
+        testData = new NormalMixtureTestData(-3, 40);
         for (double[] point : testData.generateTestData(dataSize, dimensions)) {
             if (forest.getAnomalyScore(point) > 1.0) {
                 first_anomalies++;
@@ -90,9 +90,9 @@ public class DynamicSampling implements Example {
         mapper.setSaveExecutorContext(true);
         mapper.setCopy(true);
         RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
-        copyForest.setLambda(10 * forest.getLambda());
+        copyForest.setLambda(50 * forest.getLambda());
         // force an adjustment to catch up
-        testData = new NormalMixtureTestData(-10);
+        testData = new NormalMixtureTestData(-10, -40);
         int forced_change_anomalies = 0;
         for (double[] point : testData.generateTestData(dataSize, dimensions)) {
             if (forest.getAnomalyScore(point) > 1.0) {
