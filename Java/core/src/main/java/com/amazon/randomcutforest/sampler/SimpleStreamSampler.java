@@ -57,7 +57,7 @@ import java.util.Random;
  * see {@link CompactSampler}.
  * </p>
  */
-public class SimpleStreamSampler<P> implements IStreamSampler<P> {
+public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
 
     /**
      * A min-heap containing the weighted points currently in sample. The head
@@ -70,15 +70,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
      * The number of points in the sample when full.
      */
     private final int sampleSize;
-    /**
-     * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
-     */
-    private final double lambda;
-    /**
-     * The random number generator used in sampling.
-     */
-    private final Random random;
+
     /**
      * The point evicted by the last call to {@link #update}, or if the new point
      * was not accepted by the sampler.
@@ -93,6 +85,7 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     protected AcceptPointState acceptPointState;
 
     public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
+        super();
         this.sampleSize = sampleSize;
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
@@ -109,15 +102,17 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
 
     /**
      * Submit a new point to the sampler. When the point is submitted, a new weight
-     * is computed for the point using the {@link #computeWeight} method. If the new
-     * weight is smaller than the largest weight currently in the sampler, then the
-     * new point is accepted into the sampler and the point corresponding to the
-     * largest weight is evicted.
+     * is computed for the point using the computeWeight method. If the new weight
+     * is smaller than the largest weight currently in the sampler, then the new
+     * point is accepted into the sampler and the point corresponding to the largest
+     * weight is evicted.
      *
      * @param sequenceIndex The timestamp value being submitted.
      * @return A weighted point that can be added to the sampler or null
      */
     public boolean acceptPoint(long sequenceIndex) {
+        checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
+
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
@@ -182,30 +177,6 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
     }
 
     /**
-     * Score is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
-     *
-     * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
-     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
-     * </ul>
-     * <p>
-     * A higher score means lower priority. So the points with the lower score have
-     * higher chance of making it to the sample.
-     *
-     * @param sequenceIndex The sequenceIndex of the point whose score is being
-     *                      computed.
-     * @return the weight value used to define point priority
-     */
-    protected float computeWeight(long sequenceIndex) {
-        double randomNumber = 0d;
-        while (randomNumber == 0d) {
-            randomNumber = random.nextDouble();
-        }
-
-        return (float) (-sequenceIndex * lambda + Math.log(-Math.log(randomNumber)));
-    }
-
-    /**
      * @return the number of points contained by the sampler when full.
      */
     @Override
@@ -221,13 +192,4 @@ public class SimpleStreamSampler<P> implements IStreamSampler<P> {
         return sample.size();
     }
 
-    /**
-     * @return the lambda value that determines the amount of bias given toward
-     *         recent points. Larger values of lambda indicate a greater bias toward
-     *         recent points. A value of 0 corresponds to a uniform sample over the
-     *         stream.
-     */
-    public double getLambda() {
-        return lambda;
-    }
 }

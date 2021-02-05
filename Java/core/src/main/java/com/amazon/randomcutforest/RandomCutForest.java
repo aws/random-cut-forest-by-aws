@@ -160,7 +160,7 @@ public class RandomCutForest {
     /**
      * The decay factor (lambda value) used by stream samplers in this forest.
      */
-    protected final double lambda;
+    protected double lambda;
     /**
      * Store the time information
      */
@@ -482,6 +482,17 @@ public class RandomCutForest {
     public void setBoundingBoxCacheFraction(double cacheFraction) {
         checkArgument(0 <= cacheFraction && cacheFraction <= 1, String.format("fraction must be in [0,1]"));
         updateExecutor.forEachTree(t -> t.setBoundingBoxCacheFraction(cacheFraction));
+    }
+
+    /**
+     * changes the setting of time dependent sampling on the fly
+     * 
+     * @param lambda new value of sampling rate
+     */
+    public void setLambda(double lambda) {
+        checkArgument(0 <= lambda, String.format("lambda cannot be negative"));
+        this.lambda = lambda;
+        updateExecutor.forEachSampler(t -> t.setTimeDecay(lambda));
     }
 
     /**

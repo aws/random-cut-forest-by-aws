@@ -64,7 +64,7 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testNew(Random random, CompactSampler sampler) {
         // test CompactSampler fields not defined in the IStreamSampler interface
-        assertEquals(lambda, sampler.getLambda());
+        assertEquals(lambda, sampler.getTimeDecay());
         assertNotNull(sampler.getWeightArray());
         assertNotNull(sampler.getPointIndexArray());
 
@@ -84,7 +84,7 @@ public class CompactSamplerTest {
         float[] weight = { 0.4f, 0.3f, 0.2f };
         int[] pointIndex = { 1, 2, 3 };
         CompactSampler sampler = new CompactSampler(sampleSize, weight.length, lambda, new Random(), weight, pointIndex,
-                null, true);
+                null, true, 0, 0);
 
         assertFalse(sampler.getEvictedPoint().isPresent());
         assertFalse(sampler.isStoreSequenceIndexesEnabled());
@@ -105,7 +105,7 @@ public class CompactSamplerTest {
         assertFalse(uniformSampler.isFull());
         assertEquals(sampleSize, uniformSampler.getCapacity());
         assertEquals(0, uniformSampler.size());
-        assertEquals(0.0, uniformSampler.getLambda());
+        assertEquals(0.0, uniformSampler.getTimeDecay());
     }
 
     @ParameterizedTest
@@ -233,6 +233,6 @@ public class CompactSamplerTest {
         weightArray[2 * i + 1] = f;
 
         assertThrows(IllegalStateException.class, () -> new CompactSampler(sampleSize, sampleSize, lambda, random,
-                weightArray, sampler.getPointIndexArray(), sampler.getSequenceIndexArray(), true));
+                weightArray, sampler.getPointIndexArray(), sampler.getSequenceIndexArray(), true, 0, 0));
     }
 }

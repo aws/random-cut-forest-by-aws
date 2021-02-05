@@ -135,4 +135,16 @@ public interface IStreamSampler<P> {
      * @return the number of points currently contained by the sampler.
      */
     int size();
+
+    /**
+     * changes the time dependent sampling on the fly. Lambda is the decay rate of
+     * every non-recent point
+     * 
+     * @param lambda the rate of sampling
+     */
+    default void setTimeDecay(double lambda) {
+    };
+
+    void setMaxSequenceIndex(long maxSequenceIndex);
+
 }

@@ -48,4 +48,12 @@ public class CompactSamplerState {
      * The lambda time-decay parameter for this sampler
      */
     private double lambda;
+    /**
+     * Last update of lambda
+     */
+    private long sequenceIndexOfMostRecentLambdaUpdate;
+    /**
+     * maximum timestamp seen in update/computeWeight
+     */
+    private long maxSequenceIndex;
 }

@@ -301,6 +301,9 @@ public class RandomCutForestMapper
                         .centerOfMassEnabled(state.isCenterOfMassEnabled()).randomSeed(rng.nextLong()).build();
                 SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(state.getSampleSize(),
                         state.getLambda(), rng.nextLong());
+                sampler.setMaxSequenceIndex(compactData.getMaxSequenceIndex());
+                sampler.setSequenceIndexOfMostRecentLambdaUpdate(
+                        compactData.getSequenceIndexOfMostRecentLambdaUpdate());
 
                 for (Weighted<Integer> sample : compactData.getWeightedSample()) {
                     double[] point = pointStore.get(sample.getValue());

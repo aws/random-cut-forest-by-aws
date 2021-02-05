@@ -59,7 +59,7 @@ import java.util.stream.Stream;
  * implementation uses less runtime memory.
  * </p>
  */
-public class CompactSampler implements IStreamSampler<Integer> {
+public class CompactSampler extends AbstractStreamSampler<Integer> {
 
     /**
      * When creating a {@code CompactSampler}, the user has the option to disable
@@ -76,44 +76,28 @@ public class CompactSampler implements IStreamSampler<Integer> {
      * point with the greatest weight).
      */
     protected final float[] weight;
+
     /**
      * Index values identifying the points in the sample. See
      * {@link com.amazon.randomcutforest.store.IPointStore}.
      */
     protected final int[] pointIndex;
+
     /**
      * Sequence indexes of the points in the sample.
      */
     protected final long[] sequenceIndex;
+
     /**
      * The number of points in the sample when full.
      */
     protected final int capacity;
+
     /**
      * The number of points currently in the sample.
      */
     protected int size;
-    /**
-     * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
-     */
-    private final double lambda;
-    /**
-     * The random number generator used in sampling.
-     */
-    private final Random random;
-    /**
-     * The point evicted by the last call to {@link #update}, or null if the new
-     * point was not accepted by the sampler.
-     */
-    private transient ISampled<Integer> evictedPoint;
-    /**
-     * This field is used to temporarily store the result from a call to
-     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
-     *
-     * Visible for testing.
-     */
-    protected AcceptPointState acceptPointState;
+
     /**
      * If true, then the sampler will store sequence indexes along with the sampled
      * points.
@@ -155,6 +139,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                                    sampler.
      */
     public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
+        super();
         this.capacity = sampleSize;
         size = 0;
         weight = new float[sampleSize];
@@ -197,8 +182,8 @@ public class CompactSampler implements IStreamSampler<Integer> {
      *                      satisfy the heap property.
      */
     public CompactSampler(int sampleSize, int size, double lambda, Random random, float[] weight, int[] pointIndex,
-            long[] sequenceIndex, boolean validateHeap) {
-
+            long[] sequenceIndex, boolean validateHeap, long largestSequenceIndexSeen, long lastUpdateOflambda) {
+        super();
         checkNotNull(weight, "weight must not be null");
         checkNotNull(pointIndex, "pointIndex must not be null");
 
@@ -210,6 +195,8 @@ public class CompactSampler implements IStreamSampler<Integer> {
         this.weight = weight;
         this.pointIndex = pointIndex;
         this.sequenceIndex = sequenceIndex;
+        this.maxSequenceIndex = largestSequenceIndexSeen;
+        this.sequenceIndexOfMostRecentLambdaUpdate = lastUpdateOflambda;
 
         reheap(validateHeap);
     }
@@ -233,6 +220,7 @@ public class CompactSampler implements IStreamSampler<Integer> {
 
     @Override
     public boolean acceptPoint(long sequenceIndex) {
+        checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
         if (size < capacity) {
@@ -338,10 +326,26 @@ public class CompactSampler implements IStreamSampler<Integer> {
     }
 
     private Stream<Weighted<Integer>> streamSample() {
+        reset_weights();
         return IntStream.range(0, size).mapToObj(i -> {
             long index = sequenceIndex != null ? sequenceIndex[i] : SEQUENCE_INDEX_NA;
             return new Weighted<>(pointIndex[i], weight[i], index);
         });
+    }
+
+    /**
+     * removes the adjustments to weight in accumulated lambda and resets the
+     * updates to lambda
+     */
+    private void reset_weights() {
+        if (accumulatedLambda == 0)
+            return;
+        // now the weight computation of every element would not see this subtraction
+        // which implies that every existing element should see the offset as addition
+        for (int i = 0; i < size; i++) {
+            weight[i] += accumulatedLambda;
+        }
+        accumulatedLambda = 0;
     }
 
     /**
@@ -350,30 +354,6 @@ public class CompactSampler implements IStreamSampler<Integer> {
      */
     public Optional<ISampled<Integer>> getEvictedPoint() {
         return Optional.ofNullable(evictedPoint);
-    }
-
-    /**
-     * Score is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
-     *
-     * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
-     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
-     * </ul>
-     * <p>
-     * A higher score means lower priority. So the points with the lower score have
-     * higher chance of making it to the sample.
-     *
-     * @param sequenceIndex The sequenceIndex of the point whose score is being
-     *                      computed.
-     * @return the weight value used to define point priority
-     */
-    protected float computeWeight(long sequenceIndex) {
-        double randomNumber = 0d;
-        while (randomNumber == 0d) {
-            randomNumber = random.nextDouble();
-        }
-
-        return (float) (-sequenceIndex * lambda + Math.log(-Math.log(randomNumber)));
     }
 
     /**
@@ -402,16 +382,6 @@ public class CompactSampler implements IStreamSampler<Integer> {
 
     public long[] getSequenceIndexArray() {
         return sequenceIndex;
-    }
-
-    /**
-     * @return the lambda value that determines the amount of bias given toward
-     *         recent points. Larger values of lambda indicate a greater bias toward
-     *         recent points. A value of 0 corresponds to a uniform sample over the
-     *         stream.
-     */
-    public double getLambda() {
-        return lambda;
     }
 
     public boolean isStoreSequenceIndexesEnabled() {
