@@ -22,7 +22,7 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
 public class CompactRandomCutTreeState {
-    private int rootIndex;
+    private int root;
     private LeafStoreState leafStoreState;
     private NodeStoreState nodeStoreState;
 }

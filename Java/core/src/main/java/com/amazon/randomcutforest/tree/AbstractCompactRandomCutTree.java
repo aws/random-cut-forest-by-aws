@@ -75,7 +75,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             leafStore = new LeafStore(maxSize);
             nodeStore = new NodeStore(maxSize - 1);
         }
-        rootIndex = null;
+        root = null;
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
             sequenceIndexes = new HashSet[maxSize];
@@ -85,8 +85,8 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         // setBoundingBoxCacheFraction(0.3);
     }
 
-    public AbstractCompactRandomCutTree(int maxSize, long seed, ILeafStore leafStore, INodeStore nodeStore,
-            int rootIndex, boolean enableCache) {
+    public AbstractCompactRandomCutTree(int maxSize, long seed, ILeafStore leafStore, INodeStore nodeStore, int root,
+            boolean enableCache) {
         super(seed, enableCache, false, false);
         checkArgument(maxSize > 0, "maxSize must be greater than 0");
         checkNotNull(leafStore, "leafStore must not be null");
@@ -95,7 +95,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         this.maxSize = maxSize;
         this.leafStore = leafStore;
         this.nodeStore = nodeStore;
-        this.rootIndex = rootIndex;
+        this.root = root == NULL ? null : root;
         this.enableCache = enableCache;
     }
 
@@ -199,10 +199,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         if (cachedBoxes[tempNode] != null) {
             cachedBoxes[tempNode].addPoint(point); // internal boxes can be updated in place
         }
-    }
-
-    public int getRootIndex() {
-        return rootIndex;
     }
 
     @Override
@@ -399,5 +395,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     public int getMaxSize() {
         return maxSize;
+    }
+
+    public int getRootIndex() {
+        return intValue(root);
     }
 }
