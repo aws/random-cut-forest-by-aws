@@ -56,8 +56,9 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         PointStoreState state = new PointStoreState();
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
-        state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStore().length));
-        state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
+        int prefix = model.getValidPrefix();
+        state.setDoubleData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));
+        state.setRefCount(Arrays.copyOf(model.getRefCount(), prefix));
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }

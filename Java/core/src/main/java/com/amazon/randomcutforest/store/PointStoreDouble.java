@@ -126,7 +126,7 @@ public class PointStoreDouble extends PointStore<double[]> {
     }
 
     public double[] getStore() {
-        return Arrays.copyOf(store, getValidPrefix() * dimensions);
+        return store;
     }
 
 }

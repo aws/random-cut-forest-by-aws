@@ -135,7 +135,7 @@ public class PointStoreFloat extends PointStore<float[]> implements IPointStore<
     }
 
     public float[] getStore() {
-        return Arrays.copyOf(store, getValidPrefix() * dimensions);
+        return store;
     }
 
 }

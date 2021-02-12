@@ -17,8 +17,6 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.Arrays;
-
 /**
  * PointStore is a fixed size repository of points, where each point is a float
  * array of a specified length. A PointStore counts references to points that
@@ -145,12 +143,13 @@ public abstract class PointStore<Point> extends IndexManager implements IPointSt
 
     public int getValidPrefix() {
         int prefix = capacity;
-        while (prefix > 0 && !occupied.get(prefix - 1))
+        while (prefix > 0 && !occupied.get(prefix - 1)) {
             prefix--;
+        }
         return prefix;
     }
 
     public short[] getRefCount() {
-        return Arrays.copyOf(refCount, getValidPrefix());
+        return refCount;
     }
 }
