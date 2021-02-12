@@ -40,10 +40,10 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getFloatData(), "floatdata must not be null");
 
-        int capacity = state.getRefCount().length;
+        int capacity = state.getCapacity();
+        int dimensions = state.getDimensions();
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        float[] store = Arrays.copyOf(state.getFloatData(), state.getFloatData().length);
-
+        float[] store = Arrays.copyOf(state.getFloatData(), capacity * dimensions);
         int freeIndexPointer = state.getFreeIndexes().length - 1;
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
@@ -54,6 +54,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     @Override
     public PointStoreState toState(PointStoreFloat model) {
         PointStoreState state = new PointStoreState();
+        state.setCapacity(model.getCapacity());
+        state.setDimensions(model.getDimensions());
         state.setFloatData(Arrays.copyOf(model.getStore(), model.getStore().length));
         state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));

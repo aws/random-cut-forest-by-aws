@@ -50,15 +50,15 @@ public class ProtostuffExample implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int dimensions = 4;
+        int dimensions = 10;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.DOUBLE;
+        Precision precision = Precision.SINGLE;
 
         RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
 
-        int dataSize = 4 * sampleSize;
+        int dataSize = 1000 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
         for (double[] point : testData.generateTestData(dataSize, dimensions)) {
             forest.update(point);

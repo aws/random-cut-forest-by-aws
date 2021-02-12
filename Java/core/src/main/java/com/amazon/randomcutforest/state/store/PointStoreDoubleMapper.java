@@ -40,10 +40,10 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getDoubleData(), "doubleData must not be null");
 
-        int capacity = state.getRefCount().length;
+        int capacity = state.getCapacity();
+        int dimensions = state.getDimensions();
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        double[] store = Arrays.copyOf(state.getDoubleData(), state.getDoubleData().length);
-
+        double[] store = Arrays.copyOf(state.getDoubleData(), capacity * dimensions);
         int freeIndexPointer = state.getFreeIndexes().length - 1;
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
@@ -54,6 +54,8 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
     @Override
     public PointStoreState toState(PointStoreDouble model) {
         PointStoreState state = new PointStoreState();
+        state.setDimensions(model.getDimensions());
+        state.setCapacity(model.getCapacity());
         state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStore().length));
         state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));

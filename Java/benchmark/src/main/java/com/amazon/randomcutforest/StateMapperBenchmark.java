@@ -28,6 +28,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.profilers.OutputSizeProfiler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -62,6 +63,9 @@ public class StateMapperBenchmark {
         @Param({ "false", "true" })
         boolean saveTreeState;
 
+        @Param({ "SINGLE", "DOUBLE" })
+        Precision precision;
+
         double[][] trainingData;
         double[][] testData;
         RandomCutForestState forestState;
@@ -78,7 +82,7 @@ public class StateMapperBenchmark {
         @Setup(Level.Invocation)
         public void setUpForest() throws JsonProcessingException {
             RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).build();
+                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
 
             for (int i = 0; i < NUM_TRAIN_SAMPLES; i++) {
                 forest.update(trainingData[i]);
