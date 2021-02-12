@@ -95,7 +95,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
      */
-    public void accept(final INodeView<?> node, final int depthOfNode) {
+    public void accept(final INodeView node, final int depthOfNode) {
 
         double probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(node.getBoundingBox(), queryPoint);
 
@@ -116,7 +116,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param depthOfNode the depth of the leaf node
      */
     @Override
-    public void acceptLeaf(final INodeView<?> leafNode, final int depthOfNode) {
+    public void acceptLeaf(final INodeView leafNode, final int depthOfNode) {
         for (int i = 0; i < queryPoint.length; i++) {
             if (missing[i]) {
                 queryPoint[i] = leafNode.getBoundingBox().getMinValue(i);
@@ -151,7 +151,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      *         in the query point, false otherwise.
      */
     @Override
-    public boolean trigger(final INodeView<?> node) {
+    public boolean trigger(final INodeView node) {
         return missing[node.getCutDimension()];
     }
 

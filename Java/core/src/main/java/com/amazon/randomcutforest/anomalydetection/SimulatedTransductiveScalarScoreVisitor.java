@@ -57,7 +57,7 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(INodeView<?> node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         double weight = getWeight(node.getCutDimension(), vecSepBuild, node.getBoundingBox());
 
         if (pointInsideBox) {
