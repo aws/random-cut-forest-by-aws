@@ -110,7 +110,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(INodeView<?> node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -166,7 +166,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     }
 
     @Override
-    public void acceptLeaf(INodeView<?> leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
 
         updateRangesForScoring(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 

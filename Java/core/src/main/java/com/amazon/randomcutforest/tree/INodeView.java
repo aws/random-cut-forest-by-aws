@@ -17,7 +17,7 @@ package com.amazon.randomcutforest.tree;
 
 import java.util.Set;
 
-public interface INodeView<NodeReference> {
+public interface INodeView {
     int getMass();
 
     IBoundingBoxView getBoundingBox();

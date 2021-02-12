@@ -35,7 +35,7 @@ public interface MultiVisitor<R> extends Visitor<R> {
      * @return true if the traversal should split the visitor into two copies at
      *         this node, false otherwise.
      */
-    boolean trigger(final INodeView<?> node);
+    boolean trigger(final INodeView node);
 
     /**
      * Return a copy of this visitor. The original visitor plus the copy will each

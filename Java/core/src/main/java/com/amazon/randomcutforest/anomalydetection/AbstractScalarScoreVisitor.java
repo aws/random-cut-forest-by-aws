@@ -146,7 +146,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(INodeView<?> node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -174,7 +174,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param depthOfNode The depth of the leaf node
      */
     @Override
-    public void acceptLeaf(INodeView<?> leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
         if (leafNode.leafPointEquals(pointToScore)
                 && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             pointInsideBox = true;
