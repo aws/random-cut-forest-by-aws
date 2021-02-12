@@ -27,6 +27,14 @@ import lombok.Data;
 @Data
 public class PointStoreState {
     /**
+     * size of each point saved
+     */
+    private int dimensions;
+    /**
+     * capacity of the store
+     */
+    private int capacity;
+    /**
      * Point data for a {@link com.amazon.randomcutforest.store.PointStoreDouble}.
      */
     private double[] doubleData;

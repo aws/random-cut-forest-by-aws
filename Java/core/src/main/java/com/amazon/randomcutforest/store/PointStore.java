@@ -141,6 +141,14 @@ public abstract class PointStore<Point> extends IndexManager implements IPointSt
         checkState(refCount[index] > 0, "ref count at occupied index is 0");
     }
 
+    public int getValidPrefix() {
+        int prefix = capacity;
+        while (prefix > 0 && !occupied.get(prefix - 1)) {
+            prefix--;
+        }
+        return prefix;
+    }
+
     public short[] getRefCount() {
         return refCount;
     }
