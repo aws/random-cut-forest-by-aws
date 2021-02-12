@@ -60,14 +60,14 @@ public class CompactRandomCutTreeDoubleMapper implements
         }
 
         return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, (PointStoreDouble) context.getPointStore(),
-                leafStore, nodeStore, state.getRootIndex(), boundingBoxCacheEnabled);
+                leafStore, nodeStore, state.getRoot(), boundingBoxCacheEnabled);
 
     }
 
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeDouble model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        state.setRootIndex(model.getRootIndex());
+        state.setRoot(model.getRoot());
 
         if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();

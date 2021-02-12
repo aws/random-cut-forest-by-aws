@@ -49,7 +49,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
 
     private final Random random;
-    protected NodeReference rootIndex;
+    protected NodeReference root;
     public final boolean enableCache;
     public final boolean enableCenterOfMass;
     public final boolean enableSequenceIndices;
@@ -154,24 +154,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     protected abstract AbstractBoundingBox<Point> constructBoxInPlace(NodeReference nodeReference);
 
-    /*
-     * // constructing a bounding box in place protected AbstractBoundingBox<Point>
-     * constructBoxInPlace(NodeReference nodeReference) { if (isLeaf(nodeReference))
-     * { return getMutableLeafBoxFromLeafNode(nodeReference); } else {
-     * AbstractBoundingBox<Point> currentBox =
-     * constructBoxInPlace(getLeftChild(nodeReference)); return
-     * constructBoxInPlace(currentBox, getRightChild(nodeReference));
-     * 
-     * } }
-     * 
-     * AbstractBoundingBox<Point> constructBoxInPlace(AbstractBoundingBox<Point>
-     * currentBox, NodeReference nodeReference) { if (isLeaf(nodeReference)) {
-     * return currentBox.addPoint(getPointFromLeafNode(nodeReference)); } else {
-     * AbstractBoundingBox<Point> tempBox = constructBoxInPlace(currentBox,
-     * getLeftChild(nodeReference)); // the box may be changed for single points
-     * return constructBoxInPlace(tempBox, getRightChild(nodeReference)); } }
-     */
-
     // gets the actual values of a point from its reference which can be
     // Integer/direct reference
     abstract Point getPointFromPointReference(PointReference pointIndex);
@@ -269,8 +251,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     @Override
     public void deletePoint(PointReference pointReference, long sequenceNumber) {
-        checkState(rootIndex != null, "root must not be null");
-        deletePoint(rootIndex, getPointFromPointReference(pointReference), sequenceNumber, 0);
+        checkState(root != null, "root must not be null");
+        deletePoint(root, getPointFromPointReference(pointReference), sequenceNumber, 0);
     }
 
     /**
@@ -306,7 +288,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             NodeReference parent = getParent(nodeReference);
 
             if (parent == null) {
-                rootIndex = null;
+                root = null;
                 delete(nodeReference);
                 return;
             }
@@ -314,8 +296,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
             NodeReference grandParent = getParent(parent);
             if (grandParent == null) {
-                rootIndex = getSibling(nodeReference);
-                setParent(rootIndex, null);
+                root = getSibling(nodeReference);
+                setParent(root, null);
             } else {
                 replaceNodeBySibling(grandParent, parent, nodeReference);
                 updateAncestorNodesAfterDelete(grandParent, point);
@@ -380,7 +362,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
             NodeReference parent = getParent(siblingNode);
             if (parent == null) {
-                rootIndex = mergedNode;
+                root = mergedNode;
             } else {
                 replaceChild(parent, siblingNode, mergedNode);
             }
@@ -510,15 +492,15 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public PointReference addPoint(PointReference pointReference, long sequenceNumber) {
         int saveMass = getMass();
         Point pointValue = getPointFromPointReference(pointReference);
-        if (rootIndex == null) {
-            rootIndex = addLeaf(pointReference);
+        if (isEmpty()) {
+            root = addLeaf(pointReference);
             if (enableSequenceIndices) {
-                addSequenceIndex(rootIndex, sequenceNumber);
+                addSequenceIndex(root, sequenceNumber);
             }
             checkState(saveMass + 1 == getMass(), "incorrect add");
             return pointReference;
         } else {
-            AddPointState<Point, NodeReference, PointReference> addPointState = addPoint(rootIndex, pointValue,
+            AddPointState<Point, NodeReference, PointReference> addPointState = addPoint(root, pointValue,
                     pointReference, sequenceNumber);
             resolve(pointValue, null, addPointState);
             checkState(saveMass + 1 == getMass(), "incorrect add");
@@ -569,9 +551,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
     @Override
     public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
-        checkState(rootIndex != null, "this tree doesn't contain any nodes");
+        checkState(root != null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.apply(this);
-        traversePathToLeafAndVisitNodes(point, visitor, rootIndex, 0);
+        traversePathToLeafAndVisitNodes(point, visitor, root, 0);
         return visitor.getResult();
     }
 
@@ -608,9 +590,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
-        checkState(rootIndex != null, "this tree doesn't contain any nodes");
+        checkState(root != null, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.apply(this);
-        traverseTreeMulti(point, visitor, rootIndex, 0);
+        traverseTreeMulti(point, visitor, root, 0);
         return visitor.getResult();
     }
 
@@ -637,7 +619,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     @Override
     public int getMass() {
-        return (rootIndex == null) ? 0 : getMass(rootIndex);
+        return isEmpty() ? 0 : getMass(root);
     }
 
+    public NodeReference getRoot() {
+        return root;
+    }
+
+    public boolean isEmpty() {
+        return root == null;
+    }
 }

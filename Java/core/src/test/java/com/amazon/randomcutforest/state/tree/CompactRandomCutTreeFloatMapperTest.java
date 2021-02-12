@@ -82,6 +82,6 @@ public class CompactRandomCutTreeFloatMapperTest {
     public void testRoundTrip(CompactRandomCutTreeFloat tree, CompactRandomCutTreeContext context) {
         CompactRandomCutTreeFloat tree2 = mapper.toModel(mapper.toState(tree), context);
 
-        assertEquals(tree.getRootIndex(), tree2.getRootIndex());
+        assertEquals(tree.getRoot(), tree2.getRoot());
     }
 }

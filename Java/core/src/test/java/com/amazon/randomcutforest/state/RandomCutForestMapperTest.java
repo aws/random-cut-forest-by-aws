@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -56,17 +57,7 @@ public class RandomCutForestMapperTest {
         mapper.setSaveExecutorContext(true);
     }
 
-    @ParameterizedTest
-    @MethodSource("compactForestProvider")
-    public void testRoundTripForCompactForest(RandomCutForest forest) {
-
-        NormalMixtureTestData testData = new NormalMixtureTestData();
-        for (double[] point : testData.generateTestData(sampleSize, dimensions)) {
-            forest.update(point);
-        }
-
-        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
-
+    public void assertCompactForestEquals(RandomCutForest forest, RandomCutForest forest2) {
         assertEquals(forest.getDimensions(), forest2.getDimensions());
         assertEquals(forest.getSampleSize(), forest2.getSampleSize());
         assertEquals(forest.getOutputAfter(), forest2.getOutputAfter());
@@ -112,8 +103,34 @@ public class RandomCutForestMapperTest {
 
     @ParameterizedTest
     @MethodSource("compactForestProvider")
+    public void testRoundTripForCompactForest(RandomCutForest forest) {
+
+        NormalMixtureTestData testData = new NormalMixtureTestData();
+        for (double[] point : testData.generateTestData(sampleSize, dimensions)) {
+            forest.update(point);
+        }
+
+        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+        assertCompactForestEquals(forest, forest2);
+    }
+
+    @ParameterizedTest
+    @MethodSource("compactForestProvider")
     public void testRoundTripForCompactForestSaveTreeState(RandomCutForest forest) {
         mapper.setSaveTreeState(true);
         testRoundTripForCompactForest(forest);
+    }
+
+    @Test
+    public void testRoundTripForEmptyForest() {
+        Precision precision = Precision.DOUBLE;
+
+        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+                .sampleSize(sampleSize).precision(precision).build();
+
+        mapper.setSaveTreeState(true);
+        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+        assertCompactForestEquals(forest, forest2);
     }
 }
