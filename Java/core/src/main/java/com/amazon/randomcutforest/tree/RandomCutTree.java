@@ -57,7 +57,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     protected RandomCutTree(Builder<?> builder) {
         super(builder.random, builder.boundingBoxCachingEnabled, builder.centerOfMassEnabled,
                 builder.storeSequenceIndexesEnabled);
-        super.rootIndex = null;
+        super.root = null;
     }
 
     /**
@@ -103,14 +103,14 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
         super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
-        rootIndex = null;
+        root = null;
         setBoundingBoxCacheFraction(1.0);
     }
 
     public RandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         super(random, enableCache, enableCenterOfMass, enableSequenceIndices);
-        rootIndex = null;
+        root = null;
     }
 
     @Override
@@ -309,10 +309,6 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     @Override
     protected int getMass(Node node) {
         return node.getMass();
-    }
-
-    protected Node getRoot() {
-        return rootIndex;
     }
 
     @Override

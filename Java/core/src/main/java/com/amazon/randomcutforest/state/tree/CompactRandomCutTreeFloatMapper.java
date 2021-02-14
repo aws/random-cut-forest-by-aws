@@ -59,13 +59,13 @@ public class CompactRandomCutTreeFloatMapper implements
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
         }
         return new CompactRandomCutTreeFloat(context.getMaxSize(), seed, (PointStoreFloat) context.getPointStore(),
-                leafStore, nodeStore, state.getRootIndex(), boundingBoxCacheEnabled);
+                leafStore, nodeStore, state.getRoot(), boundingBoxCacheEnabled);
     }
 
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeFloat model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        state.setRootIndex(model.getRootIndex());
+        state.setRoot(model.getRoot());
 
         if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
