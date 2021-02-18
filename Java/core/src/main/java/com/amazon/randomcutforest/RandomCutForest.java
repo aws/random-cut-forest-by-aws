@@ -807,6 +807,8 @@ public class RandomCutForest {
      * more than 1 dimension, the imputed point with the 25th percentile anomaly
      * score is returned.
      *
+     * The first function exposes the distribution.
+     *
      * @param point                 A point with missing values.
      * @param numberOfMissingValues The number of missing values in the point.
      * @param missingIndexes        An array containing the indexes of the missing
@@ -815,6 +817,36 @@ public class RandomCutForest {
      *                              missing values.
      * @return A point with the missing values imputed.
      */
+    public ArrayList<double[]> getSimpleConditionalField(double[] point, int numberOfMissingValues,
+            int[] missingIndexes) {
+        checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than or equal to 0");
+
+        // We check this condition in traverseForest, but we need to check it here as
+        // well in case we need to copy the
+        // point in the next block
+        checkNotNull(point, "point must not be null");
+
+        checkNotNull(missingIndexes, "missingIndexes must not be null");
+        checkArgument(numberOfMissingValues <= missingIndexes.length,
+                "numberOfMissingValues must be less than or equal to missingIndexes.length");
+
+        if (!isOutputReady()) {
+            return new ArrayList<>();
+        }
+
+        Function<ITree<?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
+                numberOfMissingValues, missingIndexes);
+
+        Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
+                ArrayList::add, (left, right) -> {
+                    left.addAll(right);
+                    return left;
+                }, list -> list);
+
+        return traverseForestMulti(point, visitorFactory, collector);
+
+    }
+
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
 
@@ -835,44 +867,22 @@ public class RandomCutForest {
             return new double[dimensions];
         }
 
-        Function<ITree<?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
-                numberOfMissingValues, missingIndexes);
+        ArrayList<double[]> conditionalField = getSimpleConditionalField(point, numberOfMissingValues, missingIndexes);
 
         if (numberOfMissingValues == 1) {
-
             // when there is 1 missing value, we sort all the imputed values and return the
             // median
-
-            Collector<double[], ArrayList<Double>, ArrayList<Double>> collector = Collector.of(ArrayList::new,
-                    (list, array) -> list.add(array[missingIndexes[0]]), (left, right) -> {
-                        left.addAll(right);
-                        return left;
-                    }, list -> {
-                        list.sort(Comparator.comparing(Double::doubleValue));
-                        return list;
-                    });
-
-            ArrayList<Double> imputedValues = traverseForestMulti(point, visitorFactory, collector);
             double[] returnPoint = Arrays.copyOf(point, dimensions);
-            returnPoint[missingIndexes[0]] = imputedValues.get(numberOfTrees / 2);
+            double[] basicList = conditionalField.stream().mapToDouble(array -> array[missingIndexes[0]]).sorted()
+                    .toArray();
+            returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
             return returnPoint;
         } else {
-
             // when there is more than 1 missing value, we sort the imputed points by
             // anomaly score and
             // return the point with the 25th percentile anomaly score
-
-            Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
-                    ArrayList::add, (left, right) -> {
-                        left.addAll(right);
-                        return left;
-                    }, list -> {
-                        list.sort(Comparator.comparing(this::getAnomalyScore));
-                        return list;
-                    });
-
-            ArrayList<double[]> imputedPoints = traverseForestMulti(point, visitorFactory, collector);
-            return imputedPoints.get(numberOfTrees / 4);
+            conditionalField.sort(Comparator.comparing(this::getAnomalyScore));
+            return conditionalField.get(numberOfTrees / 4);
         }
     }
 
