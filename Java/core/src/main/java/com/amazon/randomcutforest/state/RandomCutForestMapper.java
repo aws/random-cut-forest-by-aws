@@ -236,7 +236,7 @@ public class RandomCutForestMapper
             PointStoreState pointStoreState = state.getPointStoreState();
             Precision precision;
             IPointStore<?> pointStore;
-            if (pointStoreState.getFloatData() != null) {
+            if (pointStoreState.isSinglePrecisionSet()) {
                 pointStore = new PointStoreFloatMapper().toModel(pointStoreState);
                 precision = Precision.SINGLE;
             } else {

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.state.store;
 
 import lombok.Data;
+import lombok.Getter;
 
 /**
  * A class for storing the state of a
@@ -35,6 +36,19 @@ public class PointStoreState {
      */
     private int capacity;
     /**
+     * shingle size of the points
+     */
+    private int shingleSize;
+    /**
+     * boolean for precision
+     */
+    @Getter
+    private boolean singlePrecisionSet;
+    /**
+     * location beyond which the store has no useful information
+     */
+    private int startOfFreeSegment;
+    /**
      * Point data for a {@link com.amazon.randomcutforest.store.PointStoreDouble}.
      */
     private double[] doubleData;
@@ -46,6 +60,29 @@ public class PointStoreState {
      * An array of reference counts for each stored point.
      */
     private short[] refCount;
+    /**
+     * is direct mapping enabled
+     */
+    @Getter
+    private boolean direcMapLocation;
+    /**
+     * location data for indirect maps
+     */
+    private int[] locationList;
+    /**
+     * reverse location data to be usable in future
+     */
+    private int[] reverseLocationList;
+    /**
+     * boolean indicating use of overlapping shingles; need not be used in certain
+     * cases
+     */
+    @Getter
+    private boolean shingleAwareOverlapping;
+    /**
+     * state of freeindices
+     */
+    private int freeIndexPointer;
     /**
      * An array of indexes indicating which data slots are occupied.
      */

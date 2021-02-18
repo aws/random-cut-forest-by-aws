@@ -127,6 +127,11 @@ public class RandomCutForest {
     public static final boolean DEFAULT_CENTER_OF_MASS_ENABLED = false;
 
     /**
+     * By default RCF is unaware of shingle size
+     */
+    public static final int DEFAULT_KNOWN_SHINGLESIZE = 1;
+
+    /**
      * Parallel execution is enabled by default.
      */
     public static final boolean DEFAULT_PARALLEL_EXECUTION_ENABLED = false;
@@ -149,6 +154,10 @@ public class RandomCutForest {
      * The sample size used by stream samplers in this forest.
      */
     protected final int sampleSize;
+    /**
+     * The shingle size (if known)
+     */
+    protected final int shingleSize;
     /**
      * The number of points required by stream samplers before results are returned.
      */
@@ -231,7 +240,12 @@ public class RandomCutForest {
     }
 
     private void initCompactDouble() {
-        PointStoreDouble tempStore = new PointStoreDouble(dimensions, sampleSize * numberOfTrees + 1);
+        int maxupdate = 1;
+        int compactReserve = sampleSize / 10;
+        int storeSize = numberOfTrees * sampleSize + maxupdate + compactReserve;
+        PointStoreDouble tempStore = new PointStoreDouble(dimensions, shingleSize, storeSize, (shingleSize > 1),
+                (shingleSize == 1));
+
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -239,6 +253,7 @@ public class RandomCutForest {
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
+            // if (i==34)
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.updateCoordinator = updateCoordinator;
@@ -247,7 +262,11 @@ public class RandomCutForest {
     }
 
     private void initCompactFloat() {
-        PointStoreFloat tempStore = new PointStoreFloat(dimensions, sampleSize * numberOfTrees + 1);
+        int maxupdate = 1;
+        int compactReserve = sampleSize / 10;
+        int storeSize = numberOfTrees * sampleSize + maxupdate + compactReserve;
+        PointStoreFloat tempStore = new PointStoreFloat(dimensions, shingleSize, storeSize, (shingleSize > 1),
+                (shingleSize == 1));
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
@@ -313,6 +332,7 @@ public class RandomCutForest {
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
         checkArgument(builder.precision == Precision.DOUBLE || builder.compactEnabled,
                 "single precision is only supported for compact trees");
+        checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0, "wrong singlesize");
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
@@ -325,6 +345,7 @@ public class RandomCutForest {
         compactEnabled = builder.compactEnabled;
         precision = builder.precision;
         boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
+        shingleSize = builder.shingleSize;
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -374,6 +395,13 @@ public class RandomCutForest {
      */
     public int getSampleSize() {
         return sampleSize;
+    }
+
+    /**
+     * @return the shingle size used by the pointstore.
+     */
+    public int getShingleSize() {
+        return shingleSize;
     }
 
     /**
@@ -1092,6 +1120,7 @@ public class RandomCutForest {
         private Optional<Integer> threadPoolSize = Optional.empty();
         private Precision precision = DEFAULT_PRECISION;
         private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
+        private int shingleSize = DEFAULT_KNOWN_SHINGLESIZE;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -1110,6 +1139,11 @@ public class RandomCutForest {
 
         public T numberOfTrees(int numberOfTrees) {
             this.numberOfTrees = numberOfTrees;
+            return (T) this;
+        }
+
+        public T shingleSize(int shingleSize) {
+            this.shingleSize = shingleSize;
             return (T) this;
         }
 

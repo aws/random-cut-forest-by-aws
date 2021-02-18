@@ -16,66 +16,48 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
 /**
- * PointStore is a fixed size repository of points, where each point is a float
- * array of a specified length. A PointStore counts references to points that
- * are added, and frees space internally when a given point is no longer in use.
- * The primary use of this store is to enable compression since the points in
- * two different trees do not have to be stored separately.
- *
- * Stored points are referenced by index values which can be used to look up the
- * point values and increment and decrement reference counts. Valid index values
- * are between 0 (inclusive) and capacity (exclusive).
+ * PointStoreFloat is a PointStore defined on base type FLoat
  */
-public class PointStoreFloat extends PointStore<float[]> implements IPointStore<float[]> {
+public class PointStoreFloat extends PointStore<float[], float[]> {
 
-    protected final float[] store;
-
-    /**
-     * Create a new PointStore with the given dimensions and capacity.
-     *
-     * @param dimensions The number of dimensions in stored points.
-     * @param capacity   The maximum number of points that can be stored.
-     */
-    public PointStoreFloat(int dimensions, int capacity) {
-        super(dimensions, capacity);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
+    public PointStoreFloat(int dimensions, int shingleSize, int capacity, boolean overlapping, boolean directMap) {
+        super(dimensions, shingleSize, capacity, overlapping, directMap);
         store = new float[capacity * dimensions];
     }
 
-    public PointStoreFloat(float[] store, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
-        super(store.length / refCount.length, refCount, freeIndexes, freeIndexPointer);
-        checkNotNull(store, "store must not be null");
-        checkNotNull(refCount, "refCount must not be null");
-        checkArgument(refCount.length == capacity, "refCount.length must equal capacity");
-        checkArgument(store.length % capacity == 0, "store.length must be an exact multiple of capacity");
-
+    public PointStoreFloat(boolean overlapping, int startOfFreeSegment, int dimensions, int shingleSize, float[] store,
+            short[] refCount, int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
+        super(overlapping, dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
+        checkArgument(dimensions > 0, "dimensions must be greater than 0");
+        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
+        checkArgument(refCount.length == capacity, "incorrect");
         this.store = store;
+        this.startOfFreeSegment = startOfFreeSegment;
     }
 
-    /**
-     * Add a point to the point store and return the index of the stored point.
-     *
-     * @param point The point being added to the store.
-     * @return the index value of the stored point.
-     * @throws IllegalArgumentException if the length of the point does not match
-     *                                  the point store's dimensions.
-     * @throws IllegalStateException    if the point store is full.
-     */
-    public int add(double[] point) {
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
+    public PointStoreFloat(int dimensions, int capacity) {
+        super(dimensions, 1, capacity, false, true);
+        store = new float[capacity * dimensions];
+    }
 
-        int nextIndex = takeIndex();
-        for (int i = 0; i < dimensions; i++) {
-            store[nextIndex * dimensions + i] = (float) point[i];
+    @Override
+    boolean checkShingleAlignment(int location, double[] point) {
+        boolean test = true;
+        for (int i = 0; i < dimensions - baseDimension; i++) {
+            test = test && (((float) point[i]) == store[location - dimensions + baseDimension + i]);
         }
+        return test;
+    }
 
-        refCount[nextIndex] = 1;
-        return nextIndex;
+    @Override
+    void copyPoint(double[] point, int src, int location, int length) {
+        for (int i = 0; i < length; i++) {
+            store[location + i] = (float) point[src + i];
+        }
     }
 
     /**
@@ -88,7 +70,7 @@ public class PointStoreFloat extends PointStore<float[]> implements IPointStore<
      *         false otherwise.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is non-positive.
+     *                                  index is nonpositive.
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
@@ -115,27 +97,23 @@ public class PointStoreFloat extends PointStore<float[]> implements IPointStore<
      * @return a copy of the point stored at the given index.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is non-positive.
+     *                                  index is nonpositive.
      */
     @Override
     public float[] get(int index) {
         checkValidIndex(index);
-        return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
+        int address = (directLocationMap) ? index * dimensions : locationList[index];
+        return Arrays.copyOfRange(store, address, address + dimensions);
     }
 
-    /**
-     * print the point at location index
-     * 
-     * @param index index of the point in the store
-     * @return ascii output
-     */
     @Override
     public String toString(int index) {
         return Arrays.toString(get(index));
     }
 
-    public float[] getStore() {
-        return store;
+    @Override
+    void copyTo(int current, int running) {
+        store[current] = store[running];
     }
 
 }
