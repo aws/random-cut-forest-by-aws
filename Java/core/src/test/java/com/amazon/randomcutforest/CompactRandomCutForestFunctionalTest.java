@@ -870,7 +870,7 @@ public class CompactRandomCutForestFunctionalTest {
     }
 
     @Test
-    public void reproduce() {
+    public void testUpdateAfterRoundTrip() {
         int dimensions = 10;
         for (int trials = 0; trials < 1000; trials++) {
             RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
