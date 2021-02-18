@@ -37,8 +37,10 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
@@ -865,5 +867,31 @@ public class CompactRandomCutForestFunctionalTest {
 
         }
         return shingledPoint;
+    }
+
+    @Test
+    public void reproduce() {
+        int dimensions = 10;
+        for (int trials = 0; trials < 1000; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+                    .sampleSize(64).precision(Precision.SINGLE).build();
+
+            Random r = new Random();
+            for (int i = 0; i < 30; i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeState(true);
+            mapper.setSaveExecutorContext(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                forest2.update(point);
+            }
+        }
     }
 }

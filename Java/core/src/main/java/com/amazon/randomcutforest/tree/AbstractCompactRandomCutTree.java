@@ -141,7 +141,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     constructBoxInPlace(getLeftChild(nodeReference)), getRightChild(nodeReference));
             // the following is useful in cases where the forest is deserialized and
             // even though caches may be set, the individual boxes are null
-            if (cachedBoxes != null && boundingBoxCacheFraction >= 1.0) {
+            if (cachedBoxes != null && cacheRandom.nextDouble() <= boundingBoxCacheFraction) {
                 cachedBoxes[nodeReference] = currentBox.copy();
             }
             return currentBox;
@@ -155,15 +155,16 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             // if a box is present for a node in use, that box must be correct
             // this invariant is maintained throughout.
             return currentBox.addBox(cachedBoxes[nodeReference]);
-        } else {
-            AbstractBoundingBox<Point> newBox = constructBoxInPlace(
-                    constructBoxInPlace(currentBox, getLeftChild(nodeReference)), getRightChild(nodeReference));
-            // the following is useful in cases where the forest is deserialized and
-            // even though caches may be set, the individual boxes are null
-            if (cachedBoxes != null && boundingBoxCacheFraction >= 1.0) {
-                cachedBoxes[nodeReference] = newBox;
+        } else if (cachedBoxes != null && boundingBoxCacheFraction > 0) {
+            // there is a possibility of saving the box for the current node
+            AbstractBoundingBox<Point> newbox = constructBoxInPlace(nodeReference);
+            if (cacheRandom.nextDouble() <= boundingBoxCacheFraction) {
+                cachedBoxes[nodeReference] = newbox;
             }
-            return newBox;
+            return currentBox.addBox(newbox);
+        } else {
+            return constructBoxInPlace(constructBoxInPlace(currentBox, getLeftChild(nodeReference)),
+                    getRightChild(nodeReference));
         }
     }
 
@@ -188,7 +189,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      * @param savedBox   the newly created box for this node.
      */
     void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
-        if (cacheRandom.nextDouble() < boundingBoxCacheFraction) {
+        if (cacheRandom.nextDouble() <= boundingBoxCacheFraction) {
             cachedBoxes[mergedNode] = savedBox;
         } else {
             cachedBoxes[mergedNode] = null;
