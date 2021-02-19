@@ -74,6 +74,11 @@ public class PointStoreState {
      */
     private int[] reverseLocationList;
     /**
+     * flag to avoid null issues in the future
+     */
+    @Getter
+    private boolean reverseAvailable;
+    /**
      * boolean indicating use of overlapping shingles; need not be used in certain
      * cases
      */

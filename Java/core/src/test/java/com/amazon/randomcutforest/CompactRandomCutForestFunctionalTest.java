@@ -613,7 +613,7 @@ public class CompactRandomCutForestFunctionalTest {
     }
 
     @Test
-    public void testExtrapolateA() {
+    public void testExtrapolateShingleAware() {
 
         numberOfTrees = 100;
         sampleSize = 256;
@@ -621,7 +621,9 @@ public class CompactRandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(10).build();
+        RandomCutForest anotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(1).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -643,10 +645,14 @@ public class CompactRandomCutForestFunctionalTest {
 
                 record = getShinglePoint(history, entryIndex, shinglesize);
                 newforest.update(record);
+                anotherforest.update(record);
             }
         }
 
         answer = newforest.extrapolateBasic(record, 200, 1, false);
+        double[] anotherAnswer = anotherforest.extrapolateBasic(record, 200, 1, false);
+
+        assertArrayEquals(anotherAnswer, answer, 1e-10);
 
         error = 0;
         for (int j = 0; j < 200; j++) {
