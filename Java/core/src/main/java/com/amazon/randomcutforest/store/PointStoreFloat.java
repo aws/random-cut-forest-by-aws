@@ -112,8 +112,11 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     }
 
     @Override
-    void copyTo(int current, int running) {
-        store[current] = store[running];
+    void copyTo(int dest, int source, int length) {
+        checkArgument(dest <= source, "error");
+        for (int i = 0; i < length; i++) {
+            store[dest + i] = store[source + i];
+        }
     }
 
 }

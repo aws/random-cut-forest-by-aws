@@ -129,7 +129,7 @@ public class RandomCutForest {
     /**
      * By default RCF is unaware of shingle size
      */
-    public static final int DEFAULT_KNOWN_SHINGLESIZE = 1;
+    public static final int DEFAULT_SHINGLE_SIZE = 1;
 
     /**
      * Parallel execution is enabled by default.
@@ -253,7 +253,6 @@ public class RandomCutForest {
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
-            // if (i==34)
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.updateCoordinator = updateCoordinator;
@@ -1120,7 +1119,7 @@ public class RandomCutForest {
         private Optional<Integer> threadPoolSize = Optional.empty();
         private Precision precision = DEFAULT_PRECISION;
         private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
-        private int shingleSize = DEFAULT_KNOWN_SHINGLESIZE;
+        private int shingleSize = DEFAULT_SHINGLE_SIZE;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;

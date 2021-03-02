@@ -28,7 +28,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public abstract class PointStore<Store, P> extends IndexManager implements IPointStore<P> {
+public abstract class PointStore<Store, Point> extends IndexManager implements IPointStore<Point> {
 
     /**
      * generic store class
@@ -114,14 +114,7 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
     }
 
     public PointStore(int dimensions, int capacity) {
-        super(capacity);
-        this.shingleSize = 1;
-        this.dimensions = dimensions;
-        this.baseDimension = dimensions;
-        refCount = new short[capacity];
-        startOfFreeSegment = 0;
-        this.directLocationMap = true;
-        this.shingleAwareOverlapping = false;
+        this(dimensions, 1, capacity, false, true);
     }
 
     public PointStore(boolean shingleAwareOverlapping, int dimensions, int shingleSize, short[] refCount,
@@ -283,7 +276,7 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
      *                                  the point store's dimensions.
      */
 
-    abstract public boolean pointEquals(int index, P point);
+    abstract public boolean pointEquals(int index, Point point);
 
     /**
      * Get a copy of the point at the given index.
@@ -296,7 +289,7 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
      *                                  index is nonpositive.
      */
     @Override
-    abstract public P get(int index);
+    abstract public Point get(int index);
 
     @Override
     abstract public String toString(int index);
@@ -343,7 +336,7 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
         return prefix;
     }
 
-    abstract void copyTo(int current, int running);
+    abstract void copyTo(int dest, int source, int length);
 
     /**
      * The following function eliminates redundant information that builds up in the
@@ -381,6 +374,7 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
              */
             if (runningLocation < capacity * dimensions) {
                 int remainsToBeCopied = dimensions;
+                int saveLocation = runningLocation;
                 while (runningLocation < capacity * dimensions && remainsToBeCopied > 0) {
                     if (stepDimension == 1 || runningLocation % stepDimension == 0) {
                         checkArgument(stepDimension == 1 || startOfFreeSegment % stepDimension == 0, "error");
@@ -397,11 +391,11 @@ public abstract class PointStore<Store, P> extends IndexManager implements IPoin
                             }
                         }
                     }
-                    copyTo(startOfFreeSegment, runningLocation);
                     runningLocation++;
-                    startOfFreeSegment++;
                     remainsToBeCopied--;
                 }
+                copyTo(startOfFreeSegment, saveLocation, runningLocation - saveLocation);
+                startOfFreeSegment += runningLocation - saveLocation;
             }
         }
         if (!shingleAwareOverlapping) {
