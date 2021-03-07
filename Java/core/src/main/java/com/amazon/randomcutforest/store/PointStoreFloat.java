@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.Arrays;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.Arrays;
 
 /**
  * PointStoreFloat is a PointStore defined on base type FLoat

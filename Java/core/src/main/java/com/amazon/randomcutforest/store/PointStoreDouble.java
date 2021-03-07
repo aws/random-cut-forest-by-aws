@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.Arrays;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.Arrays;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
