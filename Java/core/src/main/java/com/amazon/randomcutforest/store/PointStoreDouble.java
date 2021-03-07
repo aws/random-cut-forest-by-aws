@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -55,8 +55,8 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     @Override
     boolean checkShingleAlignment(int location, double[] point) {
         boolean test = true;
-        for (int i = 0; i < dimensions - baseDimension; i++) {
-            test = test && (point[i] == store[location - dimensions + baseDimension + i]);
+        for (int i = 0; i < dimensions - baseDimension && test; i++) {
+            test = (point[i] == store[location - dimensions + baseDimension + i]);
         }
         return test;
     }

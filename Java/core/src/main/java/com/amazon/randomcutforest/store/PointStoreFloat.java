@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * PointStoreFloat is a PointStore defined on base type FLoat
@@ -47,8 +47,8 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     @Override
     boolean checkShingleAlignment(int location, double[] point) {
         boolean test = true;
-        for (int i = 0; i < dimensions - baseDimension; i++) {
-            test = test && (((float) point[i]) == store[location - dimensions + baseDimension + i]);
+        for (int i = 0; i < dimensions - baseDimension && test; i++) {
+            test = (((float) point[i]) == store[location - dimensions + baseDimension + i]);
         }
         return test;
     }
