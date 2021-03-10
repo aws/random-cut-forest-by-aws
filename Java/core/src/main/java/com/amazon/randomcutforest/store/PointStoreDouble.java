@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
@@ -31,48 +30,40 @@ import java.util.Arrays;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public class PointStoreDouble extends PointStore<double[]> {
+public class PointStoreDouble extends PointStore<double[], double[]> {
 
-    protected final double[] store;
-
-    /**
-     * Create a new PointStore with the given dimensions and capacity.
-     *
-     * @param dimensions The number of dimensions in stored points.
-     * @param capacity   The maximum number of points that can be stored.
-     */
-    public PointStoreDouble(int dimensions, int capacity) {
-        super(dimensions, capacity);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
+    public PointStoreDouble(int dimensions, int shingleSize, int capacity, boolean overlapping, boolean directMap) {
+        super(dimensions, shingleSize, capacity, overlapping, directMap);
         store = new double[capacity * dimensions];
     }
 
-    public PointStoreDouble(double[] store, short[] refCount, int[] freeIndexes, int freeIndexPointer) {
-        super(store.length / refCount.length, refCount, freeIndexes, freeIndexPointer);
-        checkNotNull(store, "store must not be null");
-        checkNotNull(refCount, "refCount must not be null");
-        checkArgument(refCount.length == capacity, "refCount.length must equal capacity");
-        checkArgument(store.length % capacity == 0, "store.length must be an exact multiple of capacity");
-
+    public PointStoreDouble(boolean overlapping, int startOfFreeSegment, int dimensions, int shingleSize,
+            double[] store, short[] refCount, int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
+        super(overlapping, dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
+        checkArgument(dimensions > 0, "dimensions must be greater than 0");
+        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
+        checkArgument(refCount.length == capacity, "incorrect");
         this.store = store;
+        this.startOfFreeSegment = startOfFreeSegment;
     }
 
-    /**
-     * Add a point to the point store and return the index of the stored point.
-     *
-     * @param point The point being added to the store.
-     * @return the index value of the stored point.
-     * @throws IllegalArgumentException if the length of the point does not match
-     *                                  the point store's dimensions.
-     * @throws IllegalStateException    if the point store is full.
-     */
-    public int add(double[] point) {
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
+    public PointStoreDouble(int dimensions, int capacity) {
+        super(dimensions, 1, capacity, false, true);
+        store = new double[capacity * dimensions];
+    }
 
-        int nextIndex = takeIndex();
-        System.arraycopy(point, 0, store, nextIndex * dimensions, dimensions);
-        refCount[nextIndex] = 1;
-        return nextIndex;
+    @Override
+    boolean checkShingleAlignment(int location, double[] point) {
+        boolean test = true;
+        for (int i = 0; i < dimensions - baseDimension && test; i++) {
+            test = (point[i] == store[location - dimensions + baseDimension + i]);
+        }
+        return test;
+    }
+
+    @Override
+    void copyPoint(double[] point, int src, int location, int length) {
+        System.arraycopy(point, src, store, location, length);
     }
 
     /**
@@ -117,7 +108,8 @@ public class PointStoreDouble extends PointStore<double[]> {
     @Override
     public double[] get(int index) {
         checkValidIndex(index);
-        return Arrays.copyOfRange(store, index * dimensions, (index + 1) * dimensions);
+        int address = (directLocationMap) ? index * dimensions : locationList[index];
+        return Arrays.copyOfRange(store, address, address + dimensions);
     }
 
     @Override
@@ -125,8 +117,12 @@ public class PointStoreDouble extends PointStore<double[]> {
         return Arrays.toString(get(index));
     }
 
-    public double[] getStore() {
-        return store;
+    @Override
+    void copyTo(int dest, int source, int length) {
+        checkArgument(dest <= source, "error");
+        for (int i = 0; i < length; i++) {
+            store[dest + i] = store[source + i];
+        }
     }
 
 }

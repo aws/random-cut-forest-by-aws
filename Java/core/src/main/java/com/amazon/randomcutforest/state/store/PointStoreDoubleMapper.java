@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
@@ -39,26 +40,60 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
     public PointStoreDouble toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getDoubleData(), "doubleData must not be null");
-
+        checkArgument(!state.isSinglePrecisionSet(), "incorrect use");
         int capacity = state.getCapacity();
         int dimensions = state.getDimensions();
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
         double[] store = Arrays.copyOf(state.getDoubleData(), capacity * dimensions);
-        int freeIndexPointer = state.getFreeIndexes().length - 1;
+        int freeIndexPointer = state.getFreeIndexPointer();
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        int startOfFreeSegment = state.getStartOfFreeSegment();
+        int[] locationList = null;
+        if (!state.isDirecMapLocation()) {
+            locationList = new int[capacity];
+            System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
+            if (!state.isShingleAwareOverlapping()) {
+                int maxLocation = 0;
+                for (int y = 0; y < state.getLocationList().length; y++) {
+                    maxLocation = Math.max(locationList[y] + dimensions, maxLocation);
+                }
+                checkArgument(startOfFreeSegment == maxLocation, " unusual misalignment");
+                for (int y = state.getLocationList().length; y < capacity; y++) {
+                    locationList[y] = maxLocation;
+                    maxLocation += dimensions;
+                }
+            }
+        }
 
-        return new PointStoreDouble(store, refCount, freeIndexes, freeIndexPointer);
+        return new PointStoreDouble(state.isShingleAwareOverlapping(), startOfFreeSegment, dimensions,
+                state.getShingleSize(), store, refCount, locationList, freeIndexes, freeIndexPointer);
     }
 
     @Override
     public PointStoreState toState(PointStoreDouble model) {
+        if (!model.isDirectLocationMap()) {
+            model.compact();
+        }
         PointStoreState state = new PointStoreState();
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
+        state.setShingleSize(model.getShingleSize());
+        state.setDirecMapLocation(model.isDirectLocationMap());
+        state.setShingleAwareOverlapping(model.isShingleAwareOverlapping());
+        state.setStartOfFreeSegment(model.getStartOfFreeSegment());
+        state.setFreeIndexPointer(model.getFreeIndexPointer());
+        state.setSinglePrecisionSet(false);
         int prefix = model.getValidPrefix();
         state.setDoubleData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));
         state.setRefCount(Arrays.copyOf(model.getRefCount(), prefix));
+        if (model.isDirectLocationMap()) {
+            state.setDoubleData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));
+        } else {
+            state.setLocationList(Arrays.copyOf(model.getLocationList(), prefix));
+            // the below assumes that compact() is invoked as the first step
+            state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
+        }
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }
