@@ -38,11 +38,11 @@ public class PointStoreFloatMapperTest {
         PointStoreFloat store = new PointStoreFloat(dimensions, capacity);
 
         double[] point1 = { 1.1, -22.2 };
-        int index1 = store.add(point1);
+        int index1 = store.add(point1, 1);
         double[] point2 = { 3.3, -4.4 };
-        int index2 = store.add(point2);
+        int index2 = store.add(point2, 2);
         double[] point3 = { 10.1, 100.1 };
-        int index3 = store.add(point3);
+        int index3 = store.add(point3, 3);
 
         PointStoreFloat store2 = mapper.toModel(mapper.toState(store));
 

@@ -179,13 +179,14 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     /**
      * Add a point to the point store and return the index of the stored point.
      *
-     * @param point The point being added to the store.
+     * @param point       The point being added to the store.
+     * @param sequenceNum sequence number of the point
      * @return the index value of the stored point.
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      * @throws IllegalStateException    if the point store is full.
      */
-    public int add(double[] point) {
+    public int add(double[] point, long sequenceNum) {
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
         if (shingleSize > 1 && shingleAwareOverlapping) {

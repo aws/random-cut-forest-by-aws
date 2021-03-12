@@ -47,7 +47,7 @@ public class CompactRandomCutTreeFloatMapperTest {
             List<Integer> indexes = new ArrayList<>();
 
             for (int i = 0; i < capacity; i++) {
-                pointStore.add(new double[] { Math.random(), Math.random() });
+                pointStore.add(new double[] { Math.random(), Math.random() }, 0);
                 indexes.add(i);
             }
 

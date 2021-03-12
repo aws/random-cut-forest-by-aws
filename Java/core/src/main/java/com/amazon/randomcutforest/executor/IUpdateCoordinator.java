@@ -30,11 +30,12 @@ public interface IUpdateCoordinator<P> {
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.
      * 
-     * @param point The input point.
+     * @param point          The input point.
+     * @param sequenceNumber the sequence number associated with the point
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    P initUpdate(double[] point);
+    P initUpdate(double[] point, long sequenceNumber);
 
     /**
      * Complete the update. This method is called by IUpdateCoordinator after all

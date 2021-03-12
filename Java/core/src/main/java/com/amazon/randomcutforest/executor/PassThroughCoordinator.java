@@ -29,7 +29,7 @@ public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]> 
      * @return the input point.
      */
     @Override
-    public double[] initUpdate(double[] point) {
+    public double[] initUpdate(double[] point, long sequenceNumber) {
         return point;
     }
 
