@@ -500,6 +500,22 @@ public class RandomCutForest {
     }
 
     /**
+     * Update the forest with the given point and a timestamp. The point is
+     * submitted to each sampler in the forest as if that timestamp was the correct
+     * stamp. storeSequenceIndexes must be false since the algorithm will not verify
+     * the correctness of the timestamp.
+     *
+     * @param point       The point used to update the forest.
+     * @param sequenceNum The timestamp of the corresponding point
+     */
+    public void update(double[] point, long sequenceNum) {
+        checkNotNull(point, "point must not be null");
+        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(!storeSequenceIndexesEnabled, "infeasible operation");
+        updateExecutor.update(point, sequenceNum);
+    }
+
+    /**
      * Update the forest such that each tree caches a fraction of the bounding
      * boxes. This allows for a tradeoff between speed and storage.
      *

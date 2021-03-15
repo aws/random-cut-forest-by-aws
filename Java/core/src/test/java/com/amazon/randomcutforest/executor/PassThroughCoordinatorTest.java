@@ -34,7 +34,7 @@ public class PassThroughCoordinatorTest {
     @Test
     public void testInitUpdate() {
         double[] point = new double[] { 1.1, -2.2, 30.30 };
-        assertSame(point, coordinator.initUpdate(point));
+        assertSame(point, coordinator.initUpdate(point, 0));
     }
 
     @Test

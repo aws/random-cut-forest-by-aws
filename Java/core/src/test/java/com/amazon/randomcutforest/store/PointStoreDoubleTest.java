@@ -53,7 +53,7 @@ public class PointStoreDoubleTest {
     @Test
     public void testAdd() {
         double[] point1 = { 1.2, -3.4 };
-        int offset1 = pointStore.add(point1);
+        int offset1 = pointStore.add(point1, 1);
         assertTrue(offset1 >= 0 && offset1 < capacity);
         assertEquals(1, pointStore.getRefCount(offset1));
         assertEquals(1, pointStore.size());
@@ -63,7 +63,7 @@ public class PointStoreDoubleTest {
         assertArrayEquals(point1, retrievedPoint1);
 
         double[] point2 = { 111.2, -333.4 };
-        int offset2 = pointStore.add(point2);
+        int offset2 = pointStore.add(point2, 2);
         assertTrue(offset2 >= 0 && offset2 < capacity);
         assertEquals(1, pointStore.getRefCount(offset2));
         assertEquals(2, pointStore.size());
@@ -82,17 +82,17 @@ public class PointStoreDoubleTest {
     @Test
     public void testAddInvalid() {
         // invalid dimensions in point
-        assertThrows(IllegalArgumentException.class, () -> pointStore.add(new double[] { 1.1, -2.2, 3.3 }));
+        assertThrows(IllegalArgumentException.class, () -> pointStore.add(new double[] { 1.1, -2.2, 3.3 }, 3));
 
         for (int i = 0; i < capacity; i++) {
             double[] point = new double[dimensions];
             point[0] = (float) Math.random();
             point[1] = (float) Math.random();
-            pointStore.add(point);
+            pointStore.add(point, i + 2);
         }
 
         // point store is full
-        assertThrows(IllegalStateException.class, () -> pointStore.add(new double[] { 1.1, -2.2 }));
+        assertThrows(IllegalStateException.class, () -> pointStore.add(new double[] { 1.1, -2.2 }, 0));
     }
 
     @Test
@@ -104,7 +104,7 @@ public class PointStoreDoubleTest {
     @Test
     public void testIncrementRefCount() {
         double[] point = { 1.2, -3.4 };
-        int offset = pointStore.add(point);
+        int offset = pointStore.add(point, 0);
         assertEquals(1, pointStore.getRefCount(offset));
 
         pointStore.incrementRefCount(offset);
@@ -120,7 +120,7 @@ public class PointStoreDoubleTest {
     @Test
     public void testDecrementRefCount() {
         double[] point = { 1.2, -3.4 };
-        int offset = pointStore.add(point);
+        int offset = pointStore.add(point, 0);
         pointStore.incrementRefCount(offset);
         assertEquals(2, pointStore.getRefCount(offset));
         assertEquals(1, pointStore.size());
@@ -143,7 +143,7 @@ public class PointStoreDoubleTest {
     @Test
     public void testPointEquals() {
         double[] point = { 1.2, -3.4 };
-        int offset = pointStore.add(point);
+        int offset = pointStore.add(point, 0);
         assertTrue(pointStore.pointEquals(offset, point));
         assertFalse(pointStore.pointEquals(offset, new double[] { 5.6, -7.8 }));
     }
@@ -154,7 +154,7 @@ public class PointStoreDoubleTest {
         assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(-1, point));
         assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(0, point));
 
-        int offset = pointStore.add(point);
+        int offset = pointStore.add(point, 0);
         assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(offset, new double[] { 99.9 }));
     }
 }

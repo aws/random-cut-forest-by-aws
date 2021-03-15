@@ -57,9 +57,13 @@ public abstract class AbstractForestUpdateExecutor<P> {
      * @param point The point used to update the forest.
      */
     public void update(double[] point) {
+        update(point, updateCoordinator.getTotalUpdates());
+    }
+
+    public void update(double[] point, long sequenceNumber) {
         double[] pointCopy = cleanCopy(point);
-        P updateInput = updateCoordinator.initUpdate(pointCopy);
-        List<UpdateResult<P>> results = update(updateInput, updateCoordinator.getTotalUpdates());
+        P updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
+        List<UpdateResult<P>> results = update(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
 

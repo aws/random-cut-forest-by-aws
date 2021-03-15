@@ -65,7 +65,7 @@ public class ArraySamplersToCompactStateConverter {
                 pointIndex[i] = pointMap.get(index);
                 pointStoreDouble.incrementRefCount(pointIndex[i]);
             } else {
-                pointIndex[i] = pointStoreDouble.add(index);
+                pointIndex[i] = pointStoreDouble.add(index, i);
                 pointMap.put(index, pointIndex[i]);
             }
             weight[i] = sample.getWeight();

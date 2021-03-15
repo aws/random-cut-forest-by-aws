@@ -29,10 +29,11 @@ public interface IPointStore<Point> extends IPointStoreView<Point> {
      *
      * Note that delete is automatic, that is when no trees are accessing the point
      * 
-     * @param point point to be added
+     * @param point       point to be added
+     * @param sequenceNum sequence number of the point
      * @return index of the stored point
      */
-    int add(double[] point);
+    int add(double[] point, long sequenceNum);
 
     // increments and returns the incremented value
     int incrementRefCount(int index);
