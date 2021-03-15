@@ -240,9 +240,9 @@ public class RandomCutForest {
     }
 
     private void initCompactDouble() {
-        int maxupdate = 1;
+        int maxUpdate = 1;
         int compactReserve = sampleSize / 10;
-        int storeSize = numberOfTrees * sampleSize + maxupdate + compactReserve;
+        int storeSize = numberOfTrees * sampleSize + maxUpdate + compactReserve;
         PointStoreDouble tempStore = new PointStoreDouble(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
 
@@ -261,9 +261,9 @@ public class RandomCutForest {
     }
 
     private void initCompactFloat() {
-        int maxupdate = 1;
+        int maxUpdate = 1;
         int compactReserve = sampleSize / 10;
-        int storeSize = numberOfTrees * sampleSize + maxupdate + compactReserve;
+        int storeSize = numberOfTrees * sampleSize + maxUpdate + compactReserve;
         PointStoreFloat tempStore = new PointStoreFloat(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
         IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
@@ -331,7 +331,7 @@ public class RandomCutForest {
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
         checkArgument(builder.precision == Precision.DOUBLE || builder.compactEnabled,
                 "single precision is only supported for compact trees");
-        checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0, "wrong singlesize");
+        checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
 
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
@@ -397,7 +397,7 @@ public class RandomCutForest {
     }
 
     /**
-     * @return the shingle size used by the pointstore.
+     * @return the shingle size used by the point store.
      */
     public int getShingleSize() {
         return shingleSize;
@@ -439,7 +439,7 @@ public class RandomCutForest {
      * reduce the memory size of the model at the cost of requiring double/float
      * conversions.
      *
-     * @return the desired precision to use internall to store points.
+     * @return the desired precision to use internal to store points.
      */
     public Precision getPrecision() {
         return precision;
@@ -511,7 +511,6 @@ public class RandomCutForest {
     public void update(double[] point, long sequenceNum) {
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
-        checkArgument(!storeSequenceIndexesEnabled, "infeasible operation");
         updateExecutor.update(point, sequenceNum);
     }
 

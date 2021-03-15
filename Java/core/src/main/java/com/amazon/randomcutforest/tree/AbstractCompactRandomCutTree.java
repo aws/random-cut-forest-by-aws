@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.tree;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
-import java.util.HashSet;
+import java.util.HashMap;
 
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.ILeafStore;
@@ -61,7 +61,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected AbstractBoundingBox<Point>[] cachedBoxes;
     protected Point[] pointSum;
     protected boolean enableCache;
-    protected HashSet<Long>[] sequenceIndexes;
+    protected HashMap<Long, Integer>[] sequenceIndexes;
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
@@ -78,7 +78,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         root = null;
         this.enableCache = enableCache;
         if (enableSequenceIndices) {
-            sequenceIndexes = new HashSet[maxSize];
+            sequenceIndexes = new HashMap[maxSize];
         }
         // adjusting the below parameter in [0,1] may change the space time tradeoff
         // but should not affect the computation in any manner
@@ -116,18 +116,27 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected void addSequenceIndex(Integer nodeRef, long sequenceIndex) {
         int leafRef = getLeafIndexForTreeIndex(nodeRef);
         if (sequenceIndexes[leafRef] == null) {
-            sequenceIndexes[leafRef] = new HashSet<>();
+            sequenceIndexes[leafRef] = new HashMap<Long, Integer>();
         }
-        sequenceIndexes[leafRef].add(sequenceIndex);
+        int num = 0;
+        if (sequenceIndexes[leafRef].containsKey(sequenceIndex)) {
+            num = sequenceIndexes[leafRef].get(sequenceIndex);
+        }
+        sequenceIndexes[leafRef].put(sequenceIndex, num + 1);
     }
 
     @Override
     protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
         int leafRef = getLeafIndexForTreeIndex(nodeRef);
-        if (sequenceIndexes[leafRef] == null || !sequenceIndexes[leafRef].contains(sequenceIndex)) {
+        if (sequenceIndexes[leafRef] == null || !sequenceIndexes[leafRef].containsKey(sequenceIndex)) {
             throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
         }
-        sequenceIndexes[leafRef].remove(sequenceIndex);
+        int num = sequenceIndexes[leafRef].get(sequenceIndex);
+        if (num == 1) {
+            sequenceIndexes[leafRef].remove(sequenceIndex);
+        } else {
+            sequenceIndexes[leafRef].put(sequenceIndex, num - 1);
+        }
     }
 
     @Override
@@ -157,11 +166,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             return currentBox.addBox(cachedBoxes[nodeReference]);
         } else if (cachedBoxes != null && boundingBoxCacheFraction > 0) {
             // there is a possibility of saving the box for the current node
-            AbstractBoundingBox<Point> newbox = constructBoxInPlace(nodeReference);
+            AbstractBoundingBox<Point> newBox = constructBoxInPlace(nodeReference);
             if (cacheRandom.nextDouble() <= boundingBoxCacheFraction) {
-                cachedBoxes[nodeReference] = newbox;
+                cachedBoxes[nodeReference] = newBox;
             }
-            return currentBox.addBox(newbox);
+            return currentBox.addBox(newBox);
         } else {
             return constructBoxInPlace(constructBoxInPlace(currentBox, getLeftChild(nodeReference)),
                     getRightChild(nodeReference));
@@ -184,7 +193,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      * controlled by the allowed fraction of boxes to be saved. Setting the fraction
      * to 1.0 saves all boxes. If the box is not saved then it must be made null to
      * overwrite any prior information
-     * 
+     *
      * @param mergedNode internal node
      * @param savedBox   the newly created box for this node.
      */
@@ -201,15 +210,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             cachedBoxes[tempNode].addPoint(point); // internal boxes can be updated in place
         }
     }
-
-    @Override
-    abstract protected boolean leftOf(Point point, int cutDimension, double cutValue);
-
-    @Override
-    abstract protected boolean equals(Point oldPoint, Point point);
-
-    @Override
-    abstract protected String toString(Point point);
 
     // returns the point based on position in the store
     @Override
@@ -390,15 +390,25 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         return i == null ? NULL : i;
     }
 
-    protected static short shortValue(Short s) {
-        return s == null ? (short) NULL : s;
-    }
-
     public int getMaxSize() {
         return maxSize;
     }
 
+    public Point getPointSum() {
+        return (root == NULL) ? null : getPointSum(root);
+    }
+
     public int getRootIndex() {
         return intValue(root);
+    }
+
+    public Point getPointSum(int ref) {
+        if (isLeaf(ref)) {
+            return pointStore.getScaledPoint(getPointReference(ref), getMass(ref));
+        }
+        if (pointSum[ref] == null) {
+            recomputePointSum(ref);
+        }
+        return pointSum[ref];
     }
 }

@@ -15,11 +15,12 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Set;
 
 /**
@@ -75,7 +76,7 @@ public class Node implements INode<Node> {
      * RandomCutTree, this set stores the indexes corresponding to times when the
      * given leaf point was added to the tree.
      */
-    private Set<Long> sequenceIndexes;
+    private HashMap<Long, Integer> sequenceIndexes;
 
     /**
      * Create a new non-leaf Node.
@@ -407,7 +408,7 @@ public class Node implements INode<Node> {
      */
     public Set<Long> getSequenceIndexes() {
         if (sequenceIndexes != null) {
-            return Collections.unmodifiableSet(sequenceIndexes);
+            return sequenceIndexes.keySet();
         } else {
             return Collections.emptySet();
         }
@@ -420,9 +421,13 @@ public class Node implements INode<Node> {
      */
     protected void addSequenceIndex(long sequenceIndex) {
         if (sequenceIndexes == null) {
-            sequenceIndexes = new HashSet<>();
+            sequenceIndexes = new HashMap<>();
         }
-        sequenceIndexes.add(sequenceIndex);
+        int num = 0;
+        if (sequenceIndexes.containsKey(sequenceIndex)) {
+            num = sequenceIndexes.get(sequenceIndex);
+        }
+        sequenceIndexes.put(sequenceIndex, num + 1);
     }
 
     /**
@@ -432,7 +437,12 @@ public class Node implements INode<Node> {
      */
     protected void deleteSequenceIndex(long sequenceIndex) {
         if (sequenceIndexes != null) {
-            sequenceIndexes.remove(sequenceIndex);
+            int num = sequenceIndexes.get(sequenceIndex);
+            if (num == 1) {
+                sequenceIndexes.remove(sequenceIndex);
+            } else {
+                sequenceIndexes.put(sequenceIndex, num - 1);
+            }
         }
     }
 
@@ -480,11 +490,12 @@ public class Node implements INode<Node> {
         }
     }
 
-    void reComputePointSum(double[] point) {
+    void reComputePointSum() {
         if (!isLeaf()) {
             double[] leftSum = getLeftChild().getPointSum();
             double[] rightSum = getRightChild().getPointSum();
-            for (int i = 0; i < point.length; i++) {
+            checkArgument(leftSum.length == rightSum.length, "incorrect state");
+            for (int i = 0; i < leftSum.length; i++) {
                 pointSum[i] = leftSum[i] + rightSum[i];
             }
         }

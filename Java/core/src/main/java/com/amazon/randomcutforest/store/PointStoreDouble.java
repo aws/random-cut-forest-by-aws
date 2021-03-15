@@ -112,6 +112,15 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
         return Arrays.copyOfRange(store, address, address + dimensions);
     }
 
+    // same as get; allows a multiplier to enable convex combinations
+    public double[] getScaledPoint(int index, double factor) {
+        double[] answer = get(index);
+        for (int i = 0; i < dimensions; i++) {
+            answer[i] *= factor;
+        }
+        return answer;
+    }
+
     @Override
     public String toString(int index) {
         return Arrays.toString(get(index));

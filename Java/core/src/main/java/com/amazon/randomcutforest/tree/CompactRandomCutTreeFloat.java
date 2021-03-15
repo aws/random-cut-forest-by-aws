@@ -61,9 +61,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
 
     @Override
     protected AbstractBoundingBox<float[]> getMutableLeafBoxFromLeafNode(Integer nodeReference) {
-        float[] leafpoint = pointStore.get(getPointReference(nodeReference));
-        return new BoundingBoxFloat(Arrays.copyOf(leafpoint, leafpoint.length),
-                Arrays.copyOf(leafpoint, leafpoint.length), 0);
+        // pointStore makes an explicit copy
+        float[] leafPoint = pointStore.get(getPointReference(nodeReference));
+        return new BoundingBoxFloat(leafPoint, Arrays.copyOf(leafPoint, leafPoint.length), 0);
     }
 
     @Override
@@ -86,32 +86,14 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         return toDoubleArray(getPointFromLeafNode(nodeOffset));
     }
 
-    float[] getPointSum(int ref, float[] point) {
-        if (isLeaf(ref)) {
-            if (getMass(ref) == 1) {
-                return getPointFromLeafNode(ref);
-            } else {
-                float[] answer = Arrays.copyOf(getPointFromLeafNode(ref), point.length);
-                for (int i = 0; i < point.length; i++) {
-                    answer[i] *= getMass(ref);
-                }
-                return answer;
-            }
-        }
-        if (pointSum[ref] == null) {
-            recomputePointSum(ref, point);
-        }
-        return pointSum[ref];
-    }
-
     @Override
-    void recomputePointSum(Integer node, float[] point) {
+    void recomputePointSum(Integer node) {
         if (pointSum[node] == null) {
-            pointSum[node] = new float[point.length];
+            pointSum[node] = new float[pointStore.getDimensions()];
         }
-        float[] leftSum = getPointSum(getLeftChild(node), point);
-        float[] rightSum = getPointSum(getRightChild(node), point);
-        for (int i = 0; i < point.length; i++) {
+        float[] leftSum = getPointSum(getLeftChild(node));
+        float[] rightSum = getPointSum(getRightChild(node));
+        for (int i = 0; i < pointStore.getDimensions(); i++) {
             pointSum[node][i] = leftSum[i] + rightSum[i];
         }
     }

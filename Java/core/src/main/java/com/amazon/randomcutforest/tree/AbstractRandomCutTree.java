@@ -218,13 +218,15 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     abstract protected void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
-    abstract void recomputePointSum(NodeReference node, Point point);
+    // the following does not need the information of the point in the current time
+    // however that information may be of use for different type of Points
+    abstract void recomputePointSum(NodeReference node);
 
-    void updateAncestorPointSum(NodeReference node, Point point) {
+    void updateAncestorPointSum(NodeReference node) {
         if (enableCenterOfMass) {
             NodeReference tempNode = node;
             while (tempNode != null) {
-                recomputePointSum(tempNode, point);
+                recomputePointSum(tempNode);
                 tempNode = getParent(tempNode);
             }
         }
@@ -241,7 +243,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             boxNeedsUpdate = (box == null) || !(box.contains(point));
             tempNode = getParent(tempNode);
         }
-        updateAncestorPointSum(nodeReference, point);
+        updateAncestorPointSum(nodeReference);
     }
 
     /**
@@ -281,7 +283,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             }
             // decrease mass for the delete
             if (decrementMass(nodeReference) > 0) {
-                updateAncestorPointSum(nodeReference, point);
+                updateAncestorPointSum(nodeReference);
                 return;
             }
 
@@ -331,7 +333,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             }
         }
         if (enableCenterOfMass) {
-            updateAncestorPointSum(mergedNode, point);
+            updateAncestorPointSum(mergedNode);
         }
     }
 
@@ -405,7 +407,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 if (enableSequenceIndices) {
                     addSequenceIndex(nodeReference, sequenceNumber);
                 }
-                updateAncestorPointSum(nodeReference, point);
+                updateAncestorPointSum(nodeReference);
                 AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(
                         getPointReference(nodeReference));
                 // the following will ensure that no further processing happens
