@@ -28,6 +28,17 @@ public interface IPointStoreView<Point> {
     Point get(int index);
 
     /**
+     * useful for managing points, convex combinations, etc., e.g. needed for center
+     * of mass
+     * 
+     * @param index  identifier of the point
+     * @param factor multiplier
+     * @return the new point; or raises an exception if such an object cannot be
+     *         defined
+     */
+    Point getScaledPoint(int index, double factor);
+
+    /**
      * Prints the point given the index, irrespective of the encoding of the point.
      * Used in exceptions and error messages
      * 

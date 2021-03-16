@@ -106,6 +106,14 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
         return Arrays.copyOfRange(store, address, address + dimensions);
     }
 
+    public float[] getScaledPoint(int index, double factor) {
+        float[] answer = get(index);
+        for (int i = 0; i < dimensions; i++) {
+            answer[i] *= factor;
+        }
+        return answer;
+    }
+
     @Override
     public String toString(int index) {
         return Arrays.toString(get(index));
