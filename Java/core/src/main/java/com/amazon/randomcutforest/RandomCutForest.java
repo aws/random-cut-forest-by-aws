@@ -439,7 +439,7 @@ public class RandomCutForest {
      * reduce the memory size of the model at the cost of requiring double/float
      * conversions.
      *
-     * @return the desired precision to use internal to store points.
+     * @return the desired precision to use internally to store points.
      */
     public Precision getPrecision() {
         return precision;

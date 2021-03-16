@@ -36,7 +36,6 @@ public interface IPointStoreView<Point> {
      * @return the new point; or raises an exception if such an object cannot be
      *         defined
      */
-
     Point getScaledPoint(int index, double factor);
 
     /**

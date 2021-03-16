@@ -21,6 +21,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -76,7 +77,7 @@ public class Node implements INode<Node> {
      * RandomCutTree, this set stores the indexes corresponding to times when the
      * given leaf point was added to the tree.
      */
-    private HashMap<Long, Integer> sequenceIndexes;
+    private Map<Long, Integer> sequenceIndexes;
 
     /**
      * Create a new non-leaf Node.
@@ -490,7 +491,7 @@ public class Node implements INode<Node> {
         }
     }
 
-    void reComputePointSum() {
+    void recomputePointSum() {
         if (!isLeaf()) {
             double[] leftSum = getLeftChild().getPointSum();
             double[] rightSum = getRightChild().getPointSum();

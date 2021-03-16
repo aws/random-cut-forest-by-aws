@@ -142,7 +142,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     void recomputePointSum(Node node) {
-        node.reComputePointSum();
+        node.recomputePointSum();
     }
 
     @Override
