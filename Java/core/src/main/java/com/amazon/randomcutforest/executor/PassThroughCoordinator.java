@@ -21,7 +21,7 @@ import java.util.List;
  * A minimal implementation of {@link IUpdateCoordinator} that does not
  * transform the input point.
  */
-public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]> {
+public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], double[]> {
     /**
      * Return the input point without making a copy.
      * 
@@ -38,7 +38,6 @@ public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]> 
      * 
      * @param updateResults A list of points that were deleted.
      * @param updateInput   The corresponding output from {@link #initUpdate}, which
-     *                      was passed into the update method for each component
      */
     @Override
     public void completeUpdate(List<UpdateResult<double[]>> updateResults, double[] updateInput) {

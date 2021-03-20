@@ -200,8 +200,8 @@ public class RandomCutForest {
      */
     protected final int threadPoolSize;
 
-    protected IUpdateCoordinator<?> updateCoordinator;
-    protected ComponentList<?> components;
+    protected IUpdateCoordinator<?, ?> updateCoordinator;
+    protected ComponentList<?, ?> components;
 
     /**
      * An implementation of forest traversal algorithms.
@@ -211,10 +211,10 @@ public class RandomCutForest {
     /**
      * An implementation of forest update algorithms.
      */
-    protected AbstractForestUpdateExecutor<?> updateExecutor;
+    protected AbstractForestUpdateExecutor<?, ?> updateExecutor;
 
-    public <Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components,
-            Random rng) {
+    public <P, Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<P, Q> updateCoordinator,
+            ComponentList<P, Q> components, Random rng) {
         this(builder, false);
 
         checkNotNull(updateCoordinator, "updateCoordinator must not be null");
@@ -246,10 +246,10 @@ public class RandomCutForest {
         PointStoreDouble tempStore = new PointStoreDouble(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
 
-        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
-        ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
+        IUpdateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(tempStore);
+        ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
+            ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
@@ -266,10 +266,10 @@ public class RandomCutForest {
         int storeSize = numberOfTrees * sampleSize + maxUpdate + compactReserve;
         PointStoreFloat tempStore = new PointStoreFloat(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
-        IUpdateCoordinator<Integer> updateCoordinator = new PointStoreCoordinator(tempStore);
-        ComponentList<Integer> components = new ComponentList<>(numberOfTrees);
+        IUpdateCoordinator<Integer, float[]> updateCoordinator = new PointStoreCoordinator(tempStore);
+        ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
+            ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
@@ -281,11 +281,11 @@ public class RandomCutForest {
     }
 
     private void initNonCompact() {
-        IUpdateCoordinator<double[]> updateCoordinator = new PassThroughCoordinator();
-        ComponentList<double[]> components = new ComponentList<>(numberOfTrees);
+        IUpdateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
+        ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[]> tree = new RandomCutTree(rng.nextLong(), boundingBoxCachingEnabled, centerOfMassEnabled,
-                    storeSequenceIndexesEnabled);
+            ITree<double[], double[]> tree = new RandomCutTree(rng.nextLong(), boundingBoxCachingEnabled,
+                    centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -295,7 +295,7 @@ public class RandomCutForest {
         initExecutors(updateCoordinator, components);
     }
 
-    private <Q> void initExecutors(IUpdateCoordinator<Q> updateCoordinator, ComponentList<Q> components) {
+    private <P, Q> void initExecutors(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
         if (parallelExecutionEnabled) {
             traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
             updateExecutor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
@@ -478,11 +478,11 @@ public class RandomCutForest {
         return threadPoolSize;
     }
 
-    public IUpdateCoordinator<?> getUpdateCoordinator() {
+    public IUpdateCoordinator<?, ?> getUpdateCoordinator() {
         return updateCoordinator;
     }
 
-    public ComponentList<?> getComponents() {
+    public ComponentList<?, ?> getComponents() {
         return components;
     }
 
@@ -560,7 +560,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -593,7 +593,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -629,7 +629,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -663,7 +663,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -696,7 +696,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -725,7 +725,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
+        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         BinaryOperator<Double> accumulator = Double::sum;
 
@@ -753,7 +753,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
+        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -783,7 +783,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
                 tree.getMass());
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
@@ -804,7 +804,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
+        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
                 tree.getMass());
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
@@ -834,8 +834,8 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        Function<ITree<?>, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(point,
-                sampleSize, 1.0, centerOfMassEnabled); // self
+        Function<ITree<?, ?>, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(
+                point, sampleSize, 1.0, centerOfMassEnabled); // self
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
                 sampleSize, numberOfTrees);
 
@@ -859,7 +859,7 @@ public class RandomCutForest {
      *                              missing values.
      * @return A point with the missing values imputed.
      */
-    public ArrayList<double[]> getSimpleConditionalField(double[] point, int numberOfMissingValues,
+    public ArrayList<double[]> getConditionalCentralField(double[] point, int numberOfMissingValues,
             int[] missingIndexes) {
         checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than or equal to 0");
 
@@ -876,7 +876,7 @@ public class RandomCutForest {
             return new ArrayList<>();
         }
 
-        Function<ITree<?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
+        Function<ITree<?, ?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
                 numberOfMissingValues, missingIndexes);
 
         Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
@@ -909,7 +909,7 @@ public class RandomCutForest {
             return new double[dimensions];
         }
 
-        ArrayList<double[]> conditionalField = getSimpleConditionalField(point, numberOfMissingValues, missingIndexes);
+        ArrayList<double[]> conditionalField = getConditionalCentralField(point, numberOfMissingValues, missingIndexes);
 
         if (numberOfMissingValues == 1) {
             // when there is 1 missing value, we sort all the imputed values and return the
@@ -1068,7 +1068,7 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        Function<ITree<?>, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
+        Function<ITree<?, ?>, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
                 distanceThreshold);
 
         return traverseForest(point, visitorFactory, Neighbor.collector());

@@ -31,12 +31,12 @@ import com.amazon.randomcutforest.tree.ITree;
  */
 public class SequentialForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
-    public SequentialForestTraversalExecutor(ComponentList<?> components) {
+    public SequentialForestTraversalExecutor(ComponentList<?, ?> components) {
         super(components);
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         R unnormalizedResult = components.stream().map(c -> c.traverse(point, visitorFactory)).reduce(accumulator)
@@ -46,17 +46,17 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         return components.stream().map(c -> c.traverse(point, visitorFactory)).collect(collector);
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
-        for (IComponentModel<?> component : components) {
+        for (IComponentModel<?, ?> component : components) {
             accumulator.accept(component.traverse(point, visitorFactory));
             if (accumulator.isConverged()) {
                 break;
@@ -67,7 +67,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         R unnormalizedResult = components.stream().map(c -> c.traverseMulti(point, visitorFactory)).reduce(accumulator)
@@ -77,7 +77,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
             Collector<R, ?, S> collector) {
 
         return components.stream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector);

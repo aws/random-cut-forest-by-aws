@@ -30,11 +30,12 @@ import com.amazon.randomcutforest.tree.ITree;
  * and submits transformed points to individual models for updating.
  *
  * @param <P> The point representation used by model data structures.
+ * @param <Q> The explicit data type of exchanging points
  */
-public abstract class AbstractForestUpdateExecutor<P> {
+public abstract class AbstractForestUpdateExecutor<P, Q> {
 
-    protected final IUpdateCoordinator<P> updateCoordinator;
-    protected final ComponentList<P> components;
+    protected final IUpdateCoordinator<P, Q> updateCoordinator;
+    protected final ComponentList<P, Q> components;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
@@ -44,7 +45,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
      *                          needed.
      * @param components        A list of models to update.
      */
-    protected AbstractForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ComponentList<P> components) {
+    protected AbstractForestUpdateExecutor(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
         this.updateCoordinator = updateCoordinator;
         this.components = components;
     }
@@ -97,7 +98,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
         return pointCopy;
     }
 
-    public void forEachTree(Consumer<ITree<?>> function) {
+    public void forEachTree(Consumer<ITree<?, ?>> function) {
         components.forEach(t -> function.accept(t.getTree()));
     }
 
@@ -105,7 +106,7 @@ public abstract class AbstractForestUpdateExecutor<P> {
         components.forEach(t -> function.accept(t.getSampler()));
     }
 
-    public <R> List<R> mapToTrees(Function<ITree<?>, R> function) {
+    public <R> List<R> mapToTrees(Function<ITree<?, ?>, R> function) {
         return components.stream().map(t -> function.apply(t.getTree())).collect(Collectors.toList());
     }
 

@@ -15,7 +15,14 @@
 
 package com.amazon.randomcutforest;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.HyperTree;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.ITree;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,15 +31,7 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.HyperTree;
-import com.amazon.randomcutforest.tree.IBoundingBoxView;
-import com.amazon.randomcutforest.tree.ITree;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
@@ -160,7 +159,7 @@ public class TransductiveHyperForestFunctionalTest {
 
             checkArgument(dimensions == point.length, "incorrect dimensions");
 
-            Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
+            Function<ITree<?,?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
                     tree.getMass(), seen, unseen, newDamp, ((HyperTree) tree).getgVec());
             BinaryOperator<Double> accumulator = Double::sum;
 

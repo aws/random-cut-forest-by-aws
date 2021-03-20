@@ -24,13 +24,14 @@ import java.util.Collection;
  *
  * @param <P> The internal point representation expected by the component models
  *            in this list.
+ * @param <Q> The explicit data type of points being passed
  */
-public class ComponentList<P> extends ArrayList<IComponentModel<P>> {
+public class ComponentList<P, Q> extends ArrayList<IComponentModel<P, Q>> {
     public ComponentList() {
         super();
     }
 
-    public ComponentList(Collection<? extends IComponentModel<P>> collection) {
+    public ComponentList(Collection<? extends IComponentModel<P, Q>> collection) {
         super(collection);
     }
 

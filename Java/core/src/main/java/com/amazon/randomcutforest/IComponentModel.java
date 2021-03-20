@@ -20,8 +20,15 @@ import com.amazon.randomcutforest.executor.IUpdatable;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
 
-public interface IComponentModel<P> extends ITraversable, IUpdatable<P> {
-    ITree<P> getTree();
+/**
+ *
+ * @param <P> The internal point representation expected by the component models
+ *            in this list.
+ * @param <Q> The explicit data type of points being passed
+ */
+
+public interface IComponentModel<P, Q> extends ITraversable, IUpdatable<P> {
+    ITree<P, Q> getTree();
 
     IStreamSampler<P> getSampler();
 }

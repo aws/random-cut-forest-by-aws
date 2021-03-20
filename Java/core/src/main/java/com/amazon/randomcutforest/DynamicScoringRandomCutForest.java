@@ -92,7 +92,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point, tree.getMass(),
+        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point, tree.getMass(),
                 ignoreLeafMassThreshold, seen, unseen, damp);
         BinaryOperator<Double> accumulator = Double::sum;
 
@@ -131,8 +131,8 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new SimulatedTransductiveScalarScoreVisitor(point,
-                tree.getMass(), seen, unseen, damp, CommonUtils::defaultRCFgVecFunction, vecSep);
+        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new SimulatedTransductiveScalarScoreVisitor(
+                point, tree.getMass(), seen, unseen, damp, CommonUtils::defaultRCFgVecFunction, vecSep);
         BinaryOperator<Double> accumulator = Double::sum;
 
         Function<Double, Double> finisher = sum -> sum / numberOfTrees;
@@ -171,7 +171,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point, tree.getMass(),
+        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point, tree.getMass(),
                 ignoreLeafMassThreshold, seen, unseen, damp);
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(highIsCritical, precision,
@@ -202,7 +202,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
+        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
                 tree.getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp);
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
@@ -235,7 +235,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?>, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
+        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
                 tree.getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp);
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,

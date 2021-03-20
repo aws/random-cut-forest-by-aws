@@ -22,10 +22,13 @@ import com.amazon.randomcutforest.ComponentList;
 
 /**
  * Traverse the trees in a forest sequentially.
+ * 
+ * @param <P> references to a point
+ * @param <Q> explicit data type of a point
  */
-public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecutor<P> {
+public class SequentialForestUpdateExecutor<P, Q> extends AbstractForestUpdateExecutor<P, Q> {
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ComponentList<P> components) {
+    public SequentialForestUpdateExecutor(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
         super(updateCoordinator, components);
     }
 

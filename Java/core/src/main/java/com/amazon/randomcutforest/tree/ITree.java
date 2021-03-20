@@ -17,7 +17,14 @@ package com.amazon.randomcutforest.tree;
 
 import com.amazon.randomcutforest.executor.ITraversable;
 
-public interface ITree<P> extends ITraversable {
+/**
+ * A tree that can potentially interact with a coordinator
+ *
+ * @param <P> The internal point representation expected by the component models
+ *            in this list.
+ * @param <Q> The explicit data type of points being passed
+ */
+public interface ITree<P, Q> extends ITraversable {
     int getMass();
 
     P addPoint(P point, long sequenceIndex);

@@ -139,15 +139,15 @@ public class RandomCutForestMapper
             state.setPointStoreState(pointStoreState);
 
             List<CompactSamplerState> samplerStates = new ArrayList<>();
-            List<ITree<Integer>> trees = null;
+            List<ITree<Integer, ?>> trees = null;
             if (saveTreeState) {
                 trees = new ArrayList<>();
             }
 
             CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
 
-            for (IComponentModel<?> component : forest.getComponents()) {
-                SamplerPlusTree<Integer> samplerPlusTree = (SamplerPlusTree<Integer>) component;
+            for (IComponentModel<?, ?> component : forest.getComponents()) {
+                SamplerPlusTree<Integer, ?> samplerPlusTree = (SamplerPlusTree<Integer, ?>) component;
                 CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
                 samplerStates.add(samplerMapper.toState(sampler));
                 if (trees != null) {
@@ -175,8 +175,8 @@ public class RandomCutForestMapper
                     forest.isStoreSequenceIndexesEnabled(), forest.getDimensions(),
                     forest.getNumberOfTrees() * forest.getSampleSize());
 
-            for (IComponentModel<?> model : forest.getComponents()) {
-                SamplerPlusTree<double[]> samplerPlusTree = (SamplerPlusTree<double[]>) model;
+            for (IComponentModel<?, ?> model : forest.getComponents()) {
+                SamplerPlusTree<double[], ?> samplerPlusTree = (SamplerPlusTree<double[], ?>) model;
                 SimpleStreamSampler<double[]> sampler = (SimpleStreamSampler<double[]>) samplerPlusTree.getSampler();
                 converter.addSampler(sampler);
             }
@@ -234,66 +234,65 @@ public class RandomCutForestMapper
 
         if (state.isCompactEnabled()) {
             PointStoreState pointStoreState = state.getPointStoreState();
-            Precision precision;
-            IPointStore<?> pointStore;
-            if (pointStoreState.isSinglePrecisionSet()) {
-                pointStore = new PointStoreFloatMapper().toModel(pointStoreState);
-                precision = Precision.SINGLE;
-            } else {
-                pointStore = new PointStoreDoubleMapper().toModel(pointStoreState);
-                precision = Precision.DOUBLE;
-            }
-            builder.precision(precision);
-
-            PointStoreCoordinator coordinator = new PointStoreCoordinator(pointStore);
-            coordinator.setTotalUpdates(state.getTotalUpdates());
-
-            ComponentList<Integer> components = new ComponentList<>();
-            IContextualStateMapper<? extends ITree<Integer>, CompactRandomCutTreeState, CompactRandomCutTreeContext> treeMapper;
-            if (precision == Precision.SINGLE) {
-                CompactRandomCutTreeFloatMapper m = new CompactRandomCutTreeFloatMapper();
-                m.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
-                treeMapper = m;
-            } else {
-                CompactRandomCutTreeDoubleMapper m = new CompactRandomCutTreeDoubleMapper();
-                m.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
-                treeMapper = m;
-            }
-
             CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
             context.setMaxSize(state.getSampleSize());
-            context.setPointStore(pointStore);
 
-            for (int i = 0; i < state.getNumberOfTrees(); i++) {
-                ITree<Integer> tree;
-                if (treeStates != null) {
-                    tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
-                } else if (precision == Precision.SINGLE) {
-                    tree = new CompactRandomCutTreeFloat(state.getSampleSize(), rng.nextLong(),
-                            (PointStoreFloat) pointStore, state.isBoundingBoxCachingEnabled(),
-                            state.isCenterOfMassEnabled(), state.isStoreSequenceIndexesEnabled());
-                } else {
-                    tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(),
-                            (PointStoreDouble) pointStore, state.isBoundingBoxCachingEnabled(),
-                            state.isCenterOfMassEnabled(), state.isStoreSequenceIndexesEnabled());
+            if (pointStoreState.isSinglePrecisionSet()) {
+                ComponentList<Integer, float[]> components = new ComponentList<>();
+                IPointStore<float[]> pointStore = new PointStoreFloatMapper().toModel(pointStoreState);
+                PointStoreCoordinator<float[]> coordinator = new PointStoreCoordinator<>(pointStore);
+                coordinator.setTotalUpdates(state.getTotalUpdates());
+                context.setPointStore(pointStore);
+                CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
+                treeMapper.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
+                for (int i = 0; i < state.getNumberOfTrees(); i++) {
+                    ITree<Integer, float[]> tree;
+                    if (treeStates != null) {
+                        tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
+                    } else {
+                        tree = new CompactRandomCutTreeFloat(state.getSampleSize(), rng.nextLong(), pointStore,
+                                state.isBoundingBoxCachingEnabled(), state.isCenterOfMassEnabled(),
+                                state.isStoreSequenceIndexesEnabled());
+                    }
+                    CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), rng.nextLong());
+                    if (treeStates == null) {
+                        sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
+                    }
+                    components.add(new SamplerPlusTree<>(sampler, tree));
                 }
-
-                CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), rng.nextLong());
-
-                if (treeStates == null) {
-                    sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
+                builder.precision(Precision.SINGLE);
+                return new RandomCutForest(builder, coordinator, components, rng);
+            } else {
+                ComponentList<Integer, double[]> components = new ComponentList<>();
+                IPointStore<double[]> pointStore = new PointStoreDoubleMapper().toModel(pointStoreState);
+                PointStoreCoordinator<double[]> coordinator = new PointStoreCoordinator<>(pointStore);
+                coordinator.setTotalUpdates(state.getTotalUpdates());
+                context.setPointStore(pointStore);
+                CompactRandomCutTreeDoubleMapper treeMapper = new CompactRandomCutTreeDoubleMapper();
+                treeMapper.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
+                for (int i = 0; i < state.getNumberOfTrees(); i++) {
+                    ITree<Integer, double[]> tree;
+                    if (treeStates != null) {
+                        tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
+                    } else {
+                        tree = new CompactRandomCutTreeDouble(state.getSampleSize(), rng.nextLong(), pointStore,
+                                state.isBoundingBoxCachingEnabled(), state.isCenterOfMassEnabled(),
+                                state.isStoreSequenceIndexesEnabled());
+                    }
+                    CompactSampler sampler = samplerMapper.toModel(samplerStates.get(i), rng.nextLong());
+                    if (treeStates == null) {
+                        sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
+                    }
+                    components.add(new SamplerPlusTree<>(sampler, tree));
                 }
-
-                components.add(new SamplerPlusTree<>(sampler, tree));
+                builder.precision(Precision.DOUBLE);
+                return new RandomCutForest(builder, coordinator, components, rng);
             }
-
-            return new RandomCutForest(builder, coordinator, components, rng);
         } else {
             PointStoreDouble pointStore = new PointStoreDoubleMapper().toModel(state.getPointStoreState());
             PassThroughCoordinator coordinator = new PassThroughCoordinator();
             coordinator.setTotalUpdates(state.getTotalUpdates());
-            ComponentList<double[]> components = new ComponentList<>();
-
+            ComponentList<double[], double[]> components = new ComponentList<>();
             for (int i = 0; i < state.getNumberOfTrees(); i++) {
                 CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i));
                 RandomCutTree tree = RandomCutTree.builder()
@@ -310,12 +309,12 @@ public class RandomCutForestMapper
                     sampler.addSample(new Weighted<>(point, sample.getWeight(), sample.getSequenceIndex()));
                     tree.addPoint(point, sample.getSequenceIndex());
                 }
-
                 components.add(new SamplerPlusTree<>(sampler, tree));
             }
 
             return new RandomCutForest(builder, coordinator, components, rng);
         }
+
     }
 
     /**
