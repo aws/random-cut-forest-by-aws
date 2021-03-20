@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import com.amazon.randomcutforest.executor.ITraversable;
+import com.amazon.randomcutforest.store.IPointStore;
 
 public interface ITree<P> extends ITraversable {
     int getMass();
@@ -23,6 +24,9 @@ public interface ITree<P> extends ITraversable {
     P addPoint(P point, long sequenceIndex);
 
     void deletePoint(P point, long sequenceIndex);
+
+    default void usePointStore(IPointStore<?> store) {
+    }
 
     default void setBoundingBoxCacheFraction(double fraction) {
     };

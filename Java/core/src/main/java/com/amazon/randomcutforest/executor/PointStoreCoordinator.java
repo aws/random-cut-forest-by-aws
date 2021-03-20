@@ -32,17 +32,20 @@ public class PointStoreCoordinator extends AbstractUpdateCoordinator<Integer> {
 
     @Override
     public Integer initUpdate(double[] point, long sequenceNumber) {
-        return store.add(point, sequenceNumber);
+        int result = store.add(point, sequenceNumber);
+        return (result >= 0) ? result : null;
     }
 
     @Override
     public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
-        updateResults.forEach(result -> {
-            result.getAddedPoint().ifPresent(store::incrementRefCount);
-            result.getDeletedPoint().ifPresent(store::decrementRefCount);
-        });
-        store.decrementRefCount(updateInput);
-        totalUpdates++;
+        if (updateInput != null) {
+            updateResults.forEach(result -> {
+                result.getAddedPoint().ifPresent(store::incrementRefCount);
+                result.getDeletedPoint().ifPresent(store::decrementRefCount);
+            });
+            store.decrementRefCount(updateInput);
+            ++totalUpdates;
+        }
     }
 
     public IPointStore<?> getStore() {

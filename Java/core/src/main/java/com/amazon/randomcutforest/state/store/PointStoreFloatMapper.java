@@ -39,21 +39,23 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
-        checkNotNull(state.getFloatData(), "doubleData must not be null");
+        checkNotNull(state.getFloatData(), "floatData must not be null");
         checkArgument(state.isSinglePrecisionSet(), "incorrect use");
         int capacity = state.getCapacity();
         int dimensions = state.getDimensions();
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        float[] store = Arrays.copyOf(state.getFloatData(), capacity * dimensions);
+        float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentCapacity() * dimensions);
         int freeIndexPointer = state.getFreeIndexPointer();
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
         int startOfFreeSegment = state.getStartOfFreeSegment();
+        boolean shingleAwareOverlapping = (state.getShingleSize() > 1) && (!state.isDirectMapLocation())
+                || state.isInternalShinglingEnabled();
         int[] locationList = null;
-        if (!state.isDirecMapLocation()) {
+        if (!state.isDirectMapLocation()) {
             locationList = new int[capacity];
             System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
-            if (!state.isShingleAwareOverlapping()) {
+            if (!shingleAwareOverlapping) {
                 int maxLocation = 0;
                 for (int y = 0; y < state.getLocationList().length; y++) {
                     maxLocation = Math.max(locationList[y] + dimensions, maxLocation);
@@ -66,8 +68,10 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
             }
         }
 
-        return new PointStoreFloat(state.isShingleAwareOverlapping(), startOfFreeSegment, dimensions,
-                state.getShingleSize(), store, refCount, locationList, freeIndexes, freeIndexPointer);
+        return new PointStoreFloat(state.isInternalShinglingEnabled(), state.getInternalShingle(),
+                state.getLastTimeStamp(), state.isRotationEnabled(), state.isDynamicResizingEnabled(),
+                state.getCurrentCapacity(), startOfFreeSegment, dimensions, state.getShingleSize(), store, refCount,
+                locationList, freeIndexes, freeIndexPointer);
     }
 
     @Override
@@ -79,13 +83,17 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
-        state.setDirecMapLocation(model.isDirectLocationMap());
-        state.setShingleAwareOverlapping(model.isShingleAwareOverlapping());
+        state.setDirectMapLocation(model.isDirectLocationMap());
+        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
+        state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
+        state.setInternalShingle(model.getInternalShingle());
+        state.setLastTimeStamp(model.getLastTimeStamp());
+        state.setRotationEnabled(model.isRotationEnabled());
+        state.setCurrentCapacity(model.getCurrentStoreCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setFreeIndexPointer(model.getFreeIndexPointer());
         state.setSinglePrecisionSet(true);
         int prefix = model.getValidPrefix();
-        state.setFloatData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));
         state.setRefCount(Arrays.copyOf(model.getRefCount(), prefix));
         if (model.isDirectLocationMap()) {
             state.setFloatData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));

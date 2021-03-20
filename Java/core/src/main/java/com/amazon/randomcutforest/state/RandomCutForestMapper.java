@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.state;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,6 +104,7 @@ public class RandomCutForestMapper
      */
     @Override
     public RandomCutForestState toState(RandomCutForest forest) {
+        checkState(!forest.isExternalPointStoreUsed(), "forests with external poinstore cannot produce a state");
         if (saveTreeState) {
             checkArgument(forest.isCompactEnabled(), "tree state cannot be saved for noncompact forests");
         }
@@ -118,7 +120,9 @@ public class RandomCutForestMapper
         state.setTotalUpdates(forest.getTotalUpdates());
         state.setCompactEnabled(forest.isCompactEnabled());
         state.setBoundingBoxCachingEnabled(forest.isBoundingBoxCachingEnabled());
-
+        state.setDynamicResizingPointStoreEnabled(forest.isDynamicallyResizePointstoreEnabled());
+        state.setRotateInternalShinglesEnabled(forest.isRotateInternalShinglesEnabled());
+        state.setInterShinglingEnabled(forest.isInternalShinglingEnabled());
         if (saveExecutorContext) {
             ExecutorContext executorContext = new ExecutorContext();
             executorContext.setParallelExecutionEnabled(forest.isParallelExecutionEnabled());
@@ -224,6 +228,9 @@ public class RandomCutForestMapper
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
                 .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled())
+                .dynamicallyResizePointStoreEnabled(state.isDynamicResizingPointStoreEnabled())
+                .internalShinglingEnabled(state.isInterShinglingEnabled())
+                .rotateInternalShinglesEnabled(state.isRotateInternalShinglesEnabled())
                 .compactEnabled(state.isCompactEnabled());
 
         Random rng = builder.getRandom();

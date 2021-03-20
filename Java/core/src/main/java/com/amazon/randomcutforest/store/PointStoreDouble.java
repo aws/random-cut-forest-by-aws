@@ -32,14 +32,20 @@ import java.util.Arrays;
  */
 public class PointStoreDouble extends PointStore<double[], double[]> {
 
-    public PointStoreDouble(int dimensions, int shingleSize, int capacity, boolean overlapping, boolean directMap) {
-        super(dimensions, shingleSize, capacity, overlapping, directMap);
-        store = new double[capacity * dimensions];
+    public PointStoreDouble(int dimensions, int shingleSize, int capacity, int currentStoreCapacity,
+            boolean internalShinglingEnabled, boolean dynamicallyResizePointStoreEnabled, boolean directMap,
+            boolean rotationEnabled) {
+        super(dimensions, shingleSize, capacity, currentStoreCapacity, internalShinglingEnabled,
+                dynamicallyResizePointStoreEnabled, directMap, rotationEnabled);
+        store = new double[currentStoreCapacity * dimensions];
     }
 
-    public PointStoreDouble(boolean overlapping, int startOfFreeSegment, int dimensions, int shingleSize,
-            double[] store, short[] refCount, int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
-        super(overlapping, dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
+    public PointStoreDouble(boolean internalShingling, double[] internalShingle, long lastTimeStamp,
+            boolean rotationEnabled, boolean dynamicResizing, int currentCapacity, int startOfFreeSegment,
+            int dimensions, int shingleSize, double[] store, short[] refCount, int[] referenceList, int[] freeIndexes,
+            int freeIndexPointer) {
+        super(internalShingling, internalShingle, lastTimeStamp, rotationEnabled, dynamicResizing, currentCapacity,
+                dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
         checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
         checkArgument(refCount.length == capacity, "incorrect");
@@ -48,8 +54,20 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     }
 
     public PointStoreDouble(int dimensions, int capacity) {
-        super(dimensions, 1, capacity, false, true);
+        super(dimensions, 1, capacity, capacity, false, false, true, false);
         store = new double[capacity * dimensions];
+    }
+
+    @Override
+    void resizeStore() {
+        int maxCapacity = rotationEnabled ? 2 * capacity : capacity;
+        int newCapacity = Math.min(2 * currentStoreCapacity, maxCapacity);
+        if (newCapacity > currentStoreCapacity) {
+            double[] newStore = new double[newCapacity * dimensions];
+            System.arraycopy(store, 0, newStore, 0, currentStoreCapacity * dimensions);
+            currentStoreCapacity = newCapacity;
+            store = newStore;
+        }
     }
 
     @Override
@@ -109,7 +127,15 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     public double[] get(int index) {
         checkValidIndex(index);
         int address = (directLocationMap) ? index * dimensions : locationList[index];
-        return Arrays.copyOfRange(store, address, address + dimensions);
+        if (!rotationEnabled) {
+            return Arrays.copyOfRange(store, address, address + dimensions);
+        } else {
+            double[] answer = new double[dimensions];
+            for (int i = 0; i < dimensions; i++) {
+                answer[(address + i) % dimensions] = store[address + i];
+            }
+            return answer;
+        }
     }
 
     // same as get; allows a multiplier to enable convex combinations
@@ -129,8 +155,10 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     @Override
     void copyTo(int dest, int source, int length) {
         checkArgument(dest <= source, "error");
-        for (int i = 0; i < length; i++) {
-            store[dest + i] = store[source + i];
+        if (dest < source) {
+            for (int i = 0; i < length; i++) {
+                store[dest + i] = store[source + i];
+            }
         }
     }
 

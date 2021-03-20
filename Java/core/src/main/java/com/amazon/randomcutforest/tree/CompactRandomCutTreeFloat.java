@@ -42,11 +42,16 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, ILeafStore leafStore,
             INodeStore nodeStore, int root, boolean cacheEnabled) {
         super(maxSize, seed, leafStore, nodeStore, root, cacheEnabled);
-        checkNotNull(pointStore, "pointStore must not be null");
+        // checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
             cachedBoxes = new BoundingBoxFloat[maxSize - 1];
         }
+    }
+
+    @Override
+    public void usePointStore(IPointStore<?> pointStore) {
+        super.pointStore = (IPointStore<float[]>) pointStore;
     }
 
     @Override

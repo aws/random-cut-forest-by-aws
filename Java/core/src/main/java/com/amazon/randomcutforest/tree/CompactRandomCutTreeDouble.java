@@ -41,11 +41,16 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, ILeafStore leafStore,
             INodeStore nodeStore, int root, boolean cacheEnabled) {
         super(maxSize, seed, leafStore, nodeStore, root, cacheEnabled);
-        checkNotNull(pointStore, "pointStore must not be null");
+        // checkNotNull(pointStore, "pointStore must not be null");
         super.pointStore = pointStore;
         if (cacheEnabled) {
             cachedBoxes = new BoundingBox[maxSize - 1];
         }
+    }
+
+    @Override
+    public void usePointStore(IPointStore<?> pointStore) {
+        super.pointStore = (IPointStore<double[]>) pointStore;
     }
 
     @Override

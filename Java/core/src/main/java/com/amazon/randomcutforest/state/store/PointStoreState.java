@@ -61,7 +61,7 @@ public class PointStoreState {
     /**
      * is direct mapping enabled
      */
-    private boolean direcMapLocation;
+    private boolean directMapLocation;
     /**
      * location data for indirect maps
      */
@@ -78,7 +78,27 @@ public class PointStoreState {
      * boolean indicating use of overlapping shingles; need not be used in certain
      * cases
      */
-    private boolean shingleAwareOverlapping;
+    private boolean internalShinglingEnabled;
+    /**
+     * internal shingle
+     */
+    private double[] internalShingle;
+    /**
+     * last timestamp
+     */
+    private long lastTimeStamp;
+    /**
+     * rotation for internal shingles
+     */
+    private boolean rotationEnabled;
+    /**
+     * dynamic resizing
+     */
+    private boolean dynamicResizingEnabled;
+    /**
+     * current capacity
+     */
+    private int currentCapacity;
     /**
      * state of free indices
      */

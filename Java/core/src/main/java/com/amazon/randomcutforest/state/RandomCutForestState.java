@@ -50,6 +50,12 @@ public class RandomCutForestState {
 
     private boolean centerOfMassEnabled;
 
+    private boolean dynamicResizingPointStoreEnabled;
+
+    private boolean interShinglingEnabled;
+
+    private boolean rotateInternalShinglesEnabled;
+
     private PointStoreState pointStoreState;
 
     private List<CompactSamplerState> compactSamplerStates;

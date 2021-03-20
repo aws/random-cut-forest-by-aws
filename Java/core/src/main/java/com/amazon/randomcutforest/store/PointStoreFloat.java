@@ -24,14 +24,20 @@ import java.util.Arrays;
  */
 public class PointStoreFloat extends PointStore<float[], float[]> {
 
-    public PointStoreFloat(int dimensions, int shingleSize, int capacity, boolean overlapping, boolean directMap) {
-        super(dimensions, shingleSize, capacity, overlapping, directMap);
-        store = new float[capacity * dimensions];
+    public PointStoreFloat(int dimensions, int shingleSize, int capacity, int currentStoreCapacity,
+            boolean internalShinglingEnabled, boolean dynamicallyResizePointStoreEnabled, boolean directMap,
+            boolean rotationEnabled) {
+        super(dimensions, shingleSize, capacity, currentStoreCapacity, internalShinglingEnabled,
+                dynamicallyResizePointStoreEnabled, directMap, rotationEnabled);
+        store = new float[currentStoreCapacity * dimensions];
     }
 
-    public PointStoreFloat(boolean overlapping, int startOfFreeSegment, int dimensions, int shingleSize, float[] store,
-            short[] refCount, int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
-        super(overlapping, dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
+    public PointStoreFloat(boolean internalShingling, double[] internalShingle, long lastTimeStamp,
+            boolean rotationEnabled, boolean dynamicResizing, int currentCapacity, int startOfFreeSegment,
+            int dimensions, int shingleSize, float[] store, short[] refCount, int[] referenceList, int[] freeIndexes,
+            int freeIndexPointer) {
+        super(internalShingling, internalShingle, lastTimeStamp, rotationEnabled, dynamicResizing, currentCapacity,
+                dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
         checkArgument(dimensions > 0, "dimensions must be greater than 0");
         checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
         checkArgument(refCount.length == capacity, "incorrect");
@@ -40,8 +46,20 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     }
 
     public PointStoreFloat(int dimensions, int capacity) {
-        super(dimensions, 1, capacity, false, true);
+        super(dimensions, 1, capacity, capacity, false, false, true, false);
         store = new float[capacity * dimensions];
+    }
+
+    @Override
+    void resizeStore() {
+        int maxCapacity = rotationEnabled ? 2 * capacity : capacity;
+        int newCapacity = Math.min(2 * currentStoreCapacity, maxCapacity);
+        if (newCapacity > currentStoreCapacity) {
+            float[] newStore = new float[newCapacity * dimensions];
+            System.arraycopy(store, 0, newStore, 0, currentStoreCapacity * dimensions);
+            currentStoreCapacity = newCapacity;
+            store = newStore;
+        }
     }
 
     @Override
@@ -79,10 +97,18 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     public boolean pointEquals(int index, float[] point) {
         checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
-
-        for (int j = 0; j < dimensions; j++) {
-            if (point[j] != store[j + index * dimensions]) {
-                return false;
+        int address = directLocationMap ? index * dimensions : locationList[index];
+        if (!rotationEnabled) {
+            for (int j = 0; j < dimensions; j++) {
+                if (point[j] != store[j + address]) {
+                    return false;
+                }
+            }
+        } else {
+            for (int j = 0; j < dimensions; j++) {
+                if (point[j] != store[(j + address) % dimensions]) {
+                    return false;
+                }
             }
         }
 
@@ -103,7 +129,15 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     public float[] get(int index) {
         checkValidIndex(index);
         int address = (directLocationMap) ? index * dimensions : locationList[index];
-        return Arrays.copyOfRange(store, address, address + dimensions);
+        if (!rotationEnabled) {
+            return Arrays.copyOfRange(store, address, address + dimensions);
+        } else {
+            float[] answer = new float[dimensions];
+            for (int i = 0; i < dimensions; i++) {
+                answer[(address + i) % dimensions] = store[address + i];
+            }
+            return answer;
+        }
     }
 
     public float[] getScaledPoint(int index, double factor) {
