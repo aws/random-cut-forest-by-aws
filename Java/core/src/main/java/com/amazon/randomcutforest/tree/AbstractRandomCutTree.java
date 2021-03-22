@@ -24,6 +24,7 @@ import java.util.function.Function;
 
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.config.Config;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -73,11 +74,33 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         this.enableSequenceIndices = enableSequenceIndices;
     }
 
+    @Override
+    public <T> void setConfig(String name, T value, Class<T> clazz) {
+        if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
+            checkArgument(Double.class.isAssignableFrom(clazz),
+                    String.format("Setting '%s' must be a double value", name));
+            setBoundingBoxCacheFraction((Double) value);
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
+
+    @Override
+    public <T> T getConfig(String name, Class<T> clazz) {
+        checkNotNull(clazz, "clazz must not be null");
+        if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
+            checkArgument(clazz.isAssignableFrom(Double.class),
+                    String.format("Setting '%s' must be a double value", name));
+            return clazz.cast(boundingBoxCacheFraction);
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
+
     // dynamically change the fraction of the new nodes which caches their bounding
     // boxes
     // 0 would mean less space usage, but slower throughput
     // 1 would imply larger space but better throughput
-    @Override
     public void setBoundingBoxCacheFraction(double fraction) {
         checkArgument(0 <= fraction && fraction <= 1, "incorrect parameter");
         boundingBoxCacheFraction = fraction;

@@ -13,19 +13,9 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest;
+package com.amazon.randomcutforest.config;
 
-import com.amazon.randomcutforest.config.IDynamicConfig;
-import com.amazon.randomcutforest.executor.ITraversable;
-import com.amazon.randomcutforest.executor.IUpdatable;
-
-/**
- *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
- */
-
-public interface IComponentModel<PointReference, Point>
-        extends ITraversable, IUpdatable<PointReference>, IDynamicConfig {
+public class Config {
+    public static final String BOUNDING_BOX_CACHE_FRACTION = "bounding_box_cache_fraction";
+    public static final String TIME_DECAY = "time_decay";
 }

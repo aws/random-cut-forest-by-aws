@@ -18,6 +18,8 @@ package com.amazon.randomcutforest.sampler;
 import java.util.List;
 import java.util.Optional;
 
+import com.amazon.randomcutforest.config.IDynamicConfig;
+
 /**
  * <p>
  * A sampler that can be updated iteratively from a stream of data points. The
@@ -45,7 +47,7 @@ import java.util.Optional;
  *
  * @param <P> The point type.
  */
-public interface IStreamSampler<P> {
+public interface IStreamSampler<P> extends IDynamicConfig {
     /**
      * Submit a point to the sampler and return true if the point is accepted into
      * the sample. By default this method chains together the {@link #acceptPoint}
@@ -136,15 +138,5 @@ public interface IStreamSampler<P> {
      */
     int size();
 
-    /**
-     * changes the time dependent sampling on the fly. Lambda is the decay rate of
-     * every non-recent point
-     * 
-     * @param lambda the rate of sampling
-     */
-    default void setTimeDecay(double lambda) {
-    };
-
     void setMaxSequenceIndex(long maxSequenceIndex);
-
 }

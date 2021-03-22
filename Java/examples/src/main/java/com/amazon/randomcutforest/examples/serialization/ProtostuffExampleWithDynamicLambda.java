@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.examples.serialization;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -97,18 +98,17 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
         forest2.setLambda(10 * forest2.getLambda());
 
         for (int i = 0; i < numberOfTrees; i++) {
-            if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getMaxSequenceIndex() != ((CompactSampler) forest.getComponents().get(i).getSampler())
-                            .getMaxSequenceIndex()) {
+            CompactSampler sampler = (CompactSampler) ((SamplerPlusTree) forest.getComponents().get(i)).getSampler();
+            CompactSampler sampler2 = (CompactSampler) ((SamplerPlusTree) forest2.getComponents().get(i)).getSampler();
+
+            if (sampler.getMaxSequenceIndex() != sampler2.getMaxSequenceIndex()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
-            if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getSequenceIndexOfMostRecentLambdaUpdate() != ((CompactSampler) forest.getComponents().get(i)
-                            .getSampler()).getSequenceIndexOfMostRecentLambdaUpdate()) {
+            if (sampler.getSequenceIndexOfMostRecentLambdaUpdate() != sampler2
+                    .getSequenceIndexOfMostRecentLambdaUpdate()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
-            if (((CompactSampler) forest2.getComponents().get(i).getSampler())
-                    .getSequenceIndexOfMostRecentLambdaUpdate() != dataSize - 1) {
+            if (sampler2.getSequenceIndexOfMostRecentLambdaUpdate() != dataSize - 1) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
         }
