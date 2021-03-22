@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.executor;
 
-public interface IUpdatable<P> {
+public interface IUpdatable<PointReference> {
     /**
      * result of an update on a sampler plus tree
      * 
@@ -24,5 +24,5 @@ public interface IUpdatable<P> {
      * @return the (inserted,deleted) pair of handles in the tree for eventual
      *         bookkeeping
      */
-    UpdateResult<P> update(P point, long seqNum);
+    UpdateResult<PointReference> update(PointReference point, long seqNum);
 }

@@ -41,10 +41,10 @@ import com.amazon.randomcutforest.tree.ITree;
 @ExtendWith(MockitoExtension.class)
 public class SamplerPlusTreeTest {
     @Mock
-    private ITree<Integer> tree;
+    private ITree<Integer, double[]> tree;
     @Mock
     private IStreamSampler<Integer> sampler;
-    private SamplerPlusTree<Integer> samplerPlusTree;
+    private SamplerPlusTree<Integer, double[]> samplerPlusTree;
 
     @BeforeEach
     public void setUp() {

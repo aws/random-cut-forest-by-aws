@@ -160,7 +160,7 @@ public class TransductiveHyperForestFunctionalTest {
 
             checkArgument(dimensions == point.length, "incorrect dimensions");
 
-            Function<ITree<?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
+            Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
                     tree.getMass(), seen, unseen, newDamp, ((HyperTree) tree).getgVec());
             BinaryOperator<Double> accumulator = Double::sum;
 

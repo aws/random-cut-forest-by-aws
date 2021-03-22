@@ -15,20 +15,13 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.executor.ITraversable;
-import com.amazon.randomcutforest.executor.IUpdatable;
-import com.amazon.randomcutforest.sampler.IStreamSampler;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.tree.ITree;
 
 /**
- *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
+ * This is the interface for a visitor factory
  */
-
-public interface IComponentModel<PointReference, Point> extends ITraversable, IUpdatable<PointReference> {
-    ITree<PointReference, Point> getTree();
-
-    IStreamSampler<PointReference> getSampler();
+@FunctionalInterface
+public interface VisitorFactory<R> extends Function<ITree<?, ?>, Visitor<R>> {
 }

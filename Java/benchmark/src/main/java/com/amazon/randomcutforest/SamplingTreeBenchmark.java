@@ -51,7 +51,7 @@ public class SamplingTreeBenchmark {
         boolean storeSequenceIndexesEnabled;
 
         double[][] data;
-        SamplerPlusTree<double[]> samplingTree;
+        SamplerPlusTree<double[], double[]> samplingTree;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -69,11 +69,11 @@ public class SamplingTreeBenchmark {
         }
     }
 
-    private SamplerPlusTree<double[]> samplerPlusTree;
+    private SamplerPlusTree<double[], double[]> samplerPlusTree;
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public SamplerPlusTree<double[]> update(BenchmarkState state) {
+    public SamplerPlusTree<double[], double[]> update(BenchmarkState state) {
         double[][] data = state.data;
         samplerPlusTree = state.samplingTree;
         long entriesSeen = 0;

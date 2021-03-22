@@ -57,20 +57,20 @@ public class ForestUpdateExecutorTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
 
-            ComponentList<double[]> sequentialComponents = new ComponentList<>();
-            ComponentList<double[]> parallelComponents = new ComponentList<>();
+            ComponentList<double[], double[]> sequentialComponents = new ComponentList<>();
+            ComponentList<double[], double[]> parallelComponents = new ComponentList<>();
 
             for (int i = 0; i < numberOfTrees; i++) {
                 sequentialComponents.add(mock(IComponentModel.class));
                 parallelComponents.add(mock(IComponentModel.class));
             }
 
-            IUpdateCoordinator<double[]> sequentialUpdateCoordinator = spy(new PassThroughCoordinator());
-            AbstractForestUpdateExecutor<double[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
+            IUpdateCoordinator<double[], double[]> sequentialUpdateCoordinator = spy(new PassThroughCoordinator());
+            AbstractForestUpdateExecutor<double[], double[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
                     sequentialUpdateCoordinator, sequentialComponents);
 
-            IUpdateCoordinator<double[]> parallelUpdateCoordinator = spy(new PassThroughCoordinator());
-            AbstractForestUpdateExecutor<double[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
+            IUpdateCoordinator<double[], double[]> parallelUpdateCoordinator = spy(new PassThroughCoordinator());
+            AbstractForestUpdateExecutor<double[], double[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
                     parallelUpdateCoordinator, parallelComponents, threadPoolSize);
 
             return Stream.of(sequentialExecutor, parallelExecutor).map(Arguments::of);
@@ -79,25 +79,25 @@ public class ForestUpdateExecutorTest {
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
-    public void testUpdate(AbstractForestUpdateExecutor<double[]> executor) {
+    public void testUpdate(AbstractForestUpdateExecutor<double[], ?> executor) {
         int addAndDelete = 4;
         int addOnly = 4;
 
-        ComponentList<double[]> components = executor.components;
+        ComponentList<double[], ?> components = executor.components;
         for (int i = 0; i < addAndDelete; i++) {
-            IComponentModel<double[]> model = components.get(i);
+            IComponentModel<double[], ?> model = components.get(i);
             UpdateResult<double[]> result = new UpdateResult<>(new double[] { i }, new double[] { 2 * i });
             when(model.update(any(), anyLong())).thenReturn(result);
         }
 
         for (int i = addAndDelete; i < addAndDelete + addOnly; i++) {
-            IComponentModel<double[]> model = components.get(i);
+            IComponentModel<double[], ?> model = components.get(i);
             UpdateResult<double[]> result = UpdateResult.<double[]>builder().addedPoint(new double[] { i }).build();
             when(model.update(any(), anyLong())).thenReturn(result);
         }
 
         for (int i = addAndDelete + addOnly; i < numberOfTrees; i++) {
-            IComponentModel<double[]> model = components.get(i);
+            IComponentModel<double[], ?> model = components.get(i);
             when(model.update(any(), anyLong())).thenReturn(UpdateResult.noop());
         }
 
@@ -106,7 +106,7 @@ public class ForestUpdateExecutorTest {
 
         executor.components.forEach(model -> verify(model).update(aryEq(point), eq(0L)));
 
-        IUpdateCoordinator<double[]> coordinator = executor.updateCoordinator;
+        IUpdateCoordinator<double[], ?> coordinator = executor.updateCoordinator;
         verify(coordinator, times(1)).completeUpdate(updateResultCaptor.capture(), aryEq(point));
 
         List<UpdateResult<double[]>> updateResults = updateResultCaptor.getValue();
@@ -129,7 +129,7 @@ public class ForestUpdateExecutorTest {
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
-    public void testCleanCopy(AbstractForestUpdateExecutor<double[]> executor) {
+    public void testCleanCopy(AbstractForestUpdateExecutor<double[], ?> executor) {
         double[] point1 = new double[] { 1.0, -22.2, 30.9 };
         double[] point1Copy = executor.cleanCopy(point1);
         assertNotSame(point1, point1Copy);

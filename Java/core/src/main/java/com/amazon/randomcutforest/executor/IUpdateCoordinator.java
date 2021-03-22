@@ -23,33 +23,35 @@ import java.util.List;
  * by the updatable models, and processes the list of deleted points if needed.
  * An IUpdateCoordinator can be used to manage shared state.
  *
- * @param <P> An internal point representation.
+ * @param <PointReference> An internal point representation.
+ * @param <Point>          Explicit point type
  */
-public interface IUpdateCoordinator<P> {
+public interface IUpdateCoordinator<PointReference, Point> {
     /**
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.
-     * 
+     *
      * @param point          The input point.
      * @param sequenceNumber the sequence number associated with the point
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    P initUpdate(double[] point, long sequenceNumber);
+    PointReference initUpdate(double[] point, long sequenceNumber);
 
     /**
      * Complete the update. This method is called by IUpdateCoordinator after all
      * IUpdabale instances have completed their individual updates. This method
      * receives the list of points that were deleted IUpdatable instances for
      * further processing if needed.
-     * 
+     *
      * @param updateResults A list of points that were deleted.
      * @param updateInput   The corresponding output from {@link #initUpdate}, which
      *                      was passed into the update method for each component
      */
-    void completeUpdate(List<UpdateResult<P>> updateResults, P updateInput);
+    void completeUpdate(List<UpdateResult<PointReference>> updateResults, PointReference updateInput);
 
     long getTotalUpdates();
 
     void setTotalUpdates(long totalUpdates);
+
 }

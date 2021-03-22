@@ -29,10 +29,19 @@ import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
 
-public class SamplerPlusTree<P> implements IComponentModel<P> {
+/**
+ * A SamplerPlusTree corresponds to a combination of sampler and tree where the
+ * information is passed via P and the tree can seek explicit point information
+ * of type Q
+ *
+ * @param <P> The internal point representation expected by the component models
+ *            in this list.
+ * @param <Q> The explicit data type of points being passed
+ */
+public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
 
     @Getter
-    private ITree<P> tree;
+    private ITree<P, Q> tree;
     @Getter
     private IStreamSampler<P> sampler;
 
@@ -44,7 +53,7 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
      * @param sampler the sampler
      * @param tree    the corresponding tree
      */
-    public SamplerPlusTree(IStreamSampler<P> sampler, ITree<P> tree) {
+    public SamplerPlusTree(IStreamSampler<P> sampler, ITree<P, Q> tree) {
         checkNotNull(sampler, "sampler must not be null");
         checkNotNull(tree, "tree must not be null");
         this.sampler = sampler;
@@ -90,12 +99,12 @@ public class SamplerPlusTree<P> implements IComponentModel<P> {
     }
 
     @Override
-    public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
+    public <R> R traverse(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory) {
         return tree.traverse(point, visitorFactory);
     }
 
     @Override
-    public <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory) {
+    public <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
         return tree.traverseMulti(point, visitorFactory);
     }
 

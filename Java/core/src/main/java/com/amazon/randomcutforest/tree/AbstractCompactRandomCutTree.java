@@ -45,7 +45,7 @@ import com.amazon.randomcutforest.store.SmallNodeStore;
  * compute a statistic from the tree.
  */
 public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandomCutTree<Point, Integer, Integer>
-        implements ITree<Integer> {
+        implements ITree<Integer, Point> {
 
     /**
      * The index value used to represent the absence of a node. For example, when
@@ -116,7 +116,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected void addSequenceIndex(Integer nodeRef, long sequenceIndex) {
         int leafRef = getLeafIndexForTreeIndex(nodeRef);
         if (sequenceIndexes[leafRef] == null) {
-            sequenceIndexes[leafRef] = new HashMap<Long, Integer>();
+            sequenceIndexes[leafRef] = new HashMap<>();
         }
         int num = 0;
         if (sequenceIndexes[leafRef].containsKey(sequenceIndex)) {

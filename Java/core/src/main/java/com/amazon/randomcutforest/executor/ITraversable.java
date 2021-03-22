@@ -42,7 +42,7 @@ public interface ITraversable {
      * @return the value of {@link Visitor#getResult()} after visiting each node in
      *         the path.
      */
-    <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory);
+    <R> R traverse(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory);
 
     /**
      * Traverse the paths defined by {@code point} and the multi-visitor, and invoke
@@ -65,5 +65,5 @@ public interface ITraversable {
      * @return the value of {@link MultiVisitor#getResult()} after traversing all
      *         paths.
      */
-    <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory);
+    <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory);
 }

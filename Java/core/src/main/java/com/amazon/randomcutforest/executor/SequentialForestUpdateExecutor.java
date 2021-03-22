@@ -22,15 +22,20 @@ import com.amazon.randomcutforest.ComponentList;
 
 /**
  * Traverse the trees in a forest sequentially.
+ * 
+ * @param <PointReference> references to a point
+ * @param <Point>          explicit data type of a point
  */
-public class SequentialForestUpdateExecutor<P> extends AbstractForestUpdateExecutor<P> {
+public class SequentialForestUpdateExecutor<PointReference, Point>
+        extends AbstractForestUpdateExecutor<PointReference, Point> {
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<P> updateCoordinator, ComponentList<P> components) {
+    public SequentialForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+            ComponentList<PointReference, Point> components) {
         super(updateCoordinator, components);
     }
 
     @Override
-    protected List<UpdateResult<P>> update(P point, long seqNum) {
+    protected List<UpdateResult<PointReference>> update(PointReference point, long seqNum) {
         return components.stream().map(t -> t.update(point, seqNum)).filter(UpdateResult::isStateChange)
                 .collect(Collectors.toList());
     }

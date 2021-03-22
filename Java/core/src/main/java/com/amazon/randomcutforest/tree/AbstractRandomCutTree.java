@@ -40,7 +40,8 @@ import com.amazon.randomcutforest.Visitor;
  * {@link Visitor} which can be submitted to a traversal method in order to
  * compute a statistic from the tree.
  */
-public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference> implements ITree<PointReference> {
+public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference>
+        implements ITree<PointReference, Point> {
 
     /**
      * The index value used to represent the absence of a node. For example, when
@@ -552,7 +553,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
-    public <R> R traverse(double[] point, Function<ITree<?>, Visitor<R>> visitorFactory) {
+    public <R> R traverse(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory) {
         checkState(root != null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.apply(this);
         traversePathToLeafAndVisitNodes(point, visitor, root, 0);
@@ -589,7 +590,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
 
     @Override
-    public <R> R traverseMulti(double[] point, Function<ITree<?>, MultiVisitor<R>> visitorFactory) {
+    public <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");

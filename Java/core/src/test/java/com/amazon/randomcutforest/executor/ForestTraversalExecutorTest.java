@@ -54,8 +54,8 @@ public class ForestTraversalExecutorTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
 
-            ComponentList<double[]> sequentialExecutors = new ComponentList<>();
-            ComponentList<double[]> parallelExecutors = new ComponentList<>();
+            ComponentList<double[], double[]> sequentialExecutors = new ComponentList<>();
+            ComponentList<double[], double[]> parallelExecutors = new ComponentList<>();
 
             for (int i = 0; i < numberOfTrees; i++) {
                 SimpleStreamSampler<double[]> sampler = mock(SimpleStreamSampler.class);
@@ -87,7 +87,7 @@ public class ForestTraversalExecutorTest {
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
-            ITree<?> tree = ((SamplerPlusTree<?>) executor.components.get(i)).getTree();
+            ITree<?, ?> tree = ((SamplerPlusTree<?, ?>) executor.components.get(i)).getTree();
             when(tree.traverse(aryEq(point), any())).thenReturn(treeResult);
             expectedResult += treeResult;
         }
@@ -97,7 +97,7 @@ public class ForestTraversalExecutorTest {
         double result = executor.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, Double::sum,
                 x -> x / 10.0);
 
-        for (IComponentModel<?> component : executor.components) {
+        for (IComponentModel<?, ?> component : executor.components) {
             verify(component, times(1)).traverse(aryEq(point), any());
         }
 
@@ -112,7 +112,7 @@ public class ForestTraversalExecutorTest {
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
-            ITree<?> tree = ((SamplerPlusTree<?>) executor.components.get(i)).getTree();
+            ITree<?, ?> tree = ((SamplerPlusTree<?, ?>) executor.components.get(i)).getTree();
             when(tree.traverse(aryEq(point), any())).thenReturn(treeResult);
             expectedResult[i] = treeResult;
         }
@@ -122,7 +122,7 @@ public class ForestTraversalExecutorTest {
         List<Double> result = executor.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY,
                 TestUtils.SORTED_LIST_COLLECTOR);
 
-        for (IComponentModel<?> component : executor.components) {
+        for (IComponentModel<?, ?> component : executor.components) {
             verify(component, times(1)).traverse(aryEq(point), any());
         }
 
@@ -139,7 +139,7 @@ public class ForestTraversalExecutorTest {
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
-            ITree<?> tree = ((SamplerPlusTree<?>) executor.components.get(i)).getTree();
+            ITree<?, ?> tree = ((SamplerPlusTree<?, ?>) executor.components.get(i)).getTree();
             when(tree.traverse(aryEq(point), any())).thenReturn(treeResult);
         }
 
@@ -149,7 +149,7 @@ public class ForestTraversalExecutorTest {
         double result = executor.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator,
                 x -> x / accumulator.getValuesAccepted());
 
-        for (IComponentModel<?> component : executor.components) {
+        for (IComponentModel<?, ?> component : executor.components) {
             verify(component, atMost(1)).traverse(aryEq(point), any());
         }
 
@@ -166,7 +166,7 @@ public class ForestTraversalExecutorTest {
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
-            ITree<?> tree = ((SamplerPlusTree<?>) executor.components.get(i)).getTree();
+            ITree<?, ?> tree = ((SamplerPlusTree<?, ?>) executor.components.get(i)).getTree();
             when(tree.traverseMulti(aryEq(point), any())).thenReturn(treeResult);
             expectedResult += treeResult;
         }
@@ -176,7 +176,7 @@ public class ForestTraversalExecutorTest {
         double result = executor.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, Double::sum,
                 x -> x / 10.0);
 
-        for (IComponentModel<?> component : executor.components) {
+        for (IComponentModel<?, ?> component : executor.components) {
             verify(component, times(1)).traverseMulti(aryEq(point), any());
         }
 
@@ -191,7 +191,7 @@ public class ForestTraversalExecutorTest {
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
-            ITree<?> tree = ((SamplerPlusTree<?>) executor.components.get(i)).getTree();
+            ITree<?, ?> tree = ((SamplerPlusTree<?, ?>) executor.components.get(i)).getTree();
             when(tree.traverseMulti(aryEq(point), any())).thenReturn(treeResult);
             expectedResult[i] = treeResult;
         }
@@ -201,7 +201,7 @@ public class ForestTraversalExecutorTest {
         List<Double> result = executor.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY,
                 TestUtils.SORTED_LIST_COLLECTOR);
 
-        for (IComponentModel<?> component : executor.components) {
+        for (IComponentModel<?, ?> component : executor.components) {
             verify(component, times(1)).traverseMulti(aryEq(point), any());
         }
 
