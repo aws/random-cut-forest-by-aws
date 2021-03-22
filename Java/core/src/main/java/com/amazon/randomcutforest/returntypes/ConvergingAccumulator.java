@@ -15,16 +15,13 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import java.util.function.Function;
-
 /**
  * An accumulator which can be used to short-circuit the number of trees visited
  * if the responses from the trees seen so far appear to be converging to a
  * value. for an example
  *
  * @param <R> The result type being accumulated.
- * @see com.amazon.randomcutforest.RandomCutForest#traverseForest(double[],
- *      Function, ConvergingAccumulator, Function)
+ * @see com.amazon.randomcutforest.RandomCutForest
  */
 public interface ConvergingAccumulator<R> {
     /**
