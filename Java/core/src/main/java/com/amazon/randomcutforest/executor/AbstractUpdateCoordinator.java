@@ -25,10 +25,10 @@ import lombok.Setter;
  * AbstractUpdateCoordinator are responsible for incrementing the totalUpdates
  * counter after completing an update successfully.
  *
- * @param <P> An internal point representation.
- * @param <Q> Data type of potential exchanges of data
+ * @param <PointReference> An internal point representation.
+ * @param <Q>              Data type of potential exchanges of data
  */
-public abstract class AbstractUpdateCoordinator<P, Q> implements IUpdateCoordinator<P, Q> {
+public abstract class AbstractUpdateCoordinator<PointReference, Q> implements IUpdateCoordinator<PointReference, Q> {
     @Getter
     @Setter
     protected long totalUpdates;

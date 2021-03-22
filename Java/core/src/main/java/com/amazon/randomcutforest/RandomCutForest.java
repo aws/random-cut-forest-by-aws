@@ -560,8 +560,8 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
-            BinaryOperator<R> accumulator, Function<R, S> finisher) {
+    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+            Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -593,8 +593,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
-            Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -629,7 +628,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -663,7 +662,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -696,7 +695,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -725,7 +724,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
+        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         BinaryOperator<Double> accumulator = Double::sum;
 
@@ -753,7 +752,7 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
+        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(point, tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -783,8 +782,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getMass());
+        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(point, tree.getMass());
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
@@ -804,8 +802,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<ITree<?, ?>, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getMass());
+        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(point, tree.getMass());
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -834,8 +831,8 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        Function<ITree<?, ?>, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(
-                point, sampleSize, 1.0, centerOfMassEnabled); // self
+        VisitorFactory<InterpolationMeasure> visitorFactory = tree -> new SimpleInterpolationVisitor(point, sampleSize,
+                1.0, centerOfMassEnabled); // self
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
                 sampleSize, numberOfTrees);
 
@@ -876,8 +873,8 @@ public class RandomCutForest {
             return new ArrayList<>();
         }
 
-        Function<ITree<?, ?>, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
-                numberOfMissingValues, missingIndexes);
+        MultiVisitorFactory<double[]> visitorFactory = tree -> new ImputeVisitor(point, numberOfMissingValues,
+                missingIndexes);
 
         Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
                 ArrayList::add, (left, right) -> {
@@ -1068,8 +1065,7 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        Function<ITree<?, ?>, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
-                distanceThreshold);
+        VisitorFactory<Optional<Neighbor>> visitorFactory = tree -> new NearNeighborVisitor(point, distanceThreshold);
 
         return traverseForest(point, visitorFactory, Neighbor.collector());
     }

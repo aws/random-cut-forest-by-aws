@@ -22,16 +22,16 @@ import java.util.Collection;
  * A ComponentList is an ArrayList specialized to contain IComponentModel
  * instances. Executor classes operate on ComponentLists.
  *
- * @param <P> The internal point representation expected by the component models
- *            in this list.
- * @param <Q> The explicit data type of points being passed
+ * @param <PointReference> The internal point representation expected by the
+ *                         component models in this list.
+ * @param <Point>          The explicit data type of points being passed
  */
-public class ComponentList<P, Q> extends ArrayList<IComponentModel<P, Q>> {
+public class ComponentList<PointReference, Point> extends ArrayList<IComponentModel<PointReference, Point>> {
     public ComponentList() {
         super();
     }
 
-    public ComponentList(Collection<? extends IComponentModel<P, Q>> collection) {
+    public ComponentList(Collection<? extends IComponentModel<PointReference, Point>> collection) {
         super(collection);
     }
 

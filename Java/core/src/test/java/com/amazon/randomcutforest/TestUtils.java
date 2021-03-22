@@ -22,7 +22,6 @@ import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.tree.INodeView;
-import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
 public class TestUtils {
@@ -45,7 +44,7 @@ public class TestUtils {
     /**
      * Return a visitor that does nothing.
      */
-    public static final Function<ITree<?, ?>, Visitor<Double>> DUMMY_GENERIC_VISITOR_FACTORY = tree -> new Visitor<Double>() {
+    public static final VisitorFactory<Double> DUMMY_GENERIC_VISITOR_FACTORY = tree -> new Visitor<Double>() {
         @Override
         public void accept(INodeView node, int depthOfNode) {
         }
@@ -136,7 +135,7 @@ public class TestUtils {
     /**
      * Return a multi-visitor that does nothing.
      */
-    public static final Function<ITree<?, ?>, MultiVisitor<Double>> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
+    public static final MultiVisitorFactory<Double> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
         @Override
         public void accept(INodeView node, int depthOfNode) {
         }

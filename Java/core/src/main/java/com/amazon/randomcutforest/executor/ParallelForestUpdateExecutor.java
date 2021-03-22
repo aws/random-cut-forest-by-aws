@@ -26,23 +26,24 @@ import com.amazon.randomcutforest.ComponentList;
  * An implementation of forest traversal methods that uses a private thread pool
  * to visit trees in parallel.
  * 
- * @param <P> references to a point
- * @param <Q> explicit data type of a point
+ * @param <PointReference> references to a point
+ * @param <Point>          explicit data type of a point
  */
-public class ParallelForestUpdateExecutor<P, Q> extends AbstractForestUpdateExecutor<P, Q> {
+public class ParallelForestUpdateExecutor<PointReference, Point>
+        extends AbstractForestUpdateExecutor<PointReference, Point> {
 
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestUpdateExecutor(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components,
-            int threadPoolSize) {
+    public ParallelForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+            ComponentList<PointReference, Point> components, int threadPoolSize) {
         super(updateCoordinator, components);
         this.threadPoolSize = threadPoolSize;
         forkJoinPool = new ForkJoinPool(threadPoolSize);
     }
 
     @Override
-    protected List<UpdateResult<P>> update(P point, long seqNum) {
+    protected List<UpdateResult<PointReference>> update(PointReference point, long seqNum) {
         return submitAndJoin(() -> components.parallelStream().map(t -> t.update(point, seqNum))
                 .filter(UpdateResult::isStateChange).collect(Collectors.toList()));
     }

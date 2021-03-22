@@ -29,13 +29,14 @@ import com.amazon.randomcutforest.tree.ITree;
  * The class transforms input points into the form expected by internal models,
  * and submits transformed points to individual models for updating.
  *
- * @param <P> The point representation used by model data structures.
- * @param <Q> The explicit data type of exchanging points
+ * @param <PointReference> The point representation used by model data
+ *                         structures.
+ * @param <Point>          The explicit data type of exchanging points
  */
-public abstract class AbstractForestUpdateExecutor<P, Q> {
+public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
-    protected final IUpdateCoordinator<P, Q> updateCoordinator;
-    protected final ComponentList<P, Q> components;
+    protected final IUpdateCoordinator<PointReference, Point> updateCoordinator;
+    protected final ComponentList<PointReference, Point> components;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
@@ -45,7 +46,8 @@ public abstract class AbstractForestUpdateExecutor<P, Q> {
      *                          needed.
      * @param components        A list of models to update.
      */
-    protected AbstractForestUpdateExecutor(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
+    protected AbstractForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+            ComponentList<PointReference, Point> components) {
         this.updateCoordinator = updateCoordinator;
         this.components = components;
     }
@@ -63,8 +65,8 @@ public abstract class AbstractForestUpdateExecutor<P, Q> {
 
     public void update(double[] point, long sequenceNumber) {
         double[] pointCopy = cleanCopy(point);
-        P updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
-        List<UpdateResult<P>> results = update(updateInput, sequenceNumber);
+        PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
+        List<UpdateResult<PointReference>> results = update(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
 
@@ -78,7 +80,7 @@ public abstract class AbstractForestUpdateExecutor<P, Q> {
      * @return a list of points that were deleted from the model as part of the
      *         update.
      */
-    protected abstract List<UpdateResult<P>> update(P updateInput, long currentIndex);
+    protected abstract List<UpdateResult<PointReference>> update(PointReference updateInput, long currentIndex);
 
     /**
      * Returns a clean deep copy of the point.
@@ -98,19 +100,19 @@ public abstract class AbstractForestUpdateExecutor<P, Q> {
         return pointCopy;
     }
 
-    public void forEachTree(Consumer<ITree<?, ?>> function) {
+    public void forEachTree(Consumer<ITree<PointReference, Point>> function) {
         components.forEach(t -> function.accept(t.getTree()));
     }
 
-    public void forEachSampler(Consumer<IStreamSampler<?>> function) {
+    public void forEachSampler(Consumer<IStreamSampler<PointReference>> function) {
         components.forEach(t -> function.accept(t.getSampler()));
     }
 
-    public <R> List<R> mapToTrees(Function<ITree<?, ?>, R> function) {
+    public <R> List<R> mapToTrees(Function<ITree<PointReference, Point>, R> function) {
         return components.stream().map(t -> function.apply(t.getTree())).collect(Collectors.toList());
     }
 
-    public <R> List<R> mapToSamplers(Function<IStreamSampler<?>, R> function) {
+    public <R> List<R> mapToSamplers(Function<IStreamSampler<PointReference>, R> function) {
         return components.stream().map(t -> function.apply(t.getSampler())).collect(Collectors.toList());
     }
 }

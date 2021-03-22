@@ -15,20 +15,18 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.executor.ITraversable;
-import com.amazon.randomcutforest.executor.IUpdatable;
-import com.amazon.randomcutforest.sampler.IStreamSampler;
+import java.util.function.Function;
+
 import com.amazon.randomcutforest.tree.ITree;
 
 /**
- *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
+ * This is the interface for a visitor which can be used with
+ * {RandomCutTree::traversePathToLeafAndVisitNodesMulti}. In this traversal
+ * method, we optionally choose to split the visitor into two copies when
+ * visiting nodes. Each copy then visits one of the paths down from that node.
+ * The results from both visitors are combined before returning back up the
+ * tree.
  */
-
-public interface IComponentModel<PointReference, Point> extends ITraversable, IUpdatable<PointReference> {
-    ITree<PointReference, Point> getTree();
-
-    IStreamSampler<PointReference> getSampler();
+@FunctionalInterface
+public interface MultiVisitorFactory<R> extends Function<ITree<?, ?>, MultiVisitor<R>> {
 }
