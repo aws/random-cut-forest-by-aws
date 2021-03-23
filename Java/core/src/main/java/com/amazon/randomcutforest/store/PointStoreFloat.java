@@ -27,7 +27,6 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     public PointStoreFloat(PointStore.Builder builder) {
         super(builder);
         store = new float[currentStoreCapacity * dimensions];
-        System.out.println(currentStoreCapacity * dimensions);
     }
 
     public PointStoreFloat(PointStore.Builder builder, double[] internalShingle, long lastTimeStamp,
@@ -55,7 +54,6 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
             currentStoreCapacity = newCapacity;
             store = newStore;
         }
-        System.out.println(currentStoreCapacity * dimensions);
     }
 
     @Override

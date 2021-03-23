@@ -73,6 +73,20 @@ public class RandomCutForestMapper
     private boolean saveTreeState = false;
 
     /**
+     * A flag indicating whether the pointstore should be included in the
+     * {@link RandomCutForestState} object produced by the mapper. This is saved by
+     * defalt for compact trees
+     */
+    private boolean savePointStoreState = true;
+
+    /**
+     * A flag indicating whether the samplers should be included in the
+     * {@link RandomCutForestState} object produced by the mapper. This is saved by
+     * defalt for all trees.
+     */
+    private boolean saveSamplerState = true;
+
+    /**
      * A flag indicating whether the executor context should be included in the
      * {@link RandomCutForestState} object produced by the mapper. Executor context
      * is not saved by defalt.
@@ -130,18 +144,22 @@ public class RandomCutForestMapper
         }
 
         if (forest.isCompactEnabled()) {
-            PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getStateCoordinator();
-            PointStoreState pointStoreState;
-            if (forest.getPrecision() == Precision.SINGLE) {
-                pointStoreState = new PointStoreFloatMapper()
-                        .toState((PointStoreFloat) pointStoreCoordinator.getStore());
-            } else {
-                pointStoreState = new PointStoreDoubleMapper()
-                        .toState((PointStoreDouble) pointStoreCoordinator.getStore());
+            if (savePointStoreState) {
+                PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getStateCoordinator();
+                PointStoreState pointStoreState;
+                if (forest.getPrecision() == Precision.SINGLE) {
+                    pointStoreState = new PointStoreFloatMapper()
+                            .toState((PointStoreFloat) pointStoreCoordinator.getStore());
+                } else {
+                    pointStoreState = new PointStoreDoubleMapper()
+                            .toState((PointStoreDouble) pointStoreCoordinator.getStore());
+                }
+                state.setPointStoreState(pointStoreState);
             }
-            state.setPointStoreState(pointStoreState);
-
-            List<CompactSamplerState> samplerStates = new ArrayList<>();
+            List<CompactSamplerState> samplerStates = null;
+            if (saveSamplerState) {
+                samplerStates = new ArrayList<>();
+            }
             List<ITree<Integer, ?>> trees = null;
             if (saveTreeState) {
                 trees = new ArrayList<>();
@@ -151,8 +169,10 @@ public class RandomCutForestMapper
 
             for (IComponentModel<?, ?> component : forest.getComponents()) {
                 SamplerPlusTree<Integer, ?> samplerPlusTree = (SamplerPlusTree<Integer, ?>) component;
-                CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
-                samplerStates.add(samplerMapper.toState(sampler));
+                if (samplerStates != null) {
+                    CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
+                    samplerStates.add(samplerMapper.toState(sampler));
+                }
                 if (trees != null) {
                     trees.add(samplerPlusTree.getTree());
                 }
@@ -185,7 +205,9 @@ public class RandomCutForestMapper
             }
 
             state.setPointStoreState(converter.getPointStoreDoubleState());
-            state.setCompactSamplerStates(converter.getCompactSamplerStates());
+            if (saveSamplerState) {
+                state.setCompactSamplerStates(converter.getCompactSamplerStates());
+            }
         }
 
         return state;
@@ -209,8 +231,9 @@ public class RandomCutForestMapper
      *                              argument and the executor context field in the
      *                              state object are null.
      */
-    @Override
-    public RandomCutForest toModel(RandomCutForestState state, ExecutorContext executorContext, long seed) {
+    public RandomCutForest toModel(RandomCutForestState state, ExecutorContext executorContext,
+            PointStoreState extPointStoreState, List<CompactRandomCutTreeState> extTreestates,
+            List<CompactSamplerState> extSamplerStates, long seed) {
 
         ExecutorContext ec;
         if (executorContext != null) {
@@ -233,12 +256,28 @@ public class RandomCutForestMapper
 
         Random rng = builder.getRandom();
 
-        List<CompactRandomCutTreeState> treeStates = state.getCompactRandomCutTreeStates();
-        List<CompactSamplerState> samplerStates = state.getCompactSamplerStates();
+        List<CompactRandomCutTreeState> treeStates = null;
+        if (extTreestates != null) {
+            treeStates = extTreestates;
+        } else if (saveTreeState) {
+            treeStates = state.getCompactRandomCutTreeStates();
+        }
+        List<CompactSamplerState> samplerStates = null;
+        if (extSamplerStates != null) {
+            samplerStates = extSamplerStates;
+        } else if (saveSamplerState) {
+            samplerStates = state.getCompactSamplerStates();
+        }
+
         CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
 
         if (state.isCompactEnabled()) {
-            PointStoreState pointStoreState = state.getPointStoreState();
+            PointStoreState pointStoreState = null;
+            if (extPointStoreState != null) {
+                pointStoreState = extPointStoreState;
+            } else {
+                pointStoreState = state.getPointStoreState();
+            }
             CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
             context.setMaxSize(state.getSampleSize());
 
@@ -320,6 +359,10 @@ public class RandomCutForestMapper
             return new RandomCutForest(builder, coordinator, components, rng);
         }
 
+    }
+
+    public RandomCutForest toModel(RandomCutForestState state, ExecutorContext executorContext, long seed) {
+        return toModel(state, executorContext, null, null, null, seed);
     }
 
     /**
