@@ -24,8 +24,16 @@ public interface IDynamicConfig {
 
     <T> void setConfig(String name, T value, Class<T> clazz);
 
+    default void setConfig(String name, short value) {
+        setConfig(name, value, Short.class);
+    }
+
     default void setConfig(String name, int value) {
         setConfig(name, value, Integer.class);
+    }
+
+    default void setConfig(String name, long value) {
+        setConfig(name, value, Long.class);
     }
 
     default void setConfig(String name, float value) {
@@ -34,6 +42,10 @@ public interface IDynamicConfig {
 
     default void setConfig(String name, double value) {
         setConfig(name, value, Double.class);
+    }
+
+    default void setConfig(String name, boolean value) {
+        setConfig(name, value, Boolean.class);
     }
 
     <T> T getConfig(String name, Class<T> clazz);
