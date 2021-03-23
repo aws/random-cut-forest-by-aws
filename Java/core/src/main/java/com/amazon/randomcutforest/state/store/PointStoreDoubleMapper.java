@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 
 @Getter
@@ -44,16 +45,18 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int capacity = state.getCapacity();
         int dimensions = state.getDimensions();
         short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        double[] store = Arrays.copyOf(state.getDoubleData(), capacity * dimensions);
+        double[] store = Arrays.copyOf(state.getDoubleData(), state.getCurrentCapacity() * dimensions);
         int freeIndexPointer = state.getFreeIndexPointer();
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
         int startOfFreeSegment = state.getStartOfFreeSegment();
+        boolean shingleAwareOverlapping = (state.getShingleSize() > 1) && (!state.isDirectMapLocation())
+                || state.isInternalShinglingEnabled();
         int[] locationList = null;
-        if (!state.isDirecMapLocation()) {
+        if (!state.isDirectMapLocation()) {
             locationList = new int[capacity];
             System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
-            if (!state.isShingleAwareOverlapping()) {
+            if (!shingleAwareOverlapping) {
                 int maxLocation = 0;
                 for (int y = 0; y < state.getLocationList().length; y++) {
                     maxLocation = Math.max(locationList[y] + dimensions, maxLocation);
@@ -66,8 +69,12 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
             }
         }
 
-        return new PointStoreDouble(state.isShingleAwareOverlapping(), startOfFreeSegment, dimensions,
-                state.getShingleSize(), store, refCount, locationList, freeIndexes, freeIndexPointer);
+        PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())
+                .internalShinglingEnabled(state.isInternalShinglingEnabled())
+                .dynamicResizingEnabled(state.isDynamicResizingEnabled()).currentCapacity(state.getCurrentCapacity())
+                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions());
+        return new PointStoreDouble(builder, state.getInternalShingle(), state.getLastTimeStamp(), startOfFreeSegment,
+                store, refCount, locationList, freeIndexes, freeIndexPointer);
     }
 
     @Override
@@ -79,8 +86,13 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
-        state.setDirecMapLocation(model.isDirectLocationMap());
-        state.setShingleAwareOverlapping(model.isShingleAwareOverlapping());
+        state.setDirectMapLocation(model.isDirectLocationMap());
+        state.setInternalShingle(model.getInternalShingle());
+        state.setLastTimeStamp(model.getLastTimeStamp());
+        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
+        state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
+        state.setRotationEnabled(model.isRotationEnabled());
+        state.setCurrentCapacity(model.getCurrentStoreCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setFreeIndexPointer(model.getFreeIndexPointer());
         state.setSinglePrecisionSet(false);

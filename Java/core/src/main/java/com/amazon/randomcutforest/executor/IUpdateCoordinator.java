@@ -24,9 +24,8 @@ import java.util.List;
  * An IUpdateCoordinator can be used to manage shared state.
  *
  * @param <PointReference> An internal point representation.
- * @param <Point>          Explicit point type
  */
-public interface IUpdateCoordinator<PointReference, Point> {
+public interface IUpdateCoordinator<PointReference> {
     /**
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.

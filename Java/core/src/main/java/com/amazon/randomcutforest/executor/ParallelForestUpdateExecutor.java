@@ -21,6 +21,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.IStateCoordinator;
 
 /**
  * An implementation of forest traversal methods that uses a private thread pool
@@ -35,7 +36,7 @@ public class ParallelForestUpdateExecutor<PointReference, Point>
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    public ParallelForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components, int threadPoolSize) {
         super(updateCoordinator, components);
         this.threadPoolSize = threadPoolSize;

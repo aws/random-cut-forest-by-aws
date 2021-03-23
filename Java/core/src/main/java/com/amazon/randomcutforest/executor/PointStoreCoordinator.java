@@ -19,33 +19,38 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.List;
 
+import com.amazon.randomcutforest.IStateCoordinator;
 import com.amazon.randomcutforest.store.IPointStore;
 
-public class PointStoreCoordinator<Q> extends AbstractUpdateCoordinator<Integer, Q> {
+public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer>
+        implements IStateCoordinator<Integer, Point> {
 
-    private final IPointStore<Q> store;
+    private final IPointStore<Point> store;
 
-    public PointStoreCoordinator(IPointStore<Q> store) {
+    public PointStoreCoordinator(IPointStore<Point> store) {
         checkNotNull(store, "store must not be null");
         this.store = store;
     }
 
     @Override
     public Integer initUpdate(double[] point, long sequenceNumber) {
-        return store.add(point, sequenceNumber);
+        int result = store.add(point, sequenceNumber);
+        return (result >= 0) ? result : null;
     }
 
     @Override
     public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
-        updateResults.forEach(result -> {
-            result.getAddedPoint().ifPresent(store::incrementRefCount);
-            result.getDeletedPoint().ifPresent(store::decrementRefCount);
-        });
-        store.decrementRefCount(updateInput);
-        totalUpdates++;
+        if (updateInput != null) {
+            updateResults.forEach(result -> {
+                result.getAddedPoint().ifPresent(store::incrementRefCount);
+                result.getDeletedPoint().ifPresent(store::decrementRefCount);
+            });
+            store.decrementRefCount(updateInput);
+            totalUpdates++;
+        }
     }
 
-    public IPointStore<Q> getStore() {
+    public IPointStore<Point> getStore() {
         return store;
     }
 }

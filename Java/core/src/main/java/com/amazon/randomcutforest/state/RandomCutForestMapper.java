@@ -117,6 +117,9 @@ public class RandomCutForestMapper
         state.setStoreSequenceIndexesEnabled(forest.isStoreSequenceIndexesEnabled());
         state.setTotalUpdates(forest.getTotalUpdates());
         state.setCompactEnabled(forest.isCompactEnabled());
+        state.setDynamicResizingEnabled(forest.isDynamicResizingEnabled());
+        state.setInternalShinglingEnabled(forest.isInternalShinglingEnabled());
+        state.setInternalRotationEnabled(forest.isInternalRotationEnabled());
         state.setBoundingBoxCachingEnabled(forest.isBoundingBoxCachingEnabled());
 
         if (saveExecutorContext) {
@@ -127,7 +130,7 @@ public class RandomCutForestMapper
         }
 
         if (forest.isCompactEnabled()) {
-            PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
+            PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getStateCoordinator();
             PointStoreState pointStoreState;
             if (forest.getPrecision() == Precision.SINGLE) {
                 pointStoreState = new PointStoreFloatMapper()
@@ -223,8 +226,10 @@ public class RandomCutForestMapper
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled())
-                .compactEnabled(state.isCompactEnabled());
+                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
+                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
+                .internalRotationEnabled(state.isInternalRotationEnabled())
+                .internalShinglingEnabled(state.isInternalShinglingEnabled());
 
         Random rng = builder.getRandom();
 

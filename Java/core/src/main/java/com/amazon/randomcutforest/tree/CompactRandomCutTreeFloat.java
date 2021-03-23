@@ -72,13 +72,13 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    protected boolean equals(float[] oldPoint, float[] point) {
-        return Arrays.equals(oldPoint, point);
+    protected boolean leftOf(float[] point, int dimension, double val) {
+        return point[dimension] <= val;
     }
 
     @Override
-    protected boolean leftOf(float[] point, int dimension, double val) {
-        return point[dimension] <= val;
+    protected boolean equals(float[] oldPoint, float[] point) {
+        return Arrays.equals(oldPoint, point);
     }
 
     @Override

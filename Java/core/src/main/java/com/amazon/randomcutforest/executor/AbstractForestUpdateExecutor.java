@@ -21,6 +21,7 @@ import java.util.List;
 import lombok.Getter;
 
 import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.IStateCoordinator;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -33,20 +34,19 @@ import com.amazon.randomcutforest.ComponentList;
 @Getter
 public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
-    protected final IUpdateCoordinator<PointReference, Point> updateCoordinator;
+    protected final IStateCoordinator<PointReference, Point> stateCoordinator;
     protected final ComponentList<PointReference, Point> components;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
      * 
-     * @param updateCoordinator The update coordinater that will be used to
-     *                          transform points and process deleted points if
-     *                          needed.
-     * @param components        A list of models to update.
+     * @param stateCoordinator The update coordinater that will be used to transform
+     *                         points and process deleted points if needed.
+     * @param components       A list of models to update.
      */
-    protected AbstractForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    protected AbstractForestUpdateExecutor(IStateCoordinator<PointReference, Point> stateCoordinator,
             ComponentList<PointReference, Point> components) {
-        this.updateCoordinator = updateCoordinator;
+        this.stateCoordinator = stateCoordinator;
         this.components = components;
     }
 
@@ -58,14 +58,15 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      * @param point The point used to update the forest.
      */
     public void update(double[] point) {
-        update(point, updateCoordinator.getTotalUpdates());
+        update(point, stateCoordinator.getTotalUpdates());
     }
 
     public void update(double[] point, long sequenceNumber) {
         double[] pointCopy = cleanCopy(point);
-        PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
-        List<UpdateResult<PointReference>> results = update(updateInput, sequenceNumber);
-        updateCoordinator.completeUpdate(results, updateInput);
+        PointReference updateInput = stateCoordinator.initUpdate(pointCopy, sequenceNumber);
+        List<UpdateResult<PointReference>> results = (updateInput == null) ? null : update(updateInput, sequenceNumber);
+        stateCoordinator.completeUpdate(results, updateInput);
+
     }
 
     /**

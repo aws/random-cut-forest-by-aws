@@ -26,9 +26,8 @@ import lombok.Setter;
  * counter after completing an update successfully.
  *
  * @param <PointReference> An internal point representation.
- * @param <Q>              Data type of potential exchanges of data
  */
-public abstract class AbstractUpdateCoordinator<PointReference, Q> implements IUpdateCoordinator<PointReference, Q> {
+public abstract class AbstractUpdateCoordinator<PointReference> implements IUpdateCoordinator<PointReference> {
     @Getter
     @Setter
     protected long totalUpdates;

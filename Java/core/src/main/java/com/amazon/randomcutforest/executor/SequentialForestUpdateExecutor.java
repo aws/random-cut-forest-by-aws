@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.IStateCoordinator;
 
 /**
  * Traverse the trees in a forest sequentially.
@@ -29,9 +30,9 @@ import com.amazon.randomcutforest.ComponentList;
 public class SequentialForestUpdateExecutor<PointReference, Point>
         extends AbstractForestUpdateExecutor<PointReference, Point> {
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    public SequentialForestUpdateExecutor(IStateCoordinator<PointReference, Point> stateCoordinator,
             ComponentList<PointReference, Point> components) {
-        super(updateCoordinator, components);
+        super(stateCoordinator, components);
     }
 
     @Override

@@ -619,11 +619,15 @@ public class CompactRandomCutForestFunctionalTest {
         sampleSize = 256;
         int shinglesize = 10;
         randomSeed = 123;
+        int inputDimensions = 1;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(10).build();
         RandomCutForest anotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(1).build();
+        RandomCutForest yetAnotherForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(1).randomSeed(randomSeed).compactEnabled(true).shingleSize(10)
+                .internalShinglingEnabled(true).initialPointStoreSize(5).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -635,25 +639,36 @@ public class CompactRandomCutForestFunctionalTest {
         double[] answer = null;
         double error = 0;
         double[] record = null;
+        double[] internallyShingledInput = new double[inputDimensions];
         for (int j = 0; j < num; ++j) { // we stream here ....
             history[entryIndex] = data[j];
             entryIndex = (entryIndex + 1) % shinglesize;
             if (entryIndex == 0) {
                 filledShingleAtleastOnce = true;
             }
-            if (filledShingleAtleastOnce) {
+            internallyShingledInput[0] = data[j];
 
+            if (filledShingleAtleastOnce) {
                 record = getShinglePoint(history, entryIndex, shinglesize);
+                assertEquals(newforest.getAnomalyScore(record), anotherforest.getAnomalyScore(record));
+                assertArrayEquals(record, yetAnotherForest.transformToShingledPoint(internallyShingledInput), 1e-10);
+                assertEquals(newforest.getAnomalyScore(record),
+                        yetAnotherForest.getAnomalyScore(internallyShingledInput), 1e-10);
+                assertEquals(newforest.getAnomalyScore(record),
+                        yetAnotherForest.getAnomalyScore(internallyShingledInput), 1e-10);
                 newforest.update(record);
                 anotherforest.update(record);
             }
+            yetAnotherForest.update(internallyShingledInput);
+            assertEquals(internallyShingledInput[0], yetAnotherForest.lastShingledPoint()[shinglesize - 1]);
         }
 
         answer = newforest.extrapolateBasic(record, 200, 1, false);
         double[] anotherAnswer = anotherforest.extrapolateBasic(record, 200, 1, false);
+        double[] yetAnotherAnswer = yetAnotherForest.extrapolate(200);
 
         assertArrayEquals(anotherAnswer, answer, 1e-10);
-
+        assertArrayEquals(yetAnotherAnswer, answer, 1e-10);
         error = 0;
         for (int j = 0; j < 200; j++) {
             double prediction = amplitude * cos((j + 850 - 50) * 2 * PI / 120);
@@ -666,7 +681,7 @@ public class CompactRandomCutForestFunctionalTest {
     }
 
     @Test
-    public void testExtrapolateB() {
+    public void testExtrapolateShingleAwareWithRotation() {
 
         numberOfTrees = 100;
         sampleSize = 256;
@@ -675,7 +690,9 @@ public class CompactRandomCutForestFunctionalTest {
 
         RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
-
+        RandomCutForest yetAnotherForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(1).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize)
+                .internalShinglingEnabled(true).internalRotationEnabled(true).initialPointStoreSize(5).build();
         double amplitude = 50.0;
         double noise = 2.0;
         Random noiseprg = new Random(72);
@@ -686,7 +703,7 @@ public class CompactRandomCutForestFunctionalTest {
         double[] data = getDataA(amplitude, noise);
         double[] answer = null;
         double error = 0;
-
+        double[] internallyShingledInput = new double[1];
         double[] record = null;
         for (int j = 0; j < num; ++j) { // we stream here ....
             history[entryIndex] = data[j];
@@ -694,6 +711,8 @@ public class CompactRandomCutForestFunctionalTest {
             if (entryIndex == 0) {
                 filledShingleAtleastOnce = true;
             }
+            internallyShingledInput[0] = data[j];
+            yetAnotherForest.update(internallyShingledInput);
             if (filledShingleAtleastOnce) {
                 // produce cyclic vectors
                 record = getShinglePoint(history, 0, shinglesize);
@@ -702,6 +721,9 @@ public class CompactRandomCutForestFunctionalTest {
         }
 
         answer = newforestB.extrapolateBasic(record, 200, 1, true, entryIndex);
+        double[] yetAnotherAnswer = yetAnotherForest.extrapolate(200);
+
+        assertArrayEquals(yetAnotherAnswer, answer, 1e-10);
 
         error = 0;
         for (int j = 0; j < 200; j++) {
@@ -895,6 +917,32 @@ public class CompactRandomCutForestFunctionalTest {
 
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                forest2.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTripDynamicResizing() {
+        int dimensions = 10;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+                    .dynamicResizingEnabled(true).sampleSize(64).precision(Precision.SINGLE).build();
+
+            Random r = new Random();
+            for (int i = 0; i < 100; i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeState(true);
+            mapper.setSaveExecutorContext(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest -- testing dynamic resizing
+            for (int i = 0; i < 100000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 forest2.update(point);
             }

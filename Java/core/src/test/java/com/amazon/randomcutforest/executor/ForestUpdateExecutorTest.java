@@ -43,6 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
+import com.amazon.randomcutforest.IStateCoordinator;
 
 @ExtendWith(MockitoExtension.class)
 public class ForestUpdateExecutorTest {
@@ -65,11 +66,11 @@ public class ForestUpdateExecutorTest {
                 parallelComponents.add(mock(IComponentModel.class));
             }
 
-            IUpdateCoordinator<double[], double[]> sequentialUpdateCoordinator = spy(new PassThroughCoordinator());
+            IStateCoordinator<double[], double[]> sequentialUpdateCoordinator = spy(new PassThroughCoordinator());
             AbstractForestUpdateExecutor<double[], double[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
                     sequentialUpdateCoordinator, sequentialComponents);
 
-            IUpdateCoordinator<double[], double[]> parallelUpdateCoordinator = spy(new PassThroughCoordinator());
+            IStateCoordinator<double[], double[]> parallelUpdateCoordinator = spy(new PassThroughCoordinator());
             AbstractForestUpdateExecutor<double[], double[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
                     parallelUpdateCoordinator, parallelComponents, threadPoolSize);
 
@@ -106,7 +107,7 @@ public class ForestUpdateExecutorTest {
 
         executor.components.forEach(model -> verify(model).update(aryEq(point), eq(0L)));
 
-        IUpdateCoordinator<double[], ?> coordinator = executor.updateCoordinator;
+        IStateCoordinator<double[], ?> coordinator = executor.stateCoordinator;
         verify(coordinator, times(1)).completeUpdate(updateResultCaptor.capture(), aryEq(point));
 
         List<UpdateResult<double[]>> updateResults = updateResultCaptor.getValue();

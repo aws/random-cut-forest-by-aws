@@ -17,11 +17,15 @@ package com.amazon.randomcutforest.executor;
 
 import java.util.List;
 
+import com.amazon.randomcutforest.IStateCoordinator;
+import com.amazon.randomcutforest.store.IPointStore;
+
 /**
  * A minimal implementation of {@link IUpdateCoordinator} that does not
  * transform the input point.
  */
-public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], double[]> {
+public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]>
+        implements IStateCoordinator<double[], double[]> {
     /**
      * Return the input point without making a copy.
      * 
@@ -42,5 +46,10 @@ public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], 
     @Override
     public void completeUpdate(List<UpdateResult<double[]>> updateResults, double[] updateInput) {
         totalUpdates++;
+    }
+
+    @Override
+    public IPointStore<double[]> getStore() {
+        return null;
     }
 }

@@ -48,6 +48,12 @@ public class RandomCutForestState {
 
     private boolean compactEnabled;
 
+    private boolean internalShinglingEnabled;
+
+    private boolean internalRotationEnabled;
+
+    private boolean dynamicResizingEnabled;
+
     private boolean centerOfMassEnabled;
 
     private PointStoreState pointStoreState;

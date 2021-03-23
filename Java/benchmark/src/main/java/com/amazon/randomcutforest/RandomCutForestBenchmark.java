@@ -43,10 +43,10 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "10", "20" })
+        @Param({ "4", "20" })
         int dimensions;
 
-        @Param({ "100" })
+        @Param({ "30" })
         int numberOfTrees;
 
         @Param({ "false" })
