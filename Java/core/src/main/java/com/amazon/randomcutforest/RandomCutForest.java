@@ -31,6 +31,7 @@ import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
@@ -522,8 +523,8 @@ public class RandomCutForest {
      *                      caching.
      */
     public void setBoundingBoxCacheFraction(double cacheFraction) {
-        checkArgument(0 <= cacheFraction && cacheFraction <= 1, String.format("fraction must be in [0,1]"));
-        updateExecutor.forEachTree(t -> t.setBoundingBoxCacheFraction(cacheFraction));
+        checkArgument(0 <= cacheFraction && cacheFraction <= 1, "cacheFraction must be between 0 and 1 (inclusive)");
+        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, cacheFraction));
     }
 
     /**
@@ -532,9 +533,9 @@ public class RandomCutForest {
      * @param lambda new value of sampling rate
      */
     public void setLambda(double lambda) {
-        checkArgument(0 <= lambda, String.format("lambda cannot be negative"));
+        checkArgument(0 <= lambda, "lambda must be greater than or equal to 0");
         this.lambda = lambda;
-        updateExecutor.forEachSampler(t -> t.setTimeDecay(lambda));
+        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.TIME_DECAY, lambda));
     }
 
     /**

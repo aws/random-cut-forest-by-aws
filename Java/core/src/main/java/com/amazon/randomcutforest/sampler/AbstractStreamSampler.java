@@ -15,7 +15,12 @@
 
 package com.amazon.randomcutforest.sampler;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
 import java.util.Random;
+
+import com.amazon.randomcutforest.config.Config;
 
 public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
@@ -96,7 +101,6 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * 
      * @param newLambda the new sampling rate
      */
-    @Override
     public void setTimeDecay(double newLambda) {
         // accumulatedLambda keeps track of adjustments and is zeroed out when the
         // arrays are
@@ -131,4 +135,26 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         sequenceIndexOfMostRecentLambdaUpdate = index;
     }
 
+    @Override
+    public <T> void setConfig(String name, T value, Class<T> clazz) {
+        if (Config.TIME_DECAY.equals(name)) {
+            checkArgument(Double.class.isAssignableFrom(clazz),
+                    String.format("Setting '%s' must be a double value", name));
+            setTimeDecay((Double) value);
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
+
+    @Override
+    public <T> T getConfig(String name, Class<T> clazz) {
+        checkNotNull(clazz, "clazz must not be null");
+        if (Config.TIME_DECAY.equals(name)) {
+            checkArgument(clazz.isAssignableFrom(Double.class),
+                    String.format("Setting '%s' must be a double value", name));
+            return clazz.cast(getTimeDecay());
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
 }

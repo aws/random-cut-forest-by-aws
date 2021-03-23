@@ -25,6 +25,7 @@ import lombok.Getter;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
@@ -108,4 +109,26 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
         return tree.traverseMulti(point, visitorFactory);
     }
 
+    @Override
+    public <T> void setConfig(String name, T value, Class<T> clazz) {
+        if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
+            tree.setConfig(name, value, clazz);
+        } else if (Config.TIME_DECAY.equals(name)) {
+            sampler.setConfig(name, value, clazz);
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
+
+    @Override
+    public <T> T getConfig(String name, Class<T> clazz) {
+        checkNotNull(clazz, "clazz must not be null");
+        if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
+            return tree.getConfig(name, clazz);
+        } else if (Config.TIME_DECAY.equals(name)) {
+            return sampler.getConfig(name, clazz);
+        } else {
+            throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
 }

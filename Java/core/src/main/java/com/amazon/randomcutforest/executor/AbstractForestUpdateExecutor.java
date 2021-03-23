@@ -17,13 +17,10 @@ package com.amazon.randomcutforest.executor;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import lombok.Getter;
 
 import com.amazon.randomcutforest.ComponentList;
-import com.amazon.randomcutforest.sampler.IStreamSampler;
-import com.amazon.randomcutforest.tree.ITree;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -33,6 +30,7 @@ import com.amazon.randomcutforest.tree.ITree;
  *                         structures.
  * @param <Point>          The explicit data type of exchanging points
  */
+@Getter
 public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
     protected final IUpdateCoordinator<PointReference, Point> updateCoordinator;
@@ -98,21 +96,5 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
             }
         }
         return pointCopy;
-    }
-
-    public void forEachTree(Consumer<ITree<PointReference, Point>> function) {
-        components.forEach(t -> function.accept(t.getTree()));
-    }
-
-    public void forEachSampler(Consumer<IStreamSampler<PointReference>> function) {
-        components.forEach(t -> function.accept(t.getSampler()));
-    }
-
-    public <R> List<R> mapToTrees(Function<ITree<PointReference, Point>, R> function) {
-        return components.stream().map(t -> function.apply(t.getTree())).collect(Collectors.toList());
-    }
-
-    public <R> List<R> mapToSamplers(Function<IStreamSampler<PointReference>, R> function) {
-        return components.stream().map(t -> function.apply(t.getSampler())).collect(Collectors.toList());
     }
 }
