@@ -21,11 +21,11 @@ import com.amazon.randomcutforest.IStateCoordinator;
 import com.amazon.randomcutforest.store.IPointStore;
 
 /**
- * A minimal implementation of {@link IUpdateCoordinator} that does not
- * transform the input point.
+ * A minimal implementation of {@link IStateCoordinator} that does not transform
+ * the input point.
  */
-public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[]>
-        implements IStateCoordinator<double[], double[]> {
+public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], double[]> {
+
     /**
      * Return the input point without making a copy.
      * 

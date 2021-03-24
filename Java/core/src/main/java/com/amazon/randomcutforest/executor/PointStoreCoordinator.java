@@ -19,11 +19,9 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.List;
 
-import com.amazon.randomcutforest.IStateCoordinator;
 import com.amazon.randomcutforest.store.IPointStore;
 
-public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer>
-        implements IStateCoordinator<Integer, Point> {
+public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer, Point> {
 
     private final IPointStore<Point> store;
 

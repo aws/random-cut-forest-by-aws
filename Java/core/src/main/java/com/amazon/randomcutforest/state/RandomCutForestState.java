@@ -56,6 +56,14 @@ public class RandomCutForestState {
 
     private boolean centerOfMassEnabled;
 
+    private boolean saveTreeState;
+
+    private boolean saveSamplerState;
+
+    private boolean saveCoordinatorState;
+
+    private boolean singlePrecisionSet;
+
     private PointStoreState pointStoreState;
 
     private List<CompactSamplerState> compactSamplerStates;

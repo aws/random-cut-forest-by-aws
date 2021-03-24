@@ -15,7 +15,9 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import java.util.List;
+
+import com.amazon.randomcutforest.executor.UpdateResult;
 import com.amazon.randomcutforest.store.IPointStore;
 
 /**
@@ -25,8 +27,33 @@ import com.amazon.randomcutforest.store.IPointStore;
  * @param <PointReference> An internal point representation.
  * @param <Point>          Explicit point type
  */
-public interface IStateCoordinator<PointReference, Point> extends IUpdateCoordinator<PointReference> {
+public interface IStateCoordinator<PointReference, Point> {
+    /**
+     * Transform the input point into a value that can be submitted to IUpdatable
+     * instances.
+     *
+     * @param point          The input point.
+     * @param sequenceNumber the sequence number associated with the point
+     * @return The point transformed into the representation expected by an
+     *         IUpdatable instance.
+     */
+    PointReference initUpdate(double[] point, long sequenceNumber);
+
+    /**
+     * Complete the update. This method is called by IUpdateCoordinator after all
+     * IUpdabale instances have completed their individual updates. This method
+     * receives the list of points that were deleted IUpdatable instances for
+     * further processing if needed.
+     *
+     * @param updateResults A list of points that were deleted.
+     * @param updateInput   The corresponding output from {@link #initUpdate}, which
+     *                      was passed into the update method for each component
+     */
+    void completeUpdate(List<UpdateResult<PointReference>> updateResults, PointReference updateInput);
+
+    long getTotalUpdates();
+
+    void setTotalUpdates(long totalUpdates);
 
     IPointStore<Point> getStore();
-
 }

@@ -104,41 +104,6 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     boolean rotationEnabled;
 
     /**
-     * Create a new PointStore with the given dimensions and capacity.
-     *
-     * @param dimensions The number of dimensions in stored points.
-     * @param capacity   The maximum number of points that can be stored.
-     */
-    /*
-     * public PointStore(int dimensions, int shingleSize, int capacity, int
-     * currentStoreCapacity, boolean internalShinglingEnabled, boolean
-     * dynamicResizingEnabled, boolean directLocationMap, boolean rotationEnabled) {
-     * super(capacity); checkArgument(dimensions > 0,
-     * "dimensions must be greater than 0"); checkArgument(shingleSize == 1 ||
-     * dimensions % shingleSize == 0, "incorrect use of shingle size");
-     * checkArgument(dynamicResizingEnabled || currentStoreCapacity > 0,
-     * "capacity must be positive if dynamic resizing is disabled");
-     * checkArgument(!directLocationMap || !internalShinglingEnabled,
-     * " cannot have internal shingles and direct map simultaneously");
-     * checkArgument(!rotationEnabled || internalShinglingEnabled,
-     * "rotation can be enabled for internal shingling only"); this.shingleSize =
-     * shingleSize; this.dimensions = dimensions; refCount = new short[capacity];
-     * startOfFreeSegment = 0; this.directLocationMap = directLocationMap;
-     * this.internalShinglingEnabled = internalShinglingEnabled; if
-     * (internalShinglingEnabled) { lastTimeStamp = 0; internalShingle = new
-     * double[dimensions]; } this.rotationEnabled = rotationEnabled;
-     * this.dynamicResizingEnabled = dynamicResizingEnabled;
-     * this.currentStoreCapacity = currentStoreCapacity;
-     * this.shingleAwareOverlapping = (shingleSize > 1) && (!directLocationMap) ||
-     * internalShinglingEnabled; if (!directLocationMap) { if
-     * (shingleAwareOverlapping) { // even if shingle size is 1 baseDimension =
-     * dimensions / shingleSize; } else { baseDimension = dimensions; } locationList
-     * = new int[capacity]; if (!shingleAwareOverlapping) { // initialize a 1-1 map
-     * for (int i = 0; i < capacity; i++) { locationList[i] = i * dimensions; } } }
-     * else { baseDimension = dimensions; } }
-     */
-
-    /**
      * Decrement the reference count for the given index.
      *
      * @param index The index value.

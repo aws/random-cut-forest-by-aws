@@ -23,8 +23,8 @@ import lombok.Builder;
  * When {@link IUpdatable#update} is called, an updatable model may choose to
  * update its state with the submitted point. This class contains the result of
  * such an operation. A list of {@code AddPointResults}s is consumed by
- * {@link IUpdateCoordinator#completeUpdate} to update global state as needed to
- * reflect the updates to individual component models.
+ * {@link com.amazon.randomcutforest.IStateCoordinator#completeUpdate} to update
+ * global state as needed to reflect the updates to individual component models.
  * 
  * @param <P> The point reference type.
  */
