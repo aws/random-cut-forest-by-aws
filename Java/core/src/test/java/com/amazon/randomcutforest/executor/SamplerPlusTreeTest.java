@@ -15,17 +15,6 @@
 
 package com.amazon.randomcutforest.executor;
 
-import com.amazon.randomcutforest.sampler.ISampled;
-import com.amazon.randomcutforest.sampler.IStreamSampler;
-import com.amazon.randomcutforest.tree.ITree;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +25,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.amazon.randomcutforest.sampler.ISampled;
+import com.amazon.randomcutforest.sampler.IStreamSampler;
+import com.amazon.randomcutforest.tree.ITree;
 
 @ExtendWith(MockitoExtension.class)
 public class SamplerPlusTreeTest {
