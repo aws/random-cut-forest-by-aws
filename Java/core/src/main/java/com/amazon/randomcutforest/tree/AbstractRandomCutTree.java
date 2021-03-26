@@ -273,12 +273,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     /**
      * method to delete a point from the tree
      *
+     * @return
      */
 
     @Override
-    public void deletePoint(PointReference pointReference, long sequenceNumber) {
+    public PointReference deletePoint(PointReference pointReference, long sequenceNumber) {
         checkState(root != null, "root must not be null");
-        deletePoint(root, getPointFromPointReference(pointReference), sequenceNumber, 0);
+        return deletePoint(root, getPointFromPointReference(pointReference), sequenceNumber);
     }
 
     /**
@@ -290,11 +291,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param nodeReference  node that we are visiting in the tree.
      * @param point          the point that is being deleted from the tree.
      * @param sequenceNumber the unique id of the point (if sequence enabled)
-     * @param level          the level (i.e., the length of the path to the root) of
-     *                       the node being evaluated.
      */
 
-    private void deletePoint(NodeReference nodeReference, Point point, long sequenceNumber, int level) {
+    private PointReference deletePoint(NodeReference nodeReference, Point point, long sequenceNumber) {
 
         if (isLeaf(nodeReference)) {
             Point oldPoint = getPointFromLeafNode(nodeReference);
@@ -305,10 +304,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             if (enableSequenceIndices) {
                 deleteSequenceIndex(nodeReference, sequenceNumber);
             }
+            PointReference returnVal = getPointReference(nodeReference);
+
             // decrease mass for the delete
             if (decrementMass(nodeReference) > 0) {
                 updateAncestorPointSum(nodeReference);
-                return;
+                return returnVal;
             }
 
             NodeReference parent = getParent(nodeReference);
@@ -316,7 +317,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             if (parent == null) {
                 root = null;
                 delete(nodeReference);
-                return;
+                return returnVal;
             }
             // parent is guaranteed to be an internal node
 
@@ -330,7 +331,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             }
             delete(nodeReference);
             delete(parent);
-            return;
+            return returnVal;
         }
 
         decrementMass(nodeReference);
@@ -338,7 +339,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         NodeReference child = leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference))
                 ? getLeftChild(nodeReference)
                 : getRightChild(nodeReference);
-        deletePoint(child, point, sequenceNumber, level + 1);
+        return deletePoint(child, point, sequenceNumber);
     }
 
     abstract void setCachedBox(NodeReference node, AbstractBoundingBox<Point> savedBox);

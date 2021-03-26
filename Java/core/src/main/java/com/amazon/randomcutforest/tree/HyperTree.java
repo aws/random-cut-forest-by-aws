@@ -123,7 +123,8 @@ public class HyperTree extends RandomCutTree {
     }
 
     @Override
-    public void deletePoint(double[] point, long sequenceIndex) {
+    public double[] deletePoint(double[] point, long sequenceIndex) {
+        return point;
         // () -> /dev/null
     }
 

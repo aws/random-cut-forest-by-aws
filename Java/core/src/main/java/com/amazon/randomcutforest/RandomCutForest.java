@@ -332,7 +332,7 @@ public class RandomCutForest {
         initExecutors(stateCoordinator, components);
     }
 
-    private <PointReference, Point> void initExecutors(IStateCoordinator<PointReference, Point> updateCoordinator,
+    protected <PointReference, Point> void initExecutors(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components) {
         if (parallelExecutionEnabled) {
             traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
@@ -354,7 +354,7 @@ public class RandomCutForest {
      *                configuration.
      * @param notUsed This parameter is not used.
      */
-    private RandomCutForest(Builder<?> builder, boolean notUsed) {
+    protected RandomCutForest(Builder<?> builder, boolean notUsed) {
         checkArgument(builder.numberOfTrees > 0, "numberOfTrees must be greater than 0");
         checkArgument(builder.sampleSize > 0, "sampleSize must be greater than 0");
         builder.outputAfter.ifPresent(n -> {

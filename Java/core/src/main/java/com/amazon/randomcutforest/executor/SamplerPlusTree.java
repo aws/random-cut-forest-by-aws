@@ -85,8 +85,7 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
             Optional<ISampled<P>> deletedPoint = sampler.getEvictedPoint();
             if (deletedPoint.isPresent()) {
                 ISampled<P> p = deletedPoint.get();
-                deleteRef = p.getValue();
-                tree.deletePoint(deleteRef, p.getSequenceIndex());
+                deleteRef = tree.deletePoint(p.getValue(), p.getSequenceIndex());
             }
 
             // the tree may choose to return a reference to an existing point

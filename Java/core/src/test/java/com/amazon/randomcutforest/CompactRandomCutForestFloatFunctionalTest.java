@@ -422,7 +422,7 @@ public class CompactRandomCutForestFloatFunctionalTest {
     @Test
     public void testUpdateWithSignedZeros() {
         RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(2).dimensions(1)
-                .randomSeed(randomSeed).compactEnabled(true).build();
+                .randomSeed(randomSeed).compactEnabled(true).precision(Precision.SINGLE).build();
 
         forest.update(new double[] { 0.0 });
         forest.getAnomalyScore(new double[] { 0.0 });
@@ -452,7 +452,8 @@ public class CompactRandomCutForestFloatFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).lambda(1e-5).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).precision(Precision.SINGLE)
+                .lambda(1e-5).build();
 
         dataSize = 10_000;
 
@@ -474,7 +475,7 @@ public class CompactRandomCutForestFloatFunctionalTest {
         double[] point = new double[] { -8.0, -8.0, 0.0 };
         DiVector result = newForest.getAnomalyAttribution(point);
         double score = newForest.getAnomalyScore(point);
-        assertEquals(score, result.getHighLowSum(), 1E-10);
+        assertEquals(score, result.getHighLowSum(), 1E-5);
         assertTrue(score > 2);
         assertTrue(result.getHighLowSum(2) < 0.2);
         // the third dimension has little influence in classification
@@ -490,7 +491,7 @@ public class CompactRandomCutForestFloatFunctionalTest {
         DiVector newResult = newForest.getAnomalyAttribution(point);
         double newScore = newForest.getAnomalyScore(point);
 
-        assertEquals(newScore, newResult.getHighLowSum(), 1E-10);
+        assertEquals(newScore, newResult.getHighLowSum(), 1E-5);
         assertTrue(newScore < score);
         for (int j = 0; j < 3; j++) {
             // relationship holds at larger values
@@ -515,7 +516,7 @@ public class CompactRandomCutForestFloatFunctionalTest {
         DiVector finalResult = newForest.getAnomalyAttribution(point);
         double finalScore = newForest.getAnomalyScore(point);
         assertTrue(finalScore < 1);
-        assertEquals(finalScore, finalResult.getHighLowSum(), 1E-10);
+        assertEquals(finalScore, finalResult.getHighLowSum(), 1E-5);
 
         for (int j = 0; j < 3; j++) {
             // relationship holds at larger values
@@ -581,7 +582,8 @@ public class CompactRandomCutForestFloatFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).precision(Precision.SINGLE)
+                .build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -628,7 +630,8 @@ public class CompactRandomCutForestFloatFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).precision(Precision.SINGLE)
+                .build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -679,10 +682,12 @@ public class CompactRandomCutForestFloatFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300)
+                .precision(Precision.SINGLE).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300)
+                .precision(Precision.SINGLE).build();
 
         double amplitude = 50.0;
         double noise = 2.0;

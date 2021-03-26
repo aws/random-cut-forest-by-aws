@@ -233,7 +233,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             --size;
             this.weight[0] = this.weight[size];
             this.pointIndex[0] = this.pointIndex[size];
-            swapDown(0);
+            if (storeSequenceIndexesEnabled) {
+                this.sequenceIndex[0] = this.sequenceIndex[size];
+            }
+            reheapOnDelete();
             return true;
         } else {
             return false;
@@ -274,6 +277,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
 
     private void swapDown(int startIndex) {
         swapDown(startIndex, false);
+    }
+
+    public void reheapOnDelete() {
+        swapDown(0);
     }
 
     public void reheap(boolean validate) {
