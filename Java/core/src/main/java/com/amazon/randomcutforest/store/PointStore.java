@@ -46,7 +46,8 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      */
     protected long lastTimeStamp;
     /**
-     * pointers to store locations
+     * pointers to store locations, this decouples direct addressing and points can
+     * be moved internally
      */
     protected int[] locationList;
 
@@ -192,8 +193,8 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
                 test = checkShingleAlignment(startOfFreeSegment, tempPoint);
             }
             if (test && startOfFreeSegment + baseDimension <= currentStoreCapacity * dimensions) {
-                int nextIndex = takeIndex(); // no more compactions
-                refCount[nextIndex] = 1; // has to be after compactions
+                int nextIndex = takeIndex();
+                refCount[nextIndex] = 1;
                 locationList[nextIndex] = startOfFreeSegment - dimensions + baseDimension;
                 copyPoint(tempPoint, dimensions - baseDimension, startOfFreeSegment, baseDimension);
                 startOfFreeSegment += baseDimension;
@@ -287,53 +288,119 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     @Override
     abstract public Point get(int index);
 
+    /**
+     * to print error messages
+     * 
+     * @param index index of the point in the store
+     * @return string corresponding to the point
+     */
     @Override
     abstract public String toString(int index);
 
+    /**
+     * used in mapper
+     * 
+     * @return gets the shingle size (if known, otherwise is 1)
+     */
     public int getShingleSize() {
         return shingleSize;
     }
 
+    /**
+     * gets the current store capacity in the number of points with dimension many
+     * values
+     * 
+     * @return capacity in number of points
+     */
     public int getCurrentStoreCapacity() {
         return currentStoreCapacity;
     }
 
+    /**
+     * used for mappers
+     * 
+     * @return the store that stores the values
+     */
     public Store getStore() {
         return store;
     }
 
+    /**
+     * used for mapper
+     * 
+     * @return the array of counts referring to different points
+     */
     public short[] getRefCount() {
         return refCount;
     }
 
+    /**
+     * useful in mapper to not copy
+     * 
+     * @return the length of the prefix
+     */
     public int getStartOfFreeSegment() {
         return startOfFreeSegment;
     }
 
+    /**
+     * used in mapper
+     * 
+     * @return the list of locations where points are stored
+     */
     public int[] getLocationList() {
         return locationList;
     }
 
+    /**
+     * used in mapper
+     * 
+     * @return if shingling is performed internally
+     */
     public boolean isInternalShinglingEnabled() {
         return internalShinglingEnabled;
     }
 
+    /**
+     *
+     * @return if the shingles performed internally are rotated as in a cyclic
+     *         buffer
+     */
     public boolean isRotationEnabled() {
         return rotationEnabled;
     }
 
+    /**
+     * used in mapper and in extrapolation
+     * 
+     * @return the last timestamp seen
+     */
     public long getLastTimeStamp() {
         return lastTimeStamp;
     }
 
+    /**
+     * used in mapper
+     * 
+     * @return ability to start from a small size an increase the store
+     */
     public boolean isDynamicResizingEnabled() {
         return dynamicResizingEnabled;
     }
 
+    /**
+     * used in mapper, as well as an optimization for shingle size 1
+     * 
+     * @return is locationList being used
+     */
     public boolean isDirectLocationMap() {
         return directLocationMap;
     }
 
+    /**
+     *
+     * @return for internal shingling, returns the last seen shingle
+     */
     public double[] getInternalShingle() {
         return (internalShingle != null) ? Arrays.copyOf(internalShingle, dimensions) : null;
     }
@@ -352,6 +419,13 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         return prefix;
     }
 
+    /**
+     * copy function for the store
+     * 
+     * @param dest   location to move to
+     * @param source moving from
+     * @param length number of values copied
+     */
     abstract void copyTo(int dest, int source, int length);
 
     /**
@@ -367,7 +441,10 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         startOfFreeSegment = 0;
         int stepDimension = (shingleAwareOverlapping) ? baseDimension : dimensions;
 
-        // we first determine which locations are the startpoints of the shingles
+        // we first determine which locations are the start points of the shingles
+        // since the shingles extend for a length and can overlap this help define the
+        // region that
+        // should be copied
         int[] reverseReferenceList = new int[currentStoreCapacity * dimensions / stepDimension];
         for (int i = 0; i < capacity; i++) {
             if (occupied.get(i)) {
@@ -429,8 +506,8 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         }
         if (!shingleAwareOverlapping) {
             /**
-             * need to restore a 1-1 map; note that the above block would work for
-             * shingleSize=1
+             * need to restore a 1-1 map so that more points can be added note that the
+             * above block works for shingleSize=1
              */
             int tempLocation = startOfFreeSegment;
             for (int i = 0; i < freeIndexPointer; i++) {
@@ -443,10 +520,22 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
 
     }
 
+    /**
+     * returns the number of copies of a point
+     * 
+     * @param i index of a point
+     * @return number of copies of the point managed by the store
+     */
     public short getRefCount(int i) {
         return refCount[i];
     }
 
+    /**
+     * transforms a point to a shingled point if internal shingling is turned on
+     * 
+     * @param point new input values
+     * @return shingled point
+     */
     @Override
     public double[] transformToShingledPoint(double[] point) {
         checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
@@ -454,24 +543,40 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         return changeShingleInPlace(Arrays.copyOf(internalShingle, dimensions), point);
     }
 
+    /**
+     * the following function is used to update the shingle in place; it can be used
+     * to produce new copies as well
+     * 
+     * @param target the array containing the shingled point
+     * @param point  the new values
+     * @return the array which now contains the updated shingle
+     */
     private double[] changeShingleInPlace(double[] target, double[] point) {
         if (!rotationEnabled) {
             for (int i = 0; i < dimensions - baseDimension; i++) {
                 target[i] = target[i + baseDimension];
             }
             for (int i = 0; i < baseDimension; i++) {
-                target[dimensions - baseDimension + i] = point[i];
+                target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0 : point[i];
             }
         } else {
             int offset = ((int) lastTimeStamp % dimensions);
             checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
             for (int i = 0; i < baseDimension; i++) {
-                target[offset + i] = point[i];
+                target[offset + i] = (point[i] == 0.0) ? 0.0 : point[i];
             }
         }
         return target;
     }
 
+    /**
+     * for extrapolation and imputation, in presence of internal shingling we need
+     * to update the list of missing values from the space of the input dimensions
+     * to the shingled dimensions
+     * 
+     * @param indexList list of missing values in the input point
+     * @return list of missing values in the shingled point
+     */
     @Override
     public int[] transformIndices(int[] indexList) {
         checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
@@ -485,11 +590,15 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
             int offset = ((int) lastTimeStamp % dimensions);
             checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
             for (int i = 0; i < indexList.length; i++) {
-                results[i] += offset;
+                results[i] = (results[i] + offset) % dimensions;
             }
         }
         return results;
     }
+
+    /**
+     * a builder
+     */
 
     public static class Builder<T extends PointStore.Builder<T>> {
 
@@ -547,12 +656,17 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     }
 
     /**
-     * @return a new RandomCutForest builder.
+     * @return a new builder.
      */
     public static PointStore.Builder builder() {
         return new PointStore.Builder();
     }
 
+    /**
+     * basic constuctor
+     * 
+     * @param builder builder specifying the parameters
+     */
     public PointStore(Builder builder) {
         super(builder.capacity);
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
@@ -597,6 +711,9 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         }
     }
 
+    /**
+     * a builder used in the mapper to restore state
+     */
     public PointStore(PointStore.Builder builder, double[] internalShingle, long lastTimeStamp, short[] refCount,
             int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
         super(freeIndexes, freeIndexPointer);

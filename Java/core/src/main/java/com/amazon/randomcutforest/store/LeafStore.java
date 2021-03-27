@@ -90,6 +90,12 @@ public class LeafStore extends IndexManager implements ILeafStore {
     }
 
     @Override
+    public int setPointIndex(int index, int pointIndex) {
+        this.pointIndex[index] = pointIndex;
+        return mass[index];
+    }
+
+    @Override
     public int incrementMass(int index) {
         return ++mass[index];
     }

@@ -172,6 +172,10 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
+    void switchLeafReference(Node leafReference, double[] newRef) {
+    }
+
+    @Override
     protected BoundingBox getLeafBoxFromLeafNode(Node node) {
         return new BoundingBox(node.getLeafPoint());
     }

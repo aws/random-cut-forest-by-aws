@@ -230,6 +230,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
+    void switchLeafReference(Integer leafNode, Integer pointIndex) {
+        leafStore.setPointIndex(getLeafIndexForTreeIndex(leafNode), pointIndex);
+    }
+
+    @Override
     protected boolean isLeaf(Integer node) {
         return isLeaf(intValue(node));
     }

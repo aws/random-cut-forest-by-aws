@@ -228,19 +228,28 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             return true;
         } else if (weight < this.weight[0]) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
-            long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
-            evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
-            --size;
-            this.weight[0] = this.weight[size];
-            this.pointIndex[0] = this.pointIndex[size];
-            if (storeSequenceIndexesEnabled) {
-                this.sequenceIndex[0] = this.sequenceIndex[size];
-            }
-            reheapOnDelete();
+            evictMax();
             return true;
         } else {
             return false;
         }
+    }
+
+    /**
+     * evicts the maximum weight point from the sampler. can be used repeatedly to
+     * change the size of the sampler and associated tree
+     */
+
+    public void evictMax() {
+        long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
+        evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
+        --size;
+        this.weight[0] = this.weight[size];
+        this.pointIndex[0] = this.pointIndex[size];
+        if (storeSequenceIndexesEnabled) {
+            this.sequenceIndex[0] = this.sequenceIndex[size];
+        }
+        swapDown(0);
     }
 
     /**
@@ -279,10 +288,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         swapDown(startIndex, false);
     }
 
-    public void reheapOnDelete() {
-        swapDown(0);
-    }
-
     public void reheap(boolean validate) {
         for (int i = (size + 1) / 2; i >= 0; i--) {
             swapDown(i, validate);
@@ -294,6 +299,9 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         checkState(size < capacity, "sampler full");
         checkState(acceptPointState != null,
                 "this method should only be called after a successful call to acceptSample(long)");
+        if (pointIndex == null) {
+            return; // can be a warning .. useful to drop elements
+        }
         this.weight[size] = acceptPointState.getWeight();
         this.pointIndex[size] = pointIndex;
         if (storeSequenceIndexesEnabled) {

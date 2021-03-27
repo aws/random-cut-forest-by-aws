@@ -69,6 +69,14 @@ public interface ILeafStore {
     int getPointIndex(int index);
 
     /**
+     * sets the index of the point associated with the leaf
+     *
+     * @param index node
+     * @return new index of the point in Point Store
+     */
+    int setPointIndex(int index, int pointIndex);
+
+    /**
      * increases the mass of the leaf and returns the value
      * 
      * @param index node

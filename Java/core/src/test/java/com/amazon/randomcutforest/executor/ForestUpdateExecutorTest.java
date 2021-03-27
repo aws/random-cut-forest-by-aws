@@ -44,6 +44,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.IStateCoordinator;
+import com.amazon.randomcutforest.RandomCutForest;
 
 @ExtendWith(MockitoExtension.class)
 public class ForestUpdateExecutorTest {
@@ -132,12 +133,12 @@ public class ForestUpdateExecutorTest {
     @ArgumentsSource(TestExecutorProvider.class)
     public void testCleanCopy(AbstractForestUpdateExecutor<double[], ?> executor) {
         double[] point1 = new double[] { 1.0, -22.2, 30.9 };
-        double[] point1Copy = executor.cleanCopy(point1);
+        double[] point1Copy = RandomCutForest.cleanCopy(point1);
         assertNotSame(point1, point1Copy);
         assertArrayEquals(point1, point1Copy);
 
         double[] point2 = new double[] { -0.0, -22.2, 30.9 };
-        double[] point2Copy = executor.cleanCopy(point2);
+        double[] point2Copy = RandomCutForest.cleanCopy(point2);
         assertNotSame(point2, point2Copy);
         assertEquals(0.0, point2Copy[0]);
 

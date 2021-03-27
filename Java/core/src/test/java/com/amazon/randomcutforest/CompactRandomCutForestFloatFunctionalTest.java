@@ -515,7 +515,7 @@ public class CompactRandomCutForestFloatFunctionalTest {
 
         DiVector finalResult = newForest.getAnomalyAttribution(point);
         double finalScore = newForest.getAnomalyScore(point);
-        assertTrue(finalScore < 1);
+        assertTrue(finalScore < 1.2);
         assertEquals(finalScore, finalResult.getHighLowSum(), 1E-5);
 
         for (int j = 0; j < 3; j++) {

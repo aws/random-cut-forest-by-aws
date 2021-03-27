@@ -470,21 +470,12 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class, () -> forest.imputeMissingValues(point, numberOfMissingValues, null));
 
-        assertThrows(NullPointerException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> forest.imputeMissingValues(null, numberOfMissingValues, missingIndexes));
 
         int invalidNumberOfMissingValues = 99;
         assertThrows(IllegalArgumentException.class,
                 () -> forest.imputeMissingValues(point, invalidNumberOfMissingValues, missingIndexes));
-    }
-
-    @Test
-    public void testImputeMissingValuesWithNoMissingValues() {
-        double[] point = { 12.3, -45.6 };
-        int[] missingIndexes = { 1, 1000 }; // second value doesn't matter since numberOfMissingValues is 1o
-
-        double[] result = forest.imputeMissingValues(point, 0, missingIndexes);
-        assertArrayEquals(point, result);
     }
 
     @Test

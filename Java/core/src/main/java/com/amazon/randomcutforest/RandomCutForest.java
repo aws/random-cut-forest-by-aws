@@ -564,23 +564,65 @@ public class RandomCutForest {
         return components;
     }
 
-    public double[] transformToShingledPoint(double[] point) {
-        checkArgument(internalShinglingEnabled, "incorrect use");
-        return stateCoordinator.getStore().transformToShingledPoint(point);
+    /**
+     * Returns a clean deep copy of the point. Current clean-ups include changing
+     * negative zero -0.0 to positive zero 0.0.
+     *
+     * @param point The original data point.
+     * @return a clean deep copy of the original point.
+     */
+    public static double[] cleanCopy(double[] point) {
+        double[] pointCopy = Arrays.copyOf(point, point.length);
+        for (int i = 0; i < point.length; i++) {
+            if (pointCopy[i] == 0.0) {
+                pointCopy[i] = 0.0;
+            }
+        }
+        return pointCopy;
     }
 
+    /**
+     * used for scoring and other function, expands to a shingled point in either
+     * case performs a clean copy
+     * 
+     * @param point input point
+     * @return a shingled copy or a clean copy
+     */
+
+    public double[] transformToShingledPoint(double[] point) {
+        checkNotNull(point, "point must not be null");
+        return (internalShinglingEnabled && point.length == inputDimensions)
+                ? stateCoordinator.getStore().transformToShingledPoint(point)
+                : cleanCopy(point);
+    }
+
+    /**
+     * transforms the missing indices on the input point to the corresponding
+     * indices of a shingled point
+     * 
+     * @param indexList input array of missing values
+     * @return output array of missing values corresponding to shingle
+     */
+    public int[] transformIndices(int[] indexList) {
+        return (!internalShinglingEnabled) ? indexList : stateCoordinator.getStore().transformIndices(indexList);
+    }
+
+    /**
+     *
+     * @return the lask known shingled point seen
+     */
     public double[] lastShingledPoint() {
         checkArgument(internalShinglingEnabled, "incorrect use");
         return stateCoordinator.getStore().getInternalShingle();
     }
 
+    /**
+     *
+     * @return the timestamp of the last known shingled point
+     */
     public long timeStamp() {
         checkArgument(internalShinglingEnabled, "incorrect use");
         return stateCoordinator.getStore().getLastTimeStamp();
-    }
-
-    public int[] transformIndices(int[] indexList) {
-        return (!internalShinglingEnabled) ? indexList : stateCoordinator.getStore().transformIndices(indexList);
     }
 
     /**
@@ -826,14 +868,12 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(newPoint, tree.getMass());
+        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(transformToShingledPoint(point),
+                tree.getMass());
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = sum -> sum / numberOfTrees;
 
-        return traverseForest(newPoint, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -855,10 +895,8 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(newPoint, tree.getMass());
+        VisitorFactory<Double> visitorFactory = tree -> new AnomalyScoreVisitor(transformToShingledPoint(point),
+                tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -866,7 +904,7 @@ public class RandomCutForest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        return traverseForest(newPoint, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -888,14 +926,12 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(newPoint, tree.getMass());
+        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(transformToShingledPoint(point),
+                tree.getMass());
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
-        return traverseForest(newPoint, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -911,10 +947,8 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(newPoint, tree.getMass());
+        VisitorFactory<DiVector> visitorFactory = tree -> new AnomalyAttributionVisitor(transformToShingledPoint(point),
+                tree.getMass());
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -922,7 +956,7 @@ public class RandomCutForest {
 
         Function<DiVector, DiVector> finisher = vector -> vector.scale(1.0 / accumulator.getValuesAccepted());
 
-        return traverseForest(newPoint, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -943,15 +977,12 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<InterpolationMeasure> visitorFactory = tree -> new SimpleInterpolationVisitor(newPoint,
-                sampleSize, 1.0, centerOfMassEnabled); // self
+        VisitorFactory<InterpolationMeasure> visitorFactory = tree -> new SimpleInterpolationVisitor(
+                transformToShingledPoint(point), sampleSize, 1.0, centerOfMassEnabled); // self
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
                 sampleSize, numberOfTrees);
 
-        return new DensityOutput(traverseForest(newPoint, visitorFactory, collector));
+        return new DensityOutput(traverseForest(transformToShingledPoint(point), visitorFactory, collector));
     }
 
     /**
@@ -973,13 +1004,7 @@ public class RandomCutForest {
      */
     public ArrayList<double[]> getConditionalCentralField(double[] point, int numberOfMissingValues,
             int[] missingIndexes) {
-        checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than or equal to 0");
-
-        // We check this condition in traverseForest, but we need to check it here as
-        // well in case we need to copy the
-        // point in the next block
-        checkNotNull(point, "point must not be null");
-
+        checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
                 "numberOfMissingValues must be less than or equal to missingIndexes.length");
@@ -988,14 +1013,8 @@ public class RandomCutForest {
             return new ArrayList<>();
         }
 
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        int[] indexList = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformIndices(missingIndexes)
-                : missingIndexes;
-        MultiVisitorFactory<double[]> visitorFactory = tree -> new ImputeVisitor(newPoint, numberOfMissingValues,
-                indexList);
+        MultiVisitorFactory<double[]> visitorFactory = tree -> new ImputeVisitor(transformToShingledPoint(point),
+                numberOfMissingValues, transformIndices(missingIndexes));
 
         Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
                 ArrayList::add, (left, right) -> {
@@ -1003,44 +1022,34 @@ public class RandomCutForest {
                     return left;
                 }, list -> list);
 
-        return traverseForestMulti(newPoint, visitorFactory, collector);
-
+        return traverseForestMulti(transformToShingledPoint(point), visitorFactory, collector);
     }
 
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
-        checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
-
-        // We check this condition in traverseForest, but we need to check it here as
-        // well in case we need to copy the
-        // point in the next block
-        checkNotNull(point, "point must not be null");
-
-        if (numberOfMissingValues == 0) {
-            return Arrays.copyOf(point, point.length);
-        }
-
+        checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater or equal than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
                 "numberOfMissingValues must be less than or equal to missingIndexes.length");
+        checkArgument(point != null, " cannot be null");
 
         if (!isOutputReady()) {
             return new double[dimensions];
         }
-
-        ArrayList<double[]> conditionalField = getConditionalCentralField(point, numberOfMissingValues, missingIndexes);
+        // checks will be performed in the function call
+        ArrayList<double[]> conditionalField = getConditionalCentralField(transformToShingledPoint(point),
+                numberOfMissingValues, transformIndices(missingIndexes));
 
         if (numberOfMissingValues == 1) {
             // when there is 1 missing value, we sort all the imputed values and return the
             // median
             double[] returnPoint = Arrays.copyOf(point, point.length);
-            double[] basicList = conditionalField.stream().mapToDouble(array -> array[missingIndexes[0]]).sorted()
-                    .toArray();
+            double[] basicList = conditionalField.stream()
+                    .mapToDouble(array -> array[transformIndices(missingIndexes)[0]]).sorted().toArray();
             returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
             return returnPoint;
         } else {
             // when there is more than 1 missing value, we sort the imputed points by
-            // anomaly score and
-            // return the point with the 25th percentile anomaly score
+            // anomaly score and return the point with the 25th percentile anomaly score
             conditionalField.sort(Comparator.comparing(this::getAnomalyScore));
             return conditionalField.get(numberOfTrees / 4);
         }
@@ -1200,13 +1209,11 @@ public class RandomCutForest {
         if (!isOutputReady()) {
             return Collections.emptyList();
         }
-        double[] newPoint = (internalShinglingEnabled && point.length == inputDimensions)
-                ? transformToShingledPoint(point)
-                : point;
-        VisitorFactory<Optional<Neighbor>> visitorFactory = tree -> new NearNeighborVisitor(newPoint,
-                distanceThreshold);
 
-        return traverseForest(newPoint, visitorFactory, Neighbor.collector());
+        VisitorFactory<Optional<Neighbor>> visitorFactory = tree -> new NearNeighborVisitor(
+                transformToShingledPoint(point), distanceThreshold);
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, Neighbor.collector());
     }
 
     /**

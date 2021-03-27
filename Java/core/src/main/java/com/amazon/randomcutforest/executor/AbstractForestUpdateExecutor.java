@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.Arrays;
 import java.util.List;
 
 import lombok.Getter;
 
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IStateCoordinator;
+import com.amazon.randomcutforest.RandomCutForest;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -62,7 +62,7 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
     }
 
     public void update(double[] point, long sequenceNumber) {
-        double[] pointCopy = cleanCopy(point);
+        double[] pointCopy = RandomCutForest.cleanCopy(point);
         PointReference updateInput = stateCoordinator.initUpdate(pointCopy, sequenceNumber);
         List<UpdateResult<PointReference>> results = (updateInput == null) ? null : update(updateInput, sequenceNumber);
         stateCoordinator.completeUpdate(results, updateInput);
@@ -81,21 +81,4 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      */
     protected abstract List<UpdateResult<PointReference>> update(PointReference updateInput, long currentIndex);
 
-    /**
-     * Returns a clean deep copy of the point.
-     *
-     * Current clean-ups include changing negative zero -0.0 to positive zero 0.0.
-     *
-     * @param point The original data point.
-     * @return a clean deep copy of the original point.
-     */
-    protected double[] cleanCopy(double[] point) {
-        double[] pointCopy = Arrays.copyOf(point, point.length);
-        for (int i = 0; i < point.length; i++) {
-            if (pointCopy[i] == 0.0) {
-                pointCopy[i] = 0.0;
-            }
-        }
-        return pointCopy;
-    }
 }
