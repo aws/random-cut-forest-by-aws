@@ -411,5 +411,4 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
         return pointSum[ref];
     }
-
 }

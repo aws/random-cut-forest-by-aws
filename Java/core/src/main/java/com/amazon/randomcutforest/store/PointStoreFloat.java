@@ -134,20 +134,6 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
         }
     }
 
-    public boolean leftOf(int index, int cutdimension, double val) {
-        checkValidIndex(index);
-        int address = (directLocationMap) ? index * dimensions : locationList[index];
-        if (!rotationEnabled) {
-            return store[address + cutdimension] <= val;
-        } else {
-            double[] answer = new double[dimensions];
-            for (int i = 0; i < dimensions; i++) {
-                answer[(address + i) % dimensions] = store[address + i];
-            }
-            return answer[cutdimension] <= val;
-        }
-    }
-
     public float[] getScaledPoint(int index, double factor) {
         float[] answer = get(index);
         for (int i = 0; i < dimensions; i++) {

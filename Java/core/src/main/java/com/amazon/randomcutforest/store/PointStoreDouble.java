@@ -32,16 +32,6 @@ import java.util.Arrays;
  */
 public class PointStoreDouble extends PointStore<double[], double[]> {
 
-    /*
-     * public PointStoreDouble(int dimensions, int shingleSize, int capacity, int
-     * currentStoreCapacity, boolean internalShinglingEnabled, boolean
-     * dynamicallyResizePointStoreEnabled, boolean directMap, boolean
-     * rotationEnabled) { super(dimensions, shingleSize, capacity,
-     * currentStoreCapacity, internalShinglingEnabled,
-     * dynamicallyResizePointStoreEnabled, directMap, rotationEnabled); store = new
-     * double[currentStoreCapacity * dimensions]; }
-     */
-
     public PointStoreDouble(PointStore.Builder builder) {
         super(builder);
         store = new double[currentStoreCapacity * dimensions];
@@ -139,20 +129,6 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
                 answer[(address + i) % dimensions] = store[address + i];
             }
             return answer;
-        }
-    }
-
-    public boolean leftOf(int index, int cutdimension, double val) {
-        checkValidIndex(index);
-        int address = (directLocationMap) ? index * dimensions : locationList[index];
-        if (!rotationEnabled) {
-            return store[address + cutdimension] <= val;
-        } else {
-            double[] answer = new double[dimensions];
-            for (int i = 0; i < dimensions; i++) {
-                answer[(address + i) % dimensions] = store[address + i];
-            }
-            return answer[cutdimension] <= val;
         }
     }
 
