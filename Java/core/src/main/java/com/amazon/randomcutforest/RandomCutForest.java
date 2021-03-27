@@ -279,7 +279,7 @@ public class RandomCutForest {
     private void initCompactDouble() {
         PointStore.Builder storeBuilder = new PointStore.Builder().internalRotationEnabled(internalRotationEnabled)
                 .capacity(numberOfTrees * sampleSize + 1).currentCapacity(initialPointStoreCapacity)
-                .direcLocationEnabled(shingleSize == 1).internalShinglingEnabled(internalShinglingEnabled)
+                .directLocationEnabled(false).internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreDouble tempStore = new PointStoreDouble(storeBuilder);
 
@@ -300,7 +300,7 @@ public class RandomCutForest {
     private void initCompactFloat() {
         PointStore.Builder storeBuilder = new PointStore.Builder().internalRotationEnabled(internalRotationEnabled)
                 .capacity(numberOfTrees * sampleSize + 1).currentCapacity(initialPointStoreCapacity)
-                .direcLocationEnabled(shingleSize == 1).internalShinglingEnabled(internalShinglingEnabled)
+                .directLocationEnabled(false).internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreFloat tempStore = new PointStoreFloat(storeBuilder);
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator(tempStore);

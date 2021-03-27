@@ -50,23 +50,10 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        boolean shingleAwareOverlapping = (state.getShingleSize() > 1) && (!state.isDirectMapLocation())
-                || state.isInternalShinglingEnabled();
         int[] locationList = null;
         if (!state.isDirectMapLocation()) {
             locationList = new int[capacity];
             System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
-            if (!shingleAwareOverlapping) {
-                int maxLocation = 0;
-                for (int y = 0; y < state.getLocationList().length; y++) {
-                    maxLocation = Math.max(locationList[y] + dimensions, maxLocation);
-                }
-                checkArgument(startOfFreeSegment == maxLocation, " unusual misalignment");
-                for (int y = state.getLocationList().length; y < capacity; y++) {
-                    locationList[y] = maxLocation;
-                    maxLocation += dimensions;
-                }
-            }
         }
 
         PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())

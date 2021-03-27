@@ -56,17 +56,6 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         if (!state.isDirectMapLocation()) {
             locationList = new int[capacity];
             System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
-            if (!shingleAwareOverlapping) {
-                int maxLocation = 0;
-                for (int y = 0; y < state.getLocationList().length; y++) {
-                    maxLocation = Math.max(locationList[y] + dimensions, maxLocation);
-                }
-                checkArgument(startOfFreeSegment == maxLocation, " unusual misalignment");
-                for (int y = state.getLocationList().length; y < capacity; y++) {
-                    locationList[y] = maxLocation;
-                    maxLocation += dimensions;
-                }
-            }
         }
 
         PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())
