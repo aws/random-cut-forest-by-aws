@@ -28,6 +28,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
+import com.amazon.randomcutforest.IStateCoordinator;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.PassThroughCoordinator;
@@ -150,14 +151,14 @@ public class RandomCutForestMapper
 
         if (forest.isCompactEnabled()) {
             if (saveCoordinatorState) {
-                PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getStateCoordinator();
+                IStateCoordinator<?, ?> stateCoordinator = forest.getStateCoordinator();
                 PointStoreState pointStoreState;
                 if (forest.getPrecision() == Precision.SINGLE) {
                     pointStoreState = new PointStoreFloatMapper()
-                            .toState((PointStoreFloat) pointStoreCoordinator.getStore());
+                            .toState((PointStoreFloat) stateCoordinator.getStore());
                 } else {
                     pointStoreState = new PointStoreDoubleMapper()
-                            .toState((PointStoreDouble) pointStoreCoordinator.getStore());
+                            .toState((PointStoreDouble) stateCoordinator.getStore());
                 }
                 state.setPointStoreState(pointStoreState);
             }
@@ -238,14 +239,6 @@ public class RandomCutForestMapper
      */
     public RandomCutForest toModel(RandomCutForestState state, ExecutorContext executorContext, long seed) {
 
-        if (state.isCompactEnabled()) {
-            if (state.isSinglePrecisionSet()) {
-                return singlePrecisionForest(state, executorContext, null, null, null, seed);
-            } else {
-                return doublePrecisionForest(state, executorContext, null, null, null, seed);
-            }
-        }
-
         ExecutorContext ec;
         if (executorContext != null) {
             ec = executorContext;
@@ -263,7 +256,15 @@ public class RandomCutForestMapper
                 .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
                 .dynamicResizingEnabled(state.isDynamicResizingEnabled())
                 .internalRotationEnabled(state.isInternalRotationEnabled())
-                .internalShinglingEnabled(state.isInternalShinglingEnabled());
+                .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
+
+        if (state.isCompactEnabled()) {
+            if (state.isSinglePrecisionSet()) {
+                return singlePrecisionForest(builder, state, null, null, null);
+            } else {
+                return doublePrecisionForest(builder, state, null, null, null);
+            }
+        }
 
         Random rng = builder.getRandom();
         List<CompactSamplerState> samplerStates = state.getCompactSamplerStates();
@@ -323,35 +324,18 @@ public class RandomCutForestMapper
         return toModel(state, null);
     }
 
-    public RandomCutForest singlePrecisionForest(RandomCutForestState state, ExecutorContext executorContext,
+    public RandomCutForest singlePrecisionForest(RandomCutForest.Builder<?> builder, RandomCutForestState state,
             IPointStore<float[]> extPointStore, List<ITree<Integer, float[]>> extTrees,
-            List<IStreamSampler<Integer>> extSamplers, long seed) {
+            List<IStreamSampler<Integer>> extSamplers) {
 
-        ExecutorContext ec;
-        if (executorContext != null) {
-            ec = executorContext;
-        } else {
-            checkNotNull(state.getExecutorContext(),
-                    "The executor context in the state object is null, an executor context must be passed explicitly to toModel()");
-            ec = state.getExecutorContext();
-        }
-
-        RandomCutForest.Builder<?> builder = RandomCutForest.builder().numberOfTrees(state.getNumberOfTrees())
-                .dimensions(state.getDimensions()).lambda(state.getLambda()).sampleSize(state.getSampleSize())
-                .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
-                .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .internalRotationEnabled(state.isInternalRotationEnabled())
-                .internalShinglingEnabled(state.isInternalShinglingEnabled());
-
-        Random rng = builder.getRandom();
+        checkArgument(builder != null, "builder cannot be null");
         checkArgument(extTrees == null || extTrees.size() == state.getNumberOfTrees(), "incorrect number of trees");
         checkArgument(extSamplers == null || extSamplers.size() == state.getNumberOfTrees(),
                 "incorrect number of samplers");
         checkArgument(extSamplers != null | state.isSaveSamplerState(), " need samplers ");
         checkArgument(extPointStore != null || state.isSaveCoordinatorState(), " need coordinator state ");
+
+        Random rng = builder.getRandom();
         ComponentList<Integer, float[]> components = new ComponentList<>();
         CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
         IPointStore<float[]> pointStore = (extPointStore == null)
@@ -390,28 +374,16 @@ public class RandomCutForestMapper
         return new RandomCutForest(builder, coordinator, components, rng);
     }
 
-    public RandomCutForest doublePrecisionForest(RandomCutForestState state, ExecutorContext executorContext,
+    public RandomCutForest doublePrecisionForest(RandomCutForest.Builder<?> builder, RandomCutForestState state,
             IPointStore<double[]> extPointStore, List<ITree<Integer, double[]>> extTrees,
-            List<IStreamSampler<Integer>> extSamplers, long seed) {
+            List<IStreamSampler<Integer>> extSamplers) {
 
-        ExecutorContext ec;
-        if (executorContext != null) {
-            ec = executorContext;
-        } else {
-            checkNotNull(state.getExecutorContext(),
-                    "The executor context in the state object is null, an executor context must be passed explicitly to toModel()");
-            ec = state.getExecutorContext();
-        }
-
-        RandomCutForest.Builder<?> builder = RandomCutForest.builder().numberOfTrees(state.getNumberOfTrees())
-                .dimensions(state.getDimensions()).lambda(state.getLambda()).sampleSize(state.getSampleSize())
-                .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
-                .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .internalRotationEnabled(state.isInternalRotationEnabled())
-                .internalShinglingEnabled(state.isInternalShinglingEnabled());
+        checkArgument(builder != null, "builder cannot be null");
+        checkArgument(extTrees == null || extTrees.size() == state.getNumberOfTrees(), "incorrect number of trees");
+        checkArgument(extSamplers == null || extSamplers.size() == state.getNumberOfTrees(),
+                "incorrect number of samplers");
+        checkArgument(extSamplers != null | state.isSaveSamplerState(), " need samplers ");
+        checkArgument(extPointStore != null || state.isSaveCoordinatorState(), " need coordinator state ");
 
         Random rng = builder.getRandom();
         checkArgument(extTrees == null || extTrees.size() == state.getNumberOfTrees(), "incorrect number of trees");

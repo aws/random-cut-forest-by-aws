@@ -32,19 +32,20 @@ import com.amazon.randomcutforest.tree.ITree;
 
 /**
  * A SamplerPlusTree corresponds to a combination of sampler and tree where the
- * information is passed via P and the tree can seek explicit point information
- * of type Q
+ * information is passed via PointReference and the tree can seek explicit point
+ * information of type Point
  *
- * @param <P> The internal point representation expected by the component models
- *            in this list.
- * @param <Q> The explicit data type of points being passed
+ * @param <PointReference> The internal point representation expected by the
+ *                         component models in this list.
+ * 
+ * @param <Point>          The explicit data type of points being passed
  */
-public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
+public class SamplerPlusTree<PointReference, Point> implements IComponentModel<PointReference, Point> {
 
     @Getter
-    private ITree<P, Q> tree;
+    private ITree<PointReference, Point> tree;
     @Getter
-    private IStreamSampler<P> sampler;
+    private IStreamSampler<PointReference> sampler;
 
     /**
      * Constructor of a pair of sampler + tree. The sampler is the driver's seat
@@ -54,7 +55,7 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
      * @param sampler the sampler
      * @param tree    the corresponding tree
      */
-    public SamplerPlusTree(IStreamSampler<P> sampler, ITree<P, Q> tree) {
+    public SamplerPlusTree(IStreamSampler<PointReference> sampler, ITree<PointReference, Point> tree) {
         checkNotNull(sampler, "sampler must not be null");
         checkNotNull(tree, "tree must not be null");
         this.sampler = sampler;
@@ -79,21 +80,21 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
      */
 
     @Override
-    public UpdateResult<P> update(P point, long sequenceIndex) {
-        P deleteRef = null;
+    public UpdateResult<PointReference> update(PointReference point, long sequenceIndex) {
+        PointReference deleteRef = null;
         if (sampler.acceptPoint(sequenceIndex)) {
-            Optional<ISampled<P>> deletedPoint = sampler.getEvictedPoint();
+            Optional<ISampled<PointReference>> deletedPoint = sampler.getEvictedPoint();
             if (deletedPoint.isPresent()) {
-                ISampled<P> p = deletedPoint.get();
+                ISampled<PointReference> p = deletedPoint.get();
                 deleteRef = tree.deletePoint(p.getValue(), p.getSequenceIndex());
             }
 
             // the tree may choose to return a reference to an existing point
             // whose value is equal to `point`
-            P addedPoint = tree.addPoint(point, sequenceIndex);
+            PointReference addedPoint = tree.addPoint(point, sequenceIndex);
 
             sampler.addPoint(addedPoint);
-            return UpdateResult.<P>builder().addedPoint(addedPoint).deletedPoint(deleteRef).build();
+            return UpdateResult.<PointReference>builder().addedPoint(addedPoint).deletedPoint(deleteRef).build();
         }
         return UpdateResult.noop();
     }
