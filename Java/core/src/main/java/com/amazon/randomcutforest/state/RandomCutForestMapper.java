@@ -252,8 +252,6 @@ public class RandomCutForestMapper
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
                 .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .internalRotationEnabled(state.isInternalRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
         if (state.isCompactEnabled()) {

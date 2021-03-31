@@ -50,10 +50,6 @@ public class RandomCutForestState {
 
     private boolean internalShinglingEnabled;
 
-    private boolean internalRotationEnabled;
-
-    private boolean dynamicResizingEnabled;
-
     private boolean centerOfMassEnabled;
 
     private boolean saveTreeState;
