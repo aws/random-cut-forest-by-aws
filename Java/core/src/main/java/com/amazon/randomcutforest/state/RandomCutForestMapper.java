@@ -133,9 +133,7 @@ public class RandomCutForestMapper
         state.setStoreSequenceIndexesEnabled(forest.isStoreSequenceIndexesEnabled());
         state.setTotalUpdates(forest.getTotalUpdates());
         state.setCompactEnabled(forest.isCompactEnabled());
-        state.setDynamicResizingEnabled(forest.isDynamicResizingEnabled());
         state.setInternalShinglingEnabled(forest.isInternalShinglingEnabled());
-        state.setInternalRotationEnabled(forest.isInternalRotationEnabled());
         state.setBoundingBoxCachingEnabled(forest.isBoundingBoxCachingEnabled());
         state.setSaveSamplerState(saveSamplerState);
         state.setSaveTreeState(saveTreeState);

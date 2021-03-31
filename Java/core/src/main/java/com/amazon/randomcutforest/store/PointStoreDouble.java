@@ -37,15 +37,9 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
         store = new double[currentStoreCapacity * dimensions];
     }
 
-    public PointStoreDouble(PointStore.Builder builder, double[] internalShingle, long lastTimeStamp,
-            int startOfFreeSegment, double[] store, short[] refCount, int[] referenceList, int[] freeIndexes,
-            int freeIndexPointer) {
-        super(builder, internalShingle, lastTimeStamp, refCount, referenceList, freeIndexes, freeIndexPointer);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
-        checkArgument(refCount.length == capacity, "incorrect");
+    public PointStoreDouble(PointStore.Builder builder, double[] store) {
+        super(builder);
         this.store = store;
-        this.startOfFreeSegment = startOfFreeSegment;
     }
 
     public PointStoreDouble(int dimensions, int capacity) {
@@ -54,7 +48,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
 
     @Override
     void resizeStore() {
-        int maxCapacity = rotationEnabled ? 2 * capacity : capacity;
+        int maxCapacity = (rotationEnabled) ? 2 * capacity : capacity;
         int newCapacity = Math.min(2 * currentStoreCapacity, maxCapacity);
         if (newCapacity > currentStoreCapacity) {
             double[] newStore = new double[newCapacity * dimensions];
@@ -95,7 +89,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
 
     @Override
     public boolean pointEquals(int index, double[] point) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
         for (int j = 0; j < dimensions; j++) {
@@ -119,7 +113,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
      */
     @Override
     public double[] get(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         int address = (directLocationMap) ? index * dimensions : locationList[index];
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);

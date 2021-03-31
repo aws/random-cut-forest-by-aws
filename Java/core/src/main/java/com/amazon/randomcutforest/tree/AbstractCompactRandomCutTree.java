@@ -230,7 +230,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
-    void switchLeafReference(Integer leafNode, Integer pointIndex) {
+    void setLeafPointReference(Integer leafNode, Integer pointIndex) {
         leafStore.setPointIndex(getLeafIndexForTreeIndex(leafNode), pointIndex);
     }
 
@@ -371,6 +371,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     @Override
     protected void increaseMassOfAncestors(Integer mergedNode) {
         nodeStore.increaseMassOfAncestorsAndItself(getParent(mergedNode.intValue()));
+    }
+
+    @Override
+    protected void decreaseMassOfAncestors(Integer mergedNode) {
+        nodeStore.decreaseMassOfAncestorsAndItself(getParent(mergedNode.intValue()));
     }
 
     @Override

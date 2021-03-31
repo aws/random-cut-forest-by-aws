@@ -158,6 +158,13 @@ public class NodeStore extends IndexManager implements INodeStore {
         }
     }
 
+    public void decreaseMassOfAncestorsAndItself(int index) {
+        while (index != NULL) {
+            --mass[index];
+            index = parentIndex[index];
+        }
+    }
+
     public int getSibling(int parent, int node) {
         return leftIndex[parent] == node ? rightIndex[parent] : leftIndex[parent];
     }

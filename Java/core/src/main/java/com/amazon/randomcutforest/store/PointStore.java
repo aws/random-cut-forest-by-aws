@@ -33,8 +33,12 @@ import java.util.HashMap;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public abstract class PointStore<Store, Point> extends IndexManager implements IPointStore<Point> {
+public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
+    /**
+     * an index manager to manage free locations
+     */
+    protected IndexManager indexManager;
     /**
      * generic store class
      */
@@ -46,7 +50,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     /**
      * last seen timestamp for internal shingling
      */
-    protected long lastTimeStamp;
+    protected long nextTimeStamp;
     /**
      * pointers to store locations, this decouples direct addressing and points can
      * be moved internally
@@ -85,6 +89,10 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      */
     boolean directLocationMap;
     /**
+     * maximum capacity
+     */
+    int capacity;
+    /**
      * current capacity of store (number of shoingled points)
      */
     int currentStoreCapacity;
@@ -111,10 +119,10 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      */
     @Override
     public int decrementRefCount(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
 
         if (refCount[index] == 1) {
-            releaseIndex(index);
+            indexManager.releaseIndex(index);
         }
 
         return --refCount[index];
@@ -160,9 +168,10 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         if (internalShinglingEnabled) {
             checkArgument(point.length == baseDimension, "incorrect length for internal shingling");
             tempPoint = changeShingleInPlace(internalShingle, point);
-            lastTimeStamp++;
-            if (lastTimeStamp < shingleSize)
+            nextTimeStamp++;
+            if (nextTimeStamp < shingleSize) {
                 return -1;
+            }
         }
 
         // the following covers the case when the user is not specifying a directmap for
@@ -189,7 +198,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
             // the following covers the initial segment as well
             if ((startOfFreeSegment - dimensions + baseDimension >= 0)
                     && checkShingleAlignment(startOfFreeSegment, tempPoint)) {
-                int nextIndex = takeIndex();
+                int nextIndex = indexManager.takeIndex();
                 refCount[nextIndex] = 1;
                 locationList[nextIndex] = startOfFreeSegment - dimensions + baseDimension;
                 copyPoint(tempPoint, dimensions - baseDimension, startOfFreeSegment, baseDimension);
@@ -206,7 +215,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
                     checkArgument(startOfFreeSegment + dimensions <= currentStoreCapacity * dimensions, "out of space");
                 }
             }
-            int nextIndex = takeIndex(); // no more compactions
+            int nextIndex = indexManager.takeIndex(); // no more compactions
             locationList[nextIndex] = startOfFreeSegment;
             copyPoint(tempPoint, 0, startOfFreeSegment, dimensions);
             startOfFreeSegment += dimensions;
@@ -216,7 +225,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         /**
          * the following corresponds to direct mapping, which may be more efficient
          */
-        int nextIndex = takeIndex(); // no more compactions
+        int nextIndex = indexManager.takeIndex(); // no more compactions
         int address = nextIndex * dimensions;
         if (address + dimensions > currentStoreCapacity * dimensions) {
             checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
@@ -242,7 +251,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      *                                  index is nonpositive.
      */
     public int incrementRefCount(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         return ++refCount[index];
     }
 
@@ -289,6 +298,13 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      */
     @Override
     abstract public String toString(int index);
+
+    /**
+     * maximum capacity, in number of points of size dimensions
+     */
+    public int getCapacity() {
+        return capacity;
+    }
 
     /**
      * used in mapper
@@ -359,7 +375,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @return if the shingles performed internally are rotated as in a cyclic
      *         buffer
      */
-    public boolean isRotationEnabled() {
+    public boolean isInternalRotationEnabled() {
         return rotationEnabled;
     }
 
@@ -368,8 +384,8 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * 
      * @return the last timestamp seen
      */
-    public long getLastTimeStamp() {
-        return lastTimeStamp;
+    public long getNextTimeStamp() {
+        return nextTimeStamp;
     }
 
     /**
@@ -391,11 +407,24 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
     }
 
     /**
-     *
+     * note that the second argument being null enforces a rotation
+     * 
      * @return for internal shingling, returns the last seen shingle
      */
     public double[] getInternalShingle() {
-        return (internalShingle != null) ? Arrays.copyOf(internalShingle, dimensions) : null;
+        return (internalShinglingEnabled) ? Arrays.copyOf(internalShingle, dimensions) : null;
+    }
+
+    public int[] getFreeIndexes() {
+        return indexManager.getFreeIndexes();
+    }
+
+    public int getFreeIndexPointer() {
+        return indexManager.getFreeIndexPointer();
+    }
+
+    public int size() {
+        return indexManager.capacity - indexManager.freeIndexPointer - 1;
     }
 
     /**
@@ -405,8 +434,8 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @return size of initial prefix in use
      */
     public int getValidPrefix() {
-        int prefix = capacity;
-        while (prefix > 0 && !occupied.get(prefix - 1)) {
+        int prefix = indexManager.capacity;
+        while (prefix > 0 && !indexManager.occupied.get(prefix - 1)) {
             prefix--;
         }
         return prefix;
@@ -442,11 +471,11 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         // the bit set coresponds to the locations that can be in use over the actual
         // store array
         // this is not the same as the number of points that can be sotred
-        BitSet inUse = new BitSet(capacity);
+        BitSet inUse = new BitSet(indexManager.capacity);
 
         // TODO make IndexManager dynamic as well?
-        for (int i = 0; i < capacity; i++) {
-            if (occupied.get(i)) {
+        for (int i = 0; i < indexManager.capacity; i++) {
+            if (indexManager.occupied.get(i)) {
                 inUse.set(locationList[i] / stepDimension);
             }
 
@@ -505,7 +534,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         }
         // now fix the addressing, assuming something has moved
         if (!movedTo.isEmpty()) {
-            for (int i = 0; i < capacity; i++) {
+            for (int i = 0; i < indexManager.capacity; i++) {
                 if (movedTo.containsKey(locationList[i])) { // need not have moved
                     locationList[i] = movedTo.get(locationList[i]);
                 }
@@ -554,7 +583,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
                 target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0 : point[i];
             }
         } else {
-            int offset = ((int) lastTimeStamp % dimensions);
+            int offset = ((int) nextTimeStamp % dimensions);
             checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
             for (int i = 0; i < baseDimension; i++) {
                 target[offset + i] = (point[i] == 0.0) ? 0.0 : point[i];
@@ -581,13 +610,20 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
                 results[i] += dimensions - baseDimension;
             }
         } else {
-            int offset = ((int) lastTimeStamp % dimensions);
+            int offset = ((int) nextTimeStamp % dimensions);
             checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
             for (int i = 0; i < indexList.length; i++) {
                 results[i] = (results[i] + offset) % dimensions;
             }
         }
         return results;
+    }
+
+    /**
+     * @return a new builder.
+     */
+    public static PointStore.Builder builder() {
+        return new PointStore.Builder();
     }
 
     /**
@@ -607,6 +643,13 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
         private boolean directLocationEnabled = false;
         private int capacity;
         private int currentCapacity;
+        private double[] knownShingle = null;
+        private int[] freeIndexes = null;
+        private int freeIndexPointer = -1;
+        private int[] locationList = null;
+        private short[] refCount = null;
+        private long nextTimeStamp = 0;
+        private int startOfFreeSegment = 0;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -647,22 +690,45 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
             this.dynamicResizingEnabled = dynamicResizingEnabled;
             return (T) this;
         }
+
+        public T knownShingle(double[] knownShingle) {
+            this.knownShingle = knownShingle;
+            return (T) this;
+        }
+
+        public T refCount(short[] refcount) {
+            this.refCount = refcount;
+            return (T) this;
+        }
+
+        public T locationList(int[] locationList) {
+            this.locationList = locationList;
+            return (T) this;
+        }
+
+        public T freeIndexes(int[] freeIndexes) {
+            this.freeIndexes = freeIndexes;
+            return (T) this;
+        }
+
+        public T freeIndexPointer(int freeIndexPointer) {
+            this.freeIndexPointer = freeIndexPointer;
+            return (T) this;
+        }
+
+        public T startOfFreeSegment(int startOfFreeSegment) {
+            this.startOfFreeSegment = startOfFreeSegment;
+            return (T) this;
+        }
+
+        public T nextTimeStamp(long nextTimeStamp) {
+            this.nextTimeStamp = nextTimeStamp;
+            return (T) this;
+        }
+
     }
 
-    /**
-     * @return a new builder.
-     */
-    public static PointStore.Builder builder() {
-        return new PointStore.Builder();
-    }
-
-    /**
-     * basic constuctor
-     * 
-     * @param builder builder specifying the parameters
-     */
     public PointStore(Builder builder) {
-        super(builder.capacity);
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
         checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0,
                 "incorrect use of shingle size");
@@ -672,57 +738,62 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
                 " cannot have internal shingles and direct map simultaneously");
         checkArgument(!builder.internalRotationEnabled || builder.internalShinglingEnabled,
                 "rotation can be enabled for internal shingling only");
+        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
+                || builder.knownShingle != null) {
+            checkArgument(builder.refCount.length == builder.capacity, "incorrect state");
+            // following may change if IndexManager is dynamically resized as well
+            checkArgument(builder.freeIndexes.length == builder.refCount.length, " incorrect state");
+            checkArgument(builder.freeIndexes.length == builder.locationList.length, " incorrect state");
+            checkArgument(builder.knownShingle == null || builder.internalShinglingEnabled, "incorrect state");
+        }
+
         this.shingleSize = builder.shingleSize;
         this.dimensions = builder.dimensions;
-        refCount = new short[builder.capacity];
-        startOfFreeSegment = 0;
         this.directLocationMap = builder.directLocationEnabled;
         this.internalShinglingEnabled = builder.internalShinglingEnabled;
         this.rotationEnabled = builder.internalRotationEnabled;
         this.currentStoreCapacity = builder.currentCapacity;
-        if (internalShinglingEnabled) {
-            lastTimeStamp = 0;
-            internalShingle = new double[dimensions];
-        }
         this.dynamicResizingEnabled = builder.dynamicResizingEnabled;
-        if (!directLocationMap) {
-            baseDimension = dimensions / shingleSize;
-            locationList = new int[capacity];
-        } else {
-            baseDimension = dimensions;
-        }
-    }
-
-    /**
-     * a builder used in the mapper to restore state
-     */
-    public PointStore(PointStore.Builder builder, double[] internalShingle, long lastTimeStamp, short[] refCount,
-            int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
-        super(freeIndexes, freeIndexPointer);
-        checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(builder.internalShinglingEnabled || builder.shingleSize == 1
-                || builder.dimensions % builder.shingleSize == 0, "incorrect use");
-        checkArgument(refCount.length == builder.capacity, "incorrect state");
-        // following may change if IndexManager is dynamically resized as well
-        checkArgument(freeIndexes.length == builder.capacity, " incorrect state");
-        this.shingleSize = builder.shingleSize;
-        this.dimensions = builder.dimensions;
-        this.refCount = refCount;
-        this.locationList = referenceList;
-        this.directLocationMap = (referenceList == null);
-        this.currentStoreCapacity = builder.currentCapacity;
-        this.internalShinglingEnabled = builder.internalShinglingEnabled;
-        this.dynamicResizingEnabled = builder.dynamicResizingEnabled;
-        if (internalShinglingEnabled) {
-            this.internalShingle = new double[dimensions];
-            this.lastTimeStamp = lastTimeStamp;
-            if (internalShingle != null) { // can be for empty forest
-                System.arraycopy(internalShingle, 0, this.internalShingle, 0, dimensions);
-            }
-        }
         this.rotationEnabled = builder.internalRotationEnabled;
         this.baseDimension = this.dimensions / this.shingleSize;
-        // firstFreeLocation would be set by the concrete classes, along with Store
+        this.capacity = builder.capacity;
+
+        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
+                || builder.knownShingle != null) {
+            /**
+             * restoring state
+             */
+            this.refCount = builder.refCount;
+            this.locationList = builder.locationList;
+            this.directLocationMap = (builder.locationList == null);
+            this.startOfFreeSegment = builder.startOfFreeSegment;
+            this.nextTimeStamp = builder.nextTimeStamp;
+
+            if (internalShinglingEnabled) {
+                this.internalShingle = new double[dimensions];
+                this.nextTimeStamp = builder.nextTimeStamp;
+                if (builder.knownShingle != null) { // can be for empty forest
+                    System.arraycopy(builder.knownShingle, 0, this.internalShingle, 0, dimensions);
+                }
+            }
+            indexManager = new IndexManager(builder.freeIndexes, builder.freeIndexPointer);
+        } else {
+
+            indexManager = new IndexManager(builder.capacity);
+            startOfFreeSegment = 0;
+            refCount = new short[builder.capacity];
+            if (internalShinglingEnabled) {
+                nextTimeStamp = 0;
+                internalShingle = new double[dimensions];
+            }
+
+            if (!directLocationMap) {
+                baseDimension = dimensions / shingleSize;
+                locationList = new int[builder.capacity];
+            } else {
+                baseDimension = dimensions;
+            }
+        }
     }
 
 }

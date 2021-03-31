@@ -160,6 +160,13 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         }
     }
 
+    public void decreaseMassOfAncestorsAndItself(int index) {
+        while (index != NULL) {
+            --mass[index];
+            index = parentIndex[index];
+        }
+    }
+
     public int getSibling(int parent, int node) {
         return leftIndex[parent] == (short) node ? rightIndex[parent] : leftIndex[parent];
     }

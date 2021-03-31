@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,9 +36,12 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
@@ -52,6 +53,8 @@ public class CompactRandomCutForestFunctionalTest {
     private static int randomSeed;
     private static RandomCutForest parallelExecutionForest;
     private static RandomCutForest singleThreadedForest;
+    private static RandomCutForest parallelExecutionForestSinglePrecision;
+    private static RandomCutForest singleThreadedForestSinglePrecision;
     private static RandomCutForest forestSpy;
 
     private static double baseMu;
@@ -70,13 +73,24 @@ public class CompactRandomCutForestFunctionalTest {
         dimensions = 3;
         randomSeed = 123;
 
+        // the four forests explore different parameters
         parallelExecutionForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .build();
+                .initialAcceptFraction(0.5).build();
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).build();
+                .initialAcceptFraction(0.5).boundingBoxCachingEnabled(false).parallelExecutionEnabled(false).build();
+
+        parallelExecutionForestSinglePrecision = RandomCutForest.builder().numberOfTrees(numberOfTrees)
+                .sampleSize(sampleSize).dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true)
+                .storeSequenceIndexesEnabled(true).initialAcceptFraction(0.75).boundingBoxCachingEnabled(false)
+                .precision(Precision.SINGLE).build();
+
+        singleThreadedForestSinglePrecision = RandomCutForest.builder().numberOfTrees(numberOfTrees)
+                .sampleSize(sampleSize).dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true)
+                .storeSequenceIndexesEnabled(false).initialAcceptFraction(0.75).parallelExecutionEnabled(false)
+                .precision(Precision.SINGLE).build();
 
         dataSize = 10_000;
 
@@ -94,6 +108,8 @@ public class CompactRandomCutForestFunctionalTest {
         for (int i = 0; i < dataSize; i++) {
             parallelExecutionForest.update(data[i]);
             singleThreadedForest.update(data[i]);
+            singleThreadedForestSinglePrecision.update(data[i]);
+            parallelExecutionForestSinglePrecision.update(data[i]);
         }
     }
 
@@ -102,7 +118,8 @@ public class CompactRandomCutForestFunctionalTest {
     static class TestForestProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(singleThreadedForest, parallelExecutionForest).map(Arguments::of);
+            return Stream.of(singleThreadedForest, parallelExecutionForest, singleThreadedForestSinglePrecision,
+                    parallelExecutionForestSinglePrecision).map(Arguments::of);
         }
     }
 
@@ -613,274 +630,17 @@ public class CompactRandomCutForestFunctionalTest {
     }
 
     @Test
-    public void testExtrapolateShingleAware() {
-
-        numberOfTrees = 100;
-        sampleSize = 256;
-        int shinglesize = 10;
-        randomSeed = 123;
-
-        RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(10).build();
-        RandomCutForest anotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(1).build();
-
-        double amplitude = 50.0;
-        double noise = 2.0;
-        int entryIndex = 0;
-        boolean filledShingleAtleastOnce = false;
-        double[] history = new double[shinglesize];
-        int num = 850;
-        double[] data = getDataA(amplitude, noise);
-        double[] answer = null;
-        double error = 0;
-        double[] record = null;
-        for (int j = 0; j < num; ++j) { // we stream here ....
-            history[entryIndex] = data[j];
-            entryIndex = (entryIndex + 1) % shinglesize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-
-                record = getShinglePoint(history, entryIndex, shinglesize);
-                newforest.update(record);
-                anotherforest.update(record);
-            }
-        }
-
-        answer = newforest.extrapolateBasic(record, 200, 1, false);
-        double[] anotherAnswer = anotherforest.extrapolateBasic(record, 200, 1, false);
-
-        assertArrayEquals(anotherAnswer, answer, 1e-10);
-
-        error = 0;
-        for (int j = 0; j < 200; j++) {
-            double prediction = amplitude * cos((j + 850 - 50) * 2 * PI / 120);
-            error += Math.abs(prediction - answer[j]);
-        }
-        error = error / 200;
-
-        assertTrue(error < 4 * noise);
-
-    }
-
-    @Test
-    public void testExtrapolateB() {
-
-        numberOfTrees = 100;
-        sampleSize = 256;
-        int shinglesize = 120;
-        randomSeed = 123;
-
-        RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
-
-        double amplitude = 50.0;
-        double noise = 2.0;
-        Random noiseprg = new Random(72);
-        int entryIndex = 0;
-        boolean filledShingleAtleastOnce = false;
-        double[] history = new double[shinglesize];
-        int num = 850;
-        double[] data = getDataA(amplitude, noise);
-        double[] answer = null;
-        double error = 0;
-
-        double[] record = null;
-        for (int j = 0; j < num; ++j) { // we stream here ....
-            history[entryIndex] = data[j];
-            entryIndex = (entryIndex + 1) % shinglesize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-                // produce cyclic vectors
-                record = getShinglePoint(history, 0, shinglesize);
-                newforestB.update(record);
-            }
-        }
-
-        answer = newforestB.extrapolateBasic(record, 200, 1, true, entryIndex);
-
-        error = 0;
-        for (int j = 0; j < 200; j++) {
-            double prediction = amplitude * cos((j + 850 - 50) * 2 * PI / 120);
-            error += Math.abs(prediction - answer[j]);
-        }
-        error = error / 200;
-        assertTrue(error < 4 * noise);
-
-    }
-
-    @Test
-    public void testExtrapolateC() {
-
-        numberOfTrees = 100;
-        sampleSize = 256;
-        int shinglesize = 20;
-        randomSeed = 124;
-
-        // build two identical copies; we will be giving them different
-        // subsequent inputs and test adaptation to stream evolution
-
-        RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
-
-        RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
-
-        double amplitude = 50.0;
-        double noise = 2.0;
-        Random noiseprg = new Random(72);
-        int entryIndex = 0;
-        boolean filledShingleAtleastOnce = false;
-        double[] history = new double[shinglesize];
-        int num = 1330;
-        double[] data = getDataB(amplitude, noise);
-        double[] answer = null;
-        double error = 0;
-
-        double[] record = null;
-        for (int j = 0; j < num; ++j) { // we stream here ....
-            history[entryIndex] = data[j];
-            entryIndex = (entryIndex + 1) % shinglesize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-
-                record = getShinglePoint(history, entryIndex, shinglesize);
-                newforestC.update(record);
-                newforestD.update(record);
-            }
-        }
-        /**
-         * the two forests are identical up to this point we will now provide two
-         * different input to each num+2*expLife=1930, but since the shape of the
-         * pattern remains the same in a phase shift, the prediction comes back to
-         * "normal" fairly quickly.
-         */
-
-        for (int j = num; j < 1630; ++j) { // we stream here ....
-            double t = cos(2 * PI * (j - 50) / 240);
-            history[entryIndex] = amplitude * t + noise * noiseprg.nextDouble();
-            ;
-            entryIndex = (entryIndex + 1) % shinglesize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-
-                record = getShinglePoint(history, entryIndex, shinglesize);
-                newforestC.update(record);
-            }
-        }
-        answer = newforestC.extrapolateBasic(record, 200, 1, false);
-
-        error = 0;
-        for (int j = 0; j < 200; j++) {
-            double t = cos(2 * PI * (1630 + j - 50) / 240);
-            double prediction = amplitude * t;
-            error += Math.abs(prediction - answer[j]);
-        }
-        error = error / 200;
-        assertTrue(error < 2 * noise);
-
-        /**
-         * Here num+2*expLife=1930 for a small explife such as 300, num+expLife is
-         * already sufficient increase the factor for larger expLife or increase the
-         * sampleSize to absorb the longer range dependencies of a larger expLife
-         */
-        for (int j = num; j < 1630; ++j) { // we stream here ....
-            double t = cos(2 * PI * (j + 50) / 120);
-            int sign = (t > 0) ? 1 : -1;
-            history[entryIndex] = amplitude * sign * Math.pow(t * sign, 1.0 / 3) + noise * noiseprg.nextDouble();
-            entryIndex = (entryIndex + 1) % shinglesize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-
-                record = getShinglePoint(history, entryIndex, shinglesize);
-                newforestD.update(record);
-            }
-        }
-        answer = newforestD.extrapolateBasic(record, 200, 1, false);
-
-        error = 0;
-        for (int j = 0; j < 200; j++) {
-            double t = cos(2 * PI * (1630 + j + 50) / 120);
-            int sign = (t > 0) ? 1 : -1;
-            double prediction = amplitude * sign * Math.pow(t * sign, 1.0 / 3);
-            error += Math.abs(prediction - answer[j]);
-        }
-        error = error / 200;
-        assertTrue(error < 2 * noise);
-    }
-
-    @Test
     public void getTotalUpdates_returnExpectedSize() {
         assertEquals(dataSize, singleThreadedForest.getTotalUpdates());
         assertEquals(dataSize, parallelExecutionForest.getTotalUpdates());
-    }
-
-    double[] getDataA(double amplitude, double noise) {
-        int num = 850;
-        double[] data = new double[num];
-        Random noiseprg = new Random(9000);
-
-        for (int i = 0; i < 510; i++) {
-            data[i] = amplitude * cos(2 * PI * (i - 50) / 120) + noise * noiseprg.nextDouble();
-        }
-        for (int i = 510; i < 525; i++) { // flatline
-            data[i] = 0;
-        }
-        for (int i = 525; i < 825; i++) {
-            data[i] = amplitude * cos(2 * PI * (i - 50) / 120) + noise * noiseprg.nextDouble();
-        }
-        for (int i = 825; i < num; i++) { // high frequency noise
-            data[i] = amplitude * cos(2 * PI * (i - 50) / 12) + noise * noiseprg.nextDouble();
-        }
-        return data;
-    }
-
-    double[] getDataB(double amplitude, double noise) {
-        int num = 1330;
-        double[] data = new double[num];
-        Random noiseprg = new Random(9001);
-        for (int i = 0; i < 990; i++) {
-            data[i] = amplitude * cos(2 * PI * (i + 50) / 240) + noise * noiseprg.nextDouble();
-        }
-        for (int i = 990; i < 1005; i++) { // flatline
-            data[i] = 0;
-        }
-        for (int i = 1005; i < 1305; i++) {
-            data[i] = amplitude * cos(2 * PI * (i + 50) / 240) + noise * noiseprg.nextDouble();
-        }
-        for (int i = 1305; i < num; i++) { // high frequency noise
-            data[i] = amplitude * cos(2 * PI * (i + 50) / 12) + noise * noiseprg.nextDouble();
-        }
-        return data;
-    }
-
-    private static double[] getShinglePoint(double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
-        double[] shingledPoint = new double[shingleLength];
-        int i = 0;
-        for (int j = 0; j < shingleLength; ++j) {
-            double point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
-            shingledPoint[i++] = point;
-
-        }
-        return shingledPoint;
     }
 
     @Test
     public void testUpdateAfterRoundTrip() {
         int dimensions = 10;
         for (int trials = 0; trials < 1000; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                    .sampleSize(64).precision(Precision.SINGLE).build();
+            RandomCutForest forest = RandomCutForest.builder().numberOfTrees(1).compactEnabled(true)
+                    .dimensions(dimensions).sampleSize(64).precision(Precision.SINGLE).build();
 
             Random r = new Random();
             for (int i = 0; i < 30; i++) {
@@ -893,9 +653,42 @@ public class CompactRandomCutForestFunctionalTest {
             mapper.setSaveExecutorContext(true);
             RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
+            PointStoreCoordinator coordinator = (PointStoreCoordinator) forest.getStateCoordinator();
+            PointStoreCoordinator coordinator2 = (PointStoreCoordinator) forest2.getStateCoordinator();
+
+            if (forest.getPrecision() == Precision.DOUBLE) {
+                PointStoreDouble store = (PointStoreDouble) coordinator.getStore();
+                PointStoreDouble store2 = (PointStoreDouble) coordinator2.getStore();
+                assertArrayEquals(store.getRefCount(), store2.getRefCount());
+                assertArrayEquals(store.getLocationList(), store2.getLocationList());
+                assertArrayEquals(store.getStore(), store2.getStore());
+                assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
+                assertEquals(store.getCapacity(), store2.getCapacity());
+                assertEquals(store.size(), store2.size());
+                assertEquals(store.getStartOfFreeSegment(), store2.getStartOfFreeSegment());
+                for (int i = 0; i < store.getCapacity() - store.size(); i++) {
+                    assertEquals(store.getRefCount(i), store2.getRefCount(i));
+                }
+            } else {
+                PointStoreFloat store = (PointStoreFloat) coordinator.getStore();
+                PointStoreFloat store2 = (PointStoreFloat) coordinator2.getStore();
+                assertArrayEquals(store.getRefCount(), store2.getRefCount());
+                assertArrayEquals(store.getStore(), store2.getStore());
+                assertArrayEquals(store.getLocationList(), store2.getLocationList());
+                assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
+                assertEquals(store.getCapacity(), store2.getCapacity());
+                assertEquals(store.size(), store2.size());
+                assertEquals(store.getStartOfFreeSegment(), store2.getStartOfFreeSegment());
+
+                for (int i = 0; i < store.getCapacity() - store.size(); i++) {
+                    assertEquals(store.getRefCount(i), store2.getRefCount(i));
+                }
+            }
+
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                forest.update(point);
                 forest2.update(point);
             }
         }

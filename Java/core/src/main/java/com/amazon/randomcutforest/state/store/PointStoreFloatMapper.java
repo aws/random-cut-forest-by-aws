@@ -50,8 +50,6 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         int[] freeIndexes = new int[capacity];
         System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        boolean shingleAwareOverlapping = (state.getShingleSize() > 1) && (!state.isDirectMapLocation())
-                || state.isInternalShinglingEnabled();
         int[] locationList = null;
         if (!state.isDirectMapLocation()) {
             locationList = new int[capacity];
@@ -61,9 +59,11 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
                 .dynamicResizingEnabled(state.isDynamicResizingEnabled()).currentCapacity(state.getCurrentCapacity())
-                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions());
-        return new PointStoreFloat(builder, state.getInternalShingle(), state.getLastTimeStamp(), startOfFreeSegment,
-                store, refCount, locationList, freeIndexes, freeIndexPointer);
+                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions())
+                .locationList(locationList).nextTimeStamp(state.getLastTimeStamp())
+                .startOfFreeSegment(startOfFreeSegment).refCount(refCount).freeIndexes(freeIndexes)
+                .freeIndexPointer(freeIndexPointer).knownShingle(state.getInternalShingle());
+        return new PointStoreFloat(builder, store);
     }
 
     @Override
@@ -79,12 +79,13 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
         state.setInternalShingle(model.getInternalShingle());
-        state.setLastTimeStamp(model.getLastTimeStamp());
-        state.setRotationEnabled(model.isRotationEnabled());
+        state.setLastTimeStamp(model.getNextTimeStamp());
+        state.setRotationEnabled(model.isInternalRotationEnabled());
         state.setCurrentCapacity(model.getCurrentStoreCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setFreeIndexPointer(model.getFreeIndexPointer());
         state.setSinglePrecisionSet(true);
+
         int prefix = model.getValidPrefix();
         state.setRefCount(Arrays.copyOf(model.getRefCount(), prefix));
         if (model.isDirectLocationMap()) {

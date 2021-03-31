@@ -172,7 +172,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    void switchLeafReference(Node leafReference, double[] newRef) {
+    void setLeafPointReference(Node leafReference, double[] newRef) {
     }
 
     @Override
@@ -306,6 +306,15 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
         Node parent = mergedNode.getParent();
         while (parent != null) {
             parent.incrementMass();
+            parent = parent.getParent();
+        }
+    }
+
+    @Override
+    protected void decreaseMassOfAncestors(Node mergedNode) {
+        Node parent = mergedNode.getParent();
+        while (parent != null) {
+            parent.decrementMass();
             parent = parent.getParent();
         }
     }

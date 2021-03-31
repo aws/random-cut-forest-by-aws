@@ -73,7 +73,8 @@ public class SimpleStreamSamplerTest {
         assertEquals(0, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
 
-        when(random.nextDouble()).thenReturn(0.5).thenReturn(0.01).thenReturn(0.99);
+        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.5).thenReturn(0.0).thenReturn(0.01).thenReturn(0.0)
+                .thenReturn(0.99);
 
         sampler.acceptPoint(10L);
         double weight1 = sampler.acceptPointState.getWeight();
@@ -155,7 +156,8 @@ public class SimpleStreamSamplerTest {
 
     @Test
     public void testGetScore() {
-        when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
+        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
+                .thenReturn(0.50);
 
         sampler.update(new double[] { 1.0 }, 101);
         sampler.update(new double[] { 2.0 }, 102);

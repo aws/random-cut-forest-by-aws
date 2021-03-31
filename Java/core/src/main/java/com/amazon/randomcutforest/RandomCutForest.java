@@ -113,6 +113,11 @@ public class RandomCutForest {
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
 
     /**
+     * By default, trees will accept every point until full.
+     */
+    public static final double DEFAULT_INITIAL_ACCEPT_FRACTION = 1.0;
+
+    /**
      * By default, the collection of points stored in the forest will increase from
      * a small size, as needed to maximum capccity
      */
@@ -201,17 +206,9 @@ public class RandomCutForest {
      */
     protected final boolean compactEnabled;
     /**
-     * enables dynamic resizing
-     */
-    protected final boolean dynamicResizingEnabled;
-    /**
-     * enables dynamic resizing
+     * enables internal shingling
      */
     protected final boolean internalShinglingEnabled;
-    /**
-     * enables dynamic resizing
-     */
-    protected final boolean internalRotationEnabled;
 
     /**
      * The preferred floating point precision to use in internal data structures.
@@ -234,8 +231,6 @@ public class RandomCutForest {
      * Number of threads to use in the thread pool if parallel execution is enabled.
      */
     protected final int threadPoolSize;
-
-    protected final int initialPointStoreCapacity;
 
     protected IStateCoordinator<?, ?> stateCoordinator;
     protected ComponentList<?, ?> components;
@@ -268,19 +263,20 @@ public class RandomCutForest {
         this(builder, false);
         rng = builder.getRandom();
         if (precision == Precision.SINGLE) {
-            initCompactFloat();
+            initCompactFloat(builder);
         } else if (compactEnabled) {
-            initCompactDouble();
+            initCompactDouble(builder);
         } else {
             initNonCompact();
         }
     }
 
-    private void initCompactDouble() {
-        PointStore.Builder storeBuilder = new PointStore.Builder().internalRotationEnabled(internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).currentCapacity(initialPointStoreCapacity)
-                .directLocationEnabled(false).internalShinglingEnabled(internalShinglingEnabled)
-                .dynamicResizingEnabled(dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
+    private void initCompactDouble(Builder<?> builder) {
+        PointStore.Builder storeBuilder = new PointStore.Builder()
+                .internalRotationEnabled(builder.internalRotationEnabled).capacity(numberOfTrees * sampleSize + 1)
+                .currentCapacity(builder.initialPointStoreSize.get()).directLocationEnabled(false)
+                .internalShinglingEnabled(internalShinglingEnabled)
+                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreDouble tempStore = new PointStoreDouble(storeBuilder);
 
         IStateCoordinator<Integer, double[]> stateCoordinator = new PointStoreCoordinator(tempStore);
@@ -289,7 +285,7 @@ public class RandomCutForest {
             ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
-                    storeSequenceIndexesEnabled);
+                    storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.stateCoordinator = stateCoordinator;
@@ -297,11 +293,12 @@ public class RandomCutForest {
         initExecutors(stateCoordinator, components);
     }
 
-    private void initCompactFloat() {
-        PointStore.Builder storeBuilder = new PointStore.Builder().internalRotationEnabled(internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).currentCapacity(initialPointStoreCapacity)
-                .directLocationEnabled(false).internalShinglingEnabled(internalShinglingEnabled)
-                .dynamicResizingEnabled(dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
+    private void initCompactFloat(Builder<?> builder) {
+        PointStore.Builder storeBuilder = new PointStore.Builder()
+                .internalRotationEnabled(builder.internalRotationEnabled).capacity(numberOfTrees * sampleSize + 1)
+                .currentCapacity(builder.initialPointStoreSize.get()).directLocationEnabled(false)
+                .internalShinglingEnabled(internalShinglingEnabled)
+                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreFloat tempStore = new PointStoreFloat(storeBuilder);
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
@@ -309,7 +306,7 @@ public class RandomCutForest {
             ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
                     boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
-                    storeSequenceIndexesEnabled);
+                    storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.stateCoordinator = stateCoordinator;
@@ -398,10 +395,9 @@ public class RandomCutForest {
         precision = builder.precision;
         boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
-        dynamicResizingEnabled = builder.dynamicResizingEnabled;
-
-        internalRotationEnabled = builder.internalRotationEnabled;
-        initialPointStoreCapacity = builder.initialPointStoreSize.orElse(2 * sampleSize);
+        if (!builder.initialPointStoreSize.isPresent() && compactEnabled) {
+            builder.initialPointStoreSize = Optional.of(2 * sampleSize);
+        }
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -510,24 +506,10 @@ public class RandomCutForest {
     }
 
     /**
-     * @return true if dynamic resizing is allowed, false otherwise.
-     */
-    public boolean isDynamicResizingEnabled() {
-        return dynamicResizingEnabled;
-    }
-
-    /**
      * @return true if internal shingling is performed, false otherwise.
      */
     public boolean isInternalShinglingEnabled() {
         return internalShinglingEnabled;
-    }
-
-    /**
-     * @return true if shingle rotation is enabled internally, false otherwise.
-     */
-    public boolean isInternalRotationEnabled() {
-        return internalRotationEnabled;
     }
 
     /**
@@ -603,8 +585,10 @@ public class RandomCutForest {
      * @param indexList input array of missing values
      * @return output array of missing values corresponding to shingle
      */
-    public int[] transformIndices(int[] indexList) {
-        return (!internalShinglingEnabled) ? indexList : stateCoordinator.getStore().transformIndices(indexList);
+    public int[] transformIndices(int[] indexList, int length) {
+        return (internalShinglingEnabled && length == inputDimensions)
+                ? stateCoordinator.getStore().transformIndices(indexList)
+                : indexList;
     }
 
     /**
@@ -620,9 +604,9 @@ public class RandomCutForest {
      *
      * @return the timestamp of the last known shingled point
      */
-    public long timeStamp() {
+    public long nextTimeStamp() {
         checkArgument(internalShinglingEnabled, "incorrect use");
-        return stateCoordinator.getStore().getLastTimeStamp();
+        return stateCoordinator.getStore().getNextTimeStamp();
     }
 
     /**
@@ -1014,7 +998,7 @@ public class RandomCutForest {
         }
 
         MultiVisitorFactory<double[]> visitorFactory = tree -> new ImputeVisitor(transformToShingledPoint(point),
-                numberOfMissingValues, transformIndices(missingIndexes));
+                numberOfMissingValues, transformIndices(missingIndexes, point.length));
 
         Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
                 ArrayList::add, (left, right) -> {
@@ -1036,15 +1020,14 @@ public class RandomCutForest {
             return new double[dimensions];
         }
         // checks will be performed in the function call
-        ArrayList<double[]> conditionalField = getConditionalCentralField(transformToShingledPoint(point),
-                numberOfMissingValues, transformIndices(missingIndexes));
+        ArrayList<double[]> conditionalField = getConditionalCentralField(point, numberOfMissingValues, missingIndexes);
 
         if (numberOfMissingValues == 1) {
             // when there is 1 missing value, we sort all the imputed values and return the
             // median
             double[] returnPoint = Arrays.copyOf(point, point.length);
             double[] basicList = conditionalField.stream()
-                    .mapToDouble(array -> array[transformIndices(missingIndexes)[0]]).sorted().toArray();
+                    .mapToDouble(array -> array[transformIndices(missingIndexes, point.length)[0]]).sorted().toArray();
             returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
             return returnPoint;
         } else {
@@ -1181,8 +1164,8 @@ public class RandomCutForest {
     public double[] extrapolate(int horizon) {
         checkArgument(internalShinglingEnabled, "incorrect use");
         IPointStore<?> store = stateCoordinator.getStore();
-        return extrapolateBasic(store.getInternalShingle(), horizon, inputDimensions, internalRotationEnabled,
-                ((int) store.getLastTimeStamp()) % dimensions);
+        return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
+                ((int) nextTimeStamp()) % dimensions);
     }
 
     /**
@@ -1277,10 +1260,11 @@ public class RandomCutForest {
         private Precision precision = DEFAULT_PRECISION;
         private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
         private int shingleSize = DEFAULT_SHINGLE_SIZE;
-        private boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
+        protected boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
         private boolean internalShinglingEnabled = DEFAULT_INTERNAL_SHINGLING_ENABLED;
-        private boolean internalRotationEnabled = DEFAULT_INTERNAL_ROTATION_ENABLED;
-        private Optional<Integer> initialPointStoreSize = Optional.empty();
+        protected boolean internalRotationEnabled = DEFAULT_INTERNAL_ROTATION_ENABLED;
+        protected Optional<Integer> initialPointStoreSize = Optional.empty();
+        protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -1369,6 +1353,11 @@ public class RandomCutForest {
 
         public T boundingBoxCachingEnabled(boolean boundingBoxCachingEnabled) {
             this.boundingBoxCachingEnabled = boundingBoxCachingEnabled;
+            return (T) this;
+        }
+
+        public T initialAcceptFraction(double initialAcceptFraction) {
+            this.initialAcceptFraction = initialAcceptFraction;
             return (T) this;
         }
 

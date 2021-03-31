@@ -31,12 +31,16 @@ public interface IPointStoreView<Point> {
         return null;
     }
 
-    default long getLastTimeStamp() {
+    default long getNextTimeStamp() {
         return 0;
     }
 
     default double[] transformToShingledPoint(double[] input) {
         return null;
+    }
+
+    default boolean isInternalRotationEnabled() {
+        return false;
     }
 
     default int[] transformIndices(int[] indexList) {

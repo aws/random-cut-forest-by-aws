@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -72,6 +73,11 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     private final int sampleSize;
 
     /**
+     * initial behavior
+     */
+    private final double initialAcceptFraction;
+
+    /**
      * The point evicted by the last call to {@link #update}, or if the new point
      * was not accepted by the sampler.
      */
@@ -84,12 +90,18 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
      */
     protected AcceptPointState acceptPointState;
 
-    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
+    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices,
+            double initialAcceptFraction) {
         super();
         this.sampleSize = sampleSize;
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.random = random;
         this.lambda = lambda;
+        this.initialAcceptFraction = initialAcceptFraction;
+    }
+
+    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
+        this(sampleSize, lambda, random, false, DEFAULT_INITIAL_ACCEPT_FRACTION);
     }
 
     public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
@@ -116,7 +128,9 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if (sample.size() < sampleSize || weight < sample.element().getWeight()) {
+        if (sample.size() < sampleSize
+                && (sequenceIndex * initialAcceptFraction > sampleSize || random.nextDouble() < initialAcceptFraction)
+                || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();
             }

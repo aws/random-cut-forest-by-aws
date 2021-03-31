@@ -59,9 +59,11 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
                 .dynamicResizingEnabled(state.isDynamicResizingEnabled()).currentCapacity(state.getCurrentCapacity())
-                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions());
-        return new PointStoreDouble(builder, state.getInternalShingle(), state.getLastTimeStamp(), startOfFreeSegment,
-                store, refCount, locationList, freeIndexes, freeIndexPointer);
+                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions())
+                .locationList(locationList).nextTimeStamp(state.getLastTimeStamp())
+                .startOfFreeSegment(startOfFreeSegment).refCount(refCount).freeIndexes(freeIndexes)
+                .freeIndexPointer(freeIndexPointer).knownShingle(state.getInternalShingle());
+        return new PointStoreDouble(builder, store);
     }
 
     @Override
@@ -75,10 +77,10 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setShingleSize(model.getShingleSize());
         state.setDirectMapLocation(model.isDirectLocationMap());
         state.setInternalShingle(model.getInternalShingle());
-        state.setLastTimeStamp(model.getLastTimeStamp());
+        state.setLastTimeStamp(model.getNextTimeStamp());
         state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
-        state.setRotationEnabled(model.isRotationEnabled());
+        state.setRotationEnabled(model.isInternalRotationEnabled());
         state.setCurrentCapacity(model.getCurrentStoreCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setFreeIndexPointer(model.getFreeIndexPointer());

@@ -29,15 +29,10 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
         store = new float[currentStoreCapacity * dimensions];
     }
 
-    public PointStoreFloat(PointStore.Builder builder, double[] internalShingle, long lastTimeStamp,
-            int startOfFreeSegment, float[] store, short[] refCount, int[] referenceList, int[] freeIndexes,
-            int freeIndexPointer) {
-        super(builder, internalShingle, lastTimeStamp, refCount, referenceList, freeIndexes, freeIndexPointer);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
-        checkArgument(refCount.length == capacity, "incorrect");
+    public PointStoreFloat(PointStore.Builder builder, float[] store) {
+        super(builder);
         this.store = store;
-        this.startOfFreeSegment = startOfFreeSegment;
+
     }
 
     public PointStoreFloat(int dimensions, int capacity) {
@@ -46,7 +41,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
 
     @Override
     void resizeStore() {
-        int maxCapacity = rotationEnabled ? 2 * capacity : capacity;
+        int maxCapacity = (rotationEnabled) ? 2 * capacity : capacity;
         int newCapacity = Math.min(2 * currentStoreCapacity, maxCapacity);
         if (newCapacity > currentStoreCapacity) {
             float[] newStore = new float[newCapacity * dimensions];
@@ -89,7 +84,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
 
     @Override
     public boolean pointEquals(int index, float[] point) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
         int address = directLocationMap ? index * dimensions : locationList[index];
         if (!rotationEnabled) {
@@ -121,7 +116,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
      */
     @Override
     public float[] get(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         int address = (directLocationMap) ? index * dimensions : locationList[index];
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);

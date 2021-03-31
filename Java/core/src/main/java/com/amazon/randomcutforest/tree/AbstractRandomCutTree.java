@@ -236,6 +236,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // note the bounding boxes of these ancestor nodes will remain unchanged
     abstract protected void increaseMassOfAncestors(NodeReference mergedNode);
 
+    abstract protected void decreaseMassOfAncestors(NodeReference mergedNode);
+
     abstract protected int getMass(NodeReference nodeReference);
 
     abstract protected void addSequenceIndex(NodeReference node, long uniqueSequenceNumber);
@@ -270,12 +272,16 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         updateAncestorPointSum(nodeReference);
     }
 
-    NodeReference findLeaf(Point point, boolean deleteMass) {
+    /**
+     * finds the reference to the leaf node which corresponds to the path followed
+     * in the tree by an input point
+     * 
+     * @param point point
+     * @return reference of the leaf node
+     */
+    NodeReference findLeaf(Point point) {
         NodeReference nodeReference = root;
         while (!isLeaf(nodeReference)) {
-            if (deleteMass) {
-                decrementMass(nodeReference);
-            }
             nodeReference = (leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))
                     ? getLeftChild(nodeReference)
                     : getRightChild(nodeReference);
@@ -283,12 +289,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return nodeReference;
     }
 
-    NodeReference findLeafAndVerify(Point point, boolean deleteMass) {
-        NodeReference nodeReference = findLeaf(point, deleteMass);
+    NodeReference findLeafAndVerify(Point point) {
+        NodeReference nodeReference = findLeaf(point);
         Point oldPoint = getPointFromLeafNode(nodeReference);
         if (!equals(oldPoint, point)) {
             throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference)) + " "
-                    + nodeReference + " node " + false + " Inconsistency in trees in delete step here.");
+                    + nodeReference + " node " + false + " Inconsistency in trees.");
         }
         return nodeReference;
     }
@@ -296,25 +302,60 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     /**
      * the following function returns the number of copies of a point in the tree
      * and switches the reference to the provided reference. This may be useful for
-     * collating duplicate points across trees. By default this is set to no-op.
-     *
+     * collating duplicate points across trees.
+     * 
      * @param leafReference reference of the leaf node
      * @param newRef        reference of the point stored at the leaf node
      * @return the number of copies of the point at leaf node
      */
-    abstract void switchLeafReference(NodeReference leafReference, PointReference newRef);
+    abstract void setLeafPointReference(NodeReference leafReference, PointReference newRef);
 
-    public void switchLeafReference(PointReference newRef) {
+    /**
+     * the following switches the reference of any copy of the point used to the new
+     * reference if the point does not exist then an exception is raised
+     * 
+     * @param newRef the new reference of the point
+     */
+    protected void switchLeafReference(PointReference newRef) {
         checkNotNull(newRef, " cannot be null ");
-        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(newRef), false);
-        switchLeafReference(nodeReference, newRef);
+        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(newRef));
+        setLeafPointReference(nodeReference, newRef);
     }
 
-    public int getCopies(PointReference reference, boolean flagError) {
-        checkNotNull(reference, " cannot be null ");
-        NodeReference nodeReference = findLeaf(getPointFromPointReference(reference), false);
-        checkState(!flagError || getPointReference(nodeReference) == reference, "error");
-        return getMass(nodeReference);
+    /**
+     * returns the reference to a point used by the tree, or null if the point is
+     * not being used
+     * 
+     * @param newReference a new reference to the point
+     * @return the exisitng reference to that point, or null if the actual point is
+     *         not in use
+     */
+    protected PointReference getEquivalentReference(PointReference newReference) {
+        Point point = getPointFromPointReference(newReference);
+        NodeReference nodeReference = findLeaf(point);
+        if (nodeReference != null) {
+            PointReference reference = getPointReference(nodeReference);
+            if (!equals(point, getPointFromPointReference(reference))) {
+                return null;
+            }
+            return reference;
+        }
+        return null;
+    }
+
+    /**
+     * the following returns the number of copies of a point given a reference. If
+     * the point is not in the tree then an exception is raised; but if the
+     * reference in the tree is not the same then the answer is zero
+     * 
+     * @param reference a reference to a point
+     * @return the number of copies the exact reference is present
+     */
+
+    protected int getCopiesOfReference(PointReference reference) {
+        checkNotNull(reference, " reference cannot be null ");
+        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(reference));
+        return (reference == getPointReference(nodeReference)) ? getMass(nodeReference) : 0;
     }
 
     /**
@@ -331,11 +372,15 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         checkState(root != null, "root must not be null");
 
         Point point = getPointFromPointReference(pointReference);
-        NodeReference nodeReference = findLeafAndVerify(point, true);
+        NodeReference nodeReference = findLeafAndVerify(point);
         if (enableSequenceIndices) {
             deleteSequenceIndex(nodeReference, sequenceNumber);
         }
         PointReference returnVal = getPointReference(nodeReference);
+
+        decreaseMassOfAncestors(nodeReference);
+        // the node is not included as its ancestor
+        // the mass of the parent needs to be 0 for it to be free to be reused
 
         // decrease mass for the delete
         if (decrementMass(nodeReference) > 0) {
@@ -410,7 +455,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             AbstractBoundingBox<Point> savedBox;
             AbstractBoundingBox<Point> currentUnmergedBox;
 
-            NodeReference followReference = findLeaf(point, false);
+            NodeReference followReference = findLeaf(point);
 
             Point oldPoint = getPointFromLeafNode(followReference);
             if (equals(oldPoint, point)) {
