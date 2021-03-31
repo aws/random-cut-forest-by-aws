@@ -42,8 +42,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-
 public class CompactSamplerTest {
 
     private static int sampleSize = 101;
@@ -79,17 +77,15 @@ public class CompactSamplerTest {
 
     @Test
     public void testNewFromExistingWeights() {
-        int sampleSize = 10;
+        int sampleSize = 3;
         double lambda = 0.1;
 
         // weight array is valid heap
         float[] weight = { 0.4f, 0.3f, 0.2f };
         int[] pointIndex = { 1, 2, 3 };
-        CompactSamplerState state = new CompactSamplerState();
-        state.setCapacity(sampleSize);
-        state.setSize(weight.length);
-        state.setLambda(lambda);
-        CompactSampler sampler = new CompactSampler(state, new Random(), weight, pointIndex, null, true);
+        CompactSampler sampler = new CompactSampler.Builder().capacity(sampleSize).size(weight.length).lambda(lambda)
+                .random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null).validateHeap(true)
+                .build();
 
         assertFalse(sampler.getEvictedPoint().isPresent());
         assertFalse(sampler.isStoreSequenceIndexesEnabled());
@@ -239,11 +235,9 @@ public class CompactSamplerTest {
         weightArray[i] = weightArray[2 * i + 1];
         weightArray[2 * i + 1] = f;
 
-        CompactSamplerState state = new CompactSamplerState();
-        state.setCapacity(sampleSize);
-        state.setSize(sampleSize);
-        state.setLambda(lambda);
-        assertThrows(IllegalStateException.class, () -> new CompactSampler(state, random, weightArray,
-                sampler.getPointIndexArray(), sampler.getSequenceIndexArray(), true));
+        assertThrows(IllegalStateException.class,
+                () -> new CompactSampler.Builder().capacity(sampleSize).size(sampleSize).lambda(lambda).random(random)
+                        .weight(weightArray).pointIndex(sampler.getPointIndexArray())
+                        .sequenceIndex(sampler.getSequenceIndexArray()).validateHeap(true).build());
     }
 }

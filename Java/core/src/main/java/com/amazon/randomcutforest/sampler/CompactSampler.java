@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
@@ -28,8 +27,6 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 
 /**
  * <p>
@@ -148,7 +145,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
      *                                    sampled points will be stored in the
      *                                    sampler.
-     * @param timeFraction                the fraction of points admitted even when
+     * @param initialAcceptFraction       the fraction of points admitted even when
      *                                    the sampler can accept a point
      */
     public CompactSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled,
@@ -197,49 +194,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      */
     public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
         this(sampleSize, lambda, random, storeSequenceIndexesEnabled, DEFAULT_INITIAL_ACCEPT_FRACTION);
-    }
-
-    /**
-     * Construct a new compact sampler with the provided state. The 3 arrays
-     * {@code weight}, {@code pointIndex}, and {@code sequenceIndex} define the
-     * points stored in the sampler. In particular, for a given index {@code i} the
-     * values {@code weight[i]}, {@code pointIndex[i]}, and {@code sequenceIndex[i]}
-     * together define a single weighted point.
-     *
-     * Internally, the points defined by {@code weight}, {@code pointIndex}, and
-     * {@code sequenceIndex} are stored in a max-heap with the weight value
-     * determining the heap structure.
-     *
-     * @param state         The CompactSampler state
-     * @param random        A random number generator that will be used in sampling.
-     * @param weight        An array of weights used for time-decay reservoir
-     *                      sampling.
-     * @param pointIndex    An array of point indexes identifying the sampled
-     *                      points.
-     * @param sequenceIndex An array of sequence indexes corresponding to the
-     *                      sampled points.
-     * @param validateHeap  If true, then the constructor will fail with an
-     *                      IllegalArgumentException if the weight array doesn't
-     *                      satisfy the heap property.
-     */
-    public CompactSampler(CompactSamplerState state, Random random, float[] weight, int[] pointIndex,
-            long[] sequenceIndex, boolean validateHeap) {
-        super();
-        checkNotNull(weight, "weight must not be null");
-        checkNotNull(pointIndex, "pointIndex must not be null");
-
-        this.capacity = state.getCapacity();
-        this.size = state.getSize();
-        this.storeSequenceIndexesEnabled = (sequenceIndex != null);
-        this.random = random;
-        this.lambda = state.getLambda();
-        this.weight = weight;
-        this.pointIndex = pointIndex;
-        this.sequenceIndex = sequenceIndex;
-        this.maxSequenceIndex = state.getMaxSequenceIndex();
-        this.sequenceIndexOfMostRecentLambdaUpdate = state.getSequenceIndexOfMostRecentLambdaUpdate();
-        this.initialAcceptFraction = state.getInitialAcceptFraction();
-        reheap(validateHeap);
     }
 
     /**
