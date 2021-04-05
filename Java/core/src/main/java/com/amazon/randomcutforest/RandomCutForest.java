@@ -633,7 +633,7 @@ public class RandomCutForest {
         checkArgument(!internalShinglingEnabled || point.length == inputDimensions,
                 String.format("point.length must equal %d for internal shingling", inputDimensions));
 
-        updateExecutor.update(point);
+        updateExecutor.update(cleanCopy(point));
     }
 
     /**
@@ -649,7 +649,7 @@ public class RandomCutForest {
         checkNotNull(point, "point must not be null");
         checkArgument(!internalShinglingEnabled, "cannot be applied with internal shingling");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
-        updateExecutor.update(point, sequenceNum);
+        updateExecutor.update(cleanCopy(point), sequenceNum);
     }
 
     /**

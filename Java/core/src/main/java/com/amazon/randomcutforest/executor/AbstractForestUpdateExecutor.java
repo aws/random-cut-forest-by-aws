@@ -21,7 +21,6 @@ import lombok.Getter;
 
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IStateCoordinator;
-import com.amazon.randomcutforest.RandomCutForest;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -55,18 +54,36 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      * sampler in the forest. If the sampler accepts the point, the point is
      * submitted to the update method in the corresponding Random Cut Tree.
      *
+     * This function can be used for internal shingling since it pads the sequence
+     * number corresponding to the order seen by the forest.
+     *
      * @param point The point used to update the forest.
      */
     public void update(double[] point) {
         update(point, stateCoordinator.getTotalUpdates());
     }
 
+    /**
+     * this function allows potentially out of order updates (provided internal
+     * shingling is not set to true, and any shingling is performed external to the
+     * forest) the point is passed to the coordinator which maintains a clean
+     * representaion (either in a store or as a clean internal copy, swithing -0.0
+     * to 0.0). The result can be null in case of internal shingling (for the
+     * initial points while the chingle is being built). In case of such null
+     * points, the remainder of the steps are bypassed except for counting the
+     * number steps of completed updates
+     * 
+     * @param point          the point to be considered for update
+     * @param sequenceNumber the sequence number of the point, if internal shingling
+     *                       is enabled then the expectation is to receive sequence
+     *                       numbers contiguosly.
+     */
     public void update(double[] point, long sequenceNumber) {
-        double[] pointCopy = RandomCutForest.cleanCopy(point);
-        PointReference updateInput = stateCoordinator.initUpdate(pointCopy, sequenceNumber);
-        List<UpdateResult<PointReference>> results = (updateInput == null) ? null : update(updateInput, sequenceNumber);
-        stateCoordinator.completeUpdate(results, updateInput);
-
+        PointReference updateInput = stateCoordinator.initUpdate(point, sequenceNumber);
+        if (updateInput != null) {
+            List<UpdateResult<PointReference>> results = update(updateInput, sequenceNumber);
+            stateCoordinator.completeUpdate(results, updateInput);
+        }
     }
 
     /**

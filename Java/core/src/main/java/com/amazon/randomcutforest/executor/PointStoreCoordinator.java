@@ -38,14 +38,12 @@ public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Inte
 
     @Override
     public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
-        if (updateInput != null) {
-            updateResults.forEach(result -> {
-                result.getAddedPoint().ifPresent(store::incrementRefCount);
-                result.getDeletedPoint().ifPresent(store::decrementRefCount);
-            });
-            store.decrementRefCount(updateInput);
-            totalUpdates++;
-        }
+        updateResults.forEach(result -> {
+            result.getAddedPoint().ifPresent(store::incrementRefCount);
+            result.getDeletedPoint().ifPresent(store::decrementRefCount);
+        });
+        store.decrementRefCount(updateInput);
+        totalUpdates++;
     }
 
     public IPointStore<Point> getStore() {

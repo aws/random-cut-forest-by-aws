@@ -145,6 +145,17 @@ public interface INodeStore {
     int getMass(int index);
 
     /**
+     * sets the current mass; this is useful for regenerating mass from the children
+     * and not storing the mass in serialization steps; this cannot be done all
+     * internally because one of the children may be a leaf and not managed by this
+     * store for internal nodes
+     *
+     * @param index   node
+     * @param newMass the new mass
+     */
+    void setMass(int index, int newMass);
+
+    /**
      * increases the mass of node as well as all its ancestors by 1 note that all
      * these nodes are internal nodes and we eliminate the back and forth in a
      * single call

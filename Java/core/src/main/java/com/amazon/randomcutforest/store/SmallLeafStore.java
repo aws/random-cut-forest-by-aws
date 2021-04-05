@@ -92,8 +92,9 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
 
     @Override
     public int setPointIndex(int index, int pointIndex) {
+        int savedIndex = this.pointIndex[index];
         this.pointIndex[index] = pointIndex;
-        return mass[index];
+        return savedIndex;
     }
 
     @Override

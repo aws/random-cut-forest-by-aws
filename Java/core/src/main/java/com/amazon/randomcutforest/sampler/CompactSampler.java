@@ -218,14 +218,12 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
-        if (size < capacity) {
-            if (sequenceIndex * initialAcceptFraction > capacity || random.nextDouble() < initialAcceptFraction) {
-                acceptPointState = new AcceptPointState(sequenceIndex, weight);
-                return true;
-            }
-        } else if (weight < this.weight[0]) {
+        if ((size < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
+                || (weight < this.weight[0])) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
-            evictMax();
+            if (size == capacity) {
+                evictMax();
+            }
             return true;
         }
         return false;
@@ -292,26 +290,24 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
 
     @Override
     public void addPoint(Integer pointIndex) {
-        if (pointIndex != null) {
-            checkState(size < capacity, "sampler full");
-            checkState(acceptPointState != null,
-                    "this method should only be called after a successful call to acceptSample(long)");
-            this.weight[size] = acceptPointState.getWeight();
-            this.pointIndex[size] = pointIndex;
-            if (storeSequenceIndexesEnabled) {
-                this.sequenceIndex[size] = acceptPointState.getSequenceIndex();
-            }
-            int current = size++;
-            while (current > 0) {
-                int tmp = (current - 1) / 2;
-                if (this.weight[tmp] < this.weight[current]) {
-                    swapWeights(current, tmp);
-                    current = tmp;
-                } else
-                    break;
-            }
-            acceptPointState = null;
+        checkState(size < capacity, "sampler full");
+        checkState(acceptPointState != null,
+                "this method should only be called after a successful call to acceptSample(long)");
+        this.weight[size] = acceptPointState.getWeight();
+        this.pointIndex[size] = pointIndex;
+        if (storeSequenceIndexesEnabled) {
+            this.sequenceIndex[size] = acceptPointState.getSequenceIndex();
         }
+        int current = size++;
+        while (current > 0) {
+            int tmp = (current - 1) / 2;
+            if (this.weight[tmp] < this.weight[current]) {
+                swapWeights(current, tmp);
+                current = tmp;
+            } else
+                break;
+        }
+        acceptPointState = null;
     }
 
     /**
@@ -522,12 +518,14 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         this.maxSequenceIndex = builder.maxSequenceIndex;
         this.sequenceIndexOfMostRecentLambdaUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
 
-        if (builder.weight != null || builder.pointIndex != null || builder.weight != null
-                || builder.sequenceIndex != null || builder.validateHeap) {
-            checkArgument(builder.weight.length == builder.capacity, " incorrect state");
-            checkArgument(builder.pointIndex.length == builder.capacity, " incorrect state");
+        if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
+                || builder.validateHeap) {
+            checkArgument(builder.weight == null || builder.weight.length == builder.capacity,
+                    " incorrect length of weights");
+            checkArgument(builder.pointIndex == null || builder.pointIndex.length == builder.capacity,
+                    " incorrect length of pointer indices");
             checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
-                    " incorrect state");
+                    " incorrect length for stored sequences");
             this.weight = builder.weight;
             this.pointIndex = builder.pointIndex;
             this.sequenceIndex = builder.sequenceIndex;

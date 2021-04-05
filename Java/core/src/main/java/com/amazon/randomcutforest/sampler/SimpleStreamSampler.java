@@ -128,8 +128,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if (sample.size() < sampleSize
-                && (sequenceIndex * initialAcceptFraction > sampleSize || random.nextDouble() < initialAcceptFraction)
+        if ((sample.size() < sampleSize && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
                 || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();

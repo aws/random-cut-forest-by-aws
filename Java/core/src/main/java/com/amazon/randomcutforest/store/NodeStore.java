@@ -161,6 +161,11 @@ public class NodeStore extends IndexManager implements INodeStore {
         return mass[index];
     }
 
+    @Override
+    public void setMass(int index, int newMass) {
+        mass[index] = newMass;
+    }
+
     public void increaseMassOfAncestorsAndItself(int index) {
         while (index != NULL) {
             ++mass[index];

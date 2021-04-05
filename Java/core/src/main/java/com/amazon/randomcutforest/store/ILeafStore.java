@@ -72,7 +72,7 @@ public interface ILeafStore {
      * sets the index of the point associated with the leaf
      *
      * @param index node
-     * @return new index of the point in Point Store
+     * @return old index in the leafstore so that we can verify (and undo)
      */
     int setPointIndex(int index, int pointIndex);
 
