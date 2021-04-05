@@ -122,8 +122,18 @@ public class NodeStore extends IndexManager implements INodeStore {
     }
 
     @Override
+    public void setRightIndex(int index, int child) {
+        rightIndex[index] = child;
+    }
+
+    @Override
     public int getLeftIndex(int index) {
         return leftIndex[index];
+    }
+
+    @Override
+    public void setLeftIndex(int index, int child) {
+        leftIndex[index] = child;
     }
 
     @Override

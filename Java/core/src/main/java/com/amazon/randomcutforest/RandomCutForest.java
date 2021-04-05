@@ -134,6 +134,11 @@ public class RandomCutForest {
     public static final boolean DEFAULT_INTERNAL_ROTATION_ENABLED = false;
 
     /**
+     * By default, point stores will favor speed of size for larger shingle sizes
+     */
+    public static final boolean DEFAULT_DIRECT_LOCATION_MAP = false;
+
+    /**
      * Default floating-point precision for internal data structures.
      */
     public static final Precision DEFAULT_PRECISION = Precision.DOUBLE;
@@ -274,7 +279,9 @@ public class RandomCutForest {
     private void initCompactDouble(Builder<?> builder) {
         PointStore.Builder storeBuilder = new PointStore.Builder()
                 .internalRotationEnabled(builder.internalRotationEnabled).capacity(numberOfTrees * sampleSize + 1)
-                .currentCapacity(builder.initialPointStoreSize.get()).directLocationEnabled(false)
+                .indexCapacity(builder.initialPointStoreSize.get())
+                .currentStoreCapacity(builder.initialPointStoreSize.get())
+                .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreDouble tempStore = new PointStoreDouble(storeBuilder);
@@ -296,7 +303,9 @@ public class RandomCutForest {
     private void initCompactFloat(Builder<?> builder) {
         PointStore.Builder storeBuilder = new PointStore.Builder()
                 .internalRotationEnabled(builder.internalRotationEnabled).capacity(numberOfTrees * sampleSize + 1)
-                .currentCapacity(builder.initialPointStoreSize.get()).directLocationEnabled(false)
+                .indexCapacity(builder.initialPointStoreSize.get())
+                .currentStoreCapacity(builder.initialPointStoreSize.get())
+                .directLocationEnabled(builder().directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions);
         PointStoreFloat tempStore = new PointStoreFloat(storeBuilder);
@@ -394,6 +403,7 @@ public class RandomCutForest {
         compactEnabled = builder.compactEnabled;
         precision = builder.precision;
         boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
+        builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
         if (!builder.initialPointStoreSize.isPresent() && compactEnabled) {
             builder.initialPointStoreSize = Optional.of(2 * sampleSize);
@@ -1257,6 +1267,7 @@ public class RandomCutForest {
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
+        private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
         private Precision precision = DEFAULT_PRECISION;
         private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
         private int shingleSize = DEFAULT_SHINGLE_SIZE;
@@ -1301,8 +1312,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
-            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+        public T directLocationMapEnabled(boolean directLocationMapEnabled) {
+            this.directLocationMapEnabled = directLocationMapEnabled;
             return (T) this;
         }
 
@@ -1323,6 +1334,11 @@ public class RandomCutForest {
 
         public T initialPointStoreSize(int initialPointStoreSize) {
             this.initialPointStoreSize = Optional.of(initialPointStoreSize);
+            return (T) this;
+        }
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
             return (T) this;
         }
 

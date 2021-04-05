@@ -43,7 +43,8 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     }
 
     public PointStoreDouble(int dimensions, int capacity) {
-        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).currentCapacity(capacity));
+        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).indexCapacity(capacity)
+                .currentStoreCapacity(capacity));
     }
 
     @Override
@@ -114,7 +115,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     @Override
     public double[] get(int index) {
         indexManager.checkValidIndex(index);
-        int address = (directLocationMap) ? index * dimensions : locationList[index];
+        int address = locationList[index];
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);
         } else {

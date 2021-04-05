@@ -83,9 +83,6 @@ public class RandomCutForestMapperTest {
             assertEquals(store.getCapacity(), store2.getCapacity());
             assertEquals(store.size(), store2.size());
 
-            for (int i = 0; i < store.getCapacity() - store.size(); i++) {
-                assertEquals(store.getRefCount(i), store2.getRefCount(i));
-            }
         } else {
             PointStoreFloat store = (PointStoreFloat) coordinator.getStore();
             PointStoreFloat store2 = (PointStoreFloat) coordinator2.getStore();
@@ -95,9 +92,6 @@ public class RandomCutForestMapperTest {
             assertEquals(store.getCapacity(), store2.getCapacity());
             assertEquals(store.size(), store2.size());
 
-            for (int i = 0; i < store.getCapacity() - store.size(); i++) {
-                assertEquals(store.getRefCount(i), store2.getRefCount(i));
-            }
         }
     }
 

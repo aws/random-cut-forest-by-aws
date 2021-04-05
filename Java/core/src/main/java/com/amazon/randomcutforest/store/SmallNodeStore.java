@@ -124,8 +124,18 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
+    public void setRightIndex(int index, int child) {
+        rightIndex[index] = (short) child;
+    }
+
+    @Override
     public int getLeftIndex(int index) {
         return leftIndex[index];
+    }
+
+    @Override
+    public void setLeftIndex(int index, int child) {
+        leftIndex[index] = (short) child;
     }
 
     @Override

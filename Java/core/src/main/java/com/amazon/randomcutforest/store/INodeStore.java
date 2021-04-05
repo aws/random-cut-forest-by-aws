@@ -78,12 +78,28 @@ public interface INodeStore {
     int getRightIndex(int index);
 
     /**
+     * sets right child
+     *
+     * @param index      node
+     * @param rightIndex new left child
+     */
+    void setRightIndex(int index, int rightIndex);
+
+    /**
      * gets leftChild
      * 
      * @param index node
      * @return index of left child (can be leaf)
      */
     int getLeftIndex(int index);
+
+    /**
+     * sets left child
+     *
+     * @param index     node
+     * @param leftIndex new left child
+     */
+    void setLeftIndex(int index, int leftIndex);
 
     /**
      * increments mass of node by 1 and returns the new value

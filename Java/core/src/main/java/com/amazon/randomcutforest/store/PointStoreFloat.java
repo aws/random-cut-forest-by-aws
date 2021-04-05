@@ -36,7 +36,8 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     }
 
     public PointStoreFloat(int dimensions, int capacity) {
-        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).currentCapacity(capacity));
+        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).indexCapacity(capacity)
+                .currentStoreCapacity(capacity));
     }
 
     @Override

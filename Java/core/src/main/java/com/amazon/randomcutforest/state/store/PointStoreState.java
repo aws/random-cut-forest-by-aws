@@ -57,11 +57,11 @@ public class PointStoreState {
     /**
      * An array of reference counts for each stored point.
      */
-    private short[] refCount;
+    private int[] refCount;
     /**
      * is direct mapping enabled
      */
-    private boolean directMapLocation;
+    private boolean directLocationMap;
     /**
      * location data for indirect maps
      */
@@ -96,9 +96,13 @@ public class PointStoreState {
      */
     private boolean dynamicResizingEnabled;
     /**
-     * current capacity
+     * current store capacity
      */
-    private int currentCapacity;
+    private int currentStoreCapacity;
+    /**
+     * current index capacity
+     */
+    private int indexCapacity;
     /**
      * state of free indices
      */

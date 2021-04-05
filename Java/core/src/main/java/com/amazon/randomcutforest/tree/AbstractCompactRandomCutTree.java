@@ -26,6 +26,7 @@ import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.SmallLeafStore;
 import com.amazon.randomcutforest.store.SmallNodeStore;
 
@@ -299,6 +300,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
+    /**
+     * deletes a node from the stores and resets the connectivity information so
+     * that state is preserved
+     * 
+     * @param node the node to be deleted
+     */
     @Override
     protected void delete(Integer node) {
         delete(intValue(node));
@@ -306,8 +313,14 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     protected void delete(int node) {
         if (isLeaf(node)) {
-            leafStore.delete(getLeafIndexForTreeIndex(node));
+            int index = getLeafIndexForTreeIndex(node);
+            leafStore.setPointIndex(index, PointStore.INFEASIBLE_INDEX);
+            leafStore.setParent(index, NULL);
+            leafStore.delete(index);
         } else {
+            nodeStore.setParent(node, NULL);
+            nodeStore.setLeftIndex(node, NULL);
+            nodeStore.setRightIndex(node, NULL);
             nodeStore.delete(node);
         }
     }

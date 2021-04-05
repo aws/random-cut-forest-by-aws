@@ -40,29 +40,27 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
-        checkNotNull(state.getFloatData(), "floatData must not be null");
-        checkArgument(state.isSinglePrecisionSet(), "incorrect use");
-        int capacity = state.getCapacity();
+        checkNotNull(state.getFloatData(), "doubleData must not be null");
+        checkArgument(!state.isSinglePrecisionSet(), "incorrect use");
+        int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
-        short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentCapacity() * dimensions);
+        int[] refCount = Arrays.copyOf(state.getRefCount(), indexCapacity);
+        float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentStoreCapacity() * dimensions);
         int freeIndexPointer = state.getFreeIndexPointer();
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        int[] freeIndexes = Arrays.copyOf(state.getFreeIndexes(), indexCapacity);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] locationList = null;
-        if (!state.isDirectMapLocation()) {
-            locationList = new int[capacity];
-            System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
-        }
+        int[] locationList = new int[indexCapacity];
+        Arrays.fill(locationList, PointStore.INFEASIBLE_LOCATION);
+        System.arraycopy(state.getLocationList(), 0, locationList, 0, state.getLocationList().length);
 
         PointStore.Builder builder = new PointStore.Builder().internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled()).currentCapacity(state.getCurrentCapacity())
-                .capacity(capacity).shingleSize(state.getShingleSize()).dimensions(state.getDimensions())
-                .locationList(locationList).nextTimeStamp(state.getLastTimeStamp())
-                .startOfFreeSegment(startOfFreeSegment).refCount(refCount).freeIndexes(freeIndexes)
-                .freeIndexPointer(freeIndexPointer).knownShingle(state.getInternalShingle());
+                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
+                .directLocationEnabled(state.isDirectLocationMap()).indexCapacity(indexCapacity)
+                .currentStoreCapacity(state.getCurrentStoreCapacity()).capacity(state.getCapacity())
+                .shingleSize(state.getShingleSize()).dimensions(state.getDimensions()).locationList(locationList)
+                .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
+                .freeIndexes(freeIndexes).freeIndexPointer(freeIndexPointer).knownShingle(state.getInternalShingle());
         return new PointStoreFloat(builder, store);
     }
 
@@ -75,26 +73,21 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
-        state.setDirectMapLocation(model.isDirectLocationMap());
-        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
-        state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
+        state.setDirectLocationMap(model.isDirectLocationMap());
         state.setInternalShingle(model.getInternalShingle());
         state.setLastTimeStamp(model.getNextTimeStamp());
+        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
+        state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
         state.setRotationEnabled(model.isInternalRotationEnabled());
-        state.setCurrentCapacity(model.getCurrentStoreCapacity());
+        state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
+        state.setIndexCapacity(model.getIndexCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setFreeIndexPointer(model.getFreeIndexPointer());
-        state.setSinglePrecisionSet(true);
-
+        state.setSinglePrecisionSet(false);
         int prefix = model.getValidPrefix();
         state.setRefCount(Arrays.copyOf(model.getRefCount(), prefix));
-        if (model.isDirectLocationMap()) {
-            state.setFloatData(Arrays.copyOf(model.getStore(), prefix * model.getDimensions()));
-        } else {
-            state.setLocationList(Arrays.copyOf(model.getLocationList(), prefix));
-            // the below assumes that compact() is invoked as the first step
-            state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
-        }
+        state.setLocationList(Arrays.copyOf(model.getLocationList(), prefix));
+        state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
         return state;
     }
