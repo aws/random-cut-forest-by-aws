@@ -17,6 +17,9 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
 
 /**
  * A fixed-size buffer for storing leaf nodes. A leaf node is defined by its
@@ -44,6 +47,8 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
         pointIndex = new int[capacity];
         parentIndex = new short[capacity];
         mass = new short[capacity];
+        Arrays.fill(pointIndex, (short) PointStore.INFEASIBLE_INDEX);
+        Arrays.fill(parentIndex, (short) NULL);
     }
 
     public SmallLeafStore(int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes,

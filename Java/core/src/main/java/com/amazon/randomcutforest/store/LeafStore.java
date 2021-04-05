@@ -47,7 +47,7 @@ public class LeafStore extends IndexManager implements ILeafStore {
         pointIndex = new int[capacity];
         parentIndex = new int[capacity];
         mass = new int[capacity];
-        Arrays.fill(parentIndex, PointStore.INFEASIBLE_INDEX);
+        Arrays.fill(pointIndex, PointStore.INFEASIBLE_INDEX);
         Arrays.fill(parentIndex, NULL);
     }
 
