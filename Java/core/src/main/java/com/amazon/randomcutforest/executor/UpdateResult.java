@@ -23,19 +23,19 @@ import lombok.Builder;
  * When {@link IUpdatable#update} is called, an updatable model may choose to
  * update its state with the submitted point. This class contains the result of
  * such an operation. A list of {@code AddPointResults}s is consumed by
- * {@link IUpdateCoordinator#completeUpdate} to update global state as needed to
+ * {@link IStateCoordinator#completeUpdate} to update global state as needed to
  * reflect the updates to individual component models.
  * 
- * @param <P> The point reference type.
+ * @param <PointReference> The point reference type.
  */
 @Builder
-public class UpdateResult<P> {
+public class UpdateResult<PointReference> {
 
     private static final UpdateResult<Object> NOOP = builder().build();
 
-    private final P addedPoint;
+    private final PointReference addedPoint;
 
-    private final P deletedPoint;
+    private final PointReference deletedPoint;
 
     /**
      * Return an {@code UpdateResult} value a no-op (an operation that did not
@@ -58,7 +58,7 @@ public class UpdateResult<P> {
      *         model as part of the udpate call, or {@code Optional.empty()} if no
      *         point was added.
      */
-    public Optional<P> getAddedPoint() {
+    public Optional<PointReference> getAddedPoint() {
         return Optional.ofNullable(addedPoint);
     }
 
@@ -70,7 +70,7 @@ public class UpdateResult<P> {
      * @return a reference to the deleted point reference or
      *         {@code Optional.empty()} if no point was deleted.
      */
-    public Optional<P> getDeletedPoint() {
+    public Optional<PointReference> getDeletedPoint() {
         return Optional.ofNullable(deletedPoint);
     }
 

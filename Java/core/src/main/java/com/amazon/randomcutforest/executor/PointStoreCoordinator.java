@@ -21,11 +21,17 @@ import java.util.List;
 
 import com.amazon.randomcutforest.store.IPointStore;
 
-public class PointStoreCoordinator<Q> extends AbstractUpdateCoordinator<Integer, Q> {
+/**
+ * pointstore coordinator for compact RCF
+ * 
+ * @param <Point> the datatype of the actual point
+ */
 
-    private final IPointStore<Q> store;
+public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer, Point> {
 
-    public PointStoreCoordinator(IPointStore<Q> store) {
+    private final IPointStore<Point> store;
+
+    public PointStoreCoordinator(IPointStore<Point> store) {
         checkNotNull(store, "store must not be null");
         this.store = store;
     }
@@ -45,7 +51,7 @@ public class PointStoreCoordinator<Q> extends AbstractUpdateCoordinator<Integer,
         totalUpdates++;
     }
 
-    public IPointStore<Q> getStore() {
+    public IPointStore<Point> getStore() {
         return store;
     }
 }

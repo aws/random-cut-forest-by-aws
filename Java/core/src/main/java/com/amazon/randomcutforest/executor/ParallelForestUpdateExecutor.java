@@ -35,7 +35,7 @@ public class ParallelForestUpdateExecutor<PointReference, Point>
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    public ParallelForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components, int threadPoolSize) {
         super(updateCoordinator, components);
         this.threadPoolSize = threadPoolSize;

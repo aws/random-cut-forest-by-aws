@@ -50,7 +50,7 @@ import org.powermock.reflect.Whitebox;
 
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
-import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import com.amazon.randomcutforest.executor.IStateCoordinator;
 import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
@@ -74,7 +74,7 @@ public class RandomCutForestTest {
     private int numberOfTrees;
     private ComponentList<double[], double[]> components;
     private AbstractForestTraversalExecutor traversalExecutor;
-    private IUpdateCoordinator<double[], double[]> updateCoordinator;
+    private IStateCoordinator<double[], double[]> updateCoordinator;
     private AbstractForestUpdateExecutor<double[], double[]> updateExecutor;
     private RandomCutForest forest;
 

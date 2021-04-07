@@ -33,7 +33,7 @@ import com.amazon.randomcutforest.ComponentList;
 @Getter
 public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
-    protected final IUpdateCoordinator<PointReference, Point> updateCoordinator;
+    protected final IStateCoordinator<PointReference, Point> updateCoordinator;
     protected final ComponentList<PointReference, Point> components;
 
     /**
@@ -44,7 +44,7 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      *                          needed.
      * @param components        A list of models to update.
      */
-    protected AbstractForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    protected AbstractForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components) {
         this.updateCoordinator = updateCoordinator;
         this.components = components;

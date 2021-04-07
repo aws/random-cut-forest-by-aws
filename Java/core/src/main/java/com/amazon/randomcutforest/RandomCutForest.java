@@ -35,7 +35,7 @@ import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
-import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import com.amazon.randomcutforest.executor.IStateCoordinator;
 import com.amazon.randomcutforest.executor.ParallelForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.PassThroughCoordinator;
@@ -201,7 +201,7 @@ public class RandomCutForest {
      */
     protected final int threadPoolSize;
 
-    protected IUpdateCoordinator<?, ?> updateCoordinator;
+    protected IStateCoordinator<?, ?> updateCoordinator;
     protected ComponentList<?, ?> components;
 
     /**
@@ -214,7 +214,7 @@ public class RandomCutForest {
      */
     protected AbstractForestUpdateExecutor<?, ?> updateExecutor;
 
-    public <P, Q> RandomCutForest(Builder<?> builder, IUpdateCoordinator<P, Q> updateCoordinator,
+    public <P, Q> RandomCutForest(Builder<?> builder, IStateCoordinator<P, Q> updateCoordinator,
             ComponentList<P, Q> components, Random rng) {
         this(builder, false);
 
@@ -247,7 +247,7 @@ public class RandomCutForest {
         PointStoreDouble tempStore = new PointStoreDouble(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
 
-        IUpdateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(tempStore);
+        IStateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
@@ -267,7 +267,7 @@ public class RandomCutForest {
         int storeSize = numberOfTrees * sampleSize + maxUpdate + compactReserve;
         PointStoreFloat tempStore = new PointStoreFloat(dimensions, shingleSize, storeSize, (shingleSize > 1),
                 (shingleSize == 1));
-        IUpdateCoordinator<Integer, float[]> updateCoordinator = new PointStoreCoordinator(tempStore);
+        IStateCoordinator<Integer, float[]> updateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
@@ -282,7 +282,7 @@ public class RandomCutForest {
     }
 
     private void initNonCompact() {
-        IUpdateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
+        IStateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
         ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<double[], double[]> tree = new RandomCutTree(rng.nextLong(), boundingBoxCachingEnabled,
@@ -296,7 +296,7 @@ public class RandomCutForest {
         initExecutors(updateCoordinator, components);
     }
 
-    private <P, Q> void initExecutors(IUpdateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
+    private <P, Q> void initExecutors(IStateCoordinator<P, Q> updateCoordinator, ComponentList<P, Q> components) {
         if (parallelExecutionEnabled) {
             traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
             updateExecutor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
@@ -479,7 +479,7 @@ public class RandomCutForest {
         return threadPoolSize;
     }
 
-    public IUpdateCoordinator<?, ?> getUpdateCoordinator() {
+    public IStateCoordinator<?, ?> getUpdateCoordinator() {
         return updateCoordinator;
     }
 

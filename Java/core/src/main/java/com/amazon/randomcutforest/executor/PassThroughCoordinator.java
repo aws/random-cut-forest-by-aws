@@ -18,8 +18,8 @@ package com.amazon.randomcutforest.executor;
 import java.util.List;
 
 /**
- * A minimal implementation of {@link IUpdateCoordinator} that does not
- * transform the input point.
+ * A minimal implementation of {@link IStateCoordinator} that does not transform
+ * the input point.
  */
 public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], double[]> {
     /**

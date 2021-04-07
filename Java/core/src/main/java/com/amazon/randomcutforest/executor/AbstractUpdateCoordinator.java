@@ -19,16 +19,17 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * A partial implementation of the {@link IUpdateCoordinator} interface that
+ * A partial implementation of the {@link IStateCoordinator} interface that
  * defines a protected instance variable to track total updates and implements
- * the {@link IUpdateCoordinator#getTotalUpdates()} method. Classes that extend
- * AbstractUpdateCoordinator are responsible for incrementing the totalUpdates
+ * the {@link IStateCoordinator#getTotalUpdates()} method. Classes that extend
+ * AbstractStateCoordinator are responsible for incrementing the totalUpdates
  * counter after completing an update successfully.
  *
  * @param <PointReference> An internal point representation.
- * @param <Q>              Data type of potential exchanges of data
+ * @param <Point>          Data type of potential exchanges of data
  */
-public abstract class AbstractUpdateCoordinator<PointReference, Q> implements IUpdateCoordinator<PointReference, Q> {
+public abstract class AbstractUpdateCoordinator<PointReference, Point>
+        implements IStateCoordinator<PointReference, Point> {
     @Getter
     @Setter
     protected long totalUpdates;
