@@ -19,36 +19,54 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * This class defines common functionality for Store classes, including
- * maintaining the stack of free pointers.
+ * maintaining the stack of free pointers. The stack may be implicitly defined.
+ * if freeIndexPointer exceeds freeIndexes.length, then any intermediate
+ * location say i, must contain entry capacity - i - 1
  */
 public class SmallIndexManager {
 
     protected final short capacity;
-    protected final short[] freeIndexes;
+    protected short[] freeIndexes;
     protected short freeIndexPointer;
     protected final BitSet occupied;
 
-    /**
-     * Create a new store with the given capacity.
-     * 
-     * @param capacity The total number of values that can be saved in this store.
-     */
     public SmallIndexManager(short capacity) {
+        this(capacity, null);
+    }
+
+    public SmallIndexManager(short capacity, BitSet bits) {
         this.capacity = capacity;
-        freeIndexes = new short[capacity];
-
-        for (int j = 0; j < capacity; j++) {
-            freeIndexes[j] = (short) (capacity - j - 1); // reverse order
+        if (bits == null) {
+            freeIndexes = new short[0];
+            freeIndexPointer = (short) (capacity - 1);
+            occupied = new BitSet(capacity);
+        } else {
+            freeIndexPointer = -1;
+            occupied = bits;
+            for (int i = 0; i < capacity; i++) {
+                if (!occupied.get(i)) {
+                    freeIndexPointer++;
+                }
+            }
+            if (freeIndexPointer != capacity - 1) {
+                freeIndexes = new short[freeIndexPointer + 1];
+                int location = 0;
+                for (int i = capacity - 1; i >= 0; i--) {
+                    if (!occupied.get(i)) {
+                        freeIndexes[location++] = (short) i;
+                    }
+                }
+            } else {
+                freeIndexes = new short[0];
+            }
         }
-
-        freeIndexPointer = (short) (capacity - 1);
-        occupied = new BitSet(capacity);
     }
 
     /**
@@ -72,6 +90,39 @@ public class SmallIndexManager {
 
         for (int i = 0; i <= freeIndexPointer; i++) {
             occupied.clear(freeIndexes[i]);
+        }
+    }
+
+    public SmallIndexManager(int capacity, short[] freeIndexes, short freeIndexPointer) {
+        checkNotNull(freeIndexes, "freeIndexes must not be null");
+
+        this.capacity = (short) capacity;
+        this.freeIndexes = freeIndexes;
+        this.freeIndexPointer = freeIndexPointer;
+
+        occupied = new BitSet(capacity);
+        occupied.set(0, capacity);
+
+        for (int i = 0; i < freeIndexPointer; i++) {
+            if (i < freeIndexes.length) {
+                occupied.clear(freeIndexes[i]);
+            } else {
+                occupied.clear(capacity - i - 1);
+            }
+        }
+
+    }
+
+    public SmallIndexManager(int capacity, int oldCapacity) {
+        checkArgument(capacity > 0, "capacity must be greater than 0");
+        this.capacity = (short) capacity;
+        freeIndexes = new short[0];
+
+        freeIndexPointer = (short) (capacity - oldCapacity - 1);
+        occupied = new BitSet(capacity);
+
+        for (int j = 0; j < oldCapacity; j++) {
+            occupied.set(j);
         }
     }
 
@@ -106,16 +157,22 @@ public class SmallIndexManager {
     }
 
     /**
-     * Take an index from the free index stack.
+     * Take an index from the free index stack. Note that the stack can be implicit.
      * 
      * @return a free index that can be used to store a value.
      */
     protected short takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
-        short index = freeIndexes[freeIndexPointer--];
-        checkState(!occupied.get(index), "store tried to return an index marked occupied");
+        int index;
+
+        if (freeIndexPointer < freeIndexes.length) {
+            index = freeIndexes[freeIndexPointer--];
+        } else {
+            index = capacity - freeIndexPointer - 1;
+            freeIndexPointer--;
+        }
         occupied.set(index);
-        return index;
+        return (short) index;
     }
 
     /**
@@ -125,8 +182,26 @@ public class SmallIndexManager {
      * @param index The index value to release.
      */
     protected void releaseIndex(int index) {
-        checkValidIndex(index);
+        checkArgument(index >= 0 && index < capacity, " incorrect index to release");
+        checkArgument(occupied.get(index), " releasing the index twice");
         occupied.clear(index);
+        if (freeIndexPointer + 1 >= freeIndexes.length) {
+            if (index == capacity - (freeIndexPointer + 1) - 1) {
+                ++freeIndexPointer;
+                return;
+            } else {
+                // for most of the applications of this small sampler we would need one extra
+                // entry; but freeIndexPointer can be -1 as well
+                // this can be changed to a larger value to reduce repeated
+                // allocation/deallocation
+                int cap = Math.min(capacity, freeIndexPointer + 2);
+                int oldLength = freeIndexes.length;
+                freeIndexes = Arrays.copyOf(freeIndexes, cap);
+                for (int j = oldLength; j < cap && j < freeIndexPointer + 1; j++) {
+                    freeIndexes[j] = (short) (capacity - j - 1);
+                }
+            }
+        }
         freeIndexes[++freeIndexPointer] = (short) index;
     }
 

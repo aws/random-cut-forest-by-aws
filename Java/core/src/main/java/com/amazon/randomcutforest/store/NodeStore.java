@@ -122,8 +122,18 @@ public class NodeStore extends IndexManager implements INodeStore {
     }
 
     @Override
+    public void setRightIndex(int index, int child) {
+        rightIndex[index] = child;
+    }
+
+    @Override
     public int getLeftIndex(int index) {
         return leftIndex[index];
+    }
+
+    @Override
+    public void setLeftIndex(int index, int child) {
+        leftIndex[index] = child;
     }
 
     @Override
@@ -151,9 +161,23 @@ public class NodeStore extends IndexManager implements INodeStore {
         return mass[index];
     }
 
+    @Override
+    public void setMass(int index, int newMass) {
+        mass[index] = newMass;
+    }
+
+    @Override
     public void increaseMassOfAncestorsAndItself(int index) {
         while (index != NULL) {
             ++mass[index];
+            index = parentIndex[index];
+        }
+    }
+
+    @Override
+    public void decreaseMassOfAncestorsAndItself(int index) {
+        while (index != NULL) {
+            --mass[index];
             index = parentIndex[index];
         }
     }

@@ -15,7 +15,12 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -60,10 +65,10 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         mass = new short[capacity];
     }
 
-    public SmallNodeStore(short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension,
+    public SmallNodeStore(int capacity, short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension,
             double[] cutValue, short[] mass, short[] freeIndexes, short freeIndexPointer) {
         // TODO validations
-        super(freeIndexes, freeIndexPointer);
+        super(capacity, freeIndexes, freeIndexPointer);
         this.parentIndex = parentIndex;
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
@@ -124,8 +129,18 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
+    public void setRightIndex(int index, int child) {
+        rightIndex[index] = (short) child;
+    }
+
+    @Override
     public int getLeftIndex(int index) {
         return leftIndex[index];
+    }
+
+    @Override
+    public void setLeftIndex(int index, int child) {
+        leftIndex[index] = (short) child;
     }
 
     @Override
@@ -153,6 +168,12 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         return mass[index];
     }
 
+    @Override
+    public void setMass(int index, int newMass) {
+        mass[index] = (short) newMass;
+    }
+
+    @Override
     public void increaseMassOfAncestorsAndItself(int index) {
         while (index != NULL) {
             ++mass[index];
@@ -160,8 +181,58 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         }
     }
 
+    @Override
+    public void decreaseMassOfAncestorsAndItself(int index) {
+        while (index != (short) NULL) {
+            --mass[index];
+            index = parentIndex[index];
+        }
+    }
+
+    @Override
     public int getSibling(int parent, int node) {
         return leftIndex[parent] == (short) node ? rightIndex[parent] : leftIndex[parent];
+    }
+
+    @Override
+    public Map<Integer, Integer> getLeavesAndParents() {
+        HashMap<Integer, Integer> newMap = new HashMap<>();
+        for (int i = 0; i < capacity; i++) {
+            if (occupied.get(i) && leftIndex[i] >= capacity) {
+                newMap.put((int) leftIndex[i], i);
+            }
+            if (occupied.get(i) && rightIndex[i] >= capacity) {
+                newMap.put((int) rightIndex[i], i);
+            }
+        }
+        return newMap;
+    }
+
+    /**
+     * this function will help in reducing redundant information for the
+     * constructors
+     * 
+     * @param leftIndex  the left child array
+     * @param rightIndex the right child array
+     * @return an array identifying the parent ( -1 or NULL for non-existent
+     *         parents)
+     */
+    short[] getParentIndex(short[] leftIndex, short[] rightIndex) {
+        int capacity = leftIndex.length;
+        checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
+        short[] parentIndex = new short[capacity];
+        Arrays.fill(parentIndex, (short) NULL);
+        for (short i = 0; i < capacity; i++) {
+            if (leftIndex[i] != NULL && leftIndex[i] < capacity) {
+                checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[leftIndex[i]] = i;
+            }
+            if (rightIndex[i] != NULL && rightIndex[i] < capacity) {
+                checkState(parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[rightIndex[i]] = i;
+            }
+        }
+        return parentIndex;
     }
 
 }

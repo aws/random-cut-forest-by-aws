@@ -35,7 +35,7 @@ public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeSt
 
     @Override
     public SmallNodeStore toModel(NodeStoreState state, long seed) {
-        int capacity = state.getSmallLeftIndex().length;
+        int capacity = state.getCapacity();
         short[] leftIndex = Arrays.copyOf(state.getSmallLeftIndex(), capacity);
         short[] rightIndex = Arrays.copyOf(state.getSmallRightIndex(), capacity);
         short[] parentIndex = Arrays.copyOf(state.getSmallParentIndex(), capacity);
@@ -43,24 +43,25 @@ public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeSt
         int[] cutDimension = Arrays.copyOf(state.getCutDimension(), capacity);
         double[] cutValue = Arrays.copyOf(state.getCutValue(), capacity);
 
-        short freeIndexPointer = (short) (state.getSmallFreeIndexes().length - 1);
-        short[] freeIndexes = new short[capacity];
-        System.arraycopy(state.getSmallFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        short freeIndexPointer = (short) (state.getFreeIndexPointer());
+        short[] freeIndexes = Arrays.copyOf(state.getSmallFreeIndexes(), state.getSmallFreeIndexes().length);
 
-        return new SmallNodeStore(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass, freeIndexes,
-                freeIndexPointer);
+        return new SmallNodeStore(capacity, parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass,
+                freeIndexes, freeIndexPointer);
     }
 
     @Override
     public NodeStoreState toState(SmallNodeStore model) {
         NodeStoreState state = new NodeStoreState();
+        state.setCapacity(model.getCapacity());
         state.setSmallLeftIndex(Arrays.copyOf(model.leftIndex, model.leftIndex.length));
         state.setSmallRightIndex(Arrays.copyOf(model.rightIndex, model.rightIndex.length));
         state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
         state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
         state.setCutDimension(Arrays.copyOf(model.cutDimension, model.cutDimension.length));
         state.setCutValue(Arrays.copyOf(model.cutValue, model.cutValue.length));
-        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setFreeIndexPointer(model.getFreeIndexPointer());
+        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexes().length));
         return state;
     }
 }

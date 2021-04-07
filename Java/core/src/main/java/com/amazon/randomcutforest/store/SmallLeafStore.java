@@ -17,6 +17,10 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
+import java.util.BitSet;
 
 /**
  * A fixed-size buffer for storing leaf nodes. A leaf node is defined by its
@@ -46,21 +50,28 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
         mass = new short[capacity];
     }
 
-    public SmallLeafStore(int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes,
+    public SmallLeafStore(int capacity, int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes,
             short freeIndexPointer) {
-        super(freeIndexes, freeIndexPointer);
+        super(capacity, freeIndexes, freeIndexPointer);
 
         checkNotNull(pointIndex, "pointIndex must not be null");
         checkNotNull(parentIndex, "parentIndex must not be null");
         checkNotNull(mass, "mass must not be null");
-
-        int capacity = pointIndex.length;
-        checkArgument(parentIndex.length == capacity && mass.length == capacity && freeIndexes.length == capacity,
+        checkArgument(pointIndex.length == capacity && parentIndex.length == capacity && mass.length == capacity,
                 "all array arguments must have the same length");
 
         this.pointIndex = pointIndex;
         this.parentIndex = parentIndex;
         this.mass = mass;
+    }
+
+    public SmallLeafStore(int capacity, BitSet leafbits) {
+        super((short) capacity, leafbits);
+        pointIndex = new int[capacity];
+        parentIndex = new short[capacity];
+        mass = new short[capacity];
+        Arrays.fill(pointIndex, (short) PointStore.INFEASIBLE_INDEX);
+        Arrays.fill(parentIndex, (short) NULL);
     }
 
     public int addLeaf(int parentIndex, int pointIndex, int mass) {
@@ -88,6 +99,13 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
     @Override
     public int getPointIndex(int index) {
         return pointIndex[index];
+    }
+
+    @Override
+    public int setPointIndex(int index, int pointIndex) {
+        int savedIndex = this.pointIndex[index];
+        this.pointIndex[index] = pointIndex;
+        return savedIndex;
     }
 
     @Override

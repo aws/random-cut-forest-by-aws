@@ -21,6 +21,8 @@ import lombok.Data;
 public class NodeStoreState {
     public int[] cutDimension;
     public double[] cutValue;
+    int capacity;
+    int freeIndexPointer;
     /*
      * the following are for SmallNodeStore
      */

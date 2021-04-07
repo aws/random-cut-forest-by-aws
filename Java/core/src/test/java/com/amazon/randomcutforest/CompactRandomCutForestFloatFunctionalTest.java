@@ -15,17 +15,12 @@
 
 package com.amazon.randomcutforest;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.util.Random;
-import java.util.stream.Stream;
-
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -35,10 +30,16 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+import java.util.stream.Stream;
+
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @Tag("functional")
 public class CompactRandomCutForestFloatFunctionalTest {
@@ -828,4 +829,60 @@ public class CompactRandomCutForestFloatFunctionalTest {
         }
         return shingledPoint;
     }
+
+    @Test
+    public void testUpdate() {
+        int dimensions = 10;
+
+        RandomCutForest forest = RandomCutForest.builder().numberOfTrees(1).compactEnabled(true).dimensions(dimensions)
+                .randomSeed(0).sampleSize(4).precision(Precision.SINGLE).build();
+
+        double[][] trainingData = genShingledData(1000, dimensions, 0);
+        double[][] testData = genShingledData(100, dimensions, 1);
+
+        for (int i = 0; i < testData.length; i++) {
+
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeState(true);
+
+            double score = forest.getAnomalyScore(testData[i]);
+            forest.update(testData[i]);
+            RandomCutForestState forestState = mapper.toState(forest);
+            forest = mapper.toModel(forestState);
+        }
+    }
+
+    private static double[][] genShingledData(int size, int dimensions, long seed) {
+        double[][] answer = new double[size][];
+        int entryIndex = 0;
+        boolean filledShingleAtleastOnce = false;
+        double[] history = new double[dimensions];
+        int count = 0;
+        double[] data = getDataD(size + dimensions - 1, 100, 5, seed);
+        for (int j = 0; j < size + dimensions - 1; ++j) { // we stream here ....
+            history[entryIndex] = data[j];
+            entryIndex = (entryIndex + 1) % dimensions;
+            if (entryIndex == 0) {
+                filledShingleAtleastOnce = true;
+            }
+            if (filledShingleAtleastOnce) {
+                // System.out.println("Adding " + j);
+                answer[count++] = getShinglePoint(history, entryIndex, dimensions);
+            }
+        }
+        return answer;
+    }
+
+    private static double[] getDataD(int num, double amplitude, double noise, long seed) {
+
+        double[] data = new double[num];
+        Random noiseprg = new Random(seed);
+        for (int i = 0; i < num; i++) {
+            data[i] = amplitude * cos(2 * PI * (i + 50) / 1000) + noise * noiseprg.nextDouble();
+        }
+
+        return data;
+    }
+
 }
