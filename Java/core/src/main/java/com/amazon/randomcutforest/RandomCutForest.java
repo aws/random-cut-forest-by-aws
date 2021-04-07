@@ -112,6 +112,11 @@ public class RandomCutForest {
     public static final boolean DEFAULT_COMPACT_ENABLED = false;
 
     /**
+     * By default, trees will accept every point until full.
+     */
+    public static final double DEFAULT_INITIAL_ACCEPT_FRACTION = 1.0;
+
+    /**
      * Default floating-point precision for internal data structures.
      */
     public static final Precision DEFAULT_PRECISION = Precision.DOUBLE;
