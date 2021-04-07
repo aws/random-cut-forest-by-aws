@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.sampler;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
 /**
  * <p>
@@ -108,9 +108,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     private final boolean storeSequenceIndexesEnabled;
 
     /**
-     * the fraction of points admitted to the sampler even when the sampler can accept (not full)
-     * this helps control the initial behavior of the points and ensure robustness by ensuring that the
-     * samplers do not all sample the initial set of points.
+     * the fraction of points admitted to the sampler even when the sampler can
+     * accept (not full) this helps control the initial behavior of the points and
+     * ensure robustness by ensuring that the samplers do not all sample the initial
+     * set of points.
      */
     private final double initialAcceptFraction;
 
