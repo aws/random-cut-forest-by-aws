@@ -30,7 +30,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
-import com.amazon.randomcutforest.executor.IUpdateCoordinator;
+import com.amazon.randomcutforest.executor.IStateCoordinator;
 import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
@@ -82,7 +82,7 @@ public class ForestUpdateExecutorBenchmark {
             Random random = new Random();
 
             if (!compactEnabled) {
-                IUpdateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
+                IStateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
                 ComponentList<double[], double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     RandomCutTree tree = RandomCutTree.builder().build();
@@ -99,7 +99,7 @@ public class ForestUpdateExecutorBenchmark {
                 }
             } else {
                 PointStoreDouble store = new PointStoreDouble(dimensions, numberOfTrees * sampleSize);
-                IUpdateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(store);
+                IStateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(store);
                 ComponentList<Integer, double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble(sampleSize, random.nextLong(),

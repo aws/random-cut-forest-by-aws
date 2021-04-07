@@ -29,7 +29,7 @@ import com.amazon.randomcutforest.ComponentList;
 public class SequentialForestUpdateExecutor<PointReference, Point>
         extends AbstractForestUpdateExecutor<PointReference, Point> {
 
-    public SequentialForestUpdateExecutor(IUpdateCoordinator<PointReference, Point> updateCoordinator,
+    public SequentialForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components) {
         super(updateCoordinator, components);
     }
