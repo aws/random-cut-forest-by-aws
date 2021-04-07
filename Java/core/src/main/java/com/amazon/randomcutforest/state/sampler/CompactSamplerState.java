@@ -33,6 +33,10 @@ public class CompactSamplerState {
      */
     private int[] pointIndex;
     /**
+     * boolean for deciding to store sequence indices
+     */
+    private boolean storeSequenceIndicesEnabled;
+    /**
      * The sequence indexes of points in the sample.
      */
     private long[] sequenceIndex;
@@ -44,6 +48,10 @@ public class CompactSamplerState {
      * The maximum number of points that the sampler can contain.
      */
     private int capacity;
+    /**
+     * The behavior of the sampler at initial sampling
+     */
+    private double initialAcceptFraction;
     /**
      * The lambda time-decay parameter for this sampler
      */

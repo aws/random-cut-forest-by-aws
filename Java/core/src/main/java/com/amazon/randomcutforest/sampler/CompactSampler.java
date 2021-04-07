@@ -15,8 +15,11 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
 import java.util.List;
 import java.util.Optional;
@@ -105,6 +108,14 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     private final boolean storeSequenceIndexesEnabled;
 
     /**
+     * the fraction of points admitted to the sampler even when the sampler can
+     * accept (not full) this helps control the initial behavior of the points and
+     * ensure robustness by ensuring that the samplers do not all sample the initial
+     * set of points.
+     */
+    private final double initialAcceptFraction;
+
+    /**
      * Construct a new CompactSampler.
      *
      * @param sampleSize                  The number of points in the sampler when
@@ -120,7 +131,29 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      *                                    sampler.
      */
     public CompactSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled) {
-        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled);
+        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled, DEFAULT_INITIAL_ACCEPT_FRACTION);
+    }
+
+    /**
+     * Construct a new CompactSampler.
+     *
+     * @param sampleSize                  The number of points in the sampler when
+     *                                    full.
+     * @param lambda                      The decay factor used for generating the
+     *                                    weight of the point. For greater values of
+     *                                    lambda we become more biased in favor of
+     *                                    recent points.
+     * @param seed                        The seed value used to create a random
+     *                                    number generator.
+     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
+     *                                    sampled points will be stored in the
+     *                                    sampler.
+     * @param initialAcceptFraction       the fraction of points admitted even when
+     *                                    the sampler can accept a point
+     */
+    public CompactSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled,
+            double initialAcceptFraction) {
+        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled, initialAcceptFraction);
     }
 
     /**
@@ -137,9 +170,13 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
      *                                    sampled points will be stored in the
      *                                    sampler.
+     * @param initialAcceptFraction       the fraction of points admitted to the
+     *                                    sampler even when the sampler can accept
      */
-    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
+    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled,
+            double initialAcceptFraction) {
         super();
+        checkArgument(initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
         this.capacity = sampleSize;
         size = 0;
         weight = new float[sampleSize];
@@ -152,53 +189,14 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
         this.random = random;
         this.lambda = lambda;
+        this.initialAcceptFraction = initialAcceptFraction;
     }
 
     /**
-     * Construct a new compact sampler with the provided state. The 3 arrays
-     * {@code weight}, {@code pointIndex}, and {@code sequenceIndex} define the
-     * points stored in the sampler. In particular, for a given index {@code i} the
-     * values {@code weight[i]}, {@code pointIndex[i]}, and {@code sequenceIndex[i]}
-     * together define a single weighted point.
-     *
-     * Internally, the points defined by {@code weight}, {@code pointIndex}, and
-     * {@code sequenceIndex} are stored in a max-heap with the weight value
-     * determining the heap structure.
-     *
-     * @param sampleSize    The number of points in the sampler when full.
-     * @param size          The number of points currently stored in the sample.
-     * @param lambda        The decay factor used for generating the weight of the
-     *                      point. For greater values of lambda the sampler is more
-     *                      biased in favor of recent points.
-     * @param random        A random number generator that will be used in sampling.
-     * @param weight        An array of weights used for time-decay reservoir
-     *                      sampling.
-     * @param pointIndex    An array of point indexes identifying the sampled
-     *                      points.
-     * @param sequenceIndex An array of sequence indexes corresponding to the
-     *                      sampled points.
-     * @param validateHeap  If true, then the constructor will fail with an
-     *                      IllegalArgumentException if the weight array doesn't
-     *                      satisfy the heap property.
+     * same as above with default accept fraction
      */
-    public CompactSampler(int sampleSize, int size, double lambda, Random random, float[] weight, int[] pointIndex,
-            long[] sequenceIndex, boolean validateHeap, long largestSequenceIndexSeen, long lastUpdateOflambda) {
-        super();
-        checkNotNull(weight, "weight must not be null");
-        checkNotNull(pointIndex, "pointIndex must not be null");
-
-        this.capacity = sampleSize;
-        this.size = size;
-        storeSequenceIndexesEnabled = (sequenceIndex != null);
-        this.random = random;
-        this.lambda = lambda;
-        this.weight = weight;
-        this.pointIndex = pointIndex;
-        this.sequenceIndex = sequenceIndex;
-        this.maxSequenceIndex = largestSequenceIndexSeen;
-        this.sequenceIndexOfMostRecentLambdaUpdate = lastUpdateOflambda;
-
-        reheap(validateHeap);
+    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
+        this(sampleSize, lambda, random, storeSequenceIndexesEnabled, DEFAULT_INITIAL_ACCEPT_FRACTION);
     }
 
     /**
@@ -223,21 +221,31 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
-        if (size < capacity) {
+        if ((size < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
+                || (weight < this.weight[0])) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
+            if (size == capacity) {
+                evictMax();
+            }
             return true;
-        } else if (weight < this.weight[0]) {
-            acceptPointState = new AcceptPointState(sequenceIndex, weight);
-            long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
-            evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
-            --size;
-            this.weight[0] = this.weight[size];
-            this.pointIndex[0] = this.pointIndex[size];
-            swapDown(0);
-            return true;
-        } else {
-            return false;
         }
+        return false;
+    }
+
+    /**
+     * evicts the maximum weight point from the sampler. can be used repeatedly to
+     * change the size of the sampler and associated tree
+     */
+    public void evictMax() {
+        long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
+        evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
+        --size;
+        this.weight[0] = this.weight[size];
+        this.pointIndex[0] = this.pointIndex[size];
+        if (storeSequenceIndexesEnabled) {
+            this.sequenceIndex[0] = this.sequenceIndex[size];
+        }
+        swapDown(0);
     }
 
     /**
@@ -284,24 +292,26 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
 
     @Override
     public void addPoint(Integer pointIndex) {
-        checkState(size < capacity, "sampler full");
-        checkState(acceptPointState != null,
-                "this method should only be called after a successful call to acceptSample(long)");
-        this.weight[size] = acceptPointState.getWeight();
-        this.pointIndex[size] = pointIndex;
-        if (storeSequenceIndexesEnabled) {
-            this.sequenceIndex[size] = acceptPointState.getSequenceIndex();
+        if (pointIndex != null) {
+            checkState(size < capacity, "sampler full");
+            checkState(acceptPointState != null,
+                    "this method should only be called after a successful call to acceptSample(long)");
+            this.weight[size] = acceptPointState.getWeight();
+            this.pointIndex[size] = pointIndex;
+            if (storeSequenceIndexesEnabled) {
+                this.sequenceIndex[size] = acceptPointState.getSequenceIndex();
+            }
+            int current = size++;
+            while (current > 0) {
+                int tmp = (current - 1) / 2;
+                if (this.weight[tmp] < this.weight[current]) {
+                    swapWeights(current, tmp);
+                    current = tmp;
+                } else
+                    break;
+            }
+            acceptPointState = null;
         }
-        int current = size++;
-        while (current > 0) {
-            int tmp = (current - 1) / 2;
-            if (this.weight[tmp] < this.weight[current]) {
-                swapWeights(current, tmp);
-                current = tmp;
-            } else
-                break;
-        }
-        acceptPointState = null;
     }
 
     /**
@@ -388,6 +398,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         return storeSequenceIndexesEnabled;
     }
 
+    public double getInitialAcceptFraction() {
+        return initialAcceptFraction;
+    }
+
     private void swapWeights(int a, int b) {
         int tmp = pointIndex[a];
         pointIndex[a] = pointIndex[b];
@@ -401,6 +415,131 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             long tmpLong = sequenceIndex[a];
             sequenceIndex[a] = sequenceIndex[b];
             sequenceIndex[b] = tmpLong;
+        }
+    }
+
+    public static class Builder<T extends CompactSampler.Builder<T>> {
+
+        // We use Optional types for optional primitive fields when it doesn't make
+        // sense to use a constant default.
+
+        private int capacity = DEFAULT_SAMPLE_SIZE;
+        private int size = DEFAULT_SAMPLE_SIZE;
+        private float[] weight = null;
+        private int[] pointIndex = null;
+        private long[] sequenceIndex = null;
+        private double lambda = 0;
+        private boolean validateHeap = false;
+        private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+        private Random random = new Random();
+        private long maxSequenceIndex = 0;
+        private long sequenceIndexOfMostRecentLambdaUpdate = 0;
+        private double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
+
+        public T capacity(int capacity) {
+            this.capacity = capacity;
+            return (T) this;
+        }
+
+        public T size(int size) {
+            this.size = size;
+            return (T) this;
+        }
+
+        public T weight(float[] weight) {
+            this.weight = weight;
+            return (T) this;
+        }
+
+        public T pointIndex(int[] pointIndex) {
+            this.pointIndex = pointIndex;
+            return (T) this;
+        }
+
+        public T sequenceIndex(long[] sequenceIndex) {
+            this.sequenceIndex = sequenceIndex;
+            return (T) this;
+        }
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+            return (T) this;
+        }
+
+        public T validateHeap(boolean validateHeap) {
+            this.validateHeap = validateHeap;
+            return (T) this;
+        }
+
+        public T seed(long seed) {
+            this.random = new Random(seed);
+            return (T) this;
+        }
+
+        public T random(Random random) {
+            this.random = random;
+            return (T) this;
+        }
+
+        public T maxSequenceIndex(long maxSequenceIndex) {
+            this.maxSequenceIndex = maxSequenceIndex;
+            return (T) this;
+        }
+
+        public T mostRecentLambdaUpdate(long sequenceIndexOfMostRecentLambdaUpdate) {
+            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentLambdaUpdate;
+            return (T) this;
+        }
+
+        public T initialAcceptFraction(double initialAcceptFraction) {
+            this.initialAcceptFraction = initialAcceptFraction;
+            return (T) this;
+        }
+
+        public T lambda(double lambda) {
+            this.lambda = lambda;
+            return (T) this;
+        }
+
+        public CompactSampler build() {
+            return new CompactSampler(this);
+        }
+    }
+
+    public CompactSampler(Builder<?> builder) {
+        super();
+        checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
+        checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
+
+        this.capacity = builder.capacity;
+        this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
+        this.initialAcceptFraction = builder.initialAcceptFraction;
+        this.random = builder.random;
+        this.lambda = builder.lambda;
+        this.maxSequenceIndex = builder.maxSequenceIndex;
+        this.sequenceIndexOfMostRecentLambdaUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
+
+        if (builder.weight != null || builder.pointIndex != null || builder.weight != null
+                || builder.sequenceIndex != null || builder.validateHeap) {
+            checkArgument(builder.weight.length == builder.capacity, " incorrect state");
+            checkArgument(builder.pointIndex.length == builder.capacity, " incorrect state");
+            checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
+                    " incorrect state");
+            this.weight = builder.weight;
+            this.pointIndex = builder.pointIndex;
+            this.sequenceIndex = builder.sequenceIndex;
+            size = builder.size;
+            reheap(builder.validateHeap);
+        } else {
+            checkArgument(builder.size == 0, "incorrect state");
+            size = 0;
+            weight = new float[builder.capacity];
+            pointIndex = new int[builder.capacity];
+            if (storeSequenceIndexesEnabled) {
+                this.sequenceIndex = new long[builder.capacity];
+            } else {
+                this.sequenceIndex = null;
+            }
         }
     }
 }

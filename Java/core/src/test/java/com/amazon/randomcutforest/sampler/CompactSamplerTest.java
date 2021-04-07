@@ -77,14 +77,15 @@ public class CompactSamplerTest {
 
     @Test
     public void testNewFromExistingWeights() {
-        int sampleSize = 10;
+        int sampleSize = 3;
         double lambda = 0.1;
 
         // weight array is valid heap
         float[] weight = { 0.4f, 0.3f, 0.2f };
         int[] pointIndex = { 1, 2, 3 };
-        CompactSampler sampler = new CompactSampler(sampleSize, weight.length, lambda, new Random(), weight, pointIndex,
-                null, true, 0, 0);
+        CompactSampler sampler = new CompactSampler.Builder().capacity(sampleSize).size(weight.length).lambda(lambda)
+                .random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null).validateHeap(true)
+                .build();
 
         assertFalse(sampler.getEvictedPoint().isPresent());
         assertFalse(sampler.isStoreSequenceIndexesEnabled());
@@ -111,7 +112,8 @@ public class CompactSamplerTest {
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
     public void testAddPoint(Random random, CompactSampler sampler) {
-        when(random.nextDouble()).thenReturn(0.5).thenReturn(0.01).thenReturn(0.99);
+        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.5).thenReturn(0.0).thenReturn(0.01).thenReturn(0.0)
+                .thenReturn(0.99);
 
         sampler.acceptPoint(10L);
         double weight1 = sampler.acceptPointState.getWeight();
@@ -196,7 +198,8 @@ public class CompactSamplerTest {
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
     public void testGetScore(Random random, CompactSampler sampler) {
-        when(random.nextDouble()).thenReturn(0.25).thenReturn(0.75).thenReturn(0.50);
+        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
+                .thenReturn(0.50);
 
         sampler.update(1, 101);
         sampler.update(2, 102);
@@ -232,7 +235,9 @@ public class CompactSamplerTest {
         weightArray[i] = weightArray[2 * i + 1];
         weightArray[2 * i + 1] = f;
 
-        assertThrows(IllegalStateException.class, () -> new CompactSampler(sampleSize, sampleSize, lambda, random,
-                weightArray, sampler.getPointIndexArray(), sampler.getSequenceIndexArray(), true, 0, 0));
+        assertThrows(IllegalStateException.class,
+                () -> new CompactSampler.Builder().capacity(sampleSize).size(sampleSize).lambda(lambda).random(random)
+                        .weight(weightArray).pointIndex(sampler.getPointIndexArray())
+                        .sequenceIndex(sampler.getSequenceIndexArray()).validateHeap(true).build());
     }
 }
