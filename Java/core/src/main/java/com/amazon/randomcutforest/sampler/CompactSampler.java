@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
 /**
  * <p>
@@ -108,7 +108,9 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     private final boolean storeSequenceIndexesEnabled;
 
     /**
-     * controls the behavior of the initial set of points
+     * the fraction of points admitted to the sampler even when the sampler can accept (not full)
+     * this helps control the initial behavior of the points and ensure robustness by ensuring that the
+     * samplers do not all sample the initial set of points.
      */
     private final double initialAcceptFraction;
 
@@ -233,7 +235,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * evicts the maximum weight point from the sampler. can be used repeatedly to
      * change the size of the sampler and associated tree
      */
-
     public void evictMax() {
         long evictedIndex = storeSequenceIndexesEnabled ? this.sequenceIndex[0] : 0L;
         evictedPoint = new Weighted<>(this.pointIndex[0], this.weight[0], evictedIndex);
@@ -505,9 +506,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     }
 
     public CompactSampler(Builder<?> builder) {
-        // int sampleSize, double lambda, Random random, boolean
-        // storeSequenceIndexesEnabled,
-        // double initialAcceptFraction) {
         super();
         checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
         checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
