@@ -28,25 +28,20 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
 
     public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, boolean cacheEnabled,
             boolean centerOfMassEnabled, boolean enableSequenceIndices) {
-        super(maxSize, seed, cacheEnabled, centerOfMassEnabled, enableSequenceIndices);
-        checkNotNull(pointStore, "pointStore must not be null");
-        super.pointStore = pointStore;
-        if (cacheEnabled) {
-            cachedBoxes = new BoundingBox[maxSize - 1];
-        }
-        if (centerOfMassEnabled) {
-            pointSum = new double[maxSize - 1][];
-        }
+        this(new Builder().pointStore(pointStore).maxSize(maxSize).randomSeed(seed)
+                .storeSequenceIndexesEnabled(enableSequenceIndices).centerOfMassEnabled(centerOfMassEnabled)
+                .enableBoundingBoxCaching(cacheEnabled));
     }
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, INodeStore nodeStore,
-            int root, boolean cacheEnabled) {
-        super(new Builder().pointStore(pointStore).nodeStore(nodeStore).root(root).randomSeed(seed).maxSize(maxSize)
-                .enableBoundingBoxCaching(cacheEnabled));
-        checkNotNull(pointStore, "pointStore must not be null");
-        super.pointStore = pointStore;
-        if (cacheEnabled) {
+    public CompactRandomCutTreeDouble(CompactRandomCutTreeDouble.Builder builder) {
+        super(builder);
+        checkNotNull(builder.pointStoreView, "pointStore must not be null");
+        super.pointStore = builder.pointStoreView;
+        if (builder.boundingBoxCachingEnabled) {
             cachedBoxes = new BoundingBox[maxSize - 1];
+        }
+        if (builder.centerOfMassEnabled) {
+            pointSum = new double[maxSize - 1][];
         }
     }
 
@@ -116,6 +111,10 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         public Builder pointStore(IPointStoreView<double[]> pointStoreView) {
             this.pointStoreView = pointStoreView;
             return this;
+        }
+
+        public CompactRandomCutTreeDouble build() {
+            return new CompactRandomCutTreeDouble(this);
         }
     }
 }

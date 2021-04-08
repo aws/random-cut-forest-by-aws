@@ -69,7 +69,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
-        this(new Builder<Builder<?>>().maxSize(maxSize).randomSeed(seed).enableBoundingBoxCaching(enableCache)
+        this(new Builder<>().maxSize(maxSize).randomSeed(seed).enableBoundingBoxCaching(enableCache)
                 .centerOfMassEnabled(enableCenterOfMass).storeSequenceIndexesEnabled(enableSequenceIndices));
         /*
          * checkArgument(maxSize > 0, "maxSize must be greater than 0"); this.maxSize =
@@ -84,7 +84,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
          */
     }
 
-    public AbstractCompactRandomCutTree(Builder builder) {
+    public AbstractCompactRandomCutTree(AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
 
@@ -472,7 +472,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     // TODO: fix ownership of default variables
-    public static class Builder<T> extends AbstractRandomCutTree.Builder<Builder<T>> {
+    public static class Builder<T extends Builder<T>> extends AbstractRandomCutTree.Builder<T> {
 
         private INodeStore nodeStore = null;
         private int root = NULL;

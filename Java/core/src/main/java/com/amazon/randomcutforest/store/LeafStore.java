@@ -50,7 +50,7 @@ public class LeafStore extends IndexManager implements ILeafStore {
         mass = new int[capacity];
     }
 
-    public LeafStore(int[] pointIndex, int[] parentIndex, int[] mass, int[] freeIndexes, short freeIndexPointer) {
+    public LeafStore(int[] pointIndex, int[] parentIndex, int[] mass, int[] freeIndexes, int freeIndexPointer) {
         super(freeIndexes, freeIndexPointer);
 
         checkNotNull(pointIndex, "pointIndex must not be null");
