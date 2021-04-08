@@ -70,7 +70,7 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
         pointIndex = new int[capacity];
         parentIndex = new short[capacity];
         mass = new short[capacity];
-        Arrays.fill(pointIndex, (short) PointStore.INFEASIBLE_INDEX);
+        Arrays.fill(pointIndex, (short) PointStore.INFEASIBLE_POINTSTORE_INDEX);
         Arrays.fill(parentIndex, (short) NULL);
     }
 

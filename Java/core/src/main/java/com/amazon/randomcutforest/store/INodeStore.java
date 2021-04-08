@@ -162,7 +162,7 @@ public interface INodeStore {
      * 
      * @param index node
      */
-    void increaseMassOfAncestorsAndItself(int index);
+    void increaseMassOfSelfAndAncestors(int index);
 
     /**
      * decreases the mass of node as well as all its ancestors by 1 note that all
@@ -171,7 +171,7 @@ public interface INodeStore {
      *
      * @param index node
      */
-    void decreaseMassOfAncestorsAndItself(int index);
+    void decreaseMassOfSelfAndAncestors(int index);
 
     /**
      * returns the sibling of node, both of whom save the same parent

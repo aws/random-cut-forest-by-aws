@@ -60,6 +60,7 @@ public class IndexManager {
      *                         freeIndexPointer (inclusive) contain valid index
      *                         values.
      */
+
     public IndexManager(int[] freeIndexes, int freeIndexPointer) {
         checkNotNull(freeIndexes, "freeIndexes must not be null");
         checkFreeIndexes(freeIndexes, freeIndexPointer);

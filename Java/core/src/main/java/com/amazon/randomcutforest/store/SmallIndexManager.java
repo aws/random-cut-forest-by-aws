@@ -26,9 +26,7 @@ import java.util.Set;
 
 /**
  * This class defines common functionality for Store classes, including
- * maintaining the stack of free pointers. The stack may be implicitly defined.
- * if freeIndexPointer exceeds freeIndexes.length, then any intermediate
- * location say i, must contain entry capacity - i - 1
+ * maintaining the stack of free pointers.
  */
 public class SmallIndexManager {
 
@@ -41,6 +39,13 @@ public class SmallIndexManager {
         this(capacity, null);
     }
 
+    /**
+     * this constructor sets up a SmallIndexManager based on a bitset that informs
+     * which indices are already in use; the bitset is used internally as well.
+     * 
+     * @param capacity the maximum number of indices
+     * @param bits     bitset indicating the indices already in use
+     */
     public SmallIndexManager(short capacity, BitSet bits) {
         this.capacity = capacity;
         if (bits == null) {
@@ -48,6 +53,11 @@ public class SmallIndexManager {
             freeIndexPointer = (short) (capacity - 1);
             occupied = new BitSet(capacity);
         } else {
+            /**
+             * The stack may be implicitly defined. if freeIndexPointer exceeds
+             * freeIndexes.length, then any intermediate location say i, must contain entry
+             * capacity - i - 1
+             */
             freeIndexPointer = -1;
             occupied = bits;
             for (int i = 0; i < capacity; i++) {
@@ -77,21 +87,6 @@ public class SmallIndexManager {
      *                         freeIndexPointer (inclusive) contain valid index
      *                         values.
      */
-    public SmallIndexManager(short[] freeIndexes, short freeIndexPointer) {
-        checkNotNull(freeIndexes, "freeIndexes must not be null");
-        checkFreeIndexes(freeIndexes, freeIndexPointer);
-
-        this.capacity = (short) freeIndexes.length;
-        this.freeIndexes = freeIndexes;
-        this.freeIndexPointer = freeIndexPointer;
-
-        occupied = new BitSet(capacity);
-        occupied.set(0, capacity);
-
-        for (int i = 0; i <= freeIndexPointer; i++) {
-            occupied.clear(freeIndexes[i]);
-        }
-    }
 
     public SmallIndexManager(int capacity, short[] freeIndexes, short freeIndexPointer) {
         checkNotNull(freeIndexes, "freeIndexes must not be null");
@@ -110,20 +105,28 @@ public class SmallIndexManager {
                 occupied.clear(capacity - i - 1);
             }
         }
-
     }
 
-    public SmallIndexManager(int capacity, int oldCapacity) {
-        checkArgument(capacity > 0, "capacity must be greater than 0");
-        this.capacity = (short) capacity;
-        freeIndexes = new short[0];
+    // as above, used for the existing tests
+    public SmallIndexManager(short[] freeIndexes, short freeIndexPointer) {
+        this(freeIndexes.length, freeIndexes, freeIndexPointer);
+    }
 
-        freeIndexPointer = (short) (capacity - oldCapacity - 1);
-        occupied = new BitSet(capacity);
+    /**
+     * a method that returns a partially filled index manager to allow for expansion
+     * 
+     * @param capacity    new capacity
+     * @param oldCapacity old capacity
+     * @return a new index manager where the older indexes are marked to be in use
+     */
+    public static SmallIndexManager expandedSmallIndexManager(int capacity, int oldCapacity) {
+        checkArgument(capacity > 0, "capacity must be greater than 0");
+        BitSet bits = new BitSet(capacity);
 
         for (int j = 0; j < oldCapacity; j++) {
-            occupied.set(j);
+            bits.set(j);
         }
+        return new SmallIndexManager((short) capacity, bits);
     }
 
     private static void checkFreeIndexes(short[] freeIndexes, short freeIndexPointer) {
@@ -194,6 +197,9 @@ public class SmallIndexManager {
                 // entry; but freeIndexPointer can be -1 as well
                 // this can be changed to a larger value to reduce repeated
                 // allocation/deallocation
+                // we are populating these intermediate values because the newly released
+                // "index"
+                // breaks the implicit guarantee maintained so far.
                 int cap = Math.min(capacity, freeIndexPointer + 2);
                 int oldLength = freeIndexes.length;
                 freeIndexes = Arrays.copyOf(freeIndexes, cap);

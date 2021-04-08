@@ -174,7 +174,7 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
-    public void increaseMassOfAncestorsAndItself(int index) {
+    public void increaseMassOfSelfAndAncestors(int index) {
         while (index != NULL) {
             ++mass[index];
             index = parentIndex[index];
@@ -182,7 +182,7 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
     }
 
     @Override
-    public void decreaseMassOfAncestorsAndItself(int index) {
+    public void decreaseMassOfSelfAndAncestors(int index) {
         while (index != (short) NULL) {
             --mass[index];
             index = parentIndex[index];
