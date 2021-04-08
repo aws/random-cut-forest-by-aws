@@ -69,6 +69,16 @@ public interface ILeafStore {
     int getPointIndex(int index);
 
     /**
+     * sets/replaces the point index in a leafstore entry
+     * 
+     * @param index      node
+     * @param pointIndex the new index of the point corresponding to the leaf
+     * @return the older index (useful for audit)
+     */
+
+    int setPointIndex(int index, int pointIndex);
+
+    /**
      * increases the mass of the leaf and returns the value
      * 
      * @param index node

@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.store;
 
+import java.util.Map;
+
 /**
  * An interface for describing access to the node ntore for different types of
  * trees.
@@ -78,12 +80,28 @@ public interface INodeStore {
     int getRightIndex(int index);
 
     /**
+     * sets rightChild
+     *
+     * @param index    node
+     * @param newIndex new right child
+     */
+    void setRightIndex(int index, int newIndex);
+
+    /**
      * gets leftChild
      * 
      * @param index node
      * @return index of left child (can be leaf)
      */
     int getLeftIndex(int index);
+
+    /**
+     * sets leftChild
+     *
+     * @param index    node
+     * @param newIndex new left child
+     */
+    void setLeftIndex(int index, int newIndex);
 
     /**
      * increments mass of node by 1 and returns the new value
@@ -123,10 +141,19 @@ public interface INodeStore {
     /**
      * returns the current mass (number of nodes in he subtree under node)
      * 
-     * @param index
-     * @return
+     * @param index node
+     * @return the mass of the node
      */
     int getMass(int index);
+
+    /**
+     * sets the current mass (number of nodes in he subtree under node) useful for
+     * rebuilding a tree
+     *
+     * @param index   node
+     * @param newMass the new mass of the node
+     */
+    void setMass(int index, int newMass);
 
     /**
      * increases the mass of node as well as all its ancestors by 1 note that all
@@ -135,7 +162,16 @@ public interface INodeStore {
      * 
      * @param index node
      */
-    void increaseMassOfAncestorsAndItself(int index);
+    void increaseMassOfSelfAndAncestors(int index);
+
+    /**
+     * decreases the mass of node as well as all its ancestors by 1 note that all
+     * these nodes are internal nodes and we eliminate the back and forth in a
+     * single call
+     *
+     * @param index node
+     */
+    void decreaseMassOfSelfAndAncestors(int index);
 
     /**
      * returns the sibling of node, both of whom save the same parent
@@ -144,7 +180,16 @@ public interface INodeStore {
      * @param node   the node
      * @return the sibling
      */
-
     public int getSibling(int parent, int node);
+
+    /**
+     * the following returns a map of (leaves,correponding parent) pairs to enable
+     * validation in serialization
+     *
+     * @return map of leaf,corresponding pairs in use for the node store
+     */
+    default Map<Integer, Integer> getLeavesAndParents() {
+        return null;
+    }
 
 }

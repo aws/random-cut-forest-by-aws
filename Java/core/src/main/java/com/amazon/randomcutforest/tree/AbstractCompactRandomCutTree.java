@@ -365,7 +365,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     @Override
     protected void increaseMassOfAncestors(Integer mergedNode) {
-        nodeStore.increaseMassOfAncestorsAndItself(getParent(mergedNode.intValue()));
+        nodeStore.increaseMassOfSelfAndAncestors(getParent(mergedNode.intValue()));
     }
 
     @Override

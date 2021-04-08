@@ -30,6 +30,9 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
  */
 public abstract class PointStore<Store, Point> extends IndexManager implements IPointStore<Point> {
 
+    public static int INFEASIBLE_POINTSTORE_LOCATION = -2;
+
+    public static int INFEASIBLE_POINTSTORE_INDEX = -1;
     /**
      * generic store class
      */
