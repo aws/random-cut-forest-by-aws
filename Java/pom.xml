@@ -134,7 +134,7 @@
                     <execution>
                         <phase>compile</phase>
                         <goals>
-                            <goal>check</goal>
+                            <goal>apply</goal>
                         </goals>
                     </execution>
                 </executions>
