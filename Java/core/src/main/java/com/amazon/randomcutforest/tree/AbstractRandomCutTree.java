@@ -23,6 +23,7 @@ import java.util.Random;
 import java.util.function.Function;
 
 import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.config.Config;
 
@@ -60,10 +61,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     public AbstractRandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
-        random = new Random(seed);
-        this.enableCache = enableCache;
-        this.enableCenterOfMass = enableCenterOfMass;
-        this.enableSequenceIndices = enableSequenceIndices;
+        this(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
     }
 
     public AbstractRandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
@@ -72,6 +70,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         this.enableCache = enableCache;
         this.enableCenterOfMass = enableCenterOfMass;
         this.enableSequenceIndices = enableSequenceIndices;
+    }
+
+    public AbstractRandomCutTree(AbstractRandomCutTree.Builder builder) {
+        this.random = new Random(builder.randomSeed);
+        this.enableCache = builder.boundingBoxCachingEnabled;
+        this.enableCenterOfMass = builder.centerOfMassEnabled;
+        this.enableSequenceIndices = builder.storeSequenceIndexesEnabled;
+        this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
     }
 
     @Override
@@ -236,6 +242,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // note the bounding boxes of these ancestor nodes will remain unchanged
     abstract protected void increaseMassOfAncestors(NodeReference mergedNode);
 
+    abstract protected void decreaseMassOfAncestors(NodeReference mergedNode);
+
     abstract protected int getMass(NodeReference nodeReference);
 
     abstract protected void addSequenceIndex(NodeReference node, long uniqueSequenceNumber);
@@ -271,74 +279,141 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * method to delete a point from the tree
-     *
+     * finds the reference to the leaf node which corresponds to the path followed
+     * in the tree by an input point
+     * 
+     * @param point point
+     * @return reference of the leaf node
      */
+    NodeReference findLeaf(Point point) {
+        NodeReference nodeReference = root;
+        while (!isLeaf(nodeReference)) {
+            nodeReference = (leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))
+                    ? getLeftChild(nodeReference)
+                    : getRightChild(nodeReference);
+        }
+        return nodeReference;
+    }
 
-    @Override
-    public void deletePoint(PointReference pointReference, long sequenceNumber) {
-        checkState(root != null, "root must not be null");
-        deletePoint(root, getPointFromPointReference(pointReference), sequenceNumber, 0);
+    NodeReference findLeafAndVerify(Point point) {
+        NodeReference nodeReference = findLeaf(point);
+        Point oldPoint = getPointFromLeafNode(nodeReference);
+        if (!equals(oldPoint, point)) {
+            throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference)) + " "
+                    + nodeReference + " node " + false + " Inconsistency in trees.");
+        }
+        return nodeReference;
     }
 
     /**
-     * This function deletes the point from the tree recursively. We traverse the
-     * tree based on the cut stored in each interior node until we reach a leaf
-     * node. We then delete the leaf node if the mass of the node is 1, otherwise we
-     * reduce the mass by 1. The bounding boxes continue
-     *
-     * @param nodeReference  node that we are visiting in the tree.
-     * @param point          the point that is being deleted from the tree.
-     * @param sequenceNumber the unique id of the point (if sequence enabled)
-     * @param level          the level (i.e., the length of the path to the root) of
-     *                       the node being evaluated.
+     * the following function returns the number of copies of a point in the tree
+     * and switches the reference to the provided reference. This may be useful for
+     * collating duplicate points across trees.
+     * 
+     * @param leafReference reference of the leaf node
+     * @param newRef        reference of the point stored at the leaf node
+     * @return the number of copies of the point at leaf node
+     */
+    abstract void setLeafPointReference(NodeReference leafReference, PointReference newRef);
+
+    /**
+     * the following switches the reference of any copy of the point used to the new
+     * reference if the point does not exist then an exception is raised
+     * 
+     * @param newRef the new reference of the point
+     */
+    protected void switchLeafReference(PointReference newRef) {
+        checkNotNull(newRef, " cannot be null ");
+        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(newRef));
+        setLeafPointReference(nodeReference, newRef);
+    }
+
+    /**
+     * returns the reference to a point used by the tree, or null if the point is
+     * not being used
+     * 
+     * @param newReference a new reference to the point
+     * @return the exisitng reference to that point, or null if the actual point is
+     *         not in use
+     */
+    protected PointReference getEquivalentReference(PointReference newReference) {
+        Point point = getPointFromPointReference(newReference);
+        NodeReference nodeReference = findLeaf(point);
+        if (nodeReference != null) {
+            PointReference reference = getPointReference(nodeReference);
+            if (!equals(point, getPointFromPointReference(reference))) {
+                return null;
+            }
+            return reference;
+        }
+        return null;
+    }
+
+    /**
+     * the following returns the number of copies of a point given a reference. If
+     * the point is not in the tree then an exception is raised; but if the
+     * reference in the tree is not the same then the answer is zero
+     * 
+     * @param reference a reference to a point
+     * @return the number of copies the exact reference is present
      */
 
-    private void deletePoint(NodeReference nodeReference, Point point, long sequenceNumber, int level) {
+    protected int getCopiesOfReference(PointReference reference) {
+        checkNotNull(reference, " reference cannot be null ");
+        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(reference));
+        return (reference == getPointReference(nodeReference)) ? getMass(nodeReference) : 0;
+    }
 
-        if (isLeaf(nodeReference)) {
-            Point oldPoint = getPointFromLeafNode(nodeReference);
-            if (!equals(oldPoint, point)) {
-                throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference))
-                        + " " + nodeReference + " node " + false + " Inconsistency in trees in delete step here.");
-            }
-            if (enableSequenceIndices) {
-                deleteSequenceIndex(nodeReference, sequenceNumber);
-            }
-            // decrease mass for the delete
-            if (decrementMass(nodeReference) > 0) {
-                updateAncestorPointSum(nodeReference);
-                return;
-            }
+    /**
+     * deletes a point from the tree
+     * 
+     * @param pointReference the reference of the point
+     * @param sequenceNumber the sequence number (in case we are storing that in the
+     *                       leaves)
+     * @return the reference used by the leaf node (after verifying equality)
+     */
 
-            NodeReference parent = getParent(nodeReference);
+    @Override
+    public PointReference deletePoint(PointReference pointReference, long sequenceNumber) {
+        checkState(root != null, "root must not be null");
 
-            if (parent == null) {
-                root = null;
-                delete(nodeReference);
-                return;
-            }
-            // parent is guaranteed to be an internal node
+        Point point = getPointFromPointReference(pointReference);
+        NodeReference nodeReference = findLeafAndVerify(point);
+        if (enableSequenceIndices) {
+            deleteSequenceIndex(nodeReference, sequenceNumber);
+        }
+        PointReference returnVal = getPointReference(nodeReference);
 
-            NodeReference grandParent = getParent(parent);
-            if (grandParent == null) {
-                root = getSibling(nodeReference);
-                setParent(root, null);
-            } else {
-                replaceNodeBySibling(grandParent, parent, nodeReference);
-                updateAncestorNodesAfterDelete(grandParent, point);
-            }
-            delete(nodeReference);
-            delete(parent);
-            return;
+        decreaseMassOfAncestors(nodeReference);
+        // the node is not included as its ancestor
+        // the mass of the parent needs to be 0 for it to be free to be reused
+
+        // decrease mass for the delete
+        if (decrementMass(nodeReference) > 0) {
+            updateAncestorPointSum(nodeReference);
+            return returnVal;
         }
 
-        decrementMass(nodeReference);
-        // node is not a leaf, and is an internal node
-        NodeReference child = leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference))
-                ? getLeftChild(nodeReference)
-                : getRightChild(nodeReference);
-        deletePoint(child, point, sequenceNumber, level + 1);
+        NodeReference parent = getParent(nodeReference);
+
+        if (parent == null) {
+            root = null;
+            delete(nodeReference);
+            return returnVal;
+        }
+        // parent is guaranteed to be an internal node
+
+        NodeReference grandParent = getParent(parent);
+        if (grandParent == null) {
+            root = getSibling(nodeReference);
+            setParent(root, null);
+        } else {
+            replaceNodeBySibling(grandParent, parent, nodeReference);
+            updateAncestorNodesAfterDelete(grandParent, point);
+        }
+        delete(nodeReference);
+        delete(parent);
+        return returnVal;
     }
 
     abstract void setCachedBox(NodeReference node, AbstractBoundingBox<Point> savedBox);
@@ -362,176 +437,130 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * The following function adjusts the tree (if the issue has not been resolved
-     * yet) based on the information in AddPointState which corresponds to the
-     * particulars of the cut and the node that is being separated by the cut as a
-     * sibling of the point
-     *
-     * @param point         the actual values
-     * @param parentIndex   index of the ancestor node (can be NULL for root) above
-     *                      which no changes need to be made
-     * @param addPointState the information about the cut.
-     */
-
-    protected void resolve(Point point, NodeReference parentIndex,
-            AddPointState<Point, NodeReference, PointReference> addPointState) {
-        if (!addPointState.getResolved()) {
-            addPointState.setResolved();
-            NodeReference siblingNode = addPointState.getSiblingOffset();
-            int cutDimension = addPointState.getCutDimension();
-            double cutValue = addPointState.getCutValue();
-            int oldMass = getMass(siblingNode);
-            NodeReference leafNode = addLeaf(addPointState.getPointIndex());
-            NodeReference mergedNode = leftOf(point, cutDimension, cutValue)
-                    ? addNode(leafNode, siblingNode, cutDimension, cutValue, (oldMass + 1))
-                    : addNode(siblingNode, leafNode, cutDimension, cutValue, (oldMass + 1));
-
-            NodeReference parent = getParent(siblingNode);
-            if (parent == null) {
-                root = mergedNode;
-            } else {
-                replaceChild(parent, siblingNode, mergedNode);
-            }
-
-            setParent(leafNode, mergedNode);
-            setParent(siblingNode, mergedNode);
-            // manage bounding boxes, including caching, as well as centerOfMass
-            updateAncestorNodesAfterAdd(addPointState.getSavedBox(), mergedNode, point, parentIndex);
-            if (enableSequenceIndices) {
-                addSequenceIndex(leafNode, addPointState.getSequenceNumber());
-            }
-        }
-
-    }
-
-    /**
-     * This function adds a point to the tree recursively starting from the leaf
-     * node.
-     *
-     * @param nodeReference the current node in the tree we are on
-     * @param point         the point that we want to add to the tree
-     * @param pointIndex    is the location of the new copy of the point in point
-     *                      store
-     *
-     * @return the integer index of the inserted point. If a previous copy is found
-     *         then the index of the previous copy is returned. That helps in
-     *         maintaining the number of times a particular vector has been seen by
-     *         some tree. If no duplicate is found then pointIndex is returned.
-     */
-
-    private AddPointState<Point, NodeReference, PointReference> addPoint(NodeReference nodeReference, Point point,
-            PointReference pointIndex, long sequenceNumber) {
-
-        if (isLeaf(nodeReference)) {
-            Point oldPoint = getPointFromLeafNode(nodeReference);
-            if (equals(oldPoint, point)) {
-                // the inserted point is equal to an existing leaf point
-                incrementMass(nodeReference);
-                increaseMassOfAncestors(nodeReference);
-                if (enableSequenceIndices) {
-                    addSequenceIndex(nodeReference, sequenceNumber);
-                }
-                updateAncestorPointSum(nodeReference);
-                AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(
-                        getPointReference(nodeReference));
-                // the following will ensure that no further processing happens
-                // note that boxes (if present) do not need to be updated
-                // the index of the duplicate point is saved
-                newState.setResolved();
-                return newState;
-            } else {
-                AbstractBoundingBox<Point> mergedBox = getInternalTwoPointBox(point, oldPoint);
-                Cut cut = randomCut(random, mergedBox);
-                // the cut is between a leaf node and the new point; it must exist
-                AddPointState<Point, NodeReference, PointReference> newState = new AddPointState<>(pointIndex);
-                newState.initialize(nodeReference, cut.getDimension(), cut.getValue(), sequenceNumber, mergedBox,
-                        getMutableLeafBoxFromLeafNode(nodeReference));
-                return newState;
-            }
-        }
-
-        NodeReference nextNode;
-        NodeReference sibling;
-
-        if ((leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))) {
-            nextNode = getLeftChild(nodeReference);
-            sibling = getRightChild(nodeReference);
-        } else {
-            nextNode = getRightChild(nodeReference);
-            sibling = getLeftChild(nodeReference);
-        }
-
-        // we recurse in a preorder traversal over the tree
-        AddPointState<Point, NodeReference, PointReference> addPointState = addPoint(nextNode, point, pointIndex,
-                sequenceNumber);
-
-        if (!addPointState.getResolved()) {
-            AbstractBoundingBox<Point> existingBox;
-            if (enableCache) {
-                // if the boxes are being cached, use the box if present, otherwise
-                // generate and cache the box
-                existingBox = getBoundingBox(nodeReference);
-                // uncomment to test
-                // checkState(existingBox.equals(constructBoxInPlace(nodeReference)), " error");
-            } else {
-                // the boxes are not present, merge the bounding box of the sibling of the last
-                // seen child (nextNode) to the stored box in the state and save it
-                existingBox = addPointState.getCurrentBox().addBox(getBoundingBox(sibling));
-                // note that existingBox will remain mutable
-            }
-
-            if (existingBox.contains(point)) {
-                // resolve the add, by modifying (if present) the bounding boxes corresponding
-                // to current node (nodeReference) all the way to the root
-                resolve(point, nodeReference, addPointState);
-                return addPointState;
-            }
-            // generate a new cut and see if it separates the new point
-            AbstractBoundingBox<Point> mergedBox = existingBox.copy().addPoint(point);
-            Cut cut = randomCut(random, mergedBox);
-            // avoid generation of mergedBox?
-            int splitDimension = cut.getDimension();
-            double splitValue = cut.getValue();
-            double minValue = existingBox.getMinValue(splitDimension);
-            double maxValue = existingBox.getMaxValue(splitDimension);
-
-            if (minValue > splitValue || maxValue <= splitValue) {
-                // the cut separates the new point; update the state to store information
-                // about the most recent cut
-                addPointState.initialize(nodeReference, splitDimension, splitValue, sequenceNumber, mergedBox,
-                        existingBox);
-            }
-        }
-        return addPointState;
-    }
-
-    /**
      * adds a point to the tree
-     * 
+     *
+     * @param pointReference the reference of the point to be added
      * @param sequenceNumber the index of the point in PointStore and the
      *                       corresponding timestamp
      *
-     * @return the index of the inserted point, which can be the input or the index
-     *         of a previously seen copy
+     * @return the reference of the inserted point, which can be the input or a
+     *         reference to a previously seen copy
      */
 
     public PointReference addPoint(PointReference pointReference, long sequenceNumber) {
-        int saveMass = getMass();
-        Point pointValue = getPointFromPointReference(pointReference);
+
+        NodeReference leafNodeForAdd;
         if (root == null) {
-            root = addLeaf(pointReference);
-            if (enableSequenceIndices) {
-                addSequenceIndex(root, sequenceNumber);
-            }
-            checkState(saveMass + 1 == getMass(), "incorrect add");
-            return pointReference;
+            leafNodeForAdd = root = addLeaf(pointReference);
         } else {
-            AddPointState<Point, NodeReference, PointReference> addPointState = addPoint(root, pointValue,
-                    pointReference, sequenceNumber);
-            resolve(pointValue, null, addPointState);
-            checkState(saveMass + 1 == getMass(), "incorrect add");
-            return addPointState.getPointIndex();
+            Point point = getPointFromPointReference(pointReference);
+            NodeReference savedSiblingNode;
+            Cut savedCut;
+            AbstractBoundingBox<Point> savedBox;
+            AbstractBoundingBox<Point> currentUnmergedBox;
+
+            NodeReference followReference = findLeaf(point);
+
+            PointReference leafPointReference = getPointReference(followReference);
+            Point oldPoint = (leafPointReference == null) ? null : getPointFromPointReference(leafPointReference);
+            if (leafPointReference == null || equals(oldPoint, point)) {
+                // the inserted point is equal to an existing leaf point
+                if (leafPointReference == null) {
+                    setLeafPointReference(followReference, pointReference);
+                }
+                incrementMass(followReference);
+                increaseMassOfAncestors(followReference);
+                if (enableSequenceIndices) {
+                    addSequenceIndex(followReference, sequenceNumber);
+                }
+                updateAncestorPointSum(followReference);
+                return getPointReference(followReference);
+                // at a leaf and found a previous copy
+            } else {
+                // construct a potential cut
+                savedBox = getInternalTwoPointBox(point, oldPoint);
+                savedCut = randomCut(random, savedBox);
+                currentUnmergedBox = getMutableLeafBoxFromLeafNode(followReference);
+                savedSiblingNode = followReference;
+            }
+
+            // now iterative proceed up the tree and try to construct a cut
+
+            checkArgument(currentUnmergedBox != null, "error");
+            followReference = getParent(followReference);
+
+            boolean resolved = false;
+            while (!resolved && followReference != null) {
+                AbstractBoundingBox<Point> existingBox;
+                if (enableCache) {
+                    // if the boxes are being cached, use the box if present, otherwise
+                    // generate and cache the box
+                    existingBox = getBoundingBox(followReference);
+                } else {
+                    NodeReference sibling = (leftOf(point, getCutDimension(followReference),
+                            getCutValue(followReference))) ? getRightChild(followReference)
+                                    : getLeftChild(followReference);
+                    // the boxes are not present, merge the bounding box of the sibling of the last
+                    // seen child to the stored box in the state and save it
+                    existingBox = currentUnmergedBox.addBox(getBoundingBox(sibling));
+                    // note that existingBox will remain mutable
+                }
+
+                if (existingBox.contains(point)) {
+                    resolved = true; // no further cuts are feasible as we move up the tree
+                } else {
+                    // a cut is feasible at this level
+                    // generate a new cut and see if it separates the new point
+                    AbstractBoundingBox<Point> mergedBox = existingBox.copy().addPoint(point);
+                    Cut cut = randomCut(random, mergedBox);
+                    // avoid generation of mergedBox?
+                    int splitDimension = cut.getDimension();
+                    double splitValue = cut.getValue();
+                    double minValue = existingBox.getMinValue(splitDimension);
+                    double maxValue = existingBox.getMaxValue(splitDimension);
+
+                    if (minValue > splitValue || maxValue <= splitValue) {
+                        // the cut separates the new point; update the state to store information
+                        // about the most recent cut
+                        savedSiblingNode = followReference;
+                        savedCut = cut;
+                        savedBox = mergedBox;
+                    }
+                    currentUnmergedBox = existingBox;
+                    followReference = getParent(followReference);
+                }
+            }
+
+            NodeReference newParent = followReference;
+
+            // resolve the add, by modifying (if present) the bounding boxes corresponding
+            // to current node (nodeReference) all the way to the root
+            int cutDimension = savedCut.getDimension();
+            double cutValue = savedCut.getValue();
+            int oldMass = getMass(savedSiblingNode);
+            leafNodeForAdd = addLeaf(pointReference);
+            NodeReference mergedNode = leftOf(point, cutDimension, cutValue)
+                    ? addNode(leafNodeForAdd, savedSiblingNode, cutDimension, cutValue, (oldMass + 1))
+                    : addNode(savedSiblingNode, leafNodeForAdd, cutDimension, cutValue, (oldMass + 1));
+
+            NodeReference oldParent = getParent(savedSiblingNode);
+            if (oldParent == null) {
+                root = mergedNode;
+            } else {
+                replaceChild(oldParent, savedSiblingNode, mergedNode);
+            }
+
+            setParent(leafNodeForAdd, mergedNode);
+            setParent(savedSiblingNode, mergedNode);
+            // manage bounding boxes, including caching, as well as centerOfMass
+            updateAncestorNodesAfterAdd(savedBox, mergedNode, point, newParent);
         }
+        if (enableSequenceIndices) {
+            addSequenceIndex(leafNodeForAdd, sequenceNumber);
+        }
+
+        return pointReference;
+
     }
 
     /**
@@ -588,11 +617,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         if (isLeaf(node)) {
             visitor.acceptLeaf(getNode(node), depthOfNode);
         } else {
-            if (leftOf(point, node)) {
-                traversePathToLeafAndVisitNodes(point, visitor, getLeftChild(node), depthOfNode + 1);
-            } else {
-                traversePathToLeafAndVisitNodes(point, visitor, getRightChild(node), depthOfNode + 1);
-            }
+            NodeReference nextNode = leftOf(point, node) ? getLeftChild(node) : getRightChild(node);
+            traversePathToLeafAndVisitNodes(point, visitor, nextNode, depthOfNode + 1);
             visitor.accept(getNode(node), depthOfNode);
         }
     }
@@ -632,23 +658,62 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 traverseTreeMulti(point, newVisitor, getRightChild(node), depthOfNode + 1);
                 visitor.combine(newVisitor);
             } else {
-
-                if (leftOf(point, node)) {
-                    traverseTreeMulti(point, visitor, getLeftChild(node), depthOfNode + 1);
-                } else {
-                    traverseTreeMulti(point, visitor, getRightChild(node), depthOfNode + 1);
-                }
+                NodeReference nextNode = leftOf(point, node) ? getLeftChild(node) : getRightChild(node);
+                traverseTreeMulti(point, visitor, nextNode, depthOfNode + 1);
             }
             visitor.accept(getNode(node), depthOfNode);
         }
     }
 
+    /**
+     *
+     * @return the mass of the tree
+     */
     @Override
     public int getMass() {
         return root == null ? 0 : getMass(root);
     }
 
+    /**
+     *
+     * @return the root of the tree
+     */
+
     public NodeReference getRoot() {
         return root;
+    }
+
+    // TODO: decide on ownership of builder constants, across the major classes
+    public static class Builder<T> {
+        protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+        protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
+        protected boolean boundingBoxCachingEnabled = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
+        protected double boundingBoxCacheFraction = 1.0;
+        protected long randomSeed = new Random().nextLong();
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+            return (T) this;
+        }
+
+        public T centerOfMassEnabled(boolean centerOfMassEnabled) {
+            this.centerOfMassEnabled = centerOfMassEnabled;
+            return (T) this;
+        }
+
+        public T enableBoundingBoxCaching(boolean boundingBoxCacheEnabled) {
+            this.boundingBoxCachingEnabled = boundingBoxCacheEnabled;
+            return (T) this;
+        }
+
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
+            return (T) this;
+        }
+
+        public T randomSeed(long randomSeed) {
+            this.randomSeed = randomSeed;
+            return (T) this;
+        }
     }
 }

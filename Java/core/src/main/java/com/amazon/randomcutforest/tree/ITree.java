@@ -30,5 +30,5 @@ public interface ITree<PointReference, Point> extends ITraversable, IDynamicConf
 
     PointReference addPoint(PointReference point, long sequenceIndex);
 
-    void deletePoint(PointReference point, long sequenceIndex);
+    PointReference deletePoint(PointReference point, long sequenceIndex);
 }

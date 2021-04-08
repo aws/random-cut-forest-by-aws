@@ -23,6 +23,7 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
@@ -36,6 +37,19 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
         if (centerOfMassEnabled) {
             pointSum = new float[maxSize - 1][];
+        }
+    }
+
+    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, INodeStore nodeStore,
+            int root, boolean cacheEnabled) {
+        super(new CompactRandomCutTreeFloat.Builder().pointStore(pointStore).nodeStore(nodeStore).root(root)
+                .randomSeed(seed).maxSize(maxSize).enableBoundingBoxCaching(cacheEnabled));
+
+        // super(maxSize, seed, nodeStore, root, cacheEnabled);
+        checkNotNull(pointStore, "pointStore must not be null");
+        super.pointStore = pointStore;
+        if (cacheEnabled) {
+            cachedBoxes = new BoundingBoxFloat[maxSize - 1];
         }
     }
 
@@ -98,4 +112,12 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
     }
 
+    public static class Builder extends AbstractCompactRandomCutTree.Builder<CompactRandomCutTreeFloat.Builder> {
+        private IPointStoreView<float[]> pointStoreView;
+
+        public CompactRandomCutTreeFloat.Builder pointStore(IPointStoreView<float[]> pointStoreView) {
+            this.pointStoreView = pointStoreView;
+            return this;
+        }
+    }
 }

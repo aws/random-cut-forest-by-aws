@@ -18,14 +18,18 @@ package com.amazon.randomcutforest.tree;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Map;
 
+import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.SmallLeafStore;
 import com.amazon.randomcutforest.store.SmallNodeStore;
 
@@ -65,24 +69,56 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
-        super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
-        checkArgument(maxSize > 0, "maxSize must be greater than 0");
-        this.maxSize = maxSize;
-        if (maxSize < SmallNodeStore.MAX_TREE_SIZE) { // max_short/2 because the tree is almost twice the size of leaves
-            leafStore = new SmallLeafStore((short) maxSize);
-            nodeStore = new SmallNodeStore((short) (maxSize - 1));
+        this(new Builder<Builder<?>>().maxSize(maxSize).randomSeed(seed).enableBoundingBoxCaching(enableCache)
+                .centerOfMassEnabled(enableCenterOfMass).storeSequenceIndexesEnabled(enableSequenceIndices));
+        /*
+         * checkArgument(maxSize > 0, "maxSize must be greater than 0"); this.maxSize =
+         * maxSize; if (maxSize < SmallNodeStore.MAX_TREE_SIZE) { leafStore = new
+         * SmallLeafStore((short) maxSize); nodeStore = new SmallNodeStore((short)
+         * (maxSize - 1)); } else { leafStore = new LeafStore(maxSize); nodeStore = new
+         * NodeStore(maxSize - 1); } root = null; this.enableCache = enableCache; if
+         * (enableSequenceIndices) { sequenceIndexes = new HashMap[maxSize]; } //
+         * adjusting the below parameter in [0,1] may change the space time tradeoff //
+         * but should not affect the computation in any manner //
+         * setBoundingBoxCacheFraction(0.3);
+         */
+    }
+
+    public AbstractCompactRandomCutTree(Builder builder) {
+        super(builder);
+        checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
+
+        this.maxSize = builder.maxSize;
+        this.enableCache = builder.boundingBoxCachingEnabled;
+        // note isLeaf is defined; as well as map to leaf indices
+        if (builder.root == NULL || isLeaf(builder.root)) {
+            if (maxSize < SmallNodeStore.MAX_TREE_SIZE) {
+                leafStore = new SmallLeafStore((short) maxSize);
+                this.nodeStore = new SmallNodeStore((short) (maxSize - 1));
+            } else {
+                leafStore = new LeafStore(maxSize);
+                this.nodeStore = new NodeStore(maxSize - 1);
+            }
+            this.root = (builder.root == NULL) ? null
+                    : getTreeIndexForLeafIndex(leafStore.addLeaf(NULL, intValue(null), 0));
         } else {
-            leafStore = new LeafStore(maxSize);
-            nodeStore = new NodeStore(maxSize - 1);
+            checkNotNull(builder.nodeStore, "nodeStore must not be null");
+            this.nodeStore = builder.nodeStore;
+            Map<Integer, Integer> leafIndices = nodeStore.getLeavesAndParents();
+            BitSet leafBits = new BitSet(maxSize);
+            leafIndices.forEach((a, b) -> leafBits.set(getLeafIndexForTreeIndex(a)));
+            if (maxSize < SmallNodeStore.MAX_TREE_SIZE) {
+                leafStore = new SmallLeafStore((short) maxSize, leafBits);
+            } else {
+                leafStore = new LeafStore(maxSize, leafBits);
+            }
+            leafIndices.forEach((a, b) -> setParent(a, b));
+            this.root = builder.root;
         }
-        root = null;
-        this.enableCache = enableCache;
+
         if (enableSequenceIndices) {
             sequenceIndexes = new HashMap[maxSize];
         }
-        // adjusting the below parameter in [0,1] may change the space time tradeoff
-        // but should not affect the computation in any manner
-        // setBoundingBoxCacheFraction(0.3);
     }
 
     public AbstractCompactRandomCutTree(int maxSize, long seed, ILeafStore leafStore, INodeStore nodeStore, int root,
@@ -215,18 +251,24 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     @Override
     Point getPointFromPointReference(Integer pointIndex) {
         checkArgument(pointIndex != null, "incorrect request");
-        return pointStore.get(pointIndex);
+        return (pointIndex == NULL) ? null : pointStore.get(pointIndex);
     }
 
     // returns the position in the point store
     @Override
     Integer getPointReference(Integer node) {
-        return getPointReference(intValue(node));
+        int val = getPointReference(intValue(node));
+        return (val == NULL) ? null : val;
     }
 
     int getPointReference(int index) {
         checkArgument(isLeaf(index), "index is not a valid leaf node index");
         return leafStore.getPointIndex(getLeafIndexForTreeIndex(index));
+    }
+
+    @Override
+    void setLeafPointReference(Integer leafNode, Integer pointIndex) {
+        leafStore.setPointIndex(getLeafIndexForTreeIndex(leafNode), pointIndex);
     }
 
     @Override
@@ -294,6 +336,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
+    /**
+     * deletes a node from the stores and resets the connectivity information so
+     * that state is preserved
+     * 
+     * @param node the node to be deleted
+     */
     @Override
     protected void delete(Integer node) {
         delete(intValue(node));
@@ -301,8 +349,14 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     protected void delete(int node) {
         if (isLeaf(node)) {
-            leafStore.delete(getLeafIndexForTreeIndex(node));
+            int index = getLeafIndexForTreeIndex(node);
+            leafStore.setPointIndex(index, PointStore.INFEASIBLE_POINTSTORE_INDEX);
+            leafStore.setParent(index, NULL);
+            leafStore.delete(index);
         } else {
+            nodeStore.setParent(node, NULL);
+            nodeStore.setLeftIndex(node, NULL);
+            nodeStore.setRightIndex(node, NULL);
             nodeStore.delete(node);
         }
     }
@@ -369,6 +423,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     @Override
+    protected void decreaseMassOfAncestors(Integer mergedNode) {
+        nodeStore.decreaseMassOfSelfAndAncestors(getParent(mergedNode.intValue()));
+    }
+
+    @Override
     protected int getMass(Integer node) {
         return getMass(intValue(node));
     }
@@ -411,4 +470,29 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
         return pointSum[ref];
     }
+
+    // TODO: fix ownership of default variables
+    public static class Builder<T> extends AbstractRandomCutTree.Builder<Builder<T>> {
+
+        private INodeStore nodeStore = null;
+        private int root = NULL;
+        private int maxSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
+
+        public T nodeStore(INodeStore nodeStore) {
+            this.nodeStore = nodeStore;
+            return (T) this;
+        }
+
+        public T root(int root) {
+            this.root = root;
+            return (T) this;
+        }
+
+        public T maxSize(int maxSize) {
+            this.maxSize = maxSize;
+            return (T) this;
+        }
+
+    }
+
 }

@@ -22,6 +22,7 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
@@ -35,6 +36,17 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
         if (centerOfMassEnabled) {
             pointSum = new double[maxSize - 1][];
+        }
+    }
+
+    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, INodeStore nodeStore,
+            int root, boolean cacheEnabled) {
+        super(new Builder().pointStore(pointStore).nodeStore(nodeStore).root(root).randomSeed(seed).maxSize(maxSize)
+                .enableBoundingBoxCaching(cacheEnabled));
+        checkNotNull(pointStore, "pointStore must not be null");
+        super.pointStore = pointStore;
+        if (cacheEnabled) {
+            cachedBoxes = new BoundingBox[maxSize - 1];
         }
     }
 
@@ -95,6 +107,15 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         double[] rightSum = getPointSum(getRightChild(node));
         for (int i = 0; i < pointStore.getDimensions(); i++) {
             pointSum[node][i] = leftSum[i] + rightSum[i];
+        }
+    }
+
+    public static class Builder extends AbstractCompactRandomCutTree.Builder<Builder> {
+        private IPointStoreView<double[]> pointStoreView;
+
+        public Builder pointStore(IPointStoreView<double[]> pointStoreView) {
+            this.pointStoreView = pointStoreView;
+            return this;
         }
     }
 }
