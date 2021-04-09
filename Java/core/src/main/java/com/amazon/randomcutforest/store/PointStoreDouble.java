@@ -32,29 +32,33 @@ import java.util.Arrays;
  */
 public class PointStoreDouble extends PointStore<double[], double[]> {
 
-    public PointStoreDouble(int dimensions, int shingleSize, int capacity, boolean overlapping, boolean directMap) {
-        super(dimensions, shingleSize, capacity, overlapping, directMap);
-        store = new double[capacity * dimensions];
-    }
-
-    public PointStoreDouble(boolean overlapping, int startOfFreeSegment, int dimensions, int shingleSize,
-            double[] store, short[] refCount, int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
-        super(overlapping, dimensions, shingleSize, refCount, referenceList, freeIndexes, freeIndexPointer);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
-        checkArgument(refCount.length == capacity, "incorrect");
-        this.store = store;
-        this.startOfFreeSegment = startOfFreeSegment;
+    public PointStoreDouble(Builder builder) {
+        super(builder);
+        checkArgument(builder.store == null || builder.store.length == currentStoreCapacity * dimensions,
+                " incorrect store length");
+        store = (builder.store == null) ? new double[currentStoreCapacity * dimensions] : builder.store;
     }
 
     public PointStoreDouble(int dimensions, int capacity) {
-        super(dimensions, 1, capacity, false, true);
-        store = new double[capacity * dimensions];
+        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).indexCapacity(capacity)
+                .currentStoreCapacity(capacity));
+    }
+
+    @Override
+    void resizeStore() {
+        int maxCapacity = (rotationEnabled) ? 2 * capacity : capacity;
+        int newCapacity = Math.min(2 * currentStoreCapacity, maxCapacity);
+        if (newCapacity > currentStoreCapacity) {
+            double[] newStore = new double[newCapacity * dimensions];
+            System.arraycopy(store, 0, newStore, 0, currentStoreCapacity * dimensions);
+            currentStoreCapacity = newCapacity;
+            store = newStore;
+        }
     }
 
     @Override
     boolean checkShingleAlignment(int location, double[] point) {
-        boolean test = true;
+        boolean test = (location - dimensions + baseDimension >= 0);
         for (int i = 0; i < dimensions - baseDimension && test; i++) {
             test = (point[i] == store[location - dimensions + baseDimension + i]);
         }
@@ -83,7 +87,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
 
     @Override
     public boolean pointEquals(int index, double[] point) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
 
         for (int j = 0; j < dimensions; j++) {
@@ -107,9 +111,17 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
      */
     @Override
     public double[] get(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         int address = (directLocationMap) ? index * dimensions : locationList[index];
-        return Arrays.copyOfRange(store, address, address + dimensions);
+        if (!rotationEnabled) {
+            return Arrays.copyOfRange(store, address, address + dimensions);
+        } else {
+            double[] answer = new double[dimensions];
+            for (int i = 0; i < dimensions; i++) {
+                answer[(address + i) % dimensions] = store[address + i];
+            }
+            return answer;
+        }
     }
 
     // same as get; allows a multiplier to enable convex combinations
@@ -129,9 +141,27 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     @Override
     void copyTo(int dest, int source, int length) {
         checkArgument(dest <= source, "error");
-        for (int i = 0; i < length; i++) {
-            store[dest + i] = store[source + i];
+        if (dest < source) {
+            for (int i = 0; i < length; i++) {
+                store[dest + i] = store[source + i];
+            }
         }
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends PointStore.Builder<Builder> {
+        private double[] store = null;
+
+        public Builder store(double[] store) {
+            this.store = store;
+            return this;
+        }
+
+        public PointStoreDouble build() {
+            return new PointStoreDouble(this);
+        }
+    }
 }

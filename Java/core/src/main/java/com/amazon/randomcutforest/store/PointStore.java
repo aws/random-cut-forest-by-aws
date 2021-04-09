@@ -16,6 +16,12 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
+
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.HashMap;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -28,17 +34,30 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
  * point values and increment and decrement reference counts. Valid index values
  * are between 0 (inclusive) and capacity (exclusive).
  */
-public abstract class PointStore<Store, Point> extends IndexManager implements IPointStore<Point> {
+public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
-    public static int INFEASIBLE_POINTSTORE_LOCATION = -2;
+    public static int INFEASIBLE_LOCATION = -1;
 
     public static int INFEASIBLE_POINTSTORE_INDEX = -1;
+    /**
+     * an index manager to manage free locations
+     */
+    protected IndexManager indexManager;
     /**
      * generic store class
      */
     protected Store store;
     /**
-     * pointers to store locations
+     * generic internal shingle, note that input is doubles
+     */
+    protected double[] internalShingle;
+    /**
+     * last seen timestamp for internal shingling
+     */
+    protected long nextTimeStamp;
+    /**
+     * pointers to store locations, this decouples direct addressing and points can
+     * be moved internally
      */
     protected int[] locationList;
 
@@ -47,7 +66,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * determined by locationList[i] or (for directLocationMapping) the point at
      * store[i * dimensions]
      */
-    protected short[] refCount;
+    protected int[] refCount;
     /**
      * first location where new data can be safely copied;
      */
@@ -67,78 +86,32 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * overlapping (say for out of order updates).
      */
     int baseDimension;
-    /**
-     * even for shingleSize>1 we may seek to disable certain behavior, for example
-     * if we know that the set of points in the store already have low overlap or
-     * the order of updates is not in a sequential increasing order
-     */
-    boolean shingleAwareOverlapping;
+
     /**
      * are the addresses mapped directly (saves space and runtime for shingleSize =
      * 1)
      */
     boolean directLocationMap;
-
     /**
-     * Create a new PointStore with the given dimensions and capacity.
-     *
-     * @param dimensions The number of dimensions in stored points.
-     * @param capacity   The maximum number of points that can be stored.
+     * maximum capacity
      */
-    public PointStore(int dimensions, int shingleSize, int capacity, boolean shingleAwareOverlapping,
-            boolean directLocationMap) {
-        super(capacity);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
-        checkArgument(!directLocationMap || !shingleAwareOverlapping,
-                " cannot have overlapped shingles and direct map simultaneously");
-        this.shingleSize = shingleSize;
-        this.dimensions = dimensions;
-        refCount = new short[capacity];
-        startOfFreeSegment = 0;
-        this.directLocationMap = directLocationMap;
-        this.shingleAwareOverlapping = shingleAwareOverlapping;
-        if (!directLocationMap) {
-            if (shingleAwareOverlapping && shingleSize > 1) {
-                // even if shingle size is 1
-                baseDimension = dimensions / shingleSize;
-            } else {
-                baseDimension = dimensions;
-            }
-            locationList = new int[capacity];
-            if (!shingleAwareOverlapping) { // initialize a 1-1 map
-                for (int i = 0; i < capacity; i++) {
-                    locationList[i] = i * dimensions;
-                }
-            }
-        } else {
-            baseDimension = dimensions;
-        }
-    }
-
-    public PointStore(int dimensions, int capacity) {
-        this(dimensions, 1, capacity, false, true);
-    }
-
-    public PointStore(boolean shingleAwareOverlapping, int dimensions, int shingleSize, short[] refCount,
-            int[] referenceList, int[] freeIndexes, int freeIndexPointer) {
-        super(freeIndexes, freeIndexPointer);
-        checkArgument(dimensions > 0, "dimensions must be greater than 0");
-        checkArgument(shingleSize == 1 || dimensions % shingleSize == 0, "incorrect use");
-        checkArgument(refCount.length == capacity, "incorrect");
-        this.shingleSize = shingleSize;
-        this.dimensions = dimensions;
-        this.refCount = refCount;
-        this.locationList = referenceList;
-        this.directLocationMap = (referenceList == null);
-        this.shingleAwareOverlapping = shingleAwareOverlapping;
-        if (shingleAwareOverlapping && shingleSize > 1) {
-            this.baseDimension = this.dimensions / this.shingleSize;
-        } else {
-            this.baseDimension = dimensions;
-        }
-        // firstFreeLocation would be set by the concrete classes, along with Store
-    }
+    int capacity;
+    /**
+     * current capacity of store (number of shingled points)
+     */
+    int currentStoreCapacity;
+    /**
+     * ability to resize the store dynamically
+     */
+    boolean dynamicResizingEnabled;
+    /**
+     * enabling internal shingling
+     */
+    boolean internalShinglingEnabled;
+    /**
+     * enable rotation of shingles; use a cyclic buffer instead of sliding window
+     */
+    boolean rotationEnabled;
 
     /**
      * Decrement the reference count for the given index.
@@ -146,14 +119,14 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @param index The index value.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non positive.
      */
     @Override
     public int decrementRefCount(int index) {
-        checkValidIndex(index);
-
+        indexManager.checkValidIndex(index);
+        checkState(refCount[index] >= 0, " incorrect state ");
         if (refCount[index] == 1) {
-            releaseIndex(index);
+            indexManager.releaseIndex(index);
         }
 
         return --refCount[index];
@@ -163,13 +136,13 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * the function checks if the provided shingled point aligns with the location
      * 
      * @param location location in the store where the point is copied
-     * @param point
-     * @return
+     * @param point    the point to be added
+     * @return true/false for an alignment
      */
     abstract boolean checkShingleAlignment(int location, double[] point);
 
     /**
-     * copy the point sratering from its location src to the location in the store
+     * copy the point starting from its location src to the location in the store
      * for desired length
      * 
      * @param point    input point
@@ -178,6 +151,51 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @param length   length to be copied
      */
     abstract void copyPoint(double[] point, int src, int location, int length);
+
+    /**
+     * takes an index from the index manager and rezises if necessary also adjusts
+     * refCount size to have increment/decrement be seamless
+     *
+     * @return an index from the index manager
+     */
+    int takeIndex() {
+        if (indexManager.freeIndexPointer == INFEASIBLE_POINTSTORE_INDEX) {
+            if (indexManager.getCapacity() < capacity) {
+                int oldCapacity = indexManager.getCapacity();
+                int newCapacity = Math.min(capacity, 2 * oldCapacity);
+                indexManager = new IndexManager(newCapacity);
+                for (int i = 0; i < oldCapacity; i++) {
+                    indexManager.occupied.set(i);
+                }
+                indexManager.freeIndexPointer = newCapacity - oldCapacity - 1;
+                validateInternalState(refCount.length == oldCapacity, " incorrect state ");
+                refCount = Arrays.copyOf(refCount, newCapacity);
+                validateInternalState(locationList.length == oldCapacity, " incorrect state ");
+                locationList = Arrays.copyOf(locationList, newCapacity);
+                for (int i = oldCapacity; i < newCapacity; i++) {
+                    locationList[i] = INFEASIBLE_LOCATION;
+                }
+            } else {
+                throw new IllegalStateException(" index manager in point store is full ");
+            }
+        }
+        int location = indexManager.takeIndex();
+        validateInternalState(refCount[location] == 0, " error");
+        return location;
+    }
+
+    void verifyAndMakeSpace(int amount) {
+        validateInternalState(amount <= dimensions, "incorrect parameter");
+        if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
+            // try compaction and then resizing
+            compact();
+            if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
+                checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
+                resizeStore();
+                validateInternalState(startOfFreeSegment + amount <= currentStoreCapacity * dimensions, "out of space");
+            }
+        }
+    }
 
     /**
      * Add a point to the point store and return the index of the stored point.
@@ -190,60 +208,54 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @throws IllegalStateException    if the point store is full.
      */
     public int add(double[] point, long sequenceNum) {
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
+        checkArgument(internalShinglingEnabled || point.length == dimensions,
+                "point.length must be equal to dimensions");
+        checkArgument(!internalShinglingEnabled || point.length == baseDimension,
+                "point.length must be equal to dimensions");
 
-        if (shingleSize > 1 && shingleAwareOverlapping) {
-            /**
-             * corresponds to the shingled/overlapped case. Currently we are considering a
-             * perfect sequence where the shift corresponds to one time unit and that
-             * represents baseDimension new values. Note that if the alignment test fails,
-             * then the points are still copied -- in future it may be reasonable to check
-             * for different alignments -- which would be beneficial for larger shingles. In
-             * extreme a segment tree type data structure could also be used.
-             */
-            if (startOfFreeSegment > capacity * dimensions - baseDimension) {
-                // the above ensures that the most recent values in a shingle can be writtem
-                compact();
+        double[] tempPoint = point;
+        if (internalShinglingEnabled) {
+            tempPoint = changeShingleInPlace(internalShingle, point);
+            nextTimeStamp++;
+            if (nextTimeStamp < shingleSize) {
+                return INFEASIBLE_POINTSTORE_INDEX;
             }
-
-            boolean test = (startOfFreeSegment - dimensions + baseDimension >= 0);
-            if (test) {
-                test = checkShingleAlignment(startOfFreeSegment, point);
-            }
-            if (test && startOfFreeSegment + baseDimension <= capacity * dimensions) {
-                int nextIndex = takeIndex(); // no more compactions
-                refCount[nextIndex] = 1; // has to be after compactions
-                locationList[nextIndex] = startOfFreeSegment - dimensions + baseDimension;
-                copyPoint(point, dimensions - baseDimension, startOfFreeSegment, baseDimension);
-                startOfFreeSegment += baseDimension;
-                return nextIndex;
-            }
-
-            // we must write the full contents of the point; we need to check for space
-            if (startOfFreeSegment >= capacity * dimensions - dimensions) {
-                compact();
-            }
-            int nextIndex = takeIndex(); // no more compactions
-            locationList[nextIndex] = startOfFreeSegment;
-            copyPoint(point, 0, startOfFreeSegment, dimensions);
-            startOfFreeSegment += dimensions;
-            refCount[nextIndex] = 1; // has to be after compactions
-            return nextIndex;
         }
-        /**
-         * the following corresponds to shingleSize=1 or the no-overlap case. The
-         * startOfFreeSegment corresponds to the maximum address written by the store.
-         * This is useful for serialization where the suffix of the store can be
-         * ignored. For short streams, this will yield significnat benefits. In the long
-         * run however, the savings will depend on the data being input.
-         */
-        int nextIndex = takeIndex(); // no more compactions
-        int address = (directLocationMap) ? nextIndex * dimensions : locationList[nextIndex];
-        startOfFreeSegment = (startOfFreeSegment < address + dimensions) ? address + dimensions : startOfFreeSegment;
-        copyPoint(point, 0, address, dimensions);
+        int nextIndex;
+        if (!directLocationMap) {
+            // suppose there was shingling then only the contents of the most recent
+            // point has to be written, otherwise we need to write the full shingle
+            int amountToWrite = checkShingleAlignment(startOfFreeSegment, tempPoint) ? baseDimension : dimensions;
+
+            verifyAndMakeSpace(amountToWrite);
+            nextIndex = takeIndex();
+            locationList[nextIndex] = startOfFreeSegment - dimensions + amountToWrite;
+            copyPoint(tempPoint, dimensions - amountToWrite, startOfFreeSegment, amountToWrite);
+            startOfFreeSegment += amountToWrite;
+        } else {
+            nextIndex = takeIndex(); // no more compactions
+            int address = locationList[nextIndex];
+            validateInternalState(refCount[nextIndex] == 0, "incorrect state");
+            if (address == INFEASIBLE_LOCATION) {
+                if (startOfFreeSegment + dimensions > currentStoreCapacity * dimensions) {
+                    checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
+                    resizeStore();
+                    if (startOfFreeSegment + dimensions > currentStoreCapacity * dimensions) {
+                        indexManager.releaseIndex(nextIndex); // put back the last index
+                        compact();
+                        nextIndex = takeIndex();
+                    }
+                }
+                locationList[nextIndex] = address = startOfFreeSegment;
+                startOfFreeSegment = Math.max(startOfFreeSegment, address + dimensions);
+            }
+            copyPoint(tempPoint, 0, address, dimensions);
+        }
         refCount[nextIndex] = 1; // has to be after compactions
         return nextIndex;
     }
+
+    abstract void resizeStore();
 
     /**
      * Increment the reference count for the given index. This operation assumes
@@ -253,10 +265,10 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @param index The index value.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non positive.
      */
     public int incrementRefCount(int index) {
-        checkValidIndex(index);
+        indexManager.checkValidIndex(index);
         return ++refCount[index];
     }
 
@@ -275,7 +287,7 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      *         false otherwise.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non positive.
      * @throws IllegalArgumentException if the length of the point does not match
      *                                  the point store's dimensions.
      */
@@ -290,40 +302,153 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @return a copy of the point stored at the given index.
      * @throws IllegalArgumentException if the index value is not valid.
      * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     *                                  index is non positive.
      */
     @Override
     abstract public Point get(int index);
 
+    /**
+     * to print error messages
+     * 
+     * @param index index of the point in the store
+     * @return string corresponding to the point
+     */
     @Override
     abstract public String toString(int index);
 
+    /**
+     * maximum capacity, in number of points of size dimensions
+     */
+    public int getCapacity() {
+        return capacity;
+    }
+
+    /**
+     * capacity of the indices
+     */
+    public int getIndexCapacity() {
+        return indexManager.getCapacity();
+    }
+
+    /**
+     * used in mapper
+     * 
+     * @return gets the shingle size (if known, otherwise is 1)
+     */
     public int getShingleSize() {
         return shingleSize;
     }
 
+    /**
+     * gets the current store capacity in the number of points with dimension many
+     * values
+     * 
+     * @return capacity in number of points
+     */
+    public int getCurrentStoreCapacity() {
+        return currentStoreCapacity;
+    }
+
+    /**
+     * used for mappers
+     * 
+     * @return the store that stores the values
+     */
     public Store getStore() {
         return store;
     }
 
-    public short[] getRefCount() {
+    /**
+     * used for mapper
+     * 
+     * @return the array of counts referring to different points
+     */
+    public int[] getRefCount() {
         return refCount;
     }
 
+    /**
+     * useful in mapper to not copy
+     * 
+     * @return the length of the prefix
+     */
     public int getStartOfFreeSegment() {
         return startOfFreeSegment;
     }
 
+    /**
+     * used in mapper
+     * 
+     * @return the list of locations where points are stored
+     */
     public int[] getLocationList() {
         return locationList;
     }
 
-    public boolean isShingleAwareOverlapping() {
-        return shingleAwareOverlapping;
+    /**
+     * used in mapper
+     * 
+     * @return if shingling is performed internally
+     */
+    public boolean isInternalShinglingEnabled() {
+        return internalShinglingEnabled;
     }
 
+    /**
+     *
+     * @return if the shingles performed internally are rotated as in a cyclic
+     *         buffer
+     */
+    public boolean isInternalRotationEnabled() {
+        return rotationEnabled;
+    }
+
+    /**
+     * used in mapper and in extrapolation
+     * 
+     * @return the last timestamp seen
+     */
+    public long getNextTimeStamp() {
+        return nextTimeStamp;
+    }
+
+    /**
+     * used in mapper
+     * 
+     * @return ability to start from a small size an increase the store
+     */
+    public boolean isDynamicResizingEnabled() {
+        return dynamicResizingEnabled;
+    }
+
+    /**
+     * used in mapper, as well as an optimization for shingle size 1
+     * 
+     * @return is locationList being used
+     */
     public boolean isDirectLocationMap() {
         return directLocationMap;
+    }
+
+    /**
+     * note that the second argument being null enforces a rotation
+     * 
+     * @return for internal shingling, returns the last seen shingle
+     */
+    public double[] getInternalShingle() {
+        return (internalShinglingEnabled) ? Arrays.copyOf(internalShingle, dimensions) : null;
+    }
+
+    public int[] getFreeIndexes() {
+        return indexManager.getFreeIndexes();
+    }
+
+    public int getFreeIndexPointer() {
+        return indexManager.getFreeIndexPointer();
+    }
+
+    public int size() {
+        return indexManager.capacity - indexManager.freeIndexPointer - 1;
     }
 
     /**
@@ -333,92 +458,367 @@ public abstract class PointStore<Store, Point> extends IndexManager implements I
      * @return size of initial prefix in use
      */
     public int getValidPrefix() {
-        int prefix = capacity;
-        while (prefix > 0 && !occupied.get(prefix - 1)) {
+        int prefix = indexManager.capacity;
+        while (prefix > 0 && !indexManager.occupied.get(prefix - 1)) {
             prefix--;
         }
         return prefix;
     }
 
+    /**
+     * copy function for the store
+     * 
+     * @param dest   location to move to
+     * @param source moving from
+     * @param length number of values copied
+     */
     abstract void copyTo(int dest, int source, int length);
 
     /**
      * The following function eliminates redundant information that builds up in the
-     * pointstore and shrinks the pointstore
+     * point store and shrinks the point store
      */
 
     public void compact() {
-        checkArgument(!directLocationMap, "incorrect call; should not be used for direct location maps");
-        int DEFAULT_EMPTY = 0; // indicates location not in use
 
         int runningLocation = 0;
         startOfFreeSegment = 0;
-        int stepDimension = (shingleAwareOverlapping) ? baseDimension : dimensions;
+        int stepDimension = baseDimension;
 
-        // we first determine which locations are the startpoints of the shingles
-        int[] reverseReferenceList = new int[capacity * dimensions / stepDimension];
-        for (int i = 0; i < capacity; i++) {
-            if (occupied.get(i)) {
-                reverseReferenceList[locationList[i] / stepDimension] = i + 1;
-                // offset by 1, to distinguish DEFAULT_EMPTY
+        // we first determine which locations are the start points of the shingles
+        // since the shingles extend for a length and can overlap this help define the
+        // region that should be copied
+
+        HashMap<Integer, Integer> movedTo = new HashMap<>();
+
+        // the bit set corresponds to the locations that can be in use over the actual
+        // store array
+        // this is not the same as the number of points that can be stored
+        BitSet inUse = new BitSet(indexManager.capacity);
+
+        for (int i = 0; i < indexManager.capacity; i++) {
+            if (indexManager.occupied.get(i)) {
+                validateInternalState(refCount[i] > 0, " bits out of sync when count = 0 ");
+                validateInternalState(locationList[i] != PointStore.INFEASIBLE_POINTSTORE_INDEX,
+                        " incorrect location info");
+                inUse.set(locationList[i] / stepDimension);
+            } else {
+                validateInternalState(refCount[i] == 0, "bits out of sync with count > 0 ");
+                locationList[i] = INFEASIBLE_LOCATION;
             }
+
         }
 
-        // we make a pass over the data
-        while (runningLocation < capacity * dimensions) {
-            // find the first eligible shoingle to be copied
-            while (runningLocation < capacity * dimensions
-                    && reverseReferenceList[runningLocation / stepDimension] == DEFAULT_EMPTY) {
+        // we make a pass over the store data
+        while (runningLocation < currentStoreCapacity * dimensions) {
+            // find the first eligible shingle to be copied
+            // for rotationEnabled, this should be a multiple of dimensions
+            while (runningLocation < currentStoreCapacity * dimensions && !inUse.get(runningLocation / stepDimension)) {
                 runningLocation += stepDimension;
+            }
+            // we are now at the start of the data but for rotation enabled internal
+            // shingling
+            // we need to ensure that locations remain a multiple of dimensions
+
+            if (rotationEnabled && runningLocation % dimensions != 0) {
+                // put back the items so that we begin from a multiple of dimensions
+                // in case rotation is enabled
+                while (runningLocation % dimensions != 0) {
+                    runningLocation--;
+                }
             }
 
             /**
              * recursively keep copying; if a new relevant shingle is found during the
              * copying, the remainsToBeCopied is updated to dimensions
              */
-            if (runningLocation < capacity * dimensions) {
+            if (runningLocation < currentStoreCapacity * dimensions) {
                 int remainsToBeCopied = dimensions;
                 int saveLocation = runningLocation;
-                while (runningLocation < capacity * dimensions && remainsToBeCopied > 0) {
+                int shadowLocation = startOfFreeSegment;
+                /**
+                 * note that remainsToBeCopied corresponds to the shingle; the test for division
+                 * by dimensions ensure that every rotated shingle
+                 */
+                while (runningLocation < currentStoreCapacity * dimensions
+                        && (remainsToBeCopied > 0 || rotationEnabled && runningLocation % dimensions != 0)) {
                     if (stepDimension == 1 || runningLocation % stepDimension == 0) {
-                        checkArgument(stepDimension == 1 || startOfFreeSegment % stepDimension == 0, "error");
-                        reverseReferenceList[startOfFreeSegment / stepDimension] = reverseReferenceList[runningLocation
-                                / stepDimension];
-                        if (reverseReferenceList[runningLocation / stepDimension] != DEFAULT_EMPTY) {
-                            checkArgument(locationList[reverseReferenceList[runningLocation / stepDimension]
-                                    - 1] == runningLocation, "error");
-                            locationList[reverseReferenceList[startOfFreeSegment / stepDimension]
-                                    - 1] = startOfFreeSegment;
+                        checkArgument(stepDimension == 1 || shadowLocation % stepDimension == 0, "error");
+
+                        if (inUse.get(runningLocation / stepDimension)) { // need to copy dimension more bits
                             remainsToBeCopied = dimensions;
-                            if (runningLocation > startOfFreeSegment) {
-                                reverseReferenceList[runningLocation / stepDimension] = DEFAULT_EMPTY;
+                            if (shadowLocation < runningLocation) { // actual move is necessary
+                                movedTo.put(runningLocation, shadowLocation);
                             }
                         }
                     }
                     runningLocation++;
+                    shadowLocation++;
                     remainsToBeCopied--;
                 }
                 copyTo(startOfFreeSegment, saveLocation, runningLocation - saveLocation);
                 startOfFreeSegment += runningLocation - saveLocation;
             }
         }
-        if (!shingleAwareOverlapping) {
-            /**
-             * need to restore a 1-1 map; note that the above block would work for
-             * shingleSize=1
-             */
-            int tempLocation = startOfFreeSegment;
-            for (int i = 0; i < freeIndexPointer; i++) {
-                if (!occupied.get(freeIndexes[i])) {
-                    locationList[freeIndexes[i]] = tempLocation;
-                    tempLocation += dimensions;
+        // now fix the addressing, assuming something has moved
+        if (!movedTo.isEmpty()) {
+            for (int i = 0; i < indexManager.capacity; i++) {
+                if (movedTo.containsKey(locationList[i])) { // need not have moved
+                    locationList[i] = movedTo.get(locationList[i]);
                 }
             }
         }
 
     }
 
-    public short getRefCount(int i) {
+    /**
+     * returns the number of copies of a point
+     * 
+     * @param i index of a point
+     * @return number of copies of the point managed by the store
+     */
+    public int getRefCount(int i) {
         return refCount[i];
     }
+
+    /**
+     * transforms a point to a shingled point if internal shingling is turned on
+     * 
+     * @param point new input values
+     * @return shingled point
+     */
+    @Override
+    public double[] transformToShingledPoint(double[] point) {
+        checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
+        checkArgument(point.length == baseDimension, " incorrect length");
+        return changeShingleInPlace(Arrays.copyOf(internalShingle, dimensions), point);
+    }
+
+    /**
+     * the following function is used to update the shingle in place; it can be used
+     * to produce new copies as well
+     * 
+     * @param target the array containing the shingled point
+     * @param point  the new values
+     * @return the array which now contains the updated shingle
+     */
+    private double[] changeShingleInPlace(double[] target, double[] point) {
+        if (!rotationEnabled) {
+            for (int i = 0; i < dimensions - baseDimension; i++) {
+                target[i] = target[i + baseDimension];
+            }
+            for (int i = 0; i < baseDimension; i++) {
+                target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0 : point[i];
+            }
+        } else {
+            int offset = ((int) nextTimeStamp % dimensions);
+            checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
+            for (int i = 0; i < baseDimension; i++) {
+                target[offset + i] = (point[i] == 0.0) ? 0.0 : point[i];
+            }
+        }
+        return target;
+    }
+
+    /**
+     * for extrapolation and imputation, in presence of internal shingling we need
+     * to update the list of missing values from the space of the input dimensions
+     * to the shingled dimensions
+     * 
+     * @param indexList list of missing values in the input point
+     * @return list of missing values in the shingled point
+     */
+    @Override
+    public int[] transformIndices(int[] indexList) {
+        checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
+        checkArgument(indexList.length <= baseDimension, " incorrect length");
+        int[] results = Arrays.copyOf(indexList, indexList.length);
+        if (!rotationEnabled) {
+            for (int i = 0; i < indexList.length; i++) {
+                results[i] += dimensions - baseDimension;
+            }
+        } else {
+            int offset = ((int) nextTimeStamp % dimensions);
+            checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
+            for (int i = 0; i < indexList.length; i++) {
+                results[i] = (results[i] + offset) % dimensions;
+            }
+        }
+        return results;
+    }
+
+    /**
+     * @return a new builder.
+     */
+    public static PointStore.Builder<?> builder() {
+        return new PointStore.Builder<>();
+    }
+
+    /**
+     * a builder
+     */
+
+    public static class Builder<T extends PointStore.Builder<T>> {
+
+        // We use Optional types for optional primitive fields when it doesn't make
+        // sense to use a constant default.
+
+        private int dimensions;
+        private int shingleSize = 1;
+        private boolean internalShinglingEnabled = false;
+        private boolean dynamicResizingEnabled = true;
+        private boolean internalRotationEnabled = false;
+        private boolean directLocationEnabled = false;
+        private int capacity;
+        private int currentStoreCapacity;
+        private int indexCapacity;
+        private double[] knownShingle = null;
+        private int[] freeIndexes = null;
+        private int freeIndexPointer = INFEASIBLE_POINTSTORE_INDEX;
+        private int[] locationList = null;
+        private int[] refCount = null;
+        private long nextTimeStamp = 0;
+        private int startOfFreeSegment = 0;
+
+        public T dimensions(int dimensions) {
+            this.dimensions = dimensions;
+            return (T) this;
+        }
+
+        public T capacity(int capacity) {
+            this.capacity = capacity;
+            return (T) this;
+        }
+
+        public T currentStoreCapacity(int currentStoreCapacity) {
+            this.currentStoreCapacity = currentStoreCapacity;
+            return (T) this;
+        }
+
+        public T indexCapacity(int indexCapacity) {
+            this.indexCapacity = indexCapacity;
+            return (T) this;
+        }
+
+        public T shingleSize(int shingleSize) {
+            this.shingleSize = shingleSize;
+            return (T) this;
+        }
+
+        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
+            this.internalShinglingEnabled = internalShinglingEnabled;
+            return (T) this;
+        }
+
+        public T directLocationEnabled(boolean directLocationEnabled) {
+            this.directLocationEnabled = directLocationEnabled;
+            return (T) this;
+        }
+
+        public T internalRotationEnabled(boolean internalRotationEnabled) {
+            this.internalRotationEnabled = internalRotationEnabled;
+            return (T) this;
+        }
+
+        public T dynamicResizingEnabled(boolean dynamicResizingEnabled) {
+            this.dynamicResizingEnabled = dynamicResizingEnabled;
+            return (T) this;
+        }
+
+        public T knownShingle(double[] knownShingle) {
+            this.knownShingle = knownShingle;
+            return (T) this;
+        }
+
+        public T refCount(int[] refCount) {
+            this.refCount = refCount;
+            return (T) this;
+        }
+
+        public T locationList(int[] locationList) {
+            this.locationList = locationList;
+            return (T) this;
+        }
+
+        /*
+         * public T freeIndexes(int[] freeIndexes) { this.freeIndexes = freeIndexes;
+         * return (T) this; }
+         * 
+         * public T freeIndexPointer(int freeIndexPointer) { this.freeIndexPointer =
+         * freeIndexPointer; return (T) this; }
+         */
+        public T startOfFreeSegment(int startOfFreeSegment) {
+            this.startOfFreeSegment = startOfFreeSegment;
+            return (T) this;
+        }
+
+        public T nextTimeStamp(long nextTimeStamp) {
+            this.nextTimeStamp = nextTimeStamp;
+            return (T) this;
+        }
+
+    }
+
+    public PointStore(Builder builder) {
+        checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
+        checkArgument(builder.shingleSize == 1 || builder.dimensions == builder.shingleSize
+                || builder.dimensions % builder.shingleSize == 0, "incorrect use of shingle size");
+        checkArgument(builder.dynamicResizingEnabled || builder.currentStoreCapacity > 0,
+                "capacity must be positive if dynamic resizing is disabled");
+        checkArgument(!builder.internalRotationEnabled || builder.internalShinglingEnabled,
+                "rotation can be enabled for internal shingling only");
+        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
+                || builder.knownShingle != null) {
+            checkArgument(builder.refCount == null || builder.refCount.length == builder.indexCapacity,
+                    "incorrect state");
+            // following may change if IndexManager is dynamically resized as well
+            checkArgument(builder.locationList == null || builder.locationList.length == builder.indexCapacity,
+                    " incorrect state");
+            checkArgument(builder.knownShingle == null || builder.internalShinglingEnabled, "incorrect state");
+        }
+
+        this.shingleSize = builder.shingleSize;
+        this.dimensions = builder.dimensions;
+        this.directLocationMap = builder.directLocationEnabled;
+        this.internalShinglingEnabled = builder.internalShinglingEnabled;
+        this.rotationEnabled = builder.internalRotationEnabled;
+        this.currentStoreCapacity = builder.currentStoreCapacity;
+        this.dynamicResizingEnabled = builder.dynamicResizingEnabled;
+        this.baseDimension = this.dimensions / this.shingleSize;
+        this.capacity = builder.capacity;
+
+        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
+                || builder.knownShingle != null) {
+
+            this.refCount = builder.refCount;
+            this.locationList = builder.locationList;
+            this.startOfFreeSegment = builder.startOfFreeSegment;
+            this.nextTimeStamp = builder.nextTimeStamp;
+
+            if (internalShinglingEnabled) {
+                this.internalShingle = new double[dimensions];
+                if (builder.knownShingle != null) { // can be for empty forest
+                    System.arraycopy(builder.knownShingle, 0, this.internalShingle, 0, dimensions);
+                }
+            }
+            BitSet bits = new BitSet(builder.indexCapacity);
+            for (int i = 0; i < builder.indexCapacity; i++) {
+                if (refCount[i] > 0) {
+                    bits.set(i);
+                }
+            }
+            indexManager = new IndexManager(builder.indexCapacity, bits);
+        } else {
+            indexManager = new IndexManager(builder.indexCapacity);
+            startOfFreeSegment = 0;
+            refCount = new int[builder.indexCapacity];
+            if (internalShinglingEnabled) {
+                nextTimeStamp = 0;
+                internalShingle = new double[dimensions];
+            }
+            locationList = new int[builder.indexCapacity];
+            Arrays.fill(locationList, INFEASIBLE_LOCATION);
+        }
+    }
+
 }

@@ -17,6 +17,8 @@ package com.amazon.randomcutforest.executor;
 
 import java.util.List;
 
+import com.amazon.randomcutforest.store.IPointStore;
+
 /**
  * An IStateCoordinator is used in conjunction with a family of IUpdatable
  * instances. The coordinator transforms the input point into the form expected
@@ -54,4 +56,7 @@ public interface IStateCoordinator<PointReference, Point> {
 
     void setTotalUpdates(long totalUpdates);
 
+    default IPointStore<Point> getStore() {
+        return null;
+    }
 }

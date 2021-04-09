@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,54 +31,109 @@ import java.util.Set;
 public class IndexManager {
 
     protected final int capacity;
-    protected final int[] freeIndexes;
+    protected int[] freeIndexes;
     protected int freeIndexPointer;
     protected final BitSet occupied;
 
     /**
-     * Create a new store with the given capacity.
+     * Create a new indexmanager with the given capacity.
      * 
      * @param capacity The total number of values that can be saved in this store.
      */
     public IndexManager(int capacity) {
-        this(capacity, new BitSet(capacity));
-    }
-
-    public IndexManager(int capacity, BitSet occupied) {
-        checkArgument(capacity > 0, "capacity must be greater than 0");
-        this.capacity = capacity;
-        freeIndexes = new int[capacity];
-        this.occupied = occupied;
-
-        for (int j = 0; j < capacity; j++) {
-            freeIndexes[j] = capacity - j - 1; // reverse order
-        }
-        freeIndexPointer = capacity - 1;
-
+        this(capacity, null);
     }
 
     /**
-     * Construct a new IndexManager with the given array of free indexes.
+     * creates a new index manager with a given capacity and a bitset representing
+     * the indices already in use
      * 
-     * @param freeIndexes      An array of index values.
+     * @param capacity total number of indices
+     * @param bits     bitset correspond to the used indices, and null corresponding
+     *                 to
+     */
+    public IndexManager(int capacity, BitSet bits) {
+        checkArgument(capacity > 0, "capacity must be greater than 0");
+        this.capacity = capacity;
+        if (bits == null) {
+            freeIndexes = new int[0];
+            freeIndexPointer = (capacity - 1);
+            occupied = new BitSet(capacity);
+        } else {
+            freeIndexPointer = -1;
+            occupied = bits;
+            for (int i = 0; i < capacity; i++) {
+                if (!occupied.get(i)) {
+                    freeIndexPointer++;
+                }
+            }
+            if (freeIndexPointer != capacity - 1) {
+                freeIndexes = new int[freeIndexPointer + 1];
+                int location = 0;
+                for (int i = capacity - 1; i >= 0; i--) {
+                    if (!occupied.get(i)) {
+                        freeIndexes[location++] = i;
+                    }
+                }
+            } else {
+                freeIndexes = new int[0];
+            }
+        }
+    }
+
+    /**
+     * Construct a new IndexManager with the given capacity, array of free indexes
+     * and a value corresponding to the number of free indices
+     *
+     * @param capacity         the size of the index
+     * @param freeIndexes      An array of unoccupied index values.
      * @param freeIndexPointer Entries in freeIndexes between 0 (inclusive) and
      *                         freeIndexPointer (inclusive) contain valid index
-     *                         values.
+     *                         values. if freeIndexPointer is larger than the length
+     *                         of the freeIndices array then the implcit guarantee
+     *                         is that location i >= freeIndexes.length contains
+     *                         index value (capacity - i -1)
      */
-
-    public IndexManager(int[] freeIndexes, int freeIndexPointer) {
+    public IndexManager(int capacity, int[] freeIndexes, int freeIndexPointer) {
         checkNotNull(freeIndexes, "freeIndexes must not be null");
-        checkFreeIndexes(freeIndexes, freeIndexPointer);
 
-        this.capacity = freeIndexes.length;
+        this.capacity = capacity;
         this.freeIndexes = freeIndexes;
         this.freeIndexPointer = freeIndexPointer;
 
         occupied = new BitSet(capacity);
         occupied.set(0, capacity);
 
-        for (int i = 0; i <= freeIndexPointer; i++) {
-            occupied.clear(freeIndexes[i]);
+        for (int i = 0; i < freeIndexPointer; i++) {
+            if (i < freeIndexes.length) {
+                occupied.clear(freeIndexes[i]);
+            } else {
+                occupied.clear(capacity - i - 1);
+            }
+        }
+
+    }
+
+    // the following is only used in testing
+    public IndexManager(int[] freeIndexes, int freeIndexPointer) {
+        this(freeIndexes.length, freeIndexes, freeIndexPointer);
+    }
+
+    public IndexManager(int capacity, int oldCapacity) {
+        checkArgument(capacity > 0, "capacity must be greater than 0");
+        this.capacity = capacity;
+        freeIndexes = new int[0];
+
+        /*
+         * for (int j = 0; j < capacity; j++) { freeIndexes[j] = capacity - j - 1; //
+         * reverse order }
+         */
+
+        freeIndexPointer = capacity - oldCapacity - 1;
+        occupied = new BitSet(capacity);
+
+        for (int j = 0; j < oldCapacity; j++) {
+            occupied.set(j);
         }
     }
 
@@ -118,7 +174,13 @@ public class IndexManager {
      */
     protected int takeIndex() {
         checkState(freeIndexPointer >= 0, "store is full");
-        int index = freeIndexes[freeIndexPointer--];
+        int index;
+        if (freeIndexPointer < freeIndexes.length) {
+            index = freeIndexes[freeIndexPointer--];
+        } else {
+            index = capacity - freeIndexPointer - 1;
+            freeIndexPointer--;
+        }
         occupied.set(index);
         return index;
     }
@@ -132,6 +194,19 @@ public class IndexManager {
     protected void releaseIndex(int index) {
         checkValidIndex(index);
         occupied.clear(index);
+        if (freeIndexPointer + 1 >= freeIndexes.length) {
+            if (index == capacity - (freeIndexPointer + 1) - 1) {
+                ++freeIndexPointer;
+                return;
+            } else {
+                int cap = Math.min(capacity, freeIndexPointer + 10);
+                int oldLength = freeIndexes.length;
+                freeIndexes = Arrays.copyOf(freeIndexes, cap);
+                for (int j = oldLength; j < cap && j < freeIndexPointer + 1; j++) {
+                    freeIndexes[j] = capacity - j - 1;
+                }
+            }
+        }
         freeIndexes[++freeIndexPointer] = index;
     }
 
