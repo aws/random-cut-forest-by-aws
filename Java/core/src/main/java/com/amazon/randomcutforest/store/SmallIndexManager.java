@@ -112,23 +112,6 @@ public class SmallIndexManager {
         this(freeIndexes.length, freeIndexes, freeIndexPointer);
     }
 
-    /**
-     * a method that returns a partially filled index manager to allow for expansion
-     * 
-     * @param capacity    new capacity
-     * @param oldCapacity old capacity
-     * @return a new index manager where the older indexes are marked to be in use
-     */
-    public static SmallIndexManager expandedSmallIndexManager(int capacity, int oldCapacity) {
-        checkArgument(capacity > 0, "capacity must be greater than 0");
-        BitSet bits = new BitSet(capacity);
-
-        for (int j = 0; j < oldCapacity; j++) {
-            bits.set(j);
-        }
-        return new SmallIndexManager((short) capacity, bits);
-    }
-
     private static void checkFreeIndexes(short[] freeIndexes, short freeIndexPointer) {
         checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
                 "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");

@@ -102,7 +102,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
-        super(seed, enableCache, enableCenterOfMass, enableSequenceIndices);
+        super(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
         root = null;
         setBoundingBoxCacheFraction(1.0);
     }
@@ -304,6 +304,19 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
             parent.incrementMass();
             parent = parent.getParent();
         }
+    }
+
+    @Override
+    protected void decreaseMassOfAncestors(Node mergedNode) {
+        Node parent = mergedNode.getParent();
+        while (parent != null) {
+            parent.decrementMass();
+            parent = parent.getParent();
+        }
+    }
+
+    @Override
+    void setLeafPointReference(Node node, double[] point) {
     }
 
     @Override

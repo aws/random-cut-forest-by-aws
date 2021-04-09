@@ -17,6 +17,10 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
+import java.util.BitSet;
 
 /**
  * A fixed-size buffer for storing leaf nodes. A leaf node is defined by its
@@ -24,7 +28,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
  * store these field values for a collection of nodes. An index in the store can
  * be used to look up the field values for a particular leaf node.
  *
- * This handles leaf nodes which corresponds to [lowerRangeLimit .. max (short)]
+ * This handles leaf nodes which corresponds to [lowerRangeLimit .. max (int)]
  *
  * If we think of an array of Node objects as being row-oriented (where each row
  * is a Node), then this class is analogous to a column-oriented database of
@@ -52,9 +56,7 @@ public class LeafStore extends IndexManager implements ILeafStore {
         checkNotNull(pointIndex, "pointIndex must not be null");
         checkNotNull(parentIndex, "parentIndex must not be null");
         checkNotNull(mass, "mass must not be null");
-
-        int capacity = pointIndex.length;
-        checkArgument(parentIndex.length == capacity && mass.length == capacity && freeIndexes.length == capacity,
+        checkArgument(pointIndex.length == capacity && parentIndex.length == capacity && mass.length == capacity,
                 "all array arguments must have the same length");
 
         this.pointIndex = pointIndex;
@@ -62,9 +64,18 @@ public class LeafStore extends IndexManager implements ILeafStore {
         this.mass = mass;
     }
 
+    public LeafStore(int capacity, BitSet leafbits) {
+        super(capacity, leafbits);
+        pointIndex = new int[capacity];
+        parentIndex = new int[capacity];
+        mass = new int[capacity];
+        Arrays.fill(pointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
+        Arrays.fill(parentIndex, NULL);
+    }
+
     public int addLeaf(int parentIndex, int pointIndex, int mass) {
         int index = takeIndex();
-        this.parentIndex[index] = (short) parentIndex;
+        this.parentIndex[index] = parentIndex;
         this.mass[index] = (short) mass;
         this.pointIndex[index] = pointIndex;
         return index;
@@ -72,7 +83,7 @@ public class LeafStore extends IndexManager implements ILeafStore {
 
     @Override
     public void setParent(int index, int parent) {
-        parentIndex[index] = (short) parent;
+        parentIndex[index] = parent;
     }
 
     @Override

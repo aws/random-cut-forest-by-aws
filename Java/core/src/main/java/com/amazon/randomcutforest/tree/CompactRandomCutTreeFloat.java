@@ -23,18 +23,25 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
     public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, boolean cacheEnabled,
             boolean centerOfMassEnabled, boolean enableSequenceIndices) {
-        super(maxSize, seed, cacheEnabled, centerOfMassEnabled, enableSequenceIndices);
-        checkNotNull(pointStore, "pointStore must not be null");
-        super.pointStore = pointStore;
-        if (cacheEnabled) {
+        this(new Builder().pointStore(pointStore).maxSize(maxSize).randomSeed(seed)
+                .storeSequenceIndexesEnabled(enableSequenceIndices).centerOfMassEnabled(centerOfMassEnabled)
+                .enableBoundingBoxCaching(cacheEnabled));
+    }
+
+    public CompactRandomCutTreeFloat(CompactRandomCutTreeFloat.Builder builder) {
+        super(builder);
+        checkNotNull(builder.pointStoreView, "pointStore must not be null");
+        super.pointStore = builder.pointStoreView;
+        if (builder.boundingBoxCachingEnabled) {
             cachedBoxes = new BoundingBoxFloat[maxSize - 1];
         }
-        if (centerOfMassEnabled) {
+        if (builder.centerOfMassEnabled) {
             pointSum = new float[maxSize - 1][];
         }
     }
@@ -98,4 +105,16 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
     }
 
+    public static class Builder extends AbstractCompactRandomCutTree.Builder<Builder> {
+        private IPointStoreView<float[]> pointStoreView;
+
+        public CompactRandomCutTreeFloat.Builder pointStore(IPointStoreView<float[]> pointStoreView) {
+            this.pointStoreView = pointStoreView;
+            return this;
+        }
+
+        public CompactRandomCutTreeFloat build() {
+            return new CompactRandomCutTreeFloat(this);
+        }
+    }
 }

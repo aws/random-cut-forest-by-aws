@@ -119,12 +119,11 @@ public class HyperTree extends RandomCutTree {
 
     public double[] addPoint(double[] point, long sequenceIndex) {
         return point;
-        // () -> /dev/null
     }
 
     @Override
-    public void deletePoint(double[] point, long sequenceIndex) {
-        // () -> /dev/null
+    public double[] deletePoint(double[] point, long sequenceIndex) {
+        return point;
     }
 
     public static class Builder extends RandomCutTree.Builder<Builder> {
