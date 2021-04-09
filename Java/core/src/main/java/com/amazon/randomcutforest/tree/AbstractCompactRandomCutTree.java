@@ -71,17 +71,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             boolean enableSequenceIndices) {
         this(new Builder<>().maxSize(maxSize).randomSeed(seed).enableBoundingBoxCaching(enableCache)
                 .centerOfMassEnabled(enableCenterOfMass).storeSequenceIndexesEnabled(enableSequenceIndices));
-        /*
-         * checkArgument(maxSize > 0, "maxSize must be greater than 0"); this.maxSize =
-         * maxSize; if (maxSize < SmallNodeStore.MAX_TREE_SIZE) { leafStore = new
-         * SmallLeafStore((short) maxSize); nodeStore = new SmallNodeStore((short)
-         * (maxSize - 1)); } else { leafStore = new LeafStore(maxSize); nodeStore = new
-         * NodeStore(maxSize - 1); } root = null; this.enableCache = enableCache; if
-         * (enableSequenceIndices) { sequenceIndexes = new HashMap[maxSize]; } //
-         * adjusting the below parameter in [0,1] may change the space time tradeoff //
-         * but should not affect the computation in any manner //
-         * setBoundingBoxCacheFraction(0.3);
-         */
     }
 
     public AbstractCompactRandomCutTree(AbstractCompactRandomCutTree.Builder<?> builder) {
@@ -90,7 +79,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         this.maxSize = builder.maxSize;
         this.enableCache = builder.boundingBoxCachingEnabled;
-        // note isLeaf is defined; as well as map to leaf indices
+
         if (builder.root == NULL || isLeaf(builder.root)) {
             if (maxSize < SmallNodeStore.MAX_TREE_SIZE) {
                 leafStore = new SmallLeafStore((short) maxSize);

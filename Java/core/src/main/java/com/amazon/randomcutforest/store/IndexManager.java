@@ -40,18 +40,14 @@ public class IndexManager {
      * @param capacity The total number of values that can be saved in this store.
      */
     public IndexManager(int capacity) {
-        this(capacity, null);
+        this(capacity, new BitSet(capacity));
     }
 
-    public IndexManager(int capacity, BitSet bits) {
+    public IndexManager(int capacity, BitSet occupied) {
         checkArgument(capacity > 0, "capacity must be greater than 0");
         this.capacity = capacity;
         freeIndexes = new int[capacity];
-        if (bits != null) {
-            occupied = bits;
-        } else {
-            occupied = new BitSet(capacity);
-        }
+        this.occupied = occupied;
 
         for (int j = 0; j < capacity; j++) {
             freeIndexes[j] = capacity - j - 1; // reverse order
