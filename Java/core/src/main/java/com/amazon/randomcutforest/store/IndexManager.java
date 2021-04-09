@@ -91,8 +91,9 @@ public class IndexManager {
      *                         freeIndexPointer (inclusive) contain valid index
      *                         values. if freeIndexPointer is larger than the length
      *                         of the freeIndices array then the implcit guarantee
-     *                         is that location i >= freeIndexes.length contains
-     *                         index value (capacity - i -1)
+     *                         is that location i greater or equal
+     *                         freeIndexes.length contains index value (capacity - i
+     *                         -1)
      */
     public IndexManager(int capacity, int[] freeIndexes, int freeIndexPointer) {
         checkNotNull(freeIndexes, "freeIndexes must not be null");
