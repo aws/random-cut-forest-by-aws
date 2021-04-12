@@ -60,13 +60,8 @@ public class IndexManager {
             freeIndexPointer = (capacity - 1);
             occupied = new BitSet(capacity);
         } else {
-            freeIndexPointer = -1;
             occupied = bits;
-            for (int i = 0; i < capacity; i++) {
-                if (!occupied.get(i)) {
-                    freeIndexPointer++;
-                }
-            }
+            freeIndexPointer = capacity - occupied.cardinality() - 1;
             if (freeIndexPointer != capacity - 1) {
                 freeIndexes = new int[freeIndexPointer + 1];
                 int location = 0;
@@ -118,24 +113,6 @@ public class IndexManager {
     // the following is only used in testing
     public IndexManager(int[] freeIndexes, int freeIndexPointer) {
         this(freeIndexes.length, freeIndexes, freeIndexPointer);
-    }
-
-    public IndexManager(int capacity, int oldCapacity) {
-        checkArgument(capacity > 0, "capacity must be greater than 0");
-        this.capacity = capacity;
-        freeIndexes = new int[0];
-
-        /*
-         * for (int j = 0; j < capacity; j++) { freeIndexes[j] = capacity - j - 1; //
-         * reverse order }
-         */
-
-        freeIndexPointer = capacity - oldCapacity - 1;
-        occupied = new BitSet(capacity);
-
-        for (int j = 0; j < oldCapacity; j++) {
-            occupied.set(j);
-        }
     }
 
     private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {

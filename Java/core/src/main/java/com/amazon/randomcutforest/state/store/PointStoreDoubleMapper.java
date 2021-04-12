@@ -26,6 +26,7 @@ import lombok.Setter;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -46,11 +47,11 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int dimensions = state.getDimensions();
         double[] store = Arrays.copyOf(state.getDoubleData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = Arrays.copyOf(ArrayCompressor.decompressToInt(state.getRefCount(), state.isCompressed()),
+        int[] refCount = Arrays.copyOf(ArrayPacking.decompressToInt(state.getRefCount(), state.isCompressed()),
                 indexCapacity);
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_LOCATION);
-        int[] tempList = ArrayCompressor.decompressToInt(state.getLocationList(), state.isCompressed());
+        int[] tempList = ArrayPacking.decompressToInt(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
 
         return PointStoreDouble.builder().internalRotationEnabled(state.isRotationEnabled())
@@ -84,9 +85,9 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setSinglePrecisionSet(false);
         int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayCompressor.compress(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
+        state.setRefCount(ArrayPacking.compress(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
         state.setLocationList(
-                ArrayCompressor.compress(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
+                ArrayPacking.compress(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
         state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

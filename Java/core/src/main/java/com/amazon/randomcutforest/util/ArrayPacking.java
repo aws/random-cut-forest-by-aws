@@ -13,20 +13,15 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state.store;
+package com.amazon.randomcutforest.util;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import lombok.Getter;
-import lombok.Setter;
+public class ArrayPacking {
 
-@Getter
-@Setter
-public class ArrayCompressor {
-
-    static int packNum(int base) {
+    static int maxPack(int base) {
         int pack = 0;
         long num = base;
         while (num < Integer.MAX_VALUE) {
@@ -36,9 +31,9 @@ public class ArrayCompressor {
         return pack;
     }
 
-    static int[] compress(short[] inputArray, boolean compress) {
+    public static int[] compress(short[] inputArray, boolean compress) {
         if (inputArray == null) {
-            return null;
+            throw new IllegalStateException(" array packing invoked on null arrays");
         }
         if (!compress || inputArray.length < 3) {
             int[] output = new int[inputArray.length];
@@ -57,7 +52,7 @@ public class ArrayCompressor {
         if (base == 1) {
             return new int[] { min, max, inputArray.length };
         } else {
-            int pack = packNum(base);
+            int pack = maxPack(base);
             int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / pack)];
             output[0] = min;
             output[1] = max;
@@ -79,9 +74,9 @@ public class ArrayCompressor {
 
     }
 
-    static short[] decompressToShort(int[] inputArray, boolean decomress) {
+    public static short[] decompressToShort(int[] inputArray, boolean decomress) {
         if (inputArray == null) {
-            return null;
+            throw new IllegalStateException(" array packing invoked on null arrays");
         }
         if (inputArray.length < 3 || !decomress) {
             short[] output = new short[inputArray.length];
@@ -97,7 +92,7 @@ public class ArrayCompressor {
             Arrays.fill(output, (short) min);
         } else {
             int base = (max - min + 1);
-            int pack = packNum(base);
+            int pack = maxPack(base);
             int count = 0;
             for (int i = 3; i < inputArray.length; i++) {
                 int code = inputArray[i];
@@ -111,21 +106,25 @@ public class ArrayCompressor {
         return output;
     }
 
-    static int[] compress(int[] inputArray, boolean compress) {
+    public static int[] compress(int[] inputArray, boolean compress) {
         if (inputArray == null) {
-            return null;
+            throw new IllegalStateException(" array packing invoked on null arrays");
         }
         if (!compress || inputArray.length < 3) {
             return Arrays.copyOf(inputArray, inputArray.length);
         }
 
-        int min = Arrays.stream(inputArray).min().getAsInt();
-        int max = Arrays.stream(inputArray).max().getAsInt();
+        int min = inputArray[0];
+        int max = inputArray[0];
+        for (int i = 1; i < inputArray.length; i++) {
+            min = Math.min(min, inputArray[i]);
+            max = Math.max(max, inputArray[i]);
+        }
         int base = max - min + 1;
         if (base == 1) {
             return new int[] { min, max, inputArray.length };
         } else {
-            int pack = packNum(base);
+            int pack = maxPack(base);
             int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / pack)];
             output[0] = min;
             output[1] = max;
@@ -147,9 +146,9 @@ public class ArrayCompressor {
 
     }
 
-    static int[] decompressToInt(int[] inputArray, boolean decomress) {
+    public static int[] decompressToInt(int[] inputArray, boolean decomress) {
         if (inputArray == null) {
-            return null;
+            throw new IllegalStateException(" array packing invoked on null arrays");
         }
         if (inputArray.length < 3 || !decomress) {
             return Arrays.copyOf(inputArray, inputArray.length);
@@ -161,7 +160,7 @@ public class ArrayCompressor {
             Arrays.fill(output, min);
         } else {
             int base = (max - min + 1);
-            int pack = packNum(base);
+            int pack = maxPack(base);
             int count = 0;
             for (int i = 3; i < inputArray.length; i++) {
                 int code = inputArray[i];
@@ -170,7 +169,6 @@ public class ArrayCompressor {
                     code = code / base;
                 }
             }
-            ;
         }
         return output;
     }
