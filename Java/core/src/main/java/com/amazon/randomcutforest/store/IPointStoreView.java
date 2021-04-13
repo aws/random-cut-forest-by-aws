@@ -27,6 +27,16 @@ public interface IPointStoreView<Point> {
 
     Point get(int index);
 
+    double[] getInternalShingle();
+
+    long getNextSequenceIndex();
+
+    double[] transformToShingledPoint(double[] input);
+
+    boolean isInternalRotationEnabled();
+
+    int[] transformIndices(int[] indexList);
+
     /**
      * useful for managing points, convex combinations, etc., e.g. needed for center
      * of mass

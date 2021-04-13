@@ -55,13 +55,17 @@ public class PointStoreState {
      */
     private float[] floatData;
     /**
+     * use compressed representatiomn for arrays
+     */
+    private boolean compressed;
+    /**
      * An array of reference counts for each stored point.
      */
-    private short[] refCount;
+    private int[] refCount;
     /**
      * is direct mapping enabled
      */
-    private boolean direcMapLocation;
+    private boolean directLocationMap;
     /**
      * location data for indirect maps
      */
@@ -78,13 +82,29 @@ public class PointStoreState {
      * boolean indicating use of overlapping shingles; need not be used in certain
      * cases
      */
-    private boolean shingleAwareOverlapping;
+    private boolean internalShinglingEnabled;
     /**
-     * state of free indices
+     * internal shingle
      */
-    private int freeIndexPointer;
+    private double[] internalShingle;
     /**
-     * An array of indexes indicating which data slots are occupied.
+     * last timestamp
      */
-    private int[] freeIndexes;
+    private long lastTimeStamp;
+    /**
+     * rotation for internal shingles
+     */
+    private boolean rotationEnabled;
+    /**
+     * dynamic resizing
+     */
+    private boolean dynamicResizingEnabled;
+    /**
+     * current store capacity
+     */
+    private int currentStoreCapacity;
+    /**
+     * current index capacity
+     */
+    private int indexCapacity;
 }

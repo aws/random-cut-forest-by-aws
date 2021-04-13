@@ -59,6 +59,21 @@ public class CommonUtils {
     }
 
     /**
+     * Throws an {@link IllegalStateException} with the specified message if the
+     * specified input is false. This would eventually become asserts.
+     *
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @throws IllegalStateException if {@code condition} is false.
+     */
+    public static void validateInternalState(boolean condition, String message) {
+        if (!condition) {
+            throw new IllegalStateException(message);
+        }
+    }
+
+    /**
      * Throws a {@link NullPointerException} with the specified message if the
      * specified input is null.
      *
