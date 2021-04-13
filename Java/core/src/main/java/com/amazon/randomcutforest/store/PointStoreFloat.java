@@ -114,7 +114,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     @Override
     public float[] get(int index) {
         indexManager.checkValidIndex(index);
-        int address = (directLocationMap) ? index * dimensions : locationList[index];
+        int address = locationList[index];
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);
         } else {
