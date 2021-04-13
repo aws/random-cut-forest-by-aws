@@ -159,7 +159,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
      * @return an index from the index manager
      */
     int takeIndex() {
-        if (indexManager.freeIndexPointer == INFEASIBLE_POINTSTORE_INDEX) {
+        if (indexManager.isFull()) {
             if (indexManager.getCapacity() < capacity) {
                 int oldCapacity = indexManager.getCapacity();
                 int newCapacity = Math.min(capacity, 2 * oldCapacity);
@@ -229,7 +229,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
             copyPoint(tempPoint, dimensions - amountToWrite, startOfFreeSegment, amountToWrite);
             startOfFreeSegment += amountToWrite;
         } else {
-            nextIndex = takeIndex(); // no more compactions
+            nextIndex = takeIndex();
             int address = locationList[nextIndex];
             validateInternalState(refCount[nextIndex] == 0, "incorrect state");
             if (address == INFEASIBLE_POINTSTORE_LOCATION) {
@@ -427,7 +427,8 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
     }
 
     /**
-     * note that the second argument being null enforces a rotation
+     * used to obtain the most recent shingle seen so far in case of internal
+     * shingling
      * 
      * @return for internal shingling, returns the last seen shingle
      */
@@ -435,14 +436,28 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         return (internalShinglingEnabled) ? Arrays.copyOf(internalShingle, dimensions) : null;
     }
 
+    /**
+     * used for serialization
+     * 
+     * @return the free indices as a stack 9can be implicitly defined)
+     */
     public int[] getFreeIndexes() {
         return indexManager.getFreeIndexes();
     }
 
+    /**
+     * used for serialization
+     * 
+     * @return the pointer to the stack of free indices
+     */
     public int getFreeIndexPointer() {
         return indexManager.getFreeIndexPointer();
     }
 
+    /**
+     *
+     * @return the number of indices stored
+     */
     public int size() {
         return indexManager.capacity - indexManager.freeIndexPointer - 1;
     }
@@ -454,11 +469,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
      * @return size of initial prefix in use
      */
     public int getValidPrefix() {
-        int prefix = indexManager.capacity;
-        while (prefix > 0 && !indexManager.occupied.get(prefix - 1)) {
-            prefix--;
-        }
-        return prefix;
+        return indexManager.occupied.previousSetBit(capacity) + 1;
     }
 
     /**
@@ -519,9 +530,12 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         while (runningLocation < currentStoreCapacity * dimensions) {
             // find the first eligible shingle to be copied
             // for rotationEnabled, this should be a multiple of dimensions
-            while (runningLocation < currentStoreCapacity * dimensions && !inUse.get(runningLocation / baseDimension)) {
-                runningLocation += baseDimension;
+
+            runningLocation = inUse.nextSetBit(runningLocation / baseDimension) * baseDimension;
+            if (runningLocation < 0) { // no next bit set
+                runningLocation = currentStoreCapacity * dimensions;
             }
+
             // we are now at the start of the data but for rotation enabled internal
             // shingling
             // we need to ensure that locations remain a multiple of dimensions

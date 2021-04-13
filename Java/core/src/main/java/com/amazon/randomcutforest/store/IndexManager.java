@@ -117,6 +117,10 @@ public class IndexManager {
         freeIndexPointer = newCapacity - manager.capacity - 1;
     }
 
+    public boolean isFull() {
+        return (freeIndexPointer == -1);
+    }
+
     private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {
         checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
                 "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");
