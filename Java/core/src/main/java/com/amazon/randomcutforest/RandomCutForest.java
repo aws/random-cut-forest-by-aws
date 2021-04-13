@@ -613,11 +613,11 @@ public class RandomCutForest {
 
     /**
      *
-     * @return the timestamp of the last known shingled point
+     * @return the sequence index of the last known shingled point
      */
-    public long nextTimeStamp() {
+    public long nextSequenceIndex() {
         checkArgument(internalShinglingEnabled, "incorrect use");
-        return stateCoordinator.getStore().getNextTimeStamp();
+        return stateCoordinator.getStore().getNextSequenceIndex();
     }
 
     /**
@@ -1176,7 +1176,7 @@ public class RandomCutForest {
         checkArgument(internalShinglingEnabled, "incorrect use");
         IPointStore<?> store = stateCoordinator.getStore();
         return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
-                ((int) nextTimeStamp()) % dimensions);
+                ((int) nextSequenceIndex()) % dimensions);
     }
 
     /**

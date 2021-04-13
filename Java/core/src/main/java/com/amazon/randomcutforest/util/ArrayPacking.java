@@ -16,12 +16,13 @@
 package com.amazon.randomcutforest.util;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
 public class ArrayPacking {
 
-    static int maxPack(int base) {
+    static int logMax(int base) {
         int pack = 0;
         long num = base;
         while (num < Integer.MAX_VALUE) {
@@ -31,10 +32,9 @@ public class ArrayPacking {
         return pack;
     }
 
-    public static int[] compress(short[] inputArray, boolean compress) {
-        if (inputArray == null) {
-            throw new IllegalStateException(" array packing invoked on null arrays");
-        }
+    public static int[] pack(short[] inputArray, boolean compress) {
+        checkNotNull(inputArray, " array packing invoked on null arrays");
+
         if (!compress || inputArray.length < 3) {
             int[] output = new int[inputArray.length];
             for (int i = 0; i < inputArray.length; i++) {
@@ -52,21 +52,20 @@ public class ArrayPacking {
         if (base == 1) {
             return new int[] { min, max, inputArray.length };
         } else {
-            int pack = maxPack(base);
-            int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / pack)];
-            output[0] = min;
+            int packNum = logMax(base);
+            int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / packNum)];
             output[1] = max;
             output[2] = inputArray.length;
             int len = 0;
             int used = 0;
             while (len < inputArray.length) {
                 int code = 0;
-                int reach = Math.min(len + pack - 1, inputArray.length - 1);
+                int reach = Math.min(len + packNum - 1, inputArray.length - 1);
                 for (int i = reach; i >= len; i--) {
                     code = base * code + (inputArray[i] - min);
                 }
                 output[3 + used++] = code;
-                len += pack;
+                len += packNum;
             }
             checkArgument(used + 3 == output.length, "incorrect state");
             return output;
@@ -74,10 +73,8 @@ public class ArrayPacking {
 
     }
 
-    public static short[] decompressToShort(int[] inputArray, boolean decomress) {
-        if (inputArray == null) {
-            throw new IllegalStateException(" array packing invoked on null arrays");
-        }
+    public static short[] unPackShorts(int[] inputArray, boolean decomress) {
+        checkNotNull(inputArray, " array unpacking invoked on null arrays");
         if (inputArray.length < 3 || !decomress) {
             short[] output = new short[inputArray.length];
             for (int i = 0; i < inputArray.length; i++) {
@@ -92,11 +89,11 @@ public class ArrayPacking {
             Arrays.fill(output, (short) min);
         } else {
             int base = (max - min + 1);
-            int pack = maxPack(base);
+            int packNum = logMax(base);
             int count = 0;
             for (int i = 3; i < inputArray.length; i++) {
                 int code = inputArray[i];
-                for (int j = 0; j < pack && count < output.length; j++) {
+                for (int j = 0; j < packNum && count < output.length; j++) {
                     output[count++] = (short) (min + code % base);
                     code = code / base;
                 }
@@ -106,10 +103,9 @@ public class ArrayPacking {
         return output;
     }
 
-    public static int[] compress(int[] inputArray, boolean compress) {
-        if (inputArray == null) {
-            throw new IllegalStateException(" array packing invoked on null arrays");
-        }
+    public static int[] pack(int[] inputArray, boolean compress) {
+        checkNotNull(inputArray, " array packing invoked on null arrays");
+
         if (!compress || inputArray.length < 3) {
             return Arrays.copyOf(inputArray, inputArray.length);
         }
@@ -124,8 +120,8 @@ public class ArrayPacking {
         if (base == 1) {
             return new int[] { min, max, inputArray.length };
         } else {
-            int pack = maxPack(base);
-            int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / pack)];
+            int packNum = logMax(base);
+            int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / packNum)];
             output[0] = min;
             output[1] = max;
             output[2] = inputArray.length;
@@ -133,12 +129,12 @@ public class ArrayPacking {
             int used = 0;
             while (len < inputArray.length) {
                 int code = 0;
-                int reach = Math.min(len + pack - 1, inputArray.length - 1);
+                int reach = Math.min(len + packNum - 1, inputArray.length - 1);
                 for (int i = reach; i >= len; i--) {
                     code = base * code + (inputArray[i] - min);
                 }
                 output[3 + used++] = code;
-                len += pack;
+                len += packNum;
             }
             checkArgument(used + 3 == output.length, "incorrect state");
             return output;
@@ -146,10 +142,8 @@ public class ArrayPacking {
 
     }
 
-    public static int[] decompressToInt(int[] inputArray, boolean decomress) {
-        if (inputArray == null) {
-            throw new IllegalStateException(" array packing invoked on null arrays");
-        }
+    public static int[] unPackInts(int[] inputArray, boolean decomress) {
+        checkNotNull(inputArray, " array unpacking invoked on null arrays");
         if (inputArray.length < 3 || !decomress) {
             return Arrays.copyOf(inputArray, inputArray.length);
         }
@@ -160,11 +154,11 @@ public class ArrayPacking {
             Arrays.fill(output, min);
         } else {
             int base = (max - min + 1);
-            int pack = maxPack(base);
+            int packNum = logMax(base);
             int count = 0;
             for (int i = 3; i < inputArray.length; i++) {
                 int code = inputArray[i];
-                for (int j = 0; j < pack && count < output.length; j++) {
+                for (int j = 0; j < packNum && count < output.length; j++) {
                     output[count++] = (min + code % base);
                     code = code / base;
                 }

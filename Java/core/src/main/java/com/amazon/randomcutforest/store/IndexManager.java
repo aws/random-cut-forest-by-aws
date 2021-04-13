@@ -41,7 +41,7 @@ public class IndexManager {
      * @param capacity The total number of values that can be saved in this store.
      */
     public IndexManager(int capacity) {
-        this(capacity, null);
+        this(capacity, new BitSet(capacity));
     }
 
     /**
@@ -55,25 +55,20 @@ public class IndexManager {
     public IndexManager(int capacity, BitSet bits) {
         checkArgument(capacity > 0, "capacity must be greater than 0");
         this.capacity = capacity;
-        if (bits == null) {
-            freeIndexes = new int[0];
-            freeIndexPointer = (capacity - 1);
-            occupied = new BitSet(capacity);
-        } else {
-            occupied = bits;
-            freeIndexPointer = capacity - occupied.cardinality() - 1;
-            if (freeIndexPointer != capacity - 1) {
-                freeIndexes = new int[freeIndexPointer + 1];
-                int location = 0;
-                for (int i = capacity - 1; i >= 0; i--) {
-                    if (!occupied.get(i)) {
-                        freeIndexes[location++] = i;
-                    }
+        occupied = bits;
+        freeIndexPointer = capacity - occupied.cardinality() - 1;
+        if (freeIndexPointer != capacity - 1) {
+            freeIndexes = new int[freeIndexPointer + 1];
+            int location = 0;
+            for (int i = capacity - 1; i >= 0; i--) {
+                if (!occupied.get(i)) {
+                    freeIndexes[location++] = i;
                 }
-            } else {
-                freeIndexes = new int[0];
             }
+        } else {
+            freeIndexes = new int[0];
         }
+
     }
 
     /**
@@ -113,6 +108,13 @@ public class IndexManager {
     // the following is only used in testing
     public IndexManager(int[] freeIndexes, int freeIndexPointer) {
         this(freeIndexes.length, freeIndexes, freeIndexPointer);
+    }
+
+    public IndexManager(IndexManager manager, int newCapacity) {
+        this(newCapacity);
+        checkArgument(manager.occupied.cardinality() == manager.capacity, " incorrect application, not full");
+        occupied.or(manager.occupied);
+        freeIndexPointer = newCapacity - manager.capacity - 1;
     }
 
     private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {

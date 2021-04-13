@@ -47,11 +47,11 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         int dimensions = state.getDimensions();
         float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = Arrays.copyOf(ArrayPacking.decompressToInt(state.getRefCount(), state.isCompressed()),
+        int[] refCount = Arrays.copyOf(ArrayPacking.unPackInts(state.getRefCount(), state.isCompressed()),
                 indexCapacity);
         int[] locationList = new int[indexCapacity];
-        Arrays.fill(locationList, PointStore.INFEASIBLE_LOCATION);
-        int[] tempList = ArrayPacking.decompressToInt(state.getLocationList(), state.isCompressed());
+        Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
+        int[] tempList = ArrayPacking.unPackInts(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
 
         return PointStoreFloat.builder().internalRotationEnabled(state.isRotationEnabled())
@@ -66,9 +66,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
 
     @Override
     public PointStoreState toState(PointStoreFloat model) {
-        if (!model.isDirectLocationMap()) {
-            model.compact();
-        }
+        model.compact();
         PointStoreState state = new PointStoreState();
         state.setCompressed(true);
         state.setDimensions(model.getDimensions());
@@ -76,7 +74,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setShingleSize(model.getShingleSize());
         state.setDirectLocationMap(model.isDirectLocationMap());
         state.setInternalShingle(model.getInternalShingle());
-        state.setLastTimeStamp(model.getNextTimeStamp());
+        state.setLastTimeStamp(model.getNextSequenceIndex());
         state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
         state.setRotationEnabled(model.isInternalRotationEnabled());
@@ -85,9 +83,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setSinglePrecisionSet(true);
         int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayPacking.compress(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
-        state.setLocationList(
-                ArrayPacking.compress(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
+        state.setRefCount(ArrayPacking.pack(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
+        state.setLocationList(ArrayPacking.pack(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
         state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

@@ -27,25 +27,15 @@ public interface IPointStoreView<Point> {
 
     Point get(int index);
 
-    default double[] getInternalShingle() {
-        return null;
-    }
+    double[] getInternalShingle();
 
-    default long getNextTimeStamp() {
-        return 0;
-    }
+    long getNextSequenceIndex();
 
-    default double[] transformToShingledPoint(double[] input) {
-        return null;
-    }
+    double[] transformToShingledPoint(double[] input);
 
-    default boolean isInternalRotationEnabled() {
-        return false;
-    }
+    boolean isInternalRotationEnabled();
 
-    default int[] transformIndices(int[] indexList) {
-        return null;
-    }
+    int[] transformIndices(int[] indexList);
 
     /**
      * useful for managing points, convex combinations, etc., e.g. needed for center
