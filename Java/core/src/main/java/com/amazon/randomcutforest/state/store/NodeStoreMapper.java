@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
 import java.util.Arrays;
 
 import lombok.Getter;
@@ -22,6 +24,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -35,32 +38,55 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
 
     @Override
     public NodeStore toModel(NodeStoreState state, long seed) {
-        int capacity = state.getLeftIndex().length;
-        int[] leftIndex = Arrays.copyOf(state.getLeftIndex(), capacity);
-        int[] rightIndex = Arrays.copyOf(state.getRightIndex(), capacity);
-        int[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
-        int[] cutDimension = Arrays.copyOf(state.getCutDimension(), capacity);
-        double[] cutValue = Arrays.copyOf(state.getCutValue(), capacity);
+        int capacity = state.getCapacity();
+        int[] cutDimension = ArrayPacking.unPackInts(state.getCutDimension(), state.isCompressed());
+        int[] leftIndex = ArrayPacking.unPackInts(state.getLeftIndex(), state.isCompressed());
+        int[] rightIndex = ArrayPacking.unPackInts(state.getRightIndex(), state.isCompressed());
+        int[] leafMass = ArrayPacking.unPackInts(state.getLeafmass(), state.isCompressed());
+        int[] leafPointIndex = ArrayPacking.unPackInts(state.getLeafPointIndex(), state.isCompressed());
+        int[] nodeFreeIndexes = ArrayPacking.unPackInts(state.getNodeFreeIndexes(), state.isCompressed());
+        int nodeFreeIndexPointer = state.getNodeFreeIndexPointer();
+        int[] leafFreeIndexes = ArrayPacking.unPackInts(state.getLeafFreeIndexes(), state.isCompressed());
+        int leafFreeIndexPointer = state.getLeafFreeIndexPointer();
+        double[] cutValue = Arrays.copyOf(state.getCutValueDouble(), state.getCutValueDouble().length);
 
-        short freeIndexPointer = (short) (state.getFreeIndexes().length - 1);
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
-
-        return new NodeStore(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass, freeIndexes,
-                freeIndexPointer);
+        return new NodeStore(capacity, leftIndex, rightIndex, cutDimension, cutValue, leafMass, leafPointIndex,
+                nodeFreeIndexes, nodeFreeIndexPointer, leafFreeIndexes, leafFreeIndexPointer);
     }
 
     @Override
     public NodeStoreState toState(NodeStore model) {
         NodeStoreState state = new NodeStoreState();
-        state.setLeftIndex(Arrays.copyOf(model.leftIndex, model.leftIndex.length));
-        state.setRightIndex(Arrays.copyOf(model.rightIndex, model.rightIndex.length));
-        state.setParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setMass(Arrays.copyOf(model.mass, model.mass.length));
-        state.setCutDimension(Arrays.copyOf(model.cutDimension, model.cutDimension.length));
-        state.setCutValue(Arrays.copyOf(model.cutValue, model.cutValue.length));
-        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setCompressed(true);
+        state.setCapacity(model.getCapacity());
+        state.setLeftIndex(ArrayPacking.pack(model.leftIndex, state.isCompressed()));
+        state.setRightIndex(ArrayPacking.pack(model.rightIndex, state.isCompressed()));
+        state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
+        state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
+        state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());
+        state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));
+        state.setLeafFreeIndexPointer(model.getLeafFreeIndexPointer());
+        state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
+        state.setLeafmass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
+        state.setCutValueDouble(Arrays.copyOf(model.cutValue, model.cutValue.length));
         return state;
+    }
+
+    int[] getParent(int[] leftIndex, int[] rightIndex) {
+        int capacity = leftIndex.length;
+        checkState(rightIndex.length == capacity, "incorrect call");
+        int[] parent = new int[capacity];
+        Arrays.fill(parent, -1);
+        for (short i = 0; i < capacity; i++) {
+            if (leftIndex[i] != -1 && leftIndex[i] < capacity) {
+                checkState(parent[leftIndex[i]] == -1, "incorrect state");
+                parent[leftIndex[i]] = i;
+            }
+            if (rightIndex[i] != -1 && rightIndex[i] < capacity) {
+                checkState(parent[rightIndex[i]] == -1, "incorrect state");
+                parent[rightIndex[i]] = i;
+            }
+        }
+        return parent;
     }
 }

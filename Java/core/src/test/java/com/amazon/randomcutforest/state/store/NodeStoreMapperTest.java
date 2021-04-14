@@ -22,35 +22,33 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.store.SmallNodeStore;
+import com.amazon.randomcutforest.store.NodeStore;
 
 public class NodeStoreMapperTest {
-    private SmallNodeStoreMapper mapper;
+    private NodeStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        mapper = new SmallNodeStoreMapper();
+        mapper = new NodeStoreMapper();
     }
 
     @Test
     public void testRoundTrip() {
-        SmallNodeStore store = new SmallNodeStore((short) 10);
+        NodeStore store = new NodeStore((short) 10);
         int index1 = store.addNode(1, 2, 3, 1, 6.6, 1);
         int index2 = store.addNode(1, 4, 5, 2, -14.8, 2);
         int index3 = store.addNode(6, 7, 8, 1, 9.8, 4);
         int index4 = store.addNode(6, 10, 11, 4, -1000.01, 1);
 
-        SmallNodeStore store2 = mapper.toModel(mapper.toState(store));
+        NodeStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
 
         IntStream.of(index1, index2, index3, index4).forEach(i -> {
-            assertEquals(store.getParent(i), store2.getParent(i));
             assertEquals(store.getLeftIndex(i), store2.getLeftIndex(i));
             assertEquals(store.getRightIndex(i), store2.getRightIndex(i));
             assertEquals(store.getCutDimension(i), store2.getCutDimension(i));
             assertEquals(store.getCutValue(i), store2.getCutValue(i));
-            assertEquals(store.getMass(i), store2.getMass(i));
         });
     }
 }

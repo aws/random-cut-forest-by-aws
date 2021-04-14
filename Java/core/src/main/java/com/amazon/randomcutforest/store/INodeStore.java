@@ -38,7 +38,36 @@ public interface INodeStore {
     int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass);
 
     /**
-     * set the parent of an internal node
+     * adds a leaf node
+     *
+     * @param parentIndex parent of the leaf
+     * @param pointIndex  index in point store determining the associated point
+     * @param mass        number of copies
+     * @return index of the leaf node
+     */
+
+    int addLeaf(int parentIndex, int pointIndex, int mass);
+
+    /**
+     * gets the index of the point associated with the leaf
+     *
+     * @param index node
+     * @return index of the point in Point Store
+     */
+    int getPointIndex(int index);
+
+    /**
+     * sets/replaces the point index in a leafstore entry
+     *
+     * @param index      node
+     * @param pointIndex the new index of the point corresponding to the leaf
+     * @return the older index (useful for audit)
+     */
+
+    int setPointIndex(int index, int pointIndex);
+
+    /**
+     * set the parent of a node
      * 
      * @param index  node
      * @param parent parent of the node (can be NULL)
@@ -54,7 +83,7 @@ public interface INodeStore {
     int getParent(int index);
 
     /**
-     * deletes an internal node
+     * deletes a node
      * 
      * @param index node
      */
@@ -191,5 +220,11 @@ public interface INodeStore {
     default Map<Integer, Integer> getLeavesAndParents() {
         return null;
     }
+
+    boolean isLeaf(int index);
+
+    int getCapacity();
+
+    int computeLeafIndex(int index);
 
 }
