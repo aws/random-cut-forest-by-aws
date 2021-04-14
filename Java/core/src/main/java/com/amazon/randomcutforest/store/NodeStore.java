@@ -38,7 +38,7 @@ import java.util.Arrays;
  * Note that a NodeStore does not store instances of the
  * {@link com.amazon.randomcutforest.tree.Node} class.
  */
-public class NodeStore implements INodeStore, ILeafStore {
+public class NodeStore implements INodeStore {
 
     public final int capacity;
     public final int[] parentIndex;
