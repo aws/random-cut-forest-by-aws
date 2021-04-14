@@ -22,6 +22,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.SmallLeafStore;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -37,10 +38,10 @@ public class SmallLeafStoreMapper implements IStateMapper<SmallLeafStore, LeafSt
     public SmallLeafStore toModel(LeafStoreState state, long seed) {
         int capacity = state.getCapacity();
         int[] pointIndex = Arrays.copyOf(state.getPointIndex(), capacity);
-        short[] parentIndex = Arrays.copyOf(state.getSmallParentIndex(), capacity);
-        short[] mass = Arrays.copyOf(state.getSmallMass(), capacity);
+        short[] parentIndex = ArrayPacking.unPackShorts(state.getParentIndex(), false);
+        short[] mass = ArrayPacking.unPackShorts(state.getMass(), false);
         short freeIndexPointer = (short) (state.getFreeIndexPointer());
-        short[] freeIndexes = Arrays.copyOf(state.getSmallFreeIndexes(), state.getSmallFreeIndexes().length);
+        int[] freeIndexes = Arrays.copyOf(state.getFreeIndexes(), state.getFreeIndexes().length);
 
         return new SmallLeafStore(capacity, pointIndex, parentIndex, mass, freeIndexes, freeIndexPointer);
     }
@@ -50,10 +51,10 @@ public class SmallLeafStoreMapper implements IStateMapper<SmallLeafStore, LeafSt
         LeafStoreState state = new LeafStoreState();
         state.setCapacity(model.getCapacity());
         state.setPointIndex(Arrays.copyOf(model.pointIndex, model.pointIndex.length));
-        state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
+        state.setParentIndex(ArrayPacking.pack(model.parentIndex, false));
+        state.setMass(ArrayPacking.pack(model.mass, false));
         state.setFreeIndexPointer(model.getFreeIndexPointer());
-        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexes().length));
+        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexes().length));
         return state;
     }
 

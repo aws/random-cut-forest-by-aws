@@ -39,7 +39,7 @@ import java.util.Map;
  * Note that a NodeStore does not store instances of the
  * {@link com.amazon.randomcutforest.tree.Node} class.
  */
-public class SmallNodeStore extends SmallIndexManager implements INodeStore {
+public class SmallNodeStore extends IndexManager implements INodeStore {
 
     public static final int MAX_TREE_SIZE = 16383;
 
@@ -63,18 +63,21 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         cutDimension = new int[capacity];
         cutValue = new double[capacity];
         mass = new short[capacity];
+        Arrays.fill(parentIndex, (short) NULL);
+        Arrays.fill(leftIndex, (short) NULL);
+        Arrays.fill(rightIndex, (short) NULL);
     }
 
-    public SmallNodeStore(int capacity, short[] parentIndex, short[] leftIndex, short[] rightIndex, int[] cutDimension,
-            double[] cutValue, short[] mass, short[] freeIndexes, short freeIndexPointer) {
+    public SmallNodeStore(int capacity, short[] leftIndex, short[] rightIndex, int[] cutDimension, double[] cutValue,
+            int[] freeIndexes, int freeIndexPointer) {
         // TODO validations
         super(capacity, freeIndexes, freeIndexPointer);
-        this.parentIndex = parentIndex;
+        this.parentIndex = getParentIndex(leftIndex, rightIndex);
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
-        this.mass = mass;
+        this.mass = new short[capacity];
     }
 
     /**
@@ -89,7 +92,7 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
      * @return the index of the newly stored node.
      */
     public int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass) {
-        short index = takeIndex();
+        int index = takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = cutDimension;
         this.leftIndex[index] = (short) leftIndex;
@@ -223,12 +226,12 @@ public class SmallNodeStore extends SmallIndexManager implements INodeStore {
         short[] parentIndex = new short[capacity];
         Arrays.fill(parentIndex, (short) NULL);
         for (short i = 0; i < capacity; i++) {
-            if (leftIndex[i] != NULL && leftIndex[i] < capacity) {
-                checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
+            if (leftIndex[i] != (short) NULL && leftIndex[i] < capacity) {
+                checkState(parentIndex[leftIndex[i]] == (short) NULL, "incorrect state, conflicting parent");
                 parentIndex[leftIndex[i]] = i;
             }
-            if (rightIndex[i] != NULL && rightIndex[i] < capacity) {
-                checkState(parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
+            if (rightIndex[i] != (short) NULL && rightIndex[i] < capacity) {
+                checkState(parentIndex[rightIndex[i]] == (short) NULL, "incorrect state, conflicting parent");
                 parentIndex[rightIndex[i]] = i;
             }
         }

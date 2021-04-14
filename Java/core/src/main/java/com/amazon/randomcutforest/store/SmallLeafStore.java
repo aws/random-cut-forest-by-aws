@@ -37,20 +37,17 @@ import java.util.BitSet;
  * The reference to the nodes will be offset by an amount that this ihe
  * capacity.
  */
-public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
+public class SmallLeafStore extends IndexManager implements ILeafStore {
 
     public final int[] pointIndex;
     public final short[] parentIndex;
     public final short[] mass;
 
     public SmallLeafStore(short capacity) {
-        super(capacity);
-        pointIndex = new int[capacity];
-        parentIndex = new short[capacity];
-        mass = new short[capacity];
+        this(capacity, new BitSet(capacity));
     }
 
-    public SmallLeafStore(int capacity, int[] pointIndex, short[] parentIndex, short[] mass, short[] freeIndexes,
+    public SmallLeafStore(int capacity, int[] pointIndex, short[] parentIndex, short[] mass, int[] freeIndexes,
             short freeIndexPointer) {
         super(capacity, freeIndexes, freeIndexPointer);
 
@@ -66,7 +63,7 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
     }
 
     public SmallLeafStore(int capacity, BitSet leafbits) {
-        super((short) capacity, leafbits);
+        super(capacity, leafbits);
         pointIndex = new int[capacity];
         parentIndex = new short[capacity];
         mass = new short[capacity];
@@ -75,7 +72,7 @@ public class SmallLeafStore extends SmallIndexManager implements ILeafStore {
     }
 
     public int addLeaf(int parentIndex, int pointIndex, int mass) {
-        short index = takeIndex();
+        int index = takeIndex();
         this.parentIndex[index] = (short) parentIndex;
         this.mass[index] = (short) mass;
         this.pointIndex[index] = pointIndex;

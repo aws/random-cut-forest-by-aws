@@ -22,6 +22,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -35,32 +36,29 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
 
     @Override
     public NodeStore toModel(NodeStoreState state, long seed) {
-        int capacity = state.getLeftIndex().length;
-        int[] leftIndex = Arrays.copyOf(state.getLeftIndex(), capacity);
-        int[] rightIndex = Arrays.copyOf(state.getRightIndex(), capacity);
-        int[] parentIndex = Arrays.copyOf(state.getParentIndex(), capacity);
-        int[] mass = Arrays.copyOf(state.getMass(), capacity);
-        int[] cutDimension = Arrays.copyOf(state.getCutDimension(), capacity);
-        double[] cutValue = Arrays.copyOf(state.getCutValue(), capacity);
+        int capacity = state.getCapacity();
+        int[] cutDimension = ArrayPacking.unPackInts(state.getCutDimension(), state.isCompressed());
+        int[] leftIndex = ArrayPacking.unPackInts(state.getLeftIndex(), state.isCompressed());
+        int[] rightIndex = ArrayPacking.unPackInts(state.getRightIndex(), state.isCompressed());
+        int[] freeIndexes = ArrayPacking.unPackInts(state.getFreeIndexes(), state.isCompressed());
+        int freeIndexPointer = state.getFreeIndexPointer();
+        double[] cutValue = Arrays.copyOf(state.getCutValueDouble(), state.getCutValueDouble().length);
 
-        short freeIndexPointer = (short) (state.getFreeIndexes().length - 1);
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
-
-        return new NodeStore(parentIndex, leftIndex, rightIndex, cutDimension, cutValue, mass, freeIndexes,
-                freeIndexPointer);
+        return new NodeStore(capacity, leftIndex, rightIndex, cutDimension, cutValue, freeIndexes, freeIndexPointer);
     }
 
     @Override
     public NodeStoreState toState(NodeStore model) {
         NodeStoreState state = new NodeStoreState();
-        state.setLeftIndex(Arrays.copyOf(model.leftIndex, model.leftIndex.length));
-        state.setRightIndex(Arrays.copyOf(model.rightIndex, model.rightIndex.length));
-        state.setParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setMass(Arrays.copyOf(model.mass, model.mass.length));
-        state.setCutDimension(Arrays.copyOf(model.cutDimension, model.cutDimension.length));
-        state.setCutValue(Arrays.copyOf(model.cutValue, model.cutValue.length));
-        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setCompressed(true);
+        state.setCapacity(model.getCapacity());
+        state.setLeftIndex(ArrayPacking.pack(model.leftIndex, state.isCompressed()));
+        state.setRightIndex(ArrayPacking.pack(model.rightIndex, state.isCompressed()));
+        state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
+        state.setFreeIndexes(ArrayPacking.pack(model.getFreeIndexes(), state.isCompressed()));
+        state.setFreeIndexPointer(model.getFreeIndexPointer());
+        state.setCutValueDouble(Arrays.copyOf(model.cutValue, model.cutValue.length));
         return state;
     }
+
 }

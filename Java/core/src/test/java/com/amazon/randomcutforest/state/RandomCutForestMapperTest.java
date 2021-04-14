@@ -71,8 +71,8 @@ public class RandomCutForestMapperTest {
         assertEquals(forest.isParallelExecutionEnabled(), forest2.isParallelExecutionEnabled());
         assertEquals(forest.getThreadPoolSize(), forest2.getThreadPoolSize());
 
-        PointStoreCoordinator coordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
-        PointStoreCoordinator coordinator2 = (PointStoreCoordinator) forest2.getUpdateCoordinator();
+        PointStoreCoordinator coordinator = (PointStoreCoordinator) forest.getStateCoordinator();
+        PointStoreCoordinator coordinator2 = (PointStoreCoordinator) forest2.getStateCoordinator();
 
         if (forest.getPrecision() == Precision.DOUBLE) {
             PointStoreDouble store = (PointStoreDouble) coordinator.getStore();

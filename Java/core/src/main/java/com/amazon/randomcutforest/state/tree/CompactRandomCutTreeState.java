@@ -23,6 +23,13 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 @Data
 public class CompactRandomCutTreeState {
     private int root;
-    private LeafStoreState leafStoreState;
+    private boolean compressed;
+    private int sampleSize;
     private NodeStoreState nodeStoreState;
+    // the following will not be present in a compressed=true state
+    // the compression will always be set to true if sequencenumbers are stored
+    // in all such cases, the corresponding sampler needs to be used to send the
+    // points to the tree before the tree can be used
+    private LeafStoreState leafStoreState;
+
 }

@@ -19,16 +19,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
-import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
-import com.amazon.randomcutforest.state.store.SmallLeafStoreMapper;
 import com.amazon.randomcutforest.state.store.SmallNodeStoreMapper;
-import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
-import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.store.SmallLeafStore;
 import com.amazon.randomcutforest.store.SmallNodeStore;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
@@ -44,24 +39,18 @@ public class CompactRandomCutTreeDoubleMapper implements
             long seed) {
 
         INodeStore nodeStore;
-        ILeafStore leafStore;
-        if (context.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
-            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
-            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
+        if (context.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
         } else {
-            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
-
             NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
         }
 
-        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, (PointStoreDouble) context.getPointStore(),
-                leafStore, nodeStore, state.getRoot(), boundingBoxCacheEnabled);
-
+        return new CompactRandomCutTreeDouble.Builder().maxSize(context.getMaxSize()).randomSeed(seed)
+                .pointStore((PointStoreDouble) context.getPointStore()).nodeStore(nodeStore).root(state.getRoot())
+                .enableBoundingBoxCaching(boundingBoxCacheEnabled).build();
     }
 
     @Override
@@ -70,15 +59,9 @@ public class CompactRandomCutTreeDoubleMapper implements
         state.setRoot(model.getRootIndex());
 
         if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
-            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
-            state.setLeafStoreState(leafStoreMapper.toState((SmallLeafStore) model.getLeafStore()));
-
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
             state.setNodeStoreState(nodeStoreMapper.toState((SmallNodeStore) model.getNodeStore()));
         } else {
-            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-            state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
-
             NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
             state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
         }

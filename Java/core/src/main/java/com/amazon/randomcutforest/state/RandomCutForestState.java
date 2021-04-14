@@ -38,6 +38,8 @@ public class RandomCutForestState {
 
     private int sampleSize;
 
+    private int shingleSize;
+
     private int dimensions;
 
     private int outputAfter;
@@ -48,7 +50,17 @@ public class RandomCutForestState {
 
     private boolean compactEnabled;
 
+    private boolean internalShinglingEnabled;
+
     private boolean centerOfMassEnabled;
+
+    private boolean saveTreeState;
+
+    private boolean saveSamplerState;
+
+    private boolean saveCoordinatorState;
+
+    private boolean singlePrecisionSet;
 
     private PointStoreState pointStoreState;
 

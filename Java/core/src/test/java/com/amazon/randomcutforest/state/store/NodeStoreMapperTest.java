@@ -45,12 +45,10 @@ public class NodeStoreMapperTest {
         assertEquals(store.size(), store2.size());
 
         IntStream.of(index1, index2, index3, index4).forEach(i -> {
-            assertEquals(store.getParent(i), store2.getParent(i));
             assertEquals(store.getLeftIndex(i), store2.getLeftIndex(i));
             assertEquals(store.getRightIndex(i), store2.getRightIndex(i));
             assertEquals(store.getCutDimension(i), store2.getCutDimension(i));
             assertEquals(store.getCutValue(i), store2.getCutValue(i));
-            assertEquals(store.getMass(i), store2.getMass(i));
         });
     }
 }

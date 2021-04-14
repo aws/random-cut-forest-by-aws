@@ -548,7 +548,7 @@ public class RandomCutForest {
     }
 
     // TODO change in next PR with the mappers and tests
-    public IStateCoordinator<?, ?> getUpdateCoordinator() {
+    public IStateCoordinator<?, ?> getStateCoordinator() {
         return stateCoordinator;
     }
 

@@ -54,6 +54,7 @@ public class ArrayPacking {
         } else {
             int packNum = logMax(base);
             int[] output = new int[3 + (int) Math.ceil(1.0 * inputArray.length / packNum)];
+            output[0] = min;
             output[1] = max;
             output[2] = inputArray.length;
             int len = 0;

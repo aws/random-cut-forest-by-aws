@@ -15,7 +15,10 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -58,16 +61,16 @@ public class NodeStore extends IndexManager implements INodeStore {
         mass = new int[capacity];
     }
 
-    public NodeStore(int[] parentIndex, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
-            int[] mass, int[] freeIndexes, int freeIndexPointer) {
+    public NodeStore(int capacity, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
+            int[] freeIndexes, int freeIndexPointer) {
         // TODO validations
-        super(freeIndexes, freeIndexPointer);
-        this.parentIndex = parentIndex;
+        super(capacity, freeIndexes, freeIndexPointer);
+        this.parentIndex = getParentIndex(leftIndex, rightIndex);
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
-        this.mass = mass;
+        this.mass = new int[capacity];
     }
 
     /**
@@ -186,4 +189,21 @@ public class NodeStore extends IndexManager implements INodeStore {
         return leftIndex[parent] == node ? rightIndex[parent] : leftIndex[parent];
     }
 
+    int[] getParentIndex(int[] leftIndex, int[] rightIndex) {
+        int capacity = leftIndex.length;
+        checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
+        int[] parentIndex = new int[capacity];
+        Arrays.fill(parentIndex, NULL);
+        for (short i = 0; i < capacity; i++) {
+            if (leftIndex[i] != NULL && leftIndex[i] < capacity) {
+                checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[leftIndex[i]] = i;
+            }
+            if (rightIndex[i] != NULL && rightIndex[i] < capacity) {
+                checkState(parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[rightIndex[i]] = i;
+            }
+        }
+        return parentIndex;
+    }
 }
