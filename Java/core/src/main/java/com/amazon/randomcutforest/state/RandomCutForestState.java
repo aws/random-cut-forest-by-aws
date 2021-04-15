@@ -15,13 +15,12 @@
 
 package com.amazon.randomcutforest.state;
 
-import java.util.List;
-
-import lombok.Data;
-
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
+import lombok.Data;
+
+import java.util.List;
 
 /**
  * A class that encapsulates most of the data used in a RandomCutForest such
@@ -38,6 +37,8 @@ public class RandomCutForestState {
 
     private int sampleSize;
 
+    private int shingleSize;
+
     private int dimensions;
 
     private int outputAfter;
@@ -48,7 +49,17 @@ public class RandomCutForestState {
 
     private boolean compactEnabled;
 
+    private boolean internalShinglingEnabled;
+
     private boolean centerOfMassEnabled;
+
+    private boolean saveTreeState;
+
+    private boolean saveSamplerState;
+
+    private boolean saveCoordinatorState;
+
+    private boolean singlePrecisionSet;
 
     private PointStoreState pointStoreState;
 
@@ -57,4 +68,5 @@ public class RandomCutForestState {
     private List<CompactRandomCutTreeState> compactRandomCutTreeStates;
 
     private ExecutorContext executorContext;
+
 }

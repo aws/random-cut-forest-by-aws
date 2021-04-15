@@ -15,16 +15,13 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Arrays;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Arrays;
 
 @Getter
 @Setter
@@ -70,23 +67,5 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         state.setLeafmass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
         state.setCutValueDouble(Arrays.copyOf(model.cutValue, model.cutValue.length));
         return state;
-    }
-
-    int[] getParent(int[] leftIndex, int[] rightIndex) {
-        int capacity = leftIndex.length;
-        checkState(rightIndex.length == capacity, "incorrect call");
-        int[] parent = new int[capacity];
-        Arrays.fill(parent, -1);
-        for (short i = 0; i < capacity; i++) {
-            if (leftIndex[i] != -1 && leftIndex[i] < capacity) {
-                checkState(parent[leftIndex[i]] == -1, "incorrect state");
-                parent[leftIndex[i]] = i;
-            }
-            if (rightIndex[i] != -1 && rightIndex[i] < capacity) {
-                checkState(parent[rightIndex[i]] == -1, "incorrect state");
-                parent[rightIndex[i]] = i;
-            }
-        }
-        return parent;
     }
 }

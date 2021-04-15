@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -204,7 +204,11 @@ public class IndexManager {
     }
 
     public int[] getFreeIndexes() {
-        return freeIndexes;
+        if (freeIndexPointer+1<freeIndexes.length) {
+            return Arrays.copyOf(freeIndexes,freeIndexPointer+1);
+        } else {
+            return freeIndexes;
+        }
     }
 
 }
