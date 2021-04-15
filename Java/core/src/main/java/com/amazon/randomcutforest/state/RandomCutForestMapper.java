@@ -15,6 +15,17 @@
 
 package com.amazon.randomcutforest.state;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.RandomCutForest;
@@ -43,16 +54,6 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 /**
  * A utility class for creating a {@link RandomCutForestState} instance from a
@@ -139,7 +140,6 @@ public class RandomCutForestMapper
         state.setSaveTreeState(saveTreeState);
         state.setSaveCoordinatorState(saveCoordinatorState);
         state.setSinglePrecisionSet(forest.getPrecision() == Precision.SINGLE);
-
 
         if (saveExecutorContext) {
             ExecutorContext executorContext = new ExecutorContext();
@@ -249,8 +249,7 @@ public class RandomCutForestMapper
                 .dimensions(state.getDimensions()).lambda(state.getLambda()).sampleSize(state.getSampleSize())
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                .shingleSize(state.getShingleSize())
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).shingleSize(state.getShingleSize())
                 .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
@@ -321,8 +320,8 @@ public class RandomCutForestMapper
     }
 
     public RandomCutForest singlePrecisionForest(RandomCutForest.Builder<?> builder, RandomCutForestState state,
-                                                 IPointStore<float[]> extPointStore, List<ITree<Integer, float[]>> extTrees,
-                                                 List<IStreamSampler<Integer>> extSamplers) {
+            IPointStore<float[]> extPointStore, List<ITree<Integer, float[]>> extTrees,
+            List<IStreamSampler<Integer>> extSamplers) {
 
         checkArgument(builder != null, "builder cannot be null");
         checkArgument(extTrees == null || extTrees.size() == state.getNumberOfTrees(), "incorrect number of trees");
@@ -369,8 +368,8 @@ public class RandomCutForestMapper
     }
 
     public RandomCutForest doublePrecisionForest(RandomCutForest.Builder<?> builder, RandomCutForestState state,
-                                                 IPointStore<double[]> extPointStore, List<ITree<Integer, double[]>> extTrees,
-                                                 List<IStreamSampler<Integer>> extSamplers) {
+            IPointStore<double[]> extPointStore, List<ITree<Integer, double[]>> extTrees,
+            List<IStreamSampler<Integer>> extSamplers) {
 
         checkArgument(builder != null, "builder cannot be null");
         checkArgument(extTrees == null || extTrees.size() == state.getNumberOfTrees(), "incorrect number of trees");

@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.NodeStore;
-import com.amazon.randomcutforest.util.ArrayPacking;
+import java.util.Arrays;
+
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Arrays;
+import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter

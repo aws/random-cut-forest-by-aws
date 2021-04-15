@@ -15,11 +15,12 @@
 
 package com.amazon.randomcutforest.executor;
 
-import com.amazon.randomcutforest.ComponentList;
-import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.List;
+
+import lombok.Getter;
+
+import com.amazon.randomcutforest.ComponentList;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -63,7 +64,7 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
     public void update(double[] point, long sequenceNumber) {
         double[] pointCopy = cleanCopy(point);
         PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
-        List<UpdateResult<PointReference>> results = (updateInput == null)?null:update(updateInput, sequenceNumber);
+        List<UpdateResult<PointReference>> results = (updateInput == null) ? null : update(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
 

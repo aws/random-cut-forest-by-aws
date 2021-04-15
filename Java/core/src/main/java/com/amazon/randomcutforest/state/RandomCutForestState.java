@@ -15,12 +15,13 @@
 
 package com.amazon.randomcutforest.state;
 
+import java.util.List;
+
+import lombok.Data;
+
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
-import lombok.Data;
-
-import java.util.List;
 
 /**
  * A class that encapsulates most of the data used in a RandomCutForest such
