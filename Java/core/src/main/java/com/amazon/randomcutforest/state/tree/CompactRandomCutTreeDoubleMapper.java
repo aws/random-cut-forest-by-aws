@@ -31,7 +31,8 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 public class CompactRandomCutTreeDoubleMapper implements
         IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean boundingBoxCacheEnabled;
+    private boolean samplersNeeded = false;
+    private boolean compress = true;
 
     @Override
     public CompactRandomCutTreeDouble toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
@@ -43,19 +44,32 @@ public class CompactRandomCutTreeDoubleMapper implements
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
-        return new CompactRandomCutTreeDouble(context.getMaxSize(), seed, (PointStoreDouble) context.getPointStore(),
-                leafStore, nodeStore, state.getRoot(), boundingBoxCacheEnabled);
+        CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder()
+                .enableBoundingBoxCaching(state.isEnableCache())
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
+                .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreDouble) context.getPointStore())
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass()).build();
+        tree.setBoundingBoxCacheFraction(state.getBoundingBoxCacheFraction());
+        return tree;
 
     }
 
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeDouble model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
+        model.renormalize();
+        state.setMaxSize(model.getMaxSize());
         state.setRoot(model.getRootIndex());
+        state.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
+        state.setEnableCache(model.enableCache);
+        state.setStoreSequenceIndices(model.enableSequenceIndices);
+        state.setEnableCenterOfMass(model.enableCenterOfMass);
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        nodeStoreMapper.setCompress(compress);
+        nodeStoreMapper.setFeasibleCanonical(model.getRootIndex() == 0);
+        nodeStoreMapper.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
-
         return state;
     }
 }

@@ -15,12 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.store.ILeafStore;
-import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
@@ -45,14 +44,16 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
     }
 
-    public CompactRandomCutTreeDouble(int maxSize, long seed, IPointStore<double[]> pointStore, ILeafStore leafStore,
-            INodeStore nodeStore, int root, boolean cacheEnabled) {
-        super(maxSize, seed, leafStore, nodeStore, root, cacheEnabled);
-        checkNotNull(pointStore, "pointStore must not be null");
-        super.pointStore = pointStore;
-        if (cacheEnabled) {
-            cachedBoxes = new BoundingBox[maxSize - 1];
+    @Override
+    public void swapCaches(int[] map) {
+        checkArgument(enableCache, "incorrect call to swapping caches");
+        BoundingBox[] newCache = new BoundingBox[maxSize - 1];
+        for (int i = 0; i < maxSize - 1; i++) {
+            if (map[i] != NULL) {
+                newCache[map[i]] = (BoundingBox) cachedBoxes[i];
+            }
         }
+        cachedBoxes = newCache;
     }
 
     @Override

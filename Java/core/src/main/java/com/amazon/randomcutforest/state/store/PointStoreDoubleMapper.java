@@ -37,6 +37,10 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
      * state class. Copying is enabled by default.
      */
     private boolean copy = true;
+    /**
+     * If true, then the arrays are compressed via simple data dependent scheme
+     */
+    private boolean compress = true;
 
     @Override
     public PointStoreDouble toModel(PointStoreState state, long seed) {
@@ -68,7 +72,7 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
     public PointStoreState toState(PointStoreDouble model) {
         model.compact();
         PointStoreState state = new PointStoreState();
-        state.setCompressed(true);
+        state.setCompressed(compress);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());

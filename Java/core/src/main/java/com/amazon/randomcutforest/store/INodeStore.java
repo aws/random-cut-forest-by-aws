@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.Map;
-
 /**
  * An interface for describing access to the node ntore for different types of
  * trees.
@@ -211,20 +209,12 @@ public interface INodeStore {
      */
     public int getSibling(int parent, int node);
 
-    /**
-     * the following returns a map of (leaves,correponding parent) pairs to enable
-     * validation in serialization
-     *
-     * @return map of leaf,corresponding pairs in use for the node store
-     */
-    default Map<Integer, Integer> getLeavesAndParents() {
-        return null;
-    }
-
     boolean isLeaf(int index);
 
     int getCapacity();
 
     int computeLeafIndex(int index);
+
+    int size();
 
 }

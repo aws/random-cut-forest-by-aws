@@ -44,6 +44,10 @@ public class RandomCutForestState {
 
     private int outputAfter;
 
+    private boolean compress;
+
+    private boolean usePartialTrees;
+
     private boolean boundingBoxCachingEnabled;
 
     private boolean storeSequenceIndexesEnabled;

@@ -31,12 +31,11 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 @Getter
 @Setter
 public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, PointStoreState> {
+
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * If true, then the arrays are compressed via simple data dependent scheme
      */
-    private boolean copy = true;
+    private boolean compress = true;
 
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
@@ -68,7 +67,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     public PointStoreState toState(PointStoreFloat model) {
         model.compact();
         PointStoreState state = new PointStoreState();
-        state.setCompressed(true);
+        state.setCompressed(compress);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());

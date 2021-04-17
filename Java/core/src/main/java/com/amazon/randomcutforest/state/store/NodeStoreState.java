@@ -20,17 +20,23 @@ import lombok.Data;
 @Data
 public class NodeStoreState {
     private int capacity;
+    private boolean compressed;
     private int[] cutDimension;
     public double[] cutValueDouble;
     private float[] cutvalueFloat;
+    private boolean singlePrecisionSet;
+
+    private boolean canonicalAndNotALeaf;
+    private int size;
     private int[] leftIndex;
     private int[] rightIndex;
-    private int[] leafPointIndex;
+
     private int[] nodeFreeIndexes;
     private int nodeFreeIndexPointer;
     private int[] leafFreeIndexes;
     private int leafFreeIndexPointer;
-    private boolean compressed;
-    private boolean singlePrecisionSet;
+
+    private boolean samplerNeeded;
     private int[] leafmass;
+    private int[] leafPointIndex;
 }

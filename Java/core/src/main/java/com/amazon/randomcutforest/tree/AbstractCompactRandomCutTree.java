@@ -17,12 +17,13 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 
 import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.NodeStore;
@@ -54,25 +55,17 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     protected int maxSize;
     // protected final ILeafStore leafStore;
-    protected final INodeStore nodeStore;
+    protected INodeStore nodeStore;
     protected IPointStoreView<Point> pointStore;
     protected AbstractBoundingBox<Point>[] cachedBoxes;
     protected Point[] pointSum;
-    protected boolean enableCache;
     protected HashMap<Long, Integer>[] sequenceIndexes;
-
-    public AbstractCompactRandomCutTree(int maxSize, long seed, boolean enableCache, boolean enableCenterOfMass,
-            boolean enableSequenceIndices) {
-        this(new Builder<>().maxSize(maxSize).randomSeed(seed).enableBoundingBoxCaching(enableCache)
-                .centerOfMassEnabled(enableCenterOfMass).storeSequenceIndexesEnabled(enableSequenceIndices));
-    }
 
     public AbstractCompactRandomCutTree(AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
 
         this.maxSize = builder.maxSize;
-        this.enableCache = builder.boundingBoxCachingEnabled;
 
         if (builder.root == NULL) {
             this.nodeStore = new NodeStore(maxSize - 1);
@@ -86,18 +79,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         if (enableSequenceIndices) {
             sequenceIndexes = new HashMap[maxSize];
         }
-    }
-
-    public AbstractCompactRandomCutTree(int maxSize, long seed, ILeafStore leafStore, INodeStore nodeStore, int root,
-            boolean enableCache) {
-        super(seed, enableCache, false, false);
-        checkArgument(maxSize > 0, "maxSize must be greater than 0");
-        checkNotNull(nodeStore, "nodeStore must not be null");
-
-        this.maxSize = maxSize;
-        this.nodeStore = nodeStore;
-        this.root = root == NULL ? null : root;
-        this.enableCache = enableCache;
     }
 
     public INodeStore getNodeStore() {
@@ -120,6 +101,77 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             num = sequenceIndexes[leafRef].get(sequenceIndex);
         }
         sequenceIndexes[leafRef].put(sequenceIndex, num + 1);
+    }
+
+    public double getBoundingBoxCacheFraction() {
+        return boundingBoxCacheFraction;
+    }
+
+    abstract void swapCaches(int[] map);
+
+    public void renormalize() {
+        NodeStore result = new NodeStore(maxSize - 1);
+        if (root != null) {
+            if (!isLeaf(root)) {
+                int nodeCounter = 0;
+                int currentNode = 0;
+                int leafcounter = maxSize - 1;
+                int[] map = new int[2 * maxSize - 1];
+                ArrayBlockingQueue<Integer> nodeQueue = new ArrayBlockingQueue<>(maxSize - 1);
+                nodeQueue.add(root);
+                while (!nodeQueue.isEmpty()) {
+                    int head = nodeQueue.poll();
+                    int newLeft;
+                    int leftChild = getLeftChild(head);
+                    if (isLeaf(leftChild)) {
+                        // the parent is the current node and the indices, mass are being copied over
+                        map[leftChild] = result.addLeaf(currentNode, getPointReference(leftChild), getMass(leftChild));
+                        validateInternalState(map[leftChild] == leafcounter, "incorrect state");
+                        newLeft = leafcounter++;
+                    } else { // leftchild is an internal node
+                        newLeft = ++nodeCounter;
+                        nodeQueue.add(leftChild);
+                    }
+                    int newRight;
+                    int rightChild = getRightChild(head);
+                    if (isLeaf(rightChild)) {
+                        // the parent is the current node and the indices, mass are being copied over
+                        map[rightChild] = result.addLeaf(currentNode, getPointReference(rightChild),
+                                getMass(rightChild));
+                        validateInternalState(map[rightChild] == leafcounter, "incorrect state");
+                        newRight = leafcounter++;
+                    } else {
+                        newRight = ++nodeCounter;
+                        nodeQueue.add(rightChild);
+                    }
+                    // the parent has to be added by now
+                    int parent = (head == root) ? -1 : map[getParent(head)];
+                    map[head] = result.addNode(parent, newLeft, newRight, getCutDimension(head), getCutValue(head),
+                            getMass(head));
+                    validateInternalState(map[head] == currentNode, "incorrect state");
+                    currentNode++;
+                }
+                validateInternalState(currentNode == nodeStore.size(), "incorrect state");
+
+                if (cachedBoxes != null) {
+                    swapCaches(map);
+                }
+                if (enableSequenceIndices) {
+                    HashMap<Long, Integer>[] newSequence = new HashMap[maxSize];
+                    for (int i = 0; i < maxSize; i++) { // iterate over leaves
+                        if (map[i + maxSize - 1] != NULL) { // leaf is in use
+                            validateInternalState(isLeaf(map[i + maxSize - 1]), "error in map");
+                            newSequence[map[i + maxSize - 1] - maxSize + 1] = sequenceIndexes[i];
+                        }
+                    }
+                    sequenceIndexes = newSequence;
+                }
+                root = 0;
+            } else {
+                root = result.addLeaf(NULL, getPointReference(root), getMass(root));
+            }
+        }
+        nodeStore = result;
     }
 
     @Override

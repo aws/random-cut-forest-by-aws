@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 import java.util.Arrays;
@@ -86,12 +87,20 @@ public class NodeStore implements INodeStore {
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
         this.mass = new int[2 * capacity + 1];
-        // copy leaf mass to the later half
-        System.arraycopy(leafMass, 0, this.mass, capacity, capacity + 1);
-        this.leafPointIndex = leafPointIndex;
-        for (int i = 0; i < capacity; i++) {
-            if (parentIndex[i] == NULL) {
-                rebuildMass(i);
+        // copy leaf mass to the later half; if mass is not null
+        if (leafMass != null) {
+            validateInternalState(leafPointIndex != null, " incorrect state for needing samplers");
+            System.arraycopy(leafMass, 0, this.mass, capacity, capacity + 1);
+            this.leafPointIndex = leafPointIndex;
+        } else {
+            this.leafPointIndex = new int[capacity + 1];
+            Arrays.fill(this.leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
+        }
+        if (leafMass != null) {
+            for (int i = 0; i < capacity; i++) {
+                if (parentIndex[i] == NULL) {
+                    rebuildMass(i);
+                }
             }
         }
     }
@@ -148,7 +157,7 @@ public class NodeStore implements INodeStore {
     public void delete(int index) {
         if (isLeaf(index)) {
             parentIndex[index] = NULL;
-            leafPointIndex[computeLeafIndex(index)] = PointStore.INFEASIBLE_POINTSTORE_LOCATION;
+            leafPointIndex[computeLeafIndex(index)] = PointStore.INFEASIBLE_POINTSTORE_INDEX;
             mass[index] = 0;
             freeLeafManager.releaseIndex(computeLeafIndex(index));
         } else {
@@ -246,6 +255,9 @@ public class NodeStore implements INodeStore {
         Arrays.fill(parentIndex, NULL);
         for (short i = 0; i < capacity; i++) {
             if (leftIndex[i] != NULL) {
+                if (parentIndex[leftIndex[i]] != NULL) {
+                    System.out.println("here");
+                }
                 checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
                 parentIndex[leftIndex[i]] = i;
             }
@@ -313,4 +325,5 @@ public class NodeStore implements INodeStore {
     public int size() {
         return freeNodeManager.size();
     }
+
 }
