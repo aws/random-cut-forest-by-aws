@@ -214,14 +214,13 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// let max = vec![2.0, 2.0];
     /// let bbox = BoundingBox::new(&min, &max);
     /// assert!(bbox.contains_point(&vec![1.0, 1.0]));
+    /// assert!(bbox.contains_point(&vec![0.0, 2.0]));
+    /// assert!(!bbox.contains_point(&vec![-1.0, 0.5]));
+    /// assert!(!bbox.contains_point(&vec![1.0, 3.0]));
     /// ```
     pub fn contains_point(&self, point: &Vec<T>) -> bool {
-        for i in 0..self.dimensions {
-            if point[i] < self.min_values[i] || self.max_values[i] < point[i] {
-                return false;
-            }
-        }
-        true
+        (0..self.dimensions).all(
+            |i| self.min_values[i] <= point[i] && point[i] <= self.max_values[i])
     }
 
     /// Returns true if the given bounding box is contained inside this
