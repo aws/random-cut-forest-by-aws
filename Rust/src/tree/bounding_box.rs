@@ -14,7 +14,7 @@ use crate::RCFFloat;
 /// # Examples
 ///
 /// ```
-/// use rcf::BoundingBox;
+/// use random_cut_forest::BoundingBox;
 ///
 /// // create a new bounding box from a single point
 /// let point: Vec<f32> = vec![1.0, 2.0];
@@ -48,7 +48,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![-1.0, 0.0];
     /// let max = vec![1.0, 3.0];
@@ -75,7 +75,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let point: Vec<f32> = vec![1.0, 2.0];
     /// let bbox = BoundingBox::new_from_point(&point);
@@ -102,7 +102,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![1.0, 1.0];
@@ -150,7 +150,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![2.0, 2.0];
@@ -208,7 +208,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![2.0, 2.0];
@@ -230,7 +230,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![8.0, 8.0];
@@ -267,7 +267,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::BoundingBox;
+    /// use random_cut_forest::BoundingBox;
     ///
     /// let min = vec![1.0, 2.0];
     /// let max = vec![4.0, 3.0];

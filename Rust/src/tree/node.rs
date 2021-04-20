@@ -13,7 +13,7 @@ type PointKey = usize;
 /// # Examples
 ///
 /// ```no_run
-/// use rcf::{PointStore, Leaf};
+/// use random_cut_forest::{PointStore, Leaf};
 ///
 /// let mut point_store = PointStore::new();
 ///
@@ -70,7 +70,7 @@ impl Leaf {
 /// # Examples
 ///
 /// ```no_run
-/// use rcf::{Cut, BoundingBox, Internal, Leaf, Node, NodeStore};
+/// use random_cut_forest::{Cut, BoundingBox, Internal, Leaf, Node, NodeStore};
 ///
 /// let mut node_store: NodeStore<f32> = NodeStore::new();
 ///

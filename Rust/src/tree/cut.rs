@@ -28,7 +28,7 @@ use crate::{BoundingBox, RCFFloat};
 /// # Examples
 ///
 /// ```
-/// use rcf::Cut;
+/// use random_cut_forest::Cut;
 ///
 /// // create a new cut from a given dimension and value
 /// let cut = Cut::new(1, 0.0);
@@ -41,7 +41,7 @@ use crate::{BoundingBox, RCFFloat};
 ///
 /// // generate a random cut inside a bounding box
 /// extern crate rand;
-/// use rcf::BoundingBox;
+/// use random_cut_forest::BoundingBox;
 ///
 /// let bbox = BoundingBox::new(&vec![0.0, 0.0, 0.0], &vec![2.0, 3.0, 4.0]);
 /// let mut rng = rand::thread_rng();
@@ -83,7 +83,7 @@ impl<T> Cut<T> where T: RCFFloat {
     /// use rand::thread_rng;
     /// let mut rng = thread_rng();
     ///
-    /// use rcf::{BoundingBox, Cut};
+    /// use random_cut_forest::{BoundingBox, Cut};
     ///
     /// let min = vec![0.0, 0.0, 0.0];
     /// let max = vec![1.0, 2.0, 3.0];
@@ -128,7 +128,7 @@ impl<T> Cut<T> where T: RCFFloat {
     /// # Examples
     ///
     /// ```
-    /// use rcf::Cut;
+    /// use random_cut_forest::Cut;
     ///
     /// let cut = Cut::new(1, 0.0);
     /// let point = vec![1.0, -2.0, 3.0, -4.0];

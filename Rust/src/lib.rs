@@ -8,7 +8,7 @@
 //! ease of experimentation in scientific work.
 //!
 //! ```ignore
-//! use rcf::{RandomCutForest, RandomCutForestBuilder};
+//! use random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
 //!
 //! // build a random cut forest. the dimension is the only required parameter
 //! let mut rcf: RandomCutForest<f32> = RandomCutForestBuilder::new(2)

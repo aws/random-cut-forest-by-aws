@@ -8,11 +8,11 @@ Python bindings also contained in this repository.
 
 ## Usage
 
-To use `rcf`, add this to your `Cargo.toml`:
+To use `random_cut_forest`, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rcf = "0.1.0"
+random_cut_forest = "0.1.0"
 ```
 
 The two main types provided by this package are `RandomCutForest` and 
@@ -22,7 +22,7 @@ combination of required and optional construction parameters.
 Below is an example showing RCF construction, training, and anomaly scoring.
 
 ```rust
-use rcf::{RandomCutForest, RandomCutForestBuilder};
+use random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
 
 // build a random cut forest. the dimension is the only required parameter
 let mut rcf: RandomCutForest<f32> = RandomCutForestBuilder::new(2)
