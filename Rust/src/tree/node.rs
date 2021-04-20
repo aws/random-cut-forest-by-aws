@@ -6,21 +6,21 @@ type NodeKey = usize;
 type PointKey = usize;
 
 /// A leaf node in a random cut tree.
-/// 
+///
 /// Points contained in a random cut tree are represented by a leaf node. In
 /// particular, a leaf node contains a `Option` node key to a parent key.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```no_run
 /// use rcf::{PointStore, Leaf};
-/// 
+///
 /// let mut point_store = PointStore::new();
-/// 
+///
 /// // add a point to a point store. this returns a point key for later access
 /// let point = vec![1.0, 2.0, 3.0];
 /// let point_key = point_store.insert(point);
-/// 
+///
 /// // create a new leaf node on this point key
 /// let leaf = Leaf::new(point_key);
 /// assert_eq!(leaf.point(), point_key);
@@ -34,9 +34,9 @@ pub struct Leaf {
 }
 
 impl Leaf {
-    
+
     /// Create a new leaf node.
-    /// 
+    ///
     /// A leaf node must point to a valid point index to a point living inside
     /// a point store. The mass is initialized to `1` and the parent is
     /// initialized to `None`.
@@ -62,31 +62,31 @@ impl Leaf {
 }
 
 /// An internal node in a random cut tree.
-/// 
+///
 /// Internal nodes contain node keys to its left and right children, which must
 /// exist. They also own a bounding box on the points contained below this node
 /// as well as a cut defining what data belongs to the left and right nodes.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```no_run
 /// use rcf::{Cut, BoundingBox, Internal, Leaf, Node, NodeStore};
-/// 
+///
 /// let mut node_store: NodeStore<f32> = NodeStore::new();
-/// 
+///
 /// // create some nodes and add then to a node store to get their keys
 /// let left_node = Node::Leaf(Leaf::new(42)); // a Leaf or Internal node
 /// let left_key = node_store.insert(left_node);
-/// 
+///
 /// let right_node = Node::Leaf(Leaf::new(123)); // a Leaf or Internal node
 /// let right_key = node_store.insert(right_node);
-/// 
+///
 /// // create a bounding box and a cut on the bounding box
 /// let min = vec![0.0, 1.0];
 /// let max = vec![2.0, 3.0];
 /// let bbox = BoundingBox::new(&min, &max);
 /// let cut = Cut::new(0, 0.7);
-/// 
+///
 /// // create a new internal node from these data
 /// let node = Internal::new(left_key, right_key, bbox, cut);
 /// ```
@@ -102,7 +102,7 @@ pub struct Internal<T> {
 impl<T> Internal<T> {
 
     /// Create a new internal node.
-    /// 
+    ///
     /// A valid internal node has a left node and a right node. The data at an
     /// internal node consists of a bounding box and a cut on that bounding box.
     /// The mass is initialized to `1` and the parent is initialized to `None`.
@@ -162,11 +162,11 @@ impl<T> Internal<T> {
 }
 
 /// An enum type representing either an [`Internal`] node or a [`Leaf`] node.
-/// 
+///
 /// Node stored in a random cut tree are all of type `Node`. The enum consists
-/// of two states: `Leaf`, which contains a [`Leaf`] type, and `Internal`, 
+/// of two states: `Leaf`, which contains a [`Leaf`] type, and `Internal`,
 /// which contains and [`Internal`] type.
-/// 
+///
 /// The methods defined for this enum type are mainly for convenience in working
 /// agnostically with either leaves or internal nodes.
 pub enum Node<T> {
@@ -177,20 +177,20 @@ pub enum Node<T> {
 impl<T: RCFFloat> Node<T> {
 
     /// Create a new leaf node.
-    /// 
+    ///
     /// See [`Leaf::new`] for more information.
     pub fn new_leaf(point: PointKey) -> Self {
         Node::Leaf(Leaf::new(point))
     }
 
     /// Create a new internal node.
-    /// 
+    ///
     /// See [`Internal::new`] for more information.
     pub fn new_internal(
         left: NodeKey,
         right: NodeKey,
         bounding_box: BoundingBox<T>,
-        cut: Cut<T>) -> Self 
+        cut: Cut<T>) -> Self
     {
         Node::Internal(Internal::new(left, right, bounding_box, cut))
     }
@@ -244,9 +244,9 @@ impl<T: RCFFloat> Node<T> {
     }
 
     /// Get a reference to the leaf represented by this node.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// If the node is not a `Leaf`.
     pub fn to_leaf(&self) -> Result<&Leaf, &str> {
         match self {

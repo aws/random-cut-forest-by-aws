@@ -6,28 +6,28 @@ use std::fmt;
 use crate::RCFFloat;
 
 /// Bounding box on collections on points.
-/// 
+///
 /// Given a set of *d*- dimensional points, a bounding box is the smallest *d*-
 /// dimensional rectangular prism containing all of these points. A bounding box
 /// is represented by two vectors
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use rcf::BoundingBox;
-/// 
+///
 /// // create a new bounding box from a single point
 /// let point: Vec<f32> = vec![1.0, 2.0];
 /// let bbox = BoundingBox::new_from_point(&point);
 /// assert_eq!(bbox.min_values(), &point);
 /// assert_eq!(bbox.max_values(), &point);
-/// 
+///
 /// // create a second bounding box by merging the first one with another point
 /// let new_point = vec![3.0, -2.0];
 /// let merged_bbox = BoundingBox::merged_box_with_point(&bbox, &new_point);
 /// println!("{}", &merged_bbox);   // BoundingBox ((1.0, -2.0), (3.0, 2.0))
-/// 
-/// // confirm that the two points and the first bounding box are contained 
+///
+/// // confirm that the two points and the first bounding box are contained
 /// // in this larger merged box
 /// assert!(merged_bbox.contains_point(&point));
 /// assert!(merged_bbox.contains_point(&new_point));
@@ -44,12 +44,12 @@ impl<T> BoundingBox<T> where T: RCFFloat {
 
     /// Create a new bounding box from a min values vector and a max values
     /// vector.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![-1.0, 0.0];
     /// let max = vec![1.0, 3.0];
     /// let bbox = BoundingBox::new(&min, &max);
@@ -68,15 +68,15 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     }
 
     /// Create a new bounding box from a single point.
-    /// 
+    ///
     /// The resulting bounding box has no interior: its min values are equal to
     /// its max values. Therefore, its range sum is zero.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let point: Vec<f32> = vec![1.0, 2.0];
     /// let bbox = BoundingBox::new_from_point(&point);
     /// assert_eq!(bbox.min_values(), &point);
@@ -95,24 +95,24 @@ impl<T> BoundingBox<T> where T: RCFFloat {
 
     /// Returns a new bounding box given by the merging of a bounding box with
     /// a point.
-    /// 
+    ///
     /// If the point lies inside the bounding box then this returns a clone of
     /// the same bounding box.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![1.0, 1.0];
     /// let bbox = BoundingBox::new(&min, &max);
-    /// 
+    ///
     /// let point = vec![0.5, 3.0];
     /// let merged = BoundingBox::merged_box_with_point(&bbox, &point);
     /// assert_eq!(merged.max_values(), &vec![1.0, 3.0]);
     /// assert_eq!(merged.range_sum(), 4.0);
-    /// 
+    ///
     /// ```
     pub fn merged_box_with_point(
         bounding_box: &BoundingBox<T>,
@@ -146,12 +146,12 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// the minimum value in each dimension. The second is the maximum value
     /// in each dimension. The points contained in both bounding boxes are also
     /// contained in this large bounding box.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![2.0, 2.0];
     /// let bbox1 = BoundingBox::new(&min, &max);
@@ -159,7 +159,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     /// let min = vec![1.0, 1.0];
     /// let max = vec![3.0, 4.0];
     /// let bbox2 = BoundingBox::new(&min, &max);
-    /// 
+    ///
     /// let merged = BoundingBox::merged_box_with_box(&bbox1, &bbox2);
     /// assert_eq!(merged.min_values(), &vec![0.0, 0.0]);
     /// assert_eq!(merged.max_values(), &vec![3.0, 4.0]);
@@ -204,12 +204,12 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     pub fn range_sum(&self) -> T { self.range_sum }
 
     /// Returns true if the given point is contained inside the bounding box
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![2.0, 2.0];
     /// let bbox = BoundingBox::new(&min, &max);
@@ -226,21 +226,21 @@ impl<T> BoundingBox<T> where T: RCFFloat {
 
     /// Returns true if the given bounding box is contained inside this
     /// bounding box.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![0.0, 0.0];
     /// let max = vec![8.0, 8.0];
     /// let bbox = BoundingBox::new(&min, &max);
-    /// 
+    ///
     /// let min = vec![0.0, 1.0];
     /// let max = vec![2.0, 3.0];
     /// let small_bbox = BoundingBox::new(&min, &max);
     /// assert!(bbox.contains_box(&small_bbox));
-    /// 
+    ///
     /// let min = vec![4.0, 6.0];
     /// let max = vec![9.0, 7.0];
     /// let med_bbox = BoundingBox::new(&min, &max);
@@ -258,17 +258,17 @@ impl<T> BoundingBox<T> where T: RCFFloat {
     }
 
     /// Compute the range sum from a pair of min/max value vectors.
-    /// 
+    ///
     /// The range sum is the sum of the differences between the min values and
     /// max values of the bounding box across each component. For example, if
     /// the min values are `[a, b]` and the max values are `[c, d]` then the
     /// range sum is equal to `(c -a) + (d - b)`.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::BoundingBox;
-    /// 
+    ///
     /// let min = vec![1.0, 2.0];
     /// let max = vec![4.0, 3.0];
     /// let range_sum = BoundingBox::compute_range_sum(&min, &max);

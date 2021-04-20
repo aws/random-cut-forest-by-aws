@@ -8,45 +8,45 @@ use crate::{BoundingBox, RCFFloat};
 
 
 /// Hyperplane cut inside a bounding box.
-/// 
+///
 /// This data structure represents the "cut" part of random cut forests. A cut
 /// is a hyperplane that paritions data points into two halves. When the cut
 /// lies inside a bounding box it is guaranteed to result in two non-empty
 /// partitions.
-/// 
+///
 /// A cut consits of a `dimension` and a `value`. The dimension is the dimension
 /// along which the normal vector of the cut points. Dimensions use zero-based
 /// indexing; that is, in a three dimensional data point the three dimensions
-/// are `0`, `1`, and `2`. The value of the cut is the location along the 
+/// are `0`, `1`, and `2`. The value of the cut is the location along the
 /// Cartesian axis where the cut is located.
-/// 
+///
 /// For example, if the dimension of the cut is `2` and the value of the cut
 /// is `1.0` then the cut partitions points into two sets: the data points that
-/// have dimension 2 component less than 1.0 and those with dimension 2 
+/// have dimension 2 component less than 1.0 and those with dimension 2
 /// componenet greater than zero.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use rcf::Cut;
-/// 
+///
 /// // create a new cut from a given dimension and value
 /// let cut = Cut::new(1, 0.0);
-/// 
+///
 /// // check if a some points are to the left or to the right of the cut
 /// let p: Vec<f32> = vec![1.0, -1.0];
 /// let q: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
 /// assert!(Cut::is_left_of(&p, &cut));
 /// assert!(!Cut::is_left_of(&q, &cut));
-/// 
+///
 /// // generate a random cut inside a bounding box
 /// extern crate rand;
 /// use rcf::BoundingBox;
-/// 
+///
 /// let bbox = BoundingBox::new(&vec![0.0, 0.0, 0.0], &vec![2.0, 3.0, 4.0]);
 /// let mut rng = rand::thread_rng();
 /// let random_cut = Cut::new_random_cut(&bbox, &mut rng).unwrap();
-/// 
+///
 /// // confirm that the random cut lies inside the bounding box
 /// assert!(0 <= random_cut.dimension() && random_cut.dimension() <= 2);
 /// assert!(bbox.min_values()[random_cut.dimension()] <= random_cut.value());
@@ -69,28 +69,28 @@ impl<T> Cut<T> where T: RCFFloat {
     }
 
     /// Returns a random cut inside a bounding box.
-    /// 
+    ///
     /// The cut is guaranteed to have a value within the bounds of the bounding
-    /// box, thus partitioning the points inside the bounding box into two 
+    /// box, thus partitioning the points inside the bounding box into two
     /// non-empty subsets.
-    /// 
+    ///
     /// This function requires a random number generator: any struct that
     /// implements the [`rand::Rng`] trait from the [`rand`] crate.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rand::thread_rng;
     /// let mut rng = thread_rng();
-    /// 
+    ///
     /// use rcf::{BoundingBox, Cut};
-    /// 
+    ///
     /// let min = vec![0.0, 0.0, 0.0];
     /// let max = vec![1.0, 2.0, 3.0];
     /// let bbox = BoundingBox::new(&min, &max);
-    /// 
+    ///
     /// let cut = Cut::new_random_cut(&bbox, &mut rng).unwrap();
-    /// 
+    ///
     /// assert!(min[cut.dimension()] <= cut.value());
     /// assert!(cut.value() <= max[cut.dimension()]);
     /// ```
@@ -121,15 +121,15 @@ impl<T> Cut<T> where T: RCFFloat {
     }
 
     /// Returns true if `point` is to the left of `cut`.
-    /// 
+    ///
     /// This simply checks if the component of the point in the cut's dimension
     /// is less than or equal to the cut's value.alloc
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use rcf::Cut;
-    /// 
+    ///
     /// let cut = Cut::new(1, 0.0);
     /// let point = vec![1.0, -2.0, 3.0, -4.0];
     /// assert!(Cut::is_left_of(&point, &cut));

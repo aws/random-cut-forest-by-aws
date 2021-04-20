@@ -1,5 +1,5 @@
 //! Submodule containing types and component of a random cut tree.
-//! 
+//!
 
 mod bounding_box;
 pub use bounding_box::BoundingBox;
