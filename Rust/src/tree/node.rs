@@ -12,8 +12,10 @@ type PointKey = usize;
 /// 
 /// # Examples
 /// 
-/// ```ignore
-/// use rcf::Leaf;
+/// ```no_run
+/// use rcf::{PointStore, Leaf};
+/// 
+/// let mut point_store = PointStore::new();
 /// 
 /// // add a point to a point store. this returns a point key for later access
 /// let point = vec![1.0, 2.0, 3.0];
@@ -21,7 +23,7 @@ type PointKey = usize;
 /// 
 /// // create a new leaf node on this point key
 /// let leaf = Leaf::new(point_key);
-/// assert_eq!(leaf.point() == point_key);
+/// assert_eq!(leaf.point(), point_key);
 /// assert!(leaf.parent().is_none());
 /// assert_eq!(leaf.mass(), 1);
 /// ```
@@ -67,14 +69,16 @@ impl Leaf {
 /// 
 /// # Examples
 /// 
-/// ```ignore
-/// use rcf::{Cut, BoundingBox, Internal};
+/// ```no_run
+/// use rcf::{Cut, BoundingBox, Internal, Leaf, Node, NodeStore};
+/// 
+/// let mut node_store: NodeStore<f32> = NodeStore::new();
 /// 
 /// // create some nodes and add then to a node store to get their keys
-/// let left_node = // a Leaf or Internal node
+/// let left_node = Node::Leaf(Leaf::new(42)); // a Leaf or Internal node
 /// let left_key = node_store.insert(left_node);
 /// 
-/// let right_node = // a Leaf or Internal node
+/// let right_node = Node::Leaf(Leaf::new(123)); // a Leaf or Internal node
 /// let right_key = node_store.insert(right_node);
 /// 
 /// // create a bounding box and a cut on the bounding box

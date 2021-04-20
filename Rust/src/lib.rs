@@ -17,6 +17,7 @@
 //!     .build();            // build forest from configuration
 //! 
 //! // train the model on a collection of vectors
+//! let data: Vec<Vec<f32>>;
 //! for point in data.iter() {
 //!     rcf.update(point.clone());
 //! }
@@ -34,8 +35,8 @@
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
 #![feature(trait_alias)]
 
-mod point_store;
-pub use point_store::{NodeStore, PointStore};
+mod store;
+pub use store::{NodeStore, PointStore};
 
 mod tree;
 pub use tree::{BoundingBox, Cut, Internal, Leaf, Node};
