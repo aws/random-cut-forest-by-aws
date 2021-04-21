@@ -34,7 +34,7 @@ public class NodeStoreMapperTest {
 
     @Test
     public void testRoundTrip() {
-        NodeStore store = new NodeStore((short) 10);
+        NodeStore store = new NodeStore(10);
         int index1 = store.addNode(1, 2, 3, 1, 6.6, 1);
         int index2 = store.addNode(1, 4, 5, 2, -14.8, 2);
         int index3 = store.addNode(6, 7, 8, 1, 9.8, 4);

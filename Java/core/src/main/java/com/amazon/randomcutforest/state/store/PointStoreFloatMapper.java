@@ -46,8 +46,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         int dimensions = state.getDimensions();
         float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = Arrays.copyOf(ArrayPacking.unPackInts(state.getRefCount(), state.isCompressed()),
-                indexCapacity);
+        int[] refCount = ArrayPacking.unPackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
         int[] tempList = ArrayPacking.unPackInts(state.getLocationList(), state.isCompressed());
@@ -82,8 +81,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setSinglePrecisionSet(true);
         int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayPacking.pack(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
-        state.setLocationList(ArrayPacking.pack(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
+        state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
+        state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
         state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

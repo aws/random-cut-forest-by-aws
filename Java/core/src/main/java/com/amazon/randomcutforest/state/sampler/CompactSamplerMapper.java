@@ -82,8 +82,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setStoreSequenceIndicesEnabled(model.isStoreSequenceIndexesEnabled());
 
         state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
-        state.setPointIndex(
-                ArrayPacking.pack(Arrays.copyOf(model.getPointIndexArray(), model.size()), state.isCompressed()));
+        state.setPointIndex(ArrayPacking.pack(model.getPointIndexArray(), model.size(), state.isCompressed()));
         if (model.isStoreSequenceIndexesEnabled()) {
             state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
 

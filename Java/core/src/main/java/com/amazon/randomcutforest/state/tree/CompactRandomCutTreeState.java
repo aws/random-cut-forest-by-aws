@@ -23,7 +23,7 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 public class CompactRandomCutTreeState {
     private int root;
     private int maxSize;
-    private boolean samplerNeeded;
+    private boolean partialTreeInUse;
     private boolean storeSequenceIndices;
     private boolean enableCache;
     private boolean enableCenterOfMass;

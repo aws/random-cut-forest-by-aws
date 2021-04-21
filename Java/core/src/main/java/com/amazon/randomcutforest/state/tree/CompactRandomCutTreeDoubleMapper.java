@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 public class CompactRandomCutTreeDoubleMapper implements
         IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean samplersNeeded = false;
+    private boolean partialTreeInUse = false;
     private boolean compress = true;
 
     @Override
@@ -57,18 +57,17 @@ public class CompactRandomCutTreeDoubleMapper implements
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeDouble model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        model.renormalize();
+        model.reorderNodesInBreadthFirstOrder();
         state.setMaxSize(model.getMaxSize());
         state.setRoot(model.getRootIndex());
-        state.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
+        state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
         state.setEnableCache(model.enableCache);
         state.setStoreSequenceIndices(model.enableSequenceIndices);
         state.setEnableCenterOfMass(model.enableCenterOfMass);
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompress(compress);
-        nodeStoreMapper.setFeasibleCanonical(model.getRootIndex() == 0);
-        nodeStoreMapper.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
+        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
         return state;
     }

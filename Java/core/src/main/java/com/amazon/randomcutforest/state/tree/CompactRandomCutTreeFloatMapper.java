@@ -30,7 +30,7 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 public class CompactRandomCutTreeFloatMapper implements
         IContextualStateMapper<CompactRandomCutTreeFloat, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean samplersNeeded = false;
+    private boolean partialTreeInUse = false;
     private boolean compress = true;
 
     @Override
@@ -40,7 +40,7 @@ public class CompactRandomCutTreeFloatMapper implements
         INodeStore nodeStore;
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        nodeStoreMapper.setSamplerNeeded(state.isSamplerNeeded());
+        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
         CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
@@ -55,10 +55,10 @@ public class CompactRandomCutTreeFloatMapper implements
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeFloat model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        model.renormalize();
+        model.reorderNodesInBreadthFirstOrder();
         state.setRoot(model.getRoot());
         state.setMaxSize(model.getMaxSize());
-        state.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
+        state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
         state.setEnableCache(model.enableCache);
         state.setStoreSequenceIndices(model.enableSequenceIndices);
         state.setEnableCenterOfMass(model.enableCenterOfMass);
@@ -66,8 +66,7 @@ public class CompactRandomCutTreeFloatMapper implements
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompress(compress);
-        nodeStoreMapper.setFeasibleCanonical(model.getRootIndex() == 0);
-        nodeStoreMapper.setSamplerNeeded(model.enableSequenceIndices || samplersNeeded);
+        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
 
         return state;

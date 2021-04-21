@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.executor;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import lombok.Getter;
@@ -64,7 +65,8 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
     public void update(double[] point, long sequenceNumber) {
         double[] pointCopy = cleanCopy(point);
         PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
-        List<UpdateResult<PointReference>> results = (updateInput == null) ? null : update(updateInput, sequenceNumber);
+        List<UpdateResult<PointReference>> results = (updateInput == null) ? Collections.emptyList()
+                : update(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
 

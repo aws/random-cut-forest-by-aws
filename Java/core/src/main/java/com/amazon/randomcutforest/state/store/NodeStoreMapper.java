@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.state.store;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 import java.util.Arrays;
-import java.util.BitSet;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -37,7 +36,6 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
      */
     private boolean copy = true;
 
-    private boolean feasibleCanonical = true;
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
      */
@@ -46,7 +44,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
     /**
      * determines if a sampler is needed to bring up a tree
      */
-    private boolean samplerNeeded = false;
+    private boolean usePartialTrees = false;
 
     @Override
     public NodeStore toModel(NodeStoreState state, long seed) {
@@ -62,7 +60,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
 
         int[] leafMass;
         int[] leafPointIndex;
-        if (state.isSamplerNeeded()) {
+        if (state.isUsePartialTrees()) {
             leafMass = null;
             leafPointIndex = null;
         } else {
@@ -84,66 +82,53 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         NodeStoreState state = new NodeStoreState();
         state.setCapacity(model.getCapacity());
         state.setCompressed(compress);
-        state.setSamplerNeeded(samplerNeeded);
+        state.setUsePartialTrees(usePartialTrees);
 
-        BitSet bits = new BitSet(2 * model.getCapacity());
         int[] leftIndex = Arrays.copyOf(model.leftIndex, model.leftIndex.length);
         int[] rightIndex = Arrays.copyOf(model.rightIndex, model.rightIndex.length);
-        boolean check = compress && feasibleCanonical && reduceToBits(model.size(), leftIndex, rightIndex);
+        boolean check = state.isCompressed() && model.isCanonicalAndNotALeaf();
         state.setCanonicalAndNotALeaf(check);
         if (check) { // can have a canonical representation saving a lot of space
+            reduceToBits(model.size(), leftIndex, rightIndex);
             state.setLeftIndex(ArrayPacking.pack(leftIndex, state.isCompressed()));
             state.setRightIndex(ArrayPacking.pack(rightIndex, state.isCompressed()));
             state.setSize(model.size());
         } else { // the temporary array leftIndex and rightIndex may be corrupt in reduceToBits()
-            state.setLeftIndex(ArrayPacking.pack(model.leftIndex, compress));
-            state.setRightIndex(ArrayPacking.pack(model.rightIndex, compress));
+            state.setLeftIndex(ArrayPacking.pack(model.leftIndex, state.isCompressed()));
+            state.setRightIndex(ArrayPacking.pack(model.rightIndex, state.isCompressed()));
         }
 
-        state.setCutDimension(ArrayPacking.pack(model.cutDimension, compress));
+        state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
         state.setCutValueDouble(Arrays.copyOf(model.cutValue, model.cutValue.length));
 
-        state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), compress));
+        state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
         state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());
-        state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), compress));
+        state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));
         state.setLeafFreeIndexPointer(model.getLeafFreeIndexPointer());
-        if (!samplerNeeded) {
-            state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), compress));
-            state.setLeafmass(ArrayPacking.pack(model.getLeafMass(), compress));
+        if (!state.isUsePartialTrees()) {
+            state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
+            state.setLeafmass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
         }
 
         return state;
     }
 
-    boolean reduceToBits(int size, int[] leftIndex, int[] rightIndex) {
-        boolean check = leftIndex.length == rightIndex.length;
-        int leafCounter = leftIndex.length;
-        int nodeCounter = 1;
-        for (int i = 0; i < size && check; i++) {
+    void reduceToBits(int size, int[] leftIndex, int[] rightIndex) {
+        for (int i = 0; i < size; i++) {
             if (leftIndex[i] != NULL) {
                 if (leftIndex[i] < leftIndex.length) {
-                    check = (nodeCounter == leftIndex[i]);
-                    ++nodeCounter;
                     leftIndex[i] = 1;
                 } else {
-                    check = (leftIndex[i] == leafCounter);
                     leftIndex[i] = 0;
-                    ++leafCounter;
                 }
-                check = check && (rightIndex[i] != NULL);
 
                 if (rightIndex[i] < rightIndex.length) {
-                    check = check && (nodeCounter == rightIndex[i]);
-                    ++nodeCounter;
                     rightIndex[i] = 1;
                 } else {
-                    check = check && (rightIndex[i] == leafCounter);
-                    ++leafCounter;
                     rightIndex[i] = 0;
                 }
             }
         }
-        return check;
     }
 
     void reverseBits(int size, int[] leftIndex, int[] rightIndex) {

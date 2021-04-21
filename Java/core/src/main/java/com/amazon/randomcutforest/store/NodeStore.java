@@ -255,9 +255,6 @@ public class NodeStore implements INodeStore {
         Arrays.fill(parentIndex, NULL);
         for (short i = 0; i < capacity; i++) {
             if (leftIndex[i] != NULL) {
-                if (parentIndex[leftIndex[i]] != NULL) {
-                    System.out.println("here");
-                }
                 checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
                 parentIndex[leftIndex[i]] = i;
             }
@@ -324,6 +321,38 @@ public class NodeStore implements INodeStore {
 
     public int size() {
         return freeNodeManager.size();
+    }
+
+    public boolean isCanonicalAndNotALeaf() {
+        boolean check = leftIndex.length == rightIndex.length;
+        int leafCounter = leftIndex.length;
+        int nodeCounter = 1;
+
+        // the root = 0; which means node 0 has no parent and is in use
+        check = check && (parentIndex[0] == -1) && freeNodeManager.occupied.get(0);
+        for (int i = 0; i < size() && check; i++) {
+            if (leftIndex[i] != NULL) {
+                if (leftIndex[i] < leftIndex.length) {
+                    check = (nodeCounter == leftIndex[i]);
+                    ++nodeCounter;
+                } else {
+                    check = (leftIndex[i] == leafCounter);
+                    ++leafCounter;
+                }
+                check = check && (rightIndex[i] != NULL);
+
+                if (rightIndex[i] < rightIndex.length) {
+                    check = check && (nodeCounter == rightIndex[i]);
+                    ++nodeCounter;
+                } else {
+                    check = check && (rightIndex[i] == leafCounter);
+                    ++leafCounter;
+                }
+            } else {
+                check = check && (rightIndex[i] == NULL);
+            }
+        }
+        return check;
     }
 
 }

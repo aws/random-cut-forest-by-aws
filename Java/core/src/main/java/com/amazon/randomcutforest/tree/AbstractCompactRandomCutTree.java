@@ -53,15 +53,19 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      */
     public static final int NULL = -1;
 
+    /**
+     * number of maximum leaves in the tree
+     */
     protected int maxSize;
-    // protected final ILeafStore leafStore;
+
     protected INodeStore nodeStore;
     protected IPointStoreView<Point> pointStore;
     protected AbstractBoundingBox<Point>[] cachedBoxes;
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
 
-    public AbstractCompactRandomCutTree(AbstractCompactRandomCutTree.Builder<?> builder) {
+    public AbstractCompactRandomCutTree(
+            com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
 
@@ -109,7 +113,45 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     abstract void swapCaches(int[] map);
 
-    public void renormalize() {
+    /**
+     * The following function reorders the nodes stored in the tree in a breadth
+     * first order; Note that a regular binary tree where each internal node has 2
+     * chidren, as is the case for AbstractRandomCutTree or any tree produced in a
+     * Random Forest ensemble (not restricted to Random Cut Forests), has maxsize -
+     * 1 internal nodes for maxSize number of leaves. The leaves are numbered 0 +
+     * (maxsize), 1 + (maxSize), ..., etc. in that BFS ordering. The root is node 0.
+     *
+     * Note that if the binary tree is a complete binary tree, then the numbering
+     * would correspond to the well known heuristic where children of node index i
+     * are numbered 2*i and 2*i + 1. The trees in AbstractCompactRandomCutTree will
+     * not be complete binary trees. But a similar numbering enables us to compress
+     * the entire structure of the tree into two bit arrays corresponding to
+     * presence of left and right children. The idea can be viewed as similar to
+     * Zak's numbering for regular binary trees Lexicographic generation of binary
+     * trees, S. Zaks, TCS volume 10, pages 63-82, 1980, that uses depth first
+     * numbering. However an extensive literature exists on this topic.
+     *
+     * The overall relies on the extra advantage that we can use two bit sequences;
+     * the left and right child pointers which appears to be simple. While it is
+     * feasible to always maintain this order, that would complicate the standard
+     * binary search tree pattern and this tranformation is used when the tree is
+     * serialized. Note that while there is savings in representing the tree
+     * structure into two bit arrays, the bulk of the serialization corresponds to
+     * the payload at the nodes (cuts, dimensions for internal nodes and index to
+     * pointstore, number of copies for the leaves). The translation to the bits is
+     * handled by the NodeStoreMapper. The algorithm here corresponds to just
+     * producing the cannoical order.
+     *
+     * The algorithm first renumbers the nodes in BFS ordering. Then the cached
+     * bounding boxes (for the internal nodes) and the sequence Index maps (for the
+     * leaves) are swapped based on the renumbering map. The swapping of the
+     * bounding boxes are abstract and left to the concrete implemenations that know
+     * the precision setting. The algorithm validates its work as it proceeds.
+     *
+     * Note that if the root is a singleton leaf then it will get mapped to 0 +
+     * maxSize in the current node store implementation.
+     */
+    public void reorderNodesInBreadthFirstOrder() {
         NodeStore result = new NodeStore(maxSize - 1);
         if (root != null) {
             if (!isLeaf(root)) {
@@ -174,6 +216,14 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         nodeStore = result;
     }
 
+    /**
+     * deletes a sequence index from a leaf map; if multiple sequence indices are
+     * present (for external shingling, timestamp etc. reasons) then the count is
+     * decremented.
+     *
+     * @param nodeRef       the leaf node reference
+     * @param sequenceIndex the sequence index to be deleted
+     */
     @Override
     protected void deleteSequenceIndex(Integer nodeRef, long sequenceIndex) {
         int leafRef = nodeStore.computeLeafIndex(nodeRef);
@@ -188,6 +238,18 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
+    /**
+     * The following algorithm constructs a bounding box for a node. If the node is
+     * a leaf then it regenerates a mutable bounding box (which can be
+     * merged/modified). If the node is an internal node and the box was already
+     * cached then it uses a copy (so that the original is not modified by the in
+     * place merge operations). Otherwise it generates a box for the left child
+     * (this function) and merges the points from the right child (a different
+     * function). Finally, if caching is set then the box is saved (at random).
+     *
+     * @param nodeReference the reference of the node
+     * @return the box corresponding to all the descendants of the node
+     */
     @Override
     protected AbstractBoundingBox<Point> constructBoxInPlace(Integer nodeReference) {
         if (isLeaf(nodeReference)) {
@@ -206,6 +268,17 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
+    /**
+     * The following function merges the descendents of a node into a provided box.
+     * If a box had been cached then the box is reused and merged into the provided
+     * box. Otherwise we recurse on the children. Note that the computation is
+     * predicated on the provided box and cannot be used to update the cached boxes.
+     *
+     * @param currentBox    a mutable bounding box
+     * @param nodeReference the node
+     * @return the bounding box corresponding to the union of the bounding box at
+     *         the node and the current box
+     */
     AbstractBoundingBox<Point> constructBoxInPlace(AbstractBoundingBox<Point> currentBox, Integer nodeReference) {
         if (isLeaf(nodeReference)) {
             return currentBox.addPoint(getPointFromLeafNode(nodeReference));
@@ -226,6 +299,15 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
+    /**
+     * during deletes, it may be necessary to recompute a box. Note that cached
+     * boxes cannot be used for this node -- because some descendant nodes may have
+     * been deleted! If the corresponding box is not cached then this operation
+     * returns null.
+     *
+     * @param node reference of the node
+     * @return the new bounding box, which is cached.
+     */
     @Override
     AbstractBoundingBox<Point> recomputeBox(Integer node) {
         if (cachedBoxes[node] != null) {
@@ -254,9 +336,16 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    void addToBox(Integer tempNode, Point point) {
-        if (cachedBoxes[tempNode] != null) {
-            cachedBoxes[tempNode].addPoint(point); // internal boxes can be updated in place
+    /**
+     * adds a point to an existing box (if present) during insertion
+     *
+     * @param node  the node
+     * @param point the point to be added
+     */
+
+    void addToBox(Integer node, Point point) {
+        if (cachedBoxes[node] != null) {
+            cachedBoxes[node].addPoint(point); // internal boxes can be updated in place
         }
     }
 

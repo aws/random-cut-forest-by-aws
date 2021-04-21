@@ -104,7 +104,7 @@ public class RandomCutForestMapper
      * can be used gain. That woukld correspond to extra time, at the benefit of a
      * smaller serialization.
      */
-    private boolean usePartialTrees = false;
+    private boolean partialTreesInUse = false;
 
     /**
      * used for tests
@@ -151,7 +151,7 @@ public class RandomCutForestMapper
         state.setSaveCoordinatorState(saveCoordinatorState);
         state.setSinglePrecisionSet(forest.getPrecision() == Precision.SINGLE);
         state.setCompress(compress);
-        state.setUsePartialTrees(usePartialTrees);
+        state.setPartialTreesInUse(partialTreesInUse);
 
         if (saveExecutorContext) {
             ExecutorContext executorContext = new ExecutorContext();
@@ -204,14 +204,14 @@ public class RandomCutForestMapper
                 if (forest.getPrecision() == Precision.SINGLE) {
                     CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
                     treeMapper.setCompress(compress);
-                    treeMapper.setSamplersNeeded(usePartialTrees || forest.isStoreSequenceIndexesEnabled());
+                    treeMapper.setPartialTreeInUse(partialTreesInUse || forest.isStoreSequenceIndexesEnabled());
                     List<CompactRandomCutTreeState> treeStates = trees.stream()
                             .map(t -> treeMapper.toState((CompactRandomCutTreeFloat) t)).collect(Collectors.toList());
                     state.setCompactRandomCutTreeStates(treeStates);
                 } else {
                     CompactRandomCutTreeDoubleMapper treeMapper = new CompactRandomCutTreeDoubleMapper();
                     treeMapper.setCompress(compress);
-                    treeMapper.setSamplersNeeded(usePartialTrees || forest.isStoreSequenceIndexesEnabled());
+                    treeMapper.setPartialTreeInUse(partialTreesInUse || forest.isStoreSequenceIndexesEnabled());
                     List<CompactRandomCutTreeState> treeStates = trees.stream()
                             .map(t -> treeMapper.toState((CompactRandomCutTreeDouble) t)).collect(Collectors.toList());
                     state.setCompactRandomCutTreeStates(treeStates);
@@ -373,7 +373,7 @@ public class RandomCutForestMapper
                 tree = extTrees.get(i);
             } else if (treeStates != null) {
                 tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
-                if (treeStates.get(i).isSamplerNeeded()) {
+                if (treeStates.get(i).isPartialTreeInUse()) {
                     sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
                 }
             } else {
@@ -424,7 +424,7 @@ public class RandomCutForestMapper
                 tree = extTrees.get(i);
             } else if (treeStates != null) {
                 tree = treeMapper.toModel(treeStates.get(i), context, rng.nextLong());
-                if (treeStates.get(i).isSamplerNeeded()) {
+                if (treeStates.get(i).isPartialTreeInUse()) {
                     sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
                 }
             } else {

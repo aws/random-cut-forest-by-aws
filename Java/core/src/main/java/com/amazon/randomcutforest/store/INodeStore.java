@@ -217,4 +217,8 @@ public interface INodeStore {
 
     int size();
 
+    default boolean isCanonicalAndNotALeaf() {
+        return false;
+    }
+
 }

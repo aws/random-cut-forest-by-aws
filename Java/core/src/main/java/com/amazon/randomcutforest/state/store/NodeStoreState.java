@@ -22,9 +22,10 @@ public class NodeStoreState {
     private int capacity;
     private boolean compressed;
     private int[] cutDimension;
-    public double[] cutValueDouble;
+    private double[] cutValueDouble;
     private float[] cutvalueFloat;
     private boolean singlePrecisionSet;
+    private int root;
 
     private boolean canonicalAndNotALeaf;
     private int size;
@@ -36,7 +37,7 @@ public class NodeStoreState {
     private int[] leafFreeIndexes;
     private int leafFreeIndexPointer;
 
-    private boolean samplerNeeded;
+    private boolean usePartialTrees;
     private int[] leafmass;
     private int[] leafPointIndex;
 }

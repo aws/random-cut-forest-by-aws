@@ -46,7 +46,7 @@ public class RandomCutForestState {
 
     private boolean compress;
 
-    private boolean usePartialTrees;
+    private boolean partialTreesInUse;
 
     private boolean boundingBoxCachingEnabled;
 
