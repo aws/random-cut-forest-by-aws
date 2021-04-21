@@ -64,4 +64,8 @@ public class CompactSamplerState {
      * maximum timestamp seen in update/computeWeight
      */
     private long maxSequenceIndex;
+    /**
+     * boolean indicating if the compression is enabled
+     */
+    private boolean compressed;
 }

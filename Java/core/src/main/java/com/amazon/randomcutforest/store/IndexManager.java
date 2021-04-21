@@ -204,7 +204,11 @@ public class IndexManager {
     }
 
     public int[] getFreeIndexes() {
-        return freeIndexes;
+        if (freeIndexPointer + 1 < freeIndexes.length) {
+            return Arrays.copyOf(freeIndexes, freeIndexPointer + 1);
+        } else {
+            return freeIndexes;
+        }
     }
 
 }

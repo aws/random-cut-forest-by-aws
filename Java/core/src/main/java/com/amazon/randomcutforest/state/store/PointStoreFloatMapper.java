@@ -31,12 +31,11 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 @Getter
 @Setter
 public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, PointStoreState> {
+
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * If true, then the arrays are compressed via simple data dependent scheme
      */
-    private boolean copy = true;
+    private boolean compress = true;
 
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
@@ -47,8 +46,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         int dimensions = state.getDimensions();
         float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = Arrays.copyOf(ArrayPacking.unPackInts(state.getRefCount(), state.isCompressed()),
-                indexCapacity);
+        int[] refCount = ArrayPacking.unPackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
         int[] tempList = ArrayPacking.unPackInts(state.getLocationList(), state.isCompressed());
@@ -68,7 +66,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     public PointStoreState toState(PointStoreFloat model) {
         model.compact();
         PointStoreState state = new PointStoreState();
-        state.setCompressed(true);
+        state.setCompressed(compress);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
@@ -83,8 +81,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setSinglePrecisionSet(true);
         int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayPacking.pack(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
-        state.setLocationList(ArrayPacking.pack(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
+        state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
+        state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
         state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

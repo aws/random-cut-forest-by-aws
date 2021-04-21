@@ -19,17 +19,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
-import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
-import com.amazon.randomcutforest.state.store.SmallLeafStoreMapper;
-import com.amazon.randomcutforest.state.store.SmallNodeStoreMapper;
-import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
-import com.amazon.randomcutforest.store.LeafStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreFloat;
-import com.amazon.randomcutforest.store.SmallLeafStore;
-import com.amazon.randomcutforest.store.SmallNodeStore;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 
 @Getter
@@ -37,49 +30,44 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 public class CompactRandomCutTreeFloatMapper implements
         IContextualStateMapper<CompactRandomCutTreeFloat, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean boundingBoxCacheEnabled;
+    private boolean partialTreeInUse = false;
+    private boolean compress = true;
 
     @Override
     public CompactRandomCutTreeFloat toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
             long seed) {
 
         INodeStore nodeStore;
-        ILeafStore leafStore;
-        if (context.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
-            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
-            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
-            SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
-            nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
-        } else {
-            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-            leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
+        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
+        nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
-            NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-            nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
-        }
-        return new CompactRandomCutTreeFloat(context.getMaxSize(), seed, (PointStoreFloat) context.getPointStore(),
-                leafStore, nodeStore, state.getRoot(), boundingBoxCacheEnabled);
+        CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
+                .enableBoundingBoxCaching(state.isEnableCache())
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
+                .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreFloat) context.getPointStore())
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass()).build();
+        tree.setBoundingBoxCacheFraction(state.getBoundingBoxCacheFraction());
+        return tree;
     }
 
     @Override
     public CompactRandomCutTreeState toState(CompactRandomCutTreeFloat model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
+        model.reorderNodesInBreadthFirstOrder();
         state.setRoot(model.getRoot());
+        state.setMaxSize(model.getMaxSize());
+        state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
+        state.setEnableCache(model.enableCache);
+        state.setStoreSequenceIndices(model.enableSequenceIndices);
+        state.setEnableCenterOfMass(model.enableCenterOfMass);
+        state.setBoundingBoxCacheFraction(model.getBoundingBoxCacheFraction());
 
-        if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
-            SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
-            state.setLeafStoreState(leafStoreMapper.toState((SmallLeafStore) model.getLeafStore()));
-
-            SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
-            state.setNodeStoreState(nodeStoreMapper.toState((SmallNodeStore) model.getNodeStore()));
-        } else {
-            LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
-            state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
-
-            NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-            state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
-        }
+        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        nodeStoreMapper.setCompress(compress);
+        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
+        state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
 
         return state;
     }

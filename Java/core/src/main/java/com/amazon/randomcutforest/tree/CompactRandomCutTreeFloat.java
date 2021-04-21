@@ -15,13 +15,12 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
 
-import com.amazon.randomcutforest.store.ILeafStore;
-import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
@@ -46,14 +45,16 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
     }
 
-    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, ILeafStore leafStore,
-            INodeStore nodeStore, int root, boolean cacheEnabled) {
-        super(maxSize, seed, leafStore, nodeStore, root, cacheEnabled);
-        checkNotNull(pointStore, "pointStore must not be null");
-        super.pointStore = pointStore;
-        if (cacheEnabled) {
-            cachedBoxes = new BoundingBoxFloat[maxSize - 1];
+    @Override
+    public void swapCaches(int[] map) {
+        checkArgument(enableCache, "incorrect call to swapping caches");
+        BoundingBoxFloat[] newCache = new BoundingBoxFloat[maxSize - 1];
+        for (int i = 0; i < maxSize - 1; i++) {
+            if (map[i] != NULL) {
+                newCache[map[i]] = (BoundingBoxFloat) cachedBoxes[i];
+            }
         }
+        cachedBoxes = newCache;
     }
 
     @Override

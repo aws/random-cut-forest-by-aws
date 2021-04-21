@@ -37,6 +37,10 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
      * state class. Copying is enabled by default.
      */
     private boolean copy = true;
+    /**
+     * If true, then the arrays are compressed via simple data dependent scheme
+     */
+    private boolean compress = true;
 
     @Override
     public PointStoreDouble toModel(PointStoreState state, long seed) {
@@ -47,8 +51,7 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int dimensions = state.getDimensions();
         double[] store = Arrays.copyOf(state.getDoubleData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = Arrays.copyOf(ArrayPacking.unPackInts(state.getRefCount(), state.isCompressed()),
-                indexCapacity);
+        int[] refCount = ArrayPacking.unPackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
         int[] tempList = ArrayPacking.unPackInts(state.getLocationList(), state.isCompressed());
@@ -68,7 +71,7 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
     public PointStoreState toState(PointStoreDouble model) {
         model.compact();
         PointStoreState state = new PointStoreState();
-        state.setCompressed(true);
+        state.setCompressed(compress);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
@@ -83,8 +86,8 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setSinglePrecisionSet(false);
         int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayPacking.pack(Arrays.copyOf(model.getRefCount(), prefix), state.isCompressed()));
-        state.setLocationList(ArrayPacking.pack(Arrays.copyOf(model.getLocationList(), prefix), state.isCompressed()));
+        state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
+        state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
         state.setDoubleData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

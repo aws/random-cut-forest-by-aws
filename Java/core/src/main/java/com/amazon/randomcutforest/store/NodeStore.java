@@ -15,7 +15,12 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
+import java.util.Arrays;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -34,14 +39,18 @@ import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
  * Note that a NodeStore does not store instances of the
  * {@link com.amazon.randomcutforest.tree.Node} class.
  */
-public class NodeStore extends IndexManager implements INodeStore {
+public class NodeStore implements INodeStore {
 
+    public final int capacity;
     public final int[] parentIndex;
     public final int[] leftIndex;
     public final int[] rightIndex;
     public final int[] cutDimension;
     public final double[] cutValue;
     public final int[] mass;
+    public final int[] leafPointIndex;
+    public IndexManager freeNodeManager;
+    public IndexManager freeLeafManager;
 
     /**
      * Create a new NodeStore with the given capacity.
@@ -49,25 +58,59 @@ public class NodeStore extends IndexManager implements INodeStore {
      * @param capacity The maximum number of Nodes whose data can be stored.
      */
     public NodeStore(int capacity) {
-        super(capacity);
-        parentIndex = new int[capacity];
+        this.capacity = capacity;
+        freeNodeManager = new IndexManager(capacity);
+        freeLeafManager = new IndexManager(capacity + 1);
+        parentIndex = new int[2 * capacity + 1];
+        mass = new int[2 * capacity + 1];
         leftIndex = new int[capacity];
         rightIndex = new int[capacity];
         cutDimension = new int[capacity];
         cutValue = new double[capacity];
-        mass = new int[capacity];
+        leafPointIndex = new int[capacity + 1];
+        Arrays.fill(parentIndex, NULL);
+        Arrays.fill(leftIndex, NULL);
+        Arrays.fill(rightIndex, NULL);
+        Arrays.fill(leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
     }
 
-    public NodeStore(int[] parentIndex, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
-            int[] mass, int[] freeIndexes, int freeIndexPointer) {
+    public NodeStore(int capacity, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
+            int[] leafMass, int[] leafPointIndex, int[] freeNodeIndexes, int freeNodeIndexPointer,
+            int[] freeLeafIndexes, int freeLeafIndexPointer) {
         // TODO validations
-        super(freeIndexes, freeIndexPointer);
-        this.parentIndex = parentIndex;
+        this.capacity = capacity;
+        this.freeNodeManager = new IndexManager(capacity, freeNodeIndexes, freeNodeIndexPointer);
+        this.freeLeafManager = new IndexManager(capacity + 1, freeLeafIndexes, freeLeafIndexPointer);
+        this.parentIndex = getParentIndex(leftIndex, rightIndex);
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
-        this.mass = mass;
+        this.mass = new int[2 * capacity + 1];
+        // copy leaf mass to the later half; if mass is not null
+        if (leafMass != null) {
+            validateInternalState(leafPointIndex != null, " incorrect state for needing samplers");
+            System.arraycopy(leafMass, 0, this.mass, capacity, capacity + 1);
+            this.leafPointIndex = leafPointIndex;
+        } else {
+            this.leafPointIndex = new int[capacity + 1];
+            Arrays.fill(this.leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
+        }
+        if (leafMass != null) {
+            for (int i = 0; i < capacity; i++) {
+                if (parentIndex[i] == NULL) {
+                    rebuildMass(i);
+                }
+            }
+        }
+    }
+
+    void rebuildMass(int node) {
+        if (!isLeaf(node) && (leftIndex[node] != NULL && rightIndex[node] != NULL)) {
+            rebuildMass(leftIndex[node]);
+            rebuildMass(rightIndex[node]);
+            mass[node] = mass[leftIndex[node]] + mass[rightIndex[node]];
+        }
     }
 
     /**
@@ -82,7 +125,7 @@ public class NodeStore extends IndexManager implements INodeStore {
      * @return the index of the newly stored node.
      */
     public int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass) {
-        int index = takeIndex();
+        int index = freeNodeManager.takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = cutDimension;
         this.leftIndex[index] = leftIndex;
@@ -92,9 +135,17 @@ public class NodeStore extends IndexManager implements INodeStore {
         return index;
     }
 
+    public int addLeaf(int parentIndex, int pointIndex, int mass) {
+        int index = freeLeafManager.takeIndex();
+        this.parentIndex[index + capacity] = parentIndex;
+        this.mass[index + capacity] = mass;
+        this.leafPointIndex[index] = pointIndex;
+        return index + capacity;
+    }
+
     @Override
     public void setParent(int index, int parent) {
-        parentIndex[index] = (short) parent;
+        parentIndex[index] = parent;
     }
 
     @Override
@@ -104,7 +155,18 @@ public class NodeStore extends IndexManager implements INodeStore {
 
     @Override
     public void delete(int index) {
-        releaseIndex(index);
+        if (isLeaf(index)) {
+            parentIndex[index] = NULL;
+            leafPointIndex[computeLeafIndex(index)] = PointStore.INFEASIBLE_POINTSTORE_INDEX;
+            mass[index] = 0;
+            freeLeafManager.releaseIndex(computeLeafIndex(index));
+        } else {
+            mass[index] = 0;
+            leftIndex[index] = NULL;
+            rightIndex[index] = NULL;
+            parentIndex[index] = NULL;
+            freeNodeManager.releaseIndex(index);
+        }
     }
 
     @Override
@@ -184,6 +246,113 @@ public class NodeStore extends IndexManager implements INodeStore {
 
     public int getSibling(int parent, int node) {
         return leftIndex[parent] == node ? rightIndex[parent] : leftIndex[parent];
+    }
+
+    int[] getParentIndex(int[] leftIndex, int[] rightIndex) {
+        int capacity = leftIndex.length;
+        checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
+        int[] parentIndex = new int[2 * capacity + 1];
+        Arrays.fill(parentIndex, NULL);
+        for (short i = 0; i < capacity; i++) {
+            if (leftIndex[i] != NULL) {
+                checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[leftIndex[i]] = i;
+            }
+            if (rightIndex[i] != NULL) {
+                checkState(parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
+                parentIndex[rightIndex[i]] = i;
+            }
+        }
+        return parentIndex;
+    }
+
+    @Override
+    public boolean isLeaf(int index) {
+        checkArgument(index >= 0, "index has to be non-negative");
+        return computeLeafIndex(index) >= 0;
+    }
+
+    public int computeLeafIndex(int index) {
+        return index - capacity;
+    }
+
+    @Override
+    public int getPointIndex(int index) {
+        return leafPointIndex[computeLeafIndex(index)];
+    }
+
+    @Override
+    public int setPointIndex(int index, int pointIndex) {
+        int newIndex = computeLeafIndex(index);
+        int savedPointIndex = this.leafPointIndex[newIndex];
+        this.leafPointIndex[newIndex] = pointIndex;
+        return savedPointIndex;
+    }
+
+    public int[] getLeafFreeIndexes() {
+        return freeLeafManager.getFreeIndexes();
+    }
+
+    public int[] getNodeFreeIndexes() {
+        return freeNodeManager.getFreeIndexes();
+    }
+
+    public int[] getLeafPointIndex() {
+        return leafPointIndex;
+    }
+
+    public int[] getLeafMass() {
+        int[] result = new int[capacity + 1];
+        System.arraycopy(mass, capacity, result, 0, capacity + 1);
+        return result;
+    }
+
+    public int getLeafFreeIndexPointer() {
+        return freeLeafManager.getFreeIndexPointer();
+    }
+
+    public int getNodeFreeIndexPointer() {
+        return freeNodeManager.getFreeIndexPointer();
+    }
+
+    public int getCapacity() {
+        return freeNodeManager.getCapacity();
+    }
+
+    public int size() {
+        return freeNodeManager.size();
+    }
+
+    public boolean isCanonicalAndNotALeaf() {
+        boolean check = leftIndex.length == rightIndex.length;
+        int leafCounter = leftIndex.length;
+        int nodeCounter = 1;
+
+        // the root = 0; which means node 0 has no parent and is in use
+        check = check && (parentIndex[0] == -1) && freeNodeManager.occupied.get(0);
+        for (int i = 0; i < size() && check; i++) {
+            if (leftIndex[i] != NULL) {
+                if (leftIndex[i] < leftIndex.length) {
+                    check = (nodeCounter == leftIndex[i]);
+                    ++nodeCounter;
+                } else {
+                    check = (leftIndex[i] == leafCounter);
+                    ++leafCounter;
+                }
+                check = check && (rightIndex[i] != NULL);
+
+                if (rightIndex[i] < rightIndex.length) {
+                    check = check && (nodeCounter == rightIndex[i]);
+                    ++nodeCounter;
+                } else {
+                    check = check && (rightIndex[i] == leafCounter);
+                    ++leafCounter;
+                }
+            } else {
+                check = check && (rightIndex[i] == NULL);
+            }
+        }
+        return check;
     }
 
 }

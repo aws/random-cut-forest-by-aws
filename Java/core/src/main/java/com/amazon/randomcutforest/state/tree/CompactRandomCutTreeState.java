@@ -17,12 +17,22 @@ package com.amazon.randomcutforest.state.tree;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.state.store.LeafStoreState;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
 public class CompactRandomCutTreeState {
     private int root;
-    private LeafStoreState leafStoreState;
+    private int maxSize;
+    private boolean partialTreeInUse;
+    private boolean storeSequenceIndices;
+    private boolean enableCache;
+    private boolean enableCenterOfMass;
     private NodeStoreState nodeStoreState;
+    private double boundingBoxCacheFraction;
+
+    // to be used later
+    private long seed;
+    private int id;
+    private int dimensions;
+
 }

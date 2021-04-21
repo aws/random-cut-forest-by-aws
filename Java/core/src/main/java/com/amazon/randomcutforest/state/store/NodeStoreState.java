@@ -19,24 +19,25 @@ import lombok.Data;
 
 @Data
 public class NodeStoreState {
-    public int[] cutDimension;
-    public double[] cutValue;
-    int capacity;
-    int freeIndexPointer;
-    /*
-     * the following are for SmallNodeStore
-     */
-    public short[] smallParentIndex;
-    public short[] smallLeftIndex;
-    public short[] smallRightIndex;
-    public short[] smallMass;
-    public short[] smallFreeIndexes;
-    /*
-     * the following are for NodeStore
-     */
-    public int[] parentIndex;
-    public int[] leftIndex;
-    public int[] rightIndex;
-    public int[] mass;
-    public int[] freeIndexes;
+    private int capacity;
+    private boolean compressed;
+    private int[] cutDimension;
+    private double[] cutValueDouble;
+    private float[] cutvalueFloat;
+    private boolean singlePrecisionSet;
+    private int root;
+
+    private boolean canonicalAndNotALeaf;
+    private int size;
+    private int[] leftIndex;
+    private int[] rightIndex;
+
+    private int[] nodeFreeIndexes;
+    private int nodeFreeIndexPointer;
+    private int[] leafFreeIndexes;
+    private int leafFreeIndexPointer;
+
+    private boolean usePartialTrees;
+    private int[] leafmass;
+    private int[] leafPointIndex;
 }

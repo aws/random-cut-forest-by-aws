@@ -23,6 +23,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -37,35 +38,27 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
     private boolean validateHeap = false;
 
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * used to compress data, can be set to false for debug
      */
+    private boolean compress = true;
+
+    // the following is for tests
     private boolean copy = true;
 
     @Override
     public CompactSampler toModel(CompactSamplerState state, long seed) {
-        float[] weight;
-        int[] pointIndex;
+        float[] weight = new float[state.getCapacity()];
+        int[] pointIndex = new int[state.getCapacity()];
         long[] sequenceIndex;
 
-        if (copy) {
-            weight = new float[state.getCapacity()];
-            pointIndex = new int[state.getCapacity()];
-
-            int size = state.getSize();
-            System.arraycopy(state.getWeight(), 0, weight, 0, size);
-            System.arraycopy(state.getPointIndex(), 0, pointIndex, 0, size);
-            if (state.getSequenceIndex() != null) {
-                sequenceIndex = new long[state.getCapacity()];
-                System.arraycopy(state.getSequenceIndex(), 0, sequenceIndex, 0, size);
-            } else {
-                sequenceIndex = null;
-            }
+        int size = state.getSize();
+        System.arraycopy(state.getWeight(), 0, weight, 0, size);
+        System.arraycopy(ArrayPacking.unPackInts(state.getPointIndex(), state.isCompressed()), 0, pointIndex, 0, size);
+        if (state.isStoreSequenceIndicesEnabled()) {
+            sequenceIndex = new long[state.getCapacity()];
+            System.arraycopy(state.getSequenceIndex(), 0, sequenceIndex, 0, size);
         } else {
-            weight = state.getWeight();
-            pointIndex = state.getPointIndex();
-            sequenceIndex = state.getSequenceIndex();
+            sequenceIndex = null;
         }
 
         return new CompactSampler.Builder().capacity(state.getCapacity()).lambda(state.getLambda())
@@ -80,6 +73,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
     public CompactSamplerState toState(CompactSampler model) {
         CompactSamplerState state = new CompactSamplerState();
         state.setSize(model.size());
+        state.setCompressed(compress);
         state.setCapacity(model.getCapacity());
         state.setLambda(model.getTimeDecay());
         state.setSequenceIndexOfMostRecentLambdaUpdate(model.getSequenceIndexOfMostRecentLambdaUpdate());
@@ -87,19 +81,13 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setInitialAcceptFraction(model.getInitialAcceptFraction());
         state.setStoreSequenceIndicesEnabled(model.isStoreSequenceIndexesEnabled());
 
-        if (copy) {
-            state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
-            state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
-            if (model.isStoreSequenceIndexesEnabled()) {
-                state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
-            }
-        } else {
-            state.setWeight(model.getWeightArray());
-            state.setPointIndex(model.getPointIndexArray());
-            if (model.isStoreSequenceIndexesEnabled()) {
-                state.setSequenceIndex(model.getSequenceIndexArray());
-            }
+        state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
+        state.setPointIndex(ArrayPacking.pack(model.getPointIndexArray(), model.size(), state.isCompressed()));
+        if (model.isStoreSequenceIndexesEnabled()) {
+            state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
+
         }
+
         return state;
     }
 }

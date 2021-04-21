@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import java.util.List;
 
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStore;
 
 /**
  * pointstore coordinator for compact RCF
@@ -38,16 +39,19 @@ public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Inte
 
     @Override
     public Integer initUpdate(double[] point, long sequenceNumber) {
-        return store.add(point, sequenceNumber);
+        int index = store.add(point, sequenceNumber);
+        return (index == PointStore.INFEASIBLE_POINTSTORE_INDEX) ? null : index;
     }
 
     @Override
     public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
-        updateResults.forEach(result -> {
-            result.getAddedPoint().ifPresent(store::incrementRefCount);
-            result.getDeletedPoint().ifPresent(store::decrementRefCount);
-        });
-        store.decrementRefCount(updateInput);
+        if (updateInput != null) { // can be null for initial shingling
+            updateResults.forEach(result -> {
+                result.getAddedPoint().ifPresent(store::incrementRefCount);
+                result.getDeletedPoint().ifPresent(store::decrementRefCount);
+            });
+            store.decrementRefCount(updateInput);
+        }
         totalUpdates++;
     }
 
