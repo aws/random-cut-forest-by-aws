@@ -8,11 +8,11 @@ Python bindings also contained in this repository.
 
 ## Usage
 
-To use `random_cut_forest`, add this to your `Cargo.toml`:
+To use this library, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-random_cut_forest = "0.1.0"
+random-cut-forest = "0.1.0"
 ```
 
 The two main types provided by this package are `RandomCutForest` and 
