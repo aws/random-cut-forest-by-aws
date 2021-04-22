@@ -1,0 +1,12 @@
+[package]
+name = "random-cut-forest"
+version = "0.1.0"
+authors = ["Chris Swierczewski <csw@amazon.com>"]
+edition = "2018"
+
+[dependencies]
+num-traits = "0.2"
+rand = "0.8.3"
+rand_chacha = "0.3.0"
+rand_distr = "0.4.0"
+slab = "0.4.2"
