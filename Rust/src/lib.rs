@@ -38,8 +38,8 @@
 mod store;
 pub use store::{NodeStore, PointStore};
 
-mod tree;
-pub use tree::{BoundingBox, Cut, Internal, Leaf, Node};
+pub mod tree;
+pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, NodeTraverser, Tree};
 
 mod types;
 pub use types::RCFFloat;
