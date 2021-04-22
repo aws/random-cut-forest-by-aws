@@ -107,11 +107,6 @@ public class RandomCutForestMapper
     private boolean partialTreesInUse = false;
 
     /**
-     * used for tests
-     */
-    private boolean copy = true;
-
-    /**
      * Create a {@link RandomCutForestState} object representing the state of the
      * given forest. If the forest is compact and the {@code saveTreeState} flag is
      * set to true, then structure of the trees in the forest will be included in

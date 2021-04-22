@@ -70,7 +70,6 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
         mapper.setSaveExecutorContext(true);
-        mapper.setCopy(true);
 
         Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
         LinkedBuffer buffer = LinkedBuffer.allocate(512);

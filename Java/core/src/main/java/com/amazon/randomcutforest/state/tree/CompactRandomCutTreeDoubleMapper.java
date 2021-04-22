@@ -20,7 +20,6 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
-import com.amazon.randomcutforest.store.ILeafStore;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
@@ -39,7 +38,6 @@ public class CompactRandomCutTreeDoubleMapper implements
             long seed) {
 
         INodeStore nodeStore;
-        ILeafStore leafStore = null;
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
