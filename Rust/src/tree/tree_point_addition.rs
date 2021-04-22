@@ -6,7 +6,7 @@ use std::iter::Sum;
 use crate::tree::{BoundingBox, Cut, Node, Tree};
 
 /// The result of a point addition operation.
-/// 
+///
 /// The `AddedPoint` result contains the key of the point that was added to the
 /// tree. The `MassIncreased` result contains the key of the point whose mass
 /// was increased.
@@ -15,7 +15,7 @@ pub enum AddResult {
     MassIncreased(usize),
 }
 
-impl<T> Tree<T> 
+impl<T> Tree<T>
     where T: Float + Sum
 {
 
@@ -78,23 +78,23 @@ impl<T> Tree<T>
 
     /// Main recursive point addition algorithm given a new point and a current
     /// node.
-    /// 
+    ///
     /// Steps of the point addition algorithm:
-    /// 
+    ///
     /// 1. Check if the current node is leaf representing the same point as the
     ///    one being inserted. If so, increase the mass of this leaf node and
     ///    return.
-    /// 2. Compute the bounding box made by the merging of the new point with 
+    /// 2. Compute the bounding box made by the merging of the new point with
     ///    the current node and create a random cut on this bounding box. If
     ///    the cut separates the point from the original contents of the current
-    ///    node then create a new leaf node at this level. See 
+    ///    node then create a new leaf node at this level. See
     ///    `insert_new_leaf()` for more information.
     /// 3. Otherwise, recurse to the left or right of the tree depending on the
     ///    location of the point relative to the proposed random cut.
     /// 4. When traversing back up the tree via recursion callback we update the
     ///    bounding boxes along the way using the merged boxes computed on the
     ///    way down.
-    /// 
+    ///
     fn add_point_by_node(&mut self, point: Vec<T>, node_key: usize) -> AddResult {
         // 1. this check will in-place increase the mass of the current node if
         // it is a leaf node. Is there a monadic way to do this?
@@ -144,7 +144,7 @@ impl<T> Tree<T>
     /// If the current node is a leaf *and* its point is equal to that of the
     /// input point then increase the mass of this leaf and return `true`.
     /// Otherwise, return `false`.
-    /// 
+    ///
     /// TODO: this function is a bit strange because it will in-place increase
     /// the mass but won't do anything (and return `false`) otherwise. This
     /// information is then used in `add_point_at_node()` to determine if we
@@ -170,7 +170,7 @@ impl<T> Tree<T>
 
     /// Returns a bounding box formed by the merging of the input point with
     /// the contents of the given node.
-    /// 
+    ///
     /// If the node is a leaf then the bounding box is just formed by these two
     /// points. If the node is internal then we return a new bounding box formed
     /// by the merging of the bounding box at this node with the new point.
@@ -196,10 +196,10 @@ impl<T> Tree<T>
 
     /// Given a proposed cut, return the range of values on the bounding box at
     /// the current node in the dimension of the cut.
-    /// 
+    ///
     /// For example, suppose the bounding box is two-dimensional with min values
-    /// `(0, 1)` and max values `(2, 4)`. If the input cut is along dimension 
-    /// 0 then the output range is `(0, 2)`. Otherwise, if the cut is along 
+    /// `(0, 1)` and max values `(2, 4)`. If the input cut is along dimension
+    /// 0 then the output range is `(0, 2)`. Otherwise, if the cut is along
     /// dimension 1 then the output range is `(1, 4)`.
     fn range_on_cut_dimension(&self, node_key: usize, cut: &Cut<T>) -> (T, T) {
         let dim = cut.dimension();
@@ -218,22 +218,22 @@ impl<T> Tree<T>
     }
 
     /// Insert a new leaf node into the tree containing the input point.
-    /// 
-    /// When this function is called we are at a node in the tree where the 
+    ///
+    /// When this function is called we are at a node in the tree where the
     /// merged box (between this node and the new point) has a proposed cut
-    /// that separates the point from original bounding box at this node. 
-    /// 
+    /// that separates the point from original bounding box at this node.
+    ///
     /// Our current tree state is:
-    ///     
+    ///
     /// ```text
     ///       A        N = current node
     ///      / \       A = parent
     ///     S   N      S = sibling of N
     ///        / \
     /// ```
-    /// 
+    ///
     /// This needs to be transformed to:
-    /// 
+    ///
     /// ```text
     ///       A        N = current node
     ///      / \       A = parent
@@ -242,17 +242,17 @@ impl<T> Tree<T>
     ///       N   P    P = new leaf node
     ///      / \
     /// ```
-    /// 
+    ///
     /// Note that the parent node and all nodes above the newly created node `B`
     /// will need to have their bounding boxes and masses updated. This is done
-    /// in the reverse recursion in `add_point_at_node()`. 
-    /// 
+    /// in the reverse recursion in `add_point_at_node()`.
+    ///
     /// Returns the key of the newly inserted point in the tree's point store.
     fn insert_new_leaf(
         &mut self,
         point: Vec<T>,
         node_key: usize,
-        merged_box: BoundingBox<T>, 
+        merged_box: BoundingBox<T>,
         proposed_cut: Cut<T>,
         min: T,
     ) -> usize {
@@ -265,7 +265,7 @@ impl<T> Tree<T>
 
         // B: new merged node. update parent to node's parent
         let (left, right) = if min > proposed_cut.value() {
-            (new_leaf_key, node_key) 
+            (new_leaf_key, node_key)
         } else {
             (node_key, new_leaf_key)
         };

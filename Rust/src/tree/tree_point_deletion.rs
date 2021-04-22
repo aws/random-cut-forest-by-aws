@@ -5,9 +5,9 @@ use std::iter::Sum;
 
 use crate::tree::{BoundingBox, Cut, Internal, Node, Tree};
 
-/// Description of the result of a point deletion operation on a tree by a 
+/// Description of the result of a point deletion operation on a tree by a
 /// `PointDeleter`.
-/// 
+///
 /// This enum has the following possible values:
 /// * `EmptyTree` - the deletion was performed on an empty tree
 /// * `PointNotFound` - the point could not be found in the tree
@@ -22,7 +22,7 @@ pub enum DeleteResult {
     MassDecreased(usize),
 }
 
-impl<T> Tree<T> 
+impl<T> Tree<T>
     where T: Float + Sum
 {
 
@@ -86,14 +86,14 @@ impl<T> Tree<T>
             Node::Leaf(_) => self.visit_leaf(point, node_key),
         }
     }
-    
+
     /// Deletion algorithm at an internal node.
-    /// 
+    ///
     /// We search for the point to delete by following cuts down the tree. That
     /// is, at a particular internal node we check if the input point to delete
     /// is on the left or right of the node's cut and select one of the node's
     /// children, accordingly.
-    /// 
+    ///
     /// One a leaf node is encountered and the leaf node contains the point that
     /// is to be deleted then we recurse back up, updating internal node
     /// bounding boxes as necessary.
@@ -139,11 +139,11 @@ impl<T> Tree<T>
             node.set_bounding_box(merged_box);
             node.decrement_mass();
         } else { panic!("Inconsistent node: expected non-leaf node"); }
-        
+
         result
     }
 
-    /// Returns the bounding box formed by the merging of point or bounding 
+    /// Returns the bounding box formed by the merging of point or bounding
     /// boxes of two different nodes.
     fn merged_box_from_nodes(&self, left: &Node<T>, right: &Node<T>) -> BoundingBox<T> {
         let left_bbox = self.node_bounding_box(left);
@@ -152,7 +152,7 @@ impl<T> Tree<T>
     }
 
     /// Returns the bounding box at a node.
-    /// 
+    ///
     /// If the node internal then it just returns a copy of that node's bounding
     /// box. If the node is a leaf then it returns the zero-size bounding
     /// box made of that leaf's point.
@@ -172,14 +172,14 @@ impl<T> Tree<T>
     }
 
     /// Deletion algorithm at a leaf node.
-    /// 
-    /// If the point to delete is not equal to the point at this leaf then we 
+    ///
+    /// If the point to delete is not equal to the point at this leaf then we
     /// we return a no-op result. If the point has mass greater than one then
     /// we simply decrease mass.
-    /// 
+    ///
     /// In the general case we have reached a leaf node `P` in the following
     /// diagram:
-    /// 
+    ///
     /// ```text
     ///     A
     ///    / \     P = current leaf node with point P
@@ -187,23 +187,23 @@ impl<T> Tree<T>
     ///  / \       S = P's sibling
     /// P   S
     /// ```
-    /// 
+    ///
     /// What we want to do is delete this node along with its parent and replace
     /// with the current node's sibling:
-    /// 
+    ///
     /// ```text
     ///   A
     ///  / \
     /// S   B
     /// ```
-    /// 
+    ///
     /// This amounts to deleting these poitns and nodes from their respective
     /// stores and "rewiring" the parent-child relationshpis of the remaining
     /// nodes.
-    /// 
+    ///
     fn visit_leaf(&mut self, point: &Vec<T>, leaf_key: usize) -> DeleteResult {
         // Handle several edge cases: (1) the leaf node is not equal to the
-        // input point, (2) 
+        // input point, (2)
         if !self.leaf_matches_point(point, leaf_key) {
             return DeleteResult::PointNotFound;
         } else if let Some(point_key) = self.decremented_leaf_mass(leaf_key) {
@@ -211,10 +211,10 @@ impl<T> Tree<T>
         } else if let Some(point_key) = self.handle_only_node_case(leaf_key) {
             return DeleteResult::DeletedPoint(point_key);
         }
-        
+
         // Set the parent-child relationship between the sibling and grandparent
         //
-        // Two cases: if a grandparent to this leaf exists then perform the 
+        // Two cases: if a grandparent to this leaf exists then perform the
         // rewriring described above. Otherwise, the rewriring reduced to the
         // sibling node becoming the new root node
         let parent_key = self.get_parent(leaf_key).unwrap();
@@ -259,7 +259,7 @@ impl<T> Tree<T>
         } else { panic!("Inconsistent node: expected leaf") }
     }
 
-    /// Checks if the leaf node has a point with mass greater than one. If so, 
+    /// Checks if the leaf node has a point with mass greater than one. If so,
     /// returns `Some(key)` where `key` is the key of the point in the point
     /// store. Otherwise, returns `None`
     fn decremented_leaf_mass(&mut self, leaf_key: usize) -> Option<usize> {
@@ -274,9 +274,9 @@ impl<T> Tree<T>
     }
 
     /// Handle the case when this node is the only node in the tree. Returns
-    /// `Some(key)` if this is indeed the case where `key` is the key of the 
+    /// `Some(key)` if this is indeed the case where `key` is the key of the
     /// point in the point store.
-    /// 
+    ///
     /// Note that we've already handled the case where the node has mass
     /// greater than one.
     fn handle_only_node_case(&mut self, leaf_key: usize) -> Option<usize> {
@@ -297,7 +297,7 @@ impl<T> Tree<T>
     }
 
     /// Returns the node key of the sibling of the input node.
-    /// 
+    ///
     /// If the sibling doesn't exist, which should only happen in the case when
     /// the input node key is the root node, then returns `None`.
     fn sibling_of(&self, node_key: usize) -> Option<usize> {
