@@ -15,18 +15,11 @@
 
 package com.amazon.randomcutforest;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -37,11 +30,17 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @Tag("functional")
 public class CompactRandomCutForestFunctionalTest {
@@ -52,6 +51,8 @@ public class CompactRandomCutForestFunctionalTest {
     private static int randomSeed;
     private static RandomCutForest parallelExecutionForest;
     private static RandomCutForest singleThreadedForest;
+    private static RandomCutForest parallelExecutionForestFloat;
+    private static RandomCutForest singleThreadedForestFloat;
     private static RandomCutForest forestSpy;
 
     private static double baseMu;
@@ -78,6 +79,14 @@ public class CompactRandomCutForestFunctionalTest {
                 .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
                 .boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).build();
 
+        parallelExecutionForestFloat = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .precision(Precision.SINGLE).build();
+
+        singleThreadedForestFloat = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .boundingBoxCachingEnabled(true).parallelExecutionEnabled(false).precision(Precision.SINGLE).build();
+
         dataSize = 10_000;
 
         baseMu = 0.0;
@@ -94,6 +103,8 @@ public class CompactRandomCutForestFunctionalTest {
         for (int i = 0; i < dataSize; i++) {
             parallelExecutionForest.update(data[i]);
             singleThreadedForest.update(data[i]);
+            parallelExecutionForestFloat.update(data[i]);
+            singleThreadedForestFloat.update(data[i]);
         }
     }
 
@@ -102,7 +113,8 @@ public class CompactRandomCutForestFunctionalTest {
     static class TestForestProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(singleThreadedForest, parallelExecutionForest).map(Arguments::of);
+            return Stream.of(singleThreadedForest, parallelExecutionForest, singleThreadedForestFloat,
+                    parallelExecutionForestFloat).map(Arguments::of);
         }
     }
 

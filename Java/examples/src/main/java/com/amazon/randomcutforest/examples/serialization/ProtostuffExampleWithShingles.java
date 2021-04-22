@@ -70,7 +70,6 @@ public class ProtostuffExampleWithShingles implements Example {
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
         mapper.setSaveExecutorContext(true);
-        mapper.setCopy(true);
         mapper.setSaveTreeState(false);
 
         Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);

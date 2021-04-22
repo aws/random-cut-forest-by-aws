@@ -65,7 +65,6 @@ public class JsonExample implements Example {
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
         mapper.setSaveExecutorContext(true);
-        mapper.setCopy(true);
         ObjectMapper jsonMapper = new ObjectMapper();
 
         String json = jsonMapper.writeValueAsString(mapper.toState(forest));
