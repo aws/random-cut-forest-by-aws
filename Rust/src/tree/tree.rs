@@ -14,18 +14,19 @@ use super::{AddResult, DeleteResult, PointAdder, PointDeleter};
 
 /// Random cut tree data structure on nodes and points.
 ///
-/// A random cut tree contains leaf nodes and internal nodes. [`Leaf`] nodes 
-/// live at the leaves of the tree and mainly represent a data point/vector in 
-/// the tree. [`Internal`] nodes mainly contain a [`BoundingBox`] on all of the
-/// points in its subtree as well as a random [`Cut`] on that bounding box.
-/// 
-/// To store these nodes and points, a random cut tree contains a node store 
+/// A random cut tree contains leaf nodes and internal nodes.
+/// [`Leaf`](crate::Leaf) nodes live at the leaves of the tree and mainly
+/// represent a data point in the tree. [`Internal`](`crate::Internal`) nodes
+/// mainly contain a [`BoundingBox`](`crate::BoundingBox`) on all of the points
+/// in its subtree as well as a random [`Cut`] on that bounding box.
+///
+/// To store these nodes and points, a random cut tree contains a node store
 /// and a point store. The [`NodeStore`] contains all of the nodes of the tree
-/// of type [`Leaf`] or [`Internal`]. The [`PointStore`] contains the data 
-/// points or vectors stored in the leaves of the tree. In some cases it is 
-/// sufficient for a `Tree` to uniquely own its point store. In other cases,
-/// such as the case where we want share points across multiple trees in a 
-/// forest, this tree's point store may live outside of this tree.
+/// of type `Leaf` or `Internal`. The [`PointStore`] contains the data points or
+/// vectors stored in the leaves of the tree. In some cases it is sufficient for
+/// a `Tree` to uniquely own its point store. In other cases, such as the case
+/// where we want share points across multiple trees in a forest, this tree's
+/// point store may live outside of this tree.
 ///
 /// # Examples
 ///
@@ -35,13 +36,12 @@ use super::{AddResult, DeleteResult, PointAdder, PointDeleter};
 ///
 /// // create a new random cut tree with its own point store
 /// let mut tree: Tree<f32> = Tree::new();
-/// 
+///
 /// // add some (two-dimensional) data points to the tree
 /// let result = tree.add_point(vec![0.0, 0.0]);
 /// tree.add_point(vec![1.0, 2.0]);
 /// tree.add_point(vec![0.2, 1.5]);
 /// ```
-///
 pub struct Tree<T> {
     point_store: Rc<RefCell<PointStore<T>>>,
     node_store: NodeStore<T>,
@@ -61,7 +61,7 @@ impl<T: RCFFloat> Tree<T> {
     ///
     /// ```
     /// extern crate slab;
-    /// 
+    ///
     /// // create a shared point store
     /// use slab::Slab;
     /// use std::cell::RefCell;
@@ -101,7 +101,7 @@ impl<T: RCFFloat> Tree<T> {
     /// using the host system's random number generator. This function
     /// reconstructs a random number generator from a specified seed.
     ///
-    /// Random cut trees use the [`ChaCha8Rng`][cha] random number generator. 
+    /// Random cut trees use the [`ChaCha8Rng`][cha] random number generator.
     /// It has fast initialization, high throughput and relatively small memory
     /// footprint.
     ///
@@ -113,7 +113,7 @@ impl<T: RCFFloat> Tree<T> {
     /// let mut tree: Tree<f32> = Tree::new();
     /// tree.seed(42);
     /// ```
-    /// 
+    ///
     /// [cha]: https://rust-random.github.io/rand/rand_chacha/struct.ChaCha8Rng.html
     pub fn seed(&mut self, seed: u64) {
         self.rng = ChaCha8Rng::seed_from_u64(seed);
@@ -209,12 +209,12 @@ impl<T: RCFFloat> Tree<T> {
     /// ```
     /// use random_cut_forest::Tree;
     /// use random_cut_forest::tree::AddResult;
-    /// 
+    ///
     /// let mut tree: Tree<f32> = Tree::new();
-    /// 
+    ///
     /// let result = tree.add_point(vec![0.0, 0.0]);
     /// assert!(std::matches!(result, AddResult::AddedPoint {..} ));
-    /// 
+    ///
     /// let result = tree.add_point(vec![0.0, 0.0]);
     /// assert!(std::matches!(result, AddResult::MassIncreased {..} ));
     /// ```
@@ -229,9 +229,9 @@ impl<T: RCFFloat> Tree<T> {
     /// The input point is removed from the tree's point store. A
     /// [`DeleteResult`] is returned, providing information on which point was
     /// deleted or if the point was not actually contained by the tree.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use random_cut_forest::Tree;
     /// use random_cut_forest::tree::DeleteResult;
@@ -239,19 +239,19 @@ impl<T: RCFFloat> Tree<T> {
     /// let mut tree: Tree<f32> = Tree::new();
     /// tree.add_point(vec![0.0, 0.0]);
     /// tree.add_point(vec![0.0, 0.0]);
-    /// 
+    ///
     /// // deleting a point with mass greater than one
     /// let result = tree.delete_point(&vec![0.0, 0.0]);
     /// assert!(std::matches!(result, DeleteResult::MassDecreased {..} ));
-    /// 
+    ///
     /// // deleting a point that doesn't live in the tree
     /// let result = tree.delete_point(&vec![42.0, 123.0]);
     /// assert!(std::matches!(result, DeleteResult::PointNotFound));
-    /// 
+    ///
     /// // deleting a point with mass equal to one
     /// let result = tree.delete_point(&vec![0.0, 0.0]);
     /// assert!(std::matches!(result, DeleteResult::DeletedPoint {..} ));
-    /// 
+    ///
     /// // deleting a point from an empty tree
     /// let result = tree.delete_point(&vec![0.0, 0.0]);
     /// assert!(std::matches!(result, DeleteResult::EmptyTree));
@@ -263,34 +263,34 @@ impl<T: RCFFloat> Tree<T> {
 
 
     /// Returns an iterator on nodes and depths.
-    /// 
+    ///
     /// Given a query point, a random cut tree traversal begins at the root node
     /// of the tree and returns a branch to the leaf node which is approximately
-    /// closest to a query point in the L1-norm. (Relative to the random cuts 
+    /// closest to a query point in the L1-norm. (Relative to the random cuts
     /// chosen in the tree.)
-    /// 
+    ///
     /// See [`NodeTraverser`] for more information.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use random_cut_forest::{Node, Tree};
     ///
     /// let mut tree: Tree<f32> = Tree::new();
     /// tree.seed(0);  // seed this test to fix a random cut
     /// tree.add_point(vec![0.0, 1.0]);
-    /// 
+    ///
     /// // check that we recover the only node in the tree
     /// let query = vec![0.1, 0.9];
     /// let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
     /// assert_eq!(nodes.len(), 1);
-    /// 
+    ///
     /// // after adding a second point the traversal should contain the
     /// // point closest to the query in the L1 norm
     /// tree.add_point(vec![-1.0, -2.0]);
     /// let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
     /// assert_eq!(nodes.len(), 2);
-    /// 
+    ///
     /// // a traversal implements iter, so we can use it in a loop
     /// for node in tree.traverse(&query) {
     ///     println!("mass = {}", node.mass());
@@ -303,12 +303,11 @@ impl<T: RCFFloat> Tree<T> {
 
 
 /// A type for traversing nodes from root to the nearest leaf.
-/// 
-/// Given an input data point/vector, this type traces the path from the root 
+///
+/// Given an input data point/vector, this type traces the path from the root
 /// node of a tree to the leaf node nearest to the input. Returned by
 /// [`Tree::traverse`].
-/// 
-/// ```
+///
 pub struct NodeTraverser<'a, T> {
     tree: &'a Tree<T>,
     point: &'a Vec<T>,
@@ -318,16 +317,16 @@ pub struct NodeTraverser<'a, T> {
 impl<'a, T: RCFFloat> NodeTraverser<'a, T> {
 
     /// Create a new node traverser from a tree and a query point.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use random_cut_forest::Tree;
     /// use random_cut_forest::tree::NodeTraverser;
-    /// 
+    ///
     /// let mut tree = Tree::new();
     /// let point = vec![0.0, 0.0];
-    /// 
+    ///
     /// // create a new node traverser from a tree and a query point
     /// let mut node_traverser = NodeTraverser::new(&tree, &point);
     /// ```
