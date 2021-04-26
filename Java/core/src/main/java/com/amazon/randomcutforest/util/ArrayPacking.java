@@ -170,7 +170,7 @@ public class ArrayPacking {
             int count = 0;
             for (int i = 3; i < packedArray.length; i++) {
                 long code = packedArray[i];
-                for (int j = 0; j < packNum && count < min(output.length, length); j++) {
+                for (int j = 0; j < packNum && count < min(packedArray[2], length); j++) {
                     output[count++] = (int) (min + code % base);
                     code = (int) (code / base);
                 }
