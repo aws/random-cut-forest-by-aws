@@ -1,0 +1,25 @@
+name: Rust CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths: [ Rust/** ]
+
+env:
+  CARGO_TERM_COLOR: always
+  
+defaults:
+  run:
+    working-directory: Rust/
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build Rust
+      run: cargo build --verbose
+    - name: Run Rust Tests
+      run: cargo test --verbose
