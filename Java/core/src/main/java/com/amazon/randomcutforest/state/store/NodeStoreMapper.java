@@ -49,11 +49,11 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
     @Override
     public NodeStore toModel(NodeStoreState state, long seed) {
         int capacity = state.getCapacity();
-        int[] cutDimension = ArrayPacking.unPackInts(state.getCutDimension(), state.isCompressed());
+        int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
         double[] cutValue = Arrays.copyOf(state.getCutValueDouble(), state.getCutValueDouble().length);
 
-        int[] leftIndex = ArrayPacking.unPackInts(state.getLeftIndex(), state.isCompressed());
-        int[] rightIndex = ArrayPacking.unPackInts(state.getRightIndex(), state.isCompressed());
+        int[] leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), state.isCompressed());
+        int[] rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), state.isCompressed());
         if (state.isCanonicalAndNotALeaf()) {
             reverseBits(state.getSize(), leftIndex, rightIndex);
         }
@@ -64,13 +64,13 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
             leafMass = null;
             leafPointIndex = null;
         } else {
-            leafMass = ArrayPacking.unPackInts(state.getLeafmass(), state.isCompressed());
-            leafPointIndex = ArrayPacking.unPackInts(state.getLeafPointIndex(), state.isCompressed());
+            leafMass = ArrayPacking.unpackInts(state.getLeafmass(), state.isCompressed());
+            leafPointIndex = ArrayPacking.unpackInts(state.getLeafPointIndex(), state.isCompressed());
         }
 
-        int[] nodeFreeIndexes = ArrayPacking.unPackInts(state.getNodeFreeIndexes(), state.isCompressed());
+        int[] nodeFreeIndexes = ArrayPacking.unpackInts(state.getNodeFreeIndexes(), state.isCompressed());
         int nodeFreeIndexPointer = state.getNodeFreeIndexPointer();
-        int[] leafFreeIndexes = ArrayPacking.unPackInts(state.getLeafFreeIndexes(), state.isCompressed());
+        int[] leafFreeIndexes = ArrayPacking.unpackInts(state.getLeafFreeIndexes(), state.isCompressed());
         int leafFreeIndexPointer = state.getLeafFreeIndexPointer();
 
         return new NodeStore(capacity, leftIndex, rightIndex, cutDimension, cutValue, leafMass, leafPointIndex,

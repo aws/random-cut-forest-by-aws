@@ -47,13 +47,9 @@ public class PointStoreState {
      */
     private int startOfFreeSegment;
     /**
-     * Point data for a {@link com.amazon.randomcutforest.store.PointStoreDouble}.
+     * Point data converted to raw bytes.
      */
-    private double[] doubleData;
-    /**
-     * Point data for a {@link com.amazon.randomcutforest.store.PointStoreFloat}.
-     */
-    private float[] floatData;
+    private byte[] pointData;
     /**
      * use compressed representatiomn for arrays
      */

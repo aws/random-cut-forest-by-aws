@@ -53,7 +53,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
 
         int size = state.getSize();
         System.arraycopy(state.getWeight(), 0, weight, 0, size);
-        System.arraycopy(ArrayPacking.unPackInts(state.getPointIndex(), state.isCompressed()), 0, pointIndex, 0, size);
+        System.arraycopy(ArrayPacking.unpackInts(state.getPointIndex(), state.isCompressed()), 0, pointIndex, 0, size);
         if (state.isStoreSequenceIndicesEnabled()) {
             sequenceIndex = new long[state.getCapacity()];
             System.arraycopy(state.getSequenceIndex(), 0, sequenceIndex, 0, size);

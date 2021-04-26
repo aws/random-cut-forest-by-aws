@@ -40,16 +40,16 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
-        checkNotNull(state.getFloatData(), "doubleData must not be null");
+        checkNotNull(state.getPointData(), "pointData must not be null");
         checkArgument(state.isSinglePrecisionSet(), "incorrect use");
         int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
-        float[] store = Arrays.copyOf(state.getFloatData(), state.getCurrentStoreCapacity() * dimensions);
+        float[] store = ArrayPacking.unpackFloats(state.getPointData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = ArrayPacking.unPackInts(state.getRefCount(), indexCapacity, state.isCompressed());
+        int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
-        int[] tempList = ArrayPacking.unPackInts(state.getLocationList(), state.isCompressed());
+        int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
 
         return PointStoreFloat.builder().internalRotationEnabled(state.isRotationEnabled())
@@ -83,8 +83,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         int prefix = model.getValidPrefix();
         state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
         state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
-        state.setFloatData(Arrays.copyOf(model.getStore(), model.getStartOfFreeSegment()));
+        state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }
-
 }
