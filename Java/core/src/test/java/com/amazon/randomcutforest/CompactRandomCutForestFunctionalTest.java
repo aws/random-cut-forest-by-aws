@@ -15,11 +15,18 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
+import java.util.Random;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -30,17 +37,11 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
 public class CompactRandomCutForestFunctionalTest {
