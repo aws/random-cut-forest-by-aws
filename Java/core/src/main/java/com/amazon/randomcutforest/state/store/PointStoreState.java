@@ -27,6 +27,10 @@ import lombok.Data;
 @Data
 public class PointStoreState {
     /**
+     * version string for future extensibility
+     */
+    private String version = "compact";
+    /**
      * size of each point saved
      */
     private int dimensions;

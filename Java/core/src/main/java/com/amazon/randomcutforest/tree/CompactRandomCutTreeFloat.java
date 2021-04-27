@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
@@ -117,5 +118,44 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         public CompactRandomCutTreeFloat build() {
             return new CompactRandomCutTreeFloat(this);
         }
+    }
+
+    /**
+     * Return a new {@link Cut}, which is chosen uniformly over the space of
+     * possible cuts for the given bounding box. The cut is over single precision,
+     * although the representation is over doubles still.
+     *
+     * @param random A random number generator
+     * @param box    A bounding box that we want to find a random cut for.
+     * @return A new Cut corresponding to a random cut in the bounding box.
+     */
+    @Override
+    Cut treeCut(Random random, AbstractBoundingBox<?> box) {
+        double rangeSum = box.getRangeSum();
+        checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
+
+        double breakPoint = random.nextDouble() * rangeSum;
+
+        for (int i = 0; i < box.getDimensions(); i++) {
+            double range = box.getRange(i);
+            if (breakPoint <= range) {
+                float cutValue = (float) (box.getMinValue(i) + breakPoint);
+
+                // Random cuts have to take a value in the half-open interval [minValue,
+                // maxValue) to ensure that a
+                // Node has a valid left child and right child.
+                if ((cutValue == box.getMaxValue(i)) && (box.getMinValue(i) < box.getMaxValue(i))) {
+                    cutValue = Math.nextAfter(cutValue, box.getMinValue(i));
+                }
+
+                // the cut still stores a double value; but the previous section validates that
+                // the
+                // cut is meaningful in single precision
+                return new Cut(i, cutValue);
+            }
+            breakPoint -= range;
+        }
+
+        throw new IllegalStateException("The break point did not lie inside the expected range");
     }
 }

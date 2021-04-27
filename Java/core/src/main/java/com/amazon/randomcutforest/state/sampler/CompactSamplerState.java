@@ -24,6 +24,11 @@ import lombok.Data;
 @Data
 public class CompactSamplerState {
     /**
+     * a version string for extensibility
+     */
+    private String version = "compact";
+
+    /**
      * An array of sampler weights.
      */
     private float[] weight;

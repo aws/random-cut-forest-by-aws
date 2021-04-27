@@ -67,6 +67,7 @@ public class CompactRandomCutTreeFloatMapper implements
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompress(compress);
         nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
+        nodeStoreMapper.setSinglePrecisionSet(true);
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
 
         return state;

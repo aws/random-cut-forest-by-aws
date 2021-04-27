@@ -19,11 +19,13 @@ import lombok.Data;
 
 @Data
 public class NodeStoreState {
+
+    private String version = "compact";
+
     private int capacity;
     private boolean compressed;
     private int[] cutDimension;
-    private double[] cutValueDouble;
-    private float[] cutvalueFloat;
+    private byte[] cutValueData;
     private boolean singlePrecisionSet;
     private int root;
 

@@ -21,6 +21,7 @@ import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
 public class CompactRandomCutTreeState {
+    private String version = "compact";
     private int root;
     private int maxSize;
     private boolean partialTreeInUse;
