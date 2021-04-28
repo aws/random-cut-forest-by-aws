@@ -120,7 +120,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    static Cut randomCut(Random random, AbstractBoundingBox<?> box) {
+    protected Cut randomCut(Random random, AbstractBoundingBox<?> box) {
         double rangeSum = box.getRangeSum();
         checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
 

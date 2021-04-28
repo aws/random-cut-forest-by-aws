@@ -22,6 +22,7 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
@@ -29,12 +30,11 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 @Getter
 @Setter
 public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> {
+
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * if true, then stores the cut information as a floqt array (converted to bytes
      */
-    private boolean copy = true;
+    private boolean singlePrecisionSet = false;
 
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
@@ -50,7 +50,12 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
     public NodeStore toModel(NodeStoreState state, long seed) {
         int capacity = state.getCapacity();
         int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
-        double[] cutValue = Arrays.copyOf(state.getCutValueDouble(), state.getCutValueDouble().length);
+        double[] cutValue;
+        if (state.isSinglePrecisionSet()) {
+            cutValue = CommonUtils.toDoubleArray(ArrayPacking.unpackFloats(state.getCutValueData()));
+        } else {
+            cutValue = ArrayPacking.unpackDoubles(state.getCutValueData());
+        }
 
         int[] leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), state.isCompressed());
         int[] rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), state.isCompressed());
@@ -83,6 +88,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         state.setCapacity(model.getCapacity());
         state.setCompressed(compress);
         state.setUsePartialTrees(usePartialTrees);
+        state.setSinglePrecisionSet(singlePrecisionSet);
 
         int[] leftIndex = Arrays.copyOf(model.leftIndex, model.leftIndex.length);
         int[] rightIndex = Arrays.copyOf(model.rightIndex, model.rightIndex.length);
@@ -99,8 +105,11 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         }
 
         state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
-        state.setCutValueDouble(Arrays.copyOf(model.cutValue, model.cutValue.length));
-
+        if (state.isSinglePrecisionSet()) {
+            state.setCutValueData(ArrayPacking.pack(CommonUtils.toFloatArray(model.cutValue)));
+        } else {
+            state.setCutValueData(ArrayPacking.pack(model.cutValue, model.cutValue.length));
+        }
         state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
         state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());
         state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));

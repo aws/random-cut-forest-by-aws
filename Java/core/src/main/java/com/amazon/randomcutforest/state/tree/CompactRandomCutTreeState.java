@@ -15,12 +15,15 @@
 
 package com.amazon.randomcutforest.state.tree;
 
+import static com.amazon.randomcutforest.state.Version.V2_0;
+
 import lombok.Data;
 
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
 public class CompactRandomCutTreeState {
+    private String version = V2_0;
     private int root;
     private int maxSize;
     private boolean partialTreeInUse;

@@ -110,7 +110,7 @@ public class RandomCutForestConsistencyFunctionalTest {
 
             // we expect some loss of precision when comparing to the score computed as a
             // double
-            assertEquals(score, compactDoubleCached.getAnomalyScore(point), 1e-3);
+            assertEquals(score, compactDoubleCached.getAnomalyScore(point), 1e-2);
 
             compactFloatCached.update(point);
             compactFloatUncached.update(point);
