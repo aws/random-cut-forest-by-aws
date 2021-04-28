@@ -326,32 +326,32 @@ public class RandomCutTreeTest {
                 .getMergedBox(new double[] { 10.0, 0.0, 30.0 });
 
         when(rng.nextDouble()).thenReturn(0.0);
-        Cut cut = RandomCutTree.randomCut(rng, box);
+        Cut cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(0));
         assertThat(cut.getValue(), is(0.0));
 
         when(rng.nextDouble()).thenReturn(0.1);
-        cut = RandomCutTree.randomCut(rng, box);
+        cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(0));
         assertThat(cut.getValue(), closeTo(10.0 * 0.1 / 0.25, EPSILON));
 
         when(rng.nextDouble()).thenReturn(0.25);
-        cut = RandomCutTree.randomCut(rng, box);
+        cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(0));
         assertThat(cut.getValue(), closeTo(10.0, EPSILON));
 
         when(rng.nextDouble()).thenReturn(0.4);
-        cut = RandomCutTree.randomCut(rng, box);
+        cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(2));
         assertThat(cut.getValue(), closeTo(30.0 * (0.4 - 0.25) / 0.75, EPSILON));
 
         when(rng.nextDouble()).thenReturn(0.99);
-        cut = RandomCutTree.randomCut(rng, box);
+        cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(2));
         assertThat(cut.getValue(), closeTo(30.0 * (0.99 - 0.25) / 0.75, EPSILON));
 
         when(rng.nextDouble()).thenReturn(1.0);
-        cut = RandomCutTree.randomCut(rng, box);
+        cut = tree.randomCut(rng, box);
         assertThat(cut.getDimension(), is(2));
         assertThat(cut.getValue(), closeTo(30.0, EPSILON));
     }

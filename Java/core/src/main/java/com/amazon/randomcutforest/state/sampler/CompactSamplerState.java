@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.state.sampler;
 
+import static com.amazon.randomcutforest.state.Version.V2_0;
+
 import lombok.Data;
 
 /**
@@ -26,7 +28,7 @@ public class CompactSamplerState {
     /**
      * a version string for extensibility
      */
-    private String version = "compact";
+    private String version = V2_0;
 
     /**
      * An array of sampler weights.

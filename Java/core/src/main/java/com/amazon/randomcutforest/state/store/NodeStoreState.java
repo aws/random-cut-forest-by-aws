@@ -15,12 +15,14 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.state.Version.V2_0;
+
 import lombok.Data;
 
 @Data
 public class NodeStoreState {
 
-    private String version = "compact";
+    private String version = V2_0;
 
     private int capacity;
     private boolean compressed;

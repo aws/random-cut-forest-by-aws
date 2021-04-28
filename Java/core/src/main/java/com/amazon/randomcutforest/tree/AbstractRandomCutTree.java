@@ -120,7 +120,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    static Cut randomCut(Random random, AbstractBoundingBox<?> box) {
+    protected Cut randomCut(Random random, AbstractBoundingBox<?> box) {
         double rangeSum = box.getRangeSum();
         checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
 
@@ -144,18 +144,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         }
 
         throw new IllegalStateException("The break point did not lie inside the expected range");
-    }
-
-    /**
-     * A local version of randomcut that can be overridden for lower precision
-     * requirments
-     * 
-     * @param random random number generator
-     * @param box    bounding box corresponding to the generation of the cut
-     * @return a cut corresponding to the box
-     */
-    Cut treeCut(Random random, AbstractBoundingBox<?> box) {
-        return randomCut(random, box);
     }
 
     // decides the path taken in the abstract tree at update time
@@ -491,7 +479,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             } else {
                 // construct a potential cut
                 savedBox = getInternalTwoPointBox(point, oldPoint);
-                savedCut = treeCut(random, savedBox);
+                savedCut = randomCut(random, savedBox);
                 currentUnmergedBox = getMutableLeafBoxFromLeafNode(followReference);
                 savedSiblingNode = followReference;
             }
@@ -524,7 +512,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                     // a cut is feasible at this level
                     // generate a new cut and see if it separates the new point
                     AbstractBoundingBox<Point> mergedBox = existingBox.copy().addPoint(point);
-                    Cut cut = treeCut(random, mergedBox);
+                    Cut cut = randomCut(random, mergedBox);
                     // avoid generation of mergedBox?
                     int splitDimension = cut.getDimension();
                     double splitValue = cut.getValue();

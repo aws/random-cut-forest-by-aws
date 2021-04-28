@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.state.Version.V2_0;
+
 import lombok.Data;
 
 /**
@@ -29,7 +31,7 @@ public class PointStoreState {
     /**
      * version string for future extensibility
      */
-    private String version = "compact";
+    private String version = V2_0;
     /**
      * size of each point saved
      */

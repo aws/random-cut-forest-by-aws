@@ -130,7 +130,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
     @Override
-    Cut treeCut(Random random, AbstractBoundingBox<?> box) {
+    protected Cut randomCut(Random random, AbstractBoundingBox<?> box) {
         double rangeSum = box.getRangeSum();
         checkArgument(rangeSum > 0, "box.getRangeSum() must be greater than 0");
 
@@ -148,6 +148,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
                     cutValue = Math.nextAfter(cutValue, box.getMinValue(i));
                 }
 
+                if (cutValue < (float) box.getMinValue(i)) {
+                    throw new IllegalStateException(" precision error in single precision cuts");
+                }
                 // the cut still stores a double value; but the previous section validates that
                 // the
                 // cut is meaningful in single precision
