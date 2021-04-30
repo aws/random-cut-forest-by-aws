@@ -8,3 +8,12 @@ pub use cut::Cut;
 
 mod node;
 pub use node::{Internal, Leaf, Node};
+
+mod tree_point_addition;
+pub use tree_point_addition::AddResult;
+
+mod tree_point_deletion;
+pub use tree_point_deletion::DeleteResult;
+
+mod tree;
+pub use tree::{NodeTraverser, Tree};

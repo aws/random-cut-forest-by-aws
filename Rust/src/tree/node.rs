@@ -1,6 +1,5 @@
 use super::BoundingBox;
 use super::Cut;
-use crate::RCFFloat;
 
 type NodeKey = usize;
 type PointKey = usize;
@@ -174,7 +173,7 @@ pub enum Node<T> {
     Internal(Internal<T>),
 }
 
-impl<T: RCFFloat> Node<T> {
+impl<T> Node<T> {
 
     /// Create a new leaf node.
     ///

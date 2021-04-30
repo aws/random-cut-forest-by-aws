@@ -2,8 +2,7 @@ extern crate num_traits;
 use num_traits::{Float, Zero};
 
 use std::fmt;
-
-use crate::RCFFloat;
+use std::iter::Sum;
 
 /// Bounding box on collections on points.
 ///
@@ -40,7 +39,9 @@ pub struct BoundingBox<T> {
     range_sum: T,
 }
 
-impl<T> BoundingBox<T> where T: RCFFloat {
+impl<T> BoundingBox<T> 
+    where T: Float + Sum
+{
 
     /// Create a new bounding box from a min values vector and a max values
     /// vector.
@@ -282,7 +283,7 @@ impl<T> BoundingBox<T> where T: RCFFloat {
 }
 
 impl<T> fmt::Display for BoundingBox<T>
-    where T: RCFFloat + fmt::Debug
+    where T: fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BoundingBox ({:?}, {:?})", self.min_values, self.max_values)
