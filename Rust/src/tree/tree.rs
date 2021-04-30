@@ -1,3 +1,6 @@
+extern crate num_traits;
+use num_traits::Float;
+
 extern crate rand;
 use rand::SeedableRng;
 
@@ -5,9 +8,9 @@ extern crate rand_chacha;
 use rand_chacha::ChaCha8Rng;
 
 use std::cell::{Ref, RefMut, RefCell};
+use std::iter::Sum;
 use std::rc::Rc;
 
-use crate::RCFFloat;
 use crate::store::{PointStore, NodeStore};
 use crate::tree::{Cut, Node};
 
@@ -52,7 +55,9 @@ pub struct Tree<T> {
 }
 
 
-impl<T: RCFFloat> Tree<T> {
+impl<T> Tree<T> 
+    where T: Float + Sum
+{
 
     /// Create a new `Tree` with a shared point store.
     ///
@@ -270,7 +275,9 @@ pub struct NodeTraverser<'a, T> {
     current_node_key: Option<usize>,
 }
 
-impl<'a, T: RCFFloat> NodeTraverser<'a, T> {
+impl<'a, T> NodeTraverser<'a, T> 
+    where T: Float + Sum
+{
 
     /// Create a new node traverser from a tree and a query point.
     ///
@@ -309,7 +316,9 @@ impl<'a, T: RCFFloat> NodeTraverser<'a, T> {
     }
 }
 
-impl<'a, T: RCFFloat> Iterator for NodeTraverser<'a, T> {
+impl<'a, T> Iterator for NodeTraverser<'a, T> 
+    where T: Float + Sum
+{
     type Item = &'a Node<T>;
 
     fn next(&mut self) -> Option<&'a Node<T>> {
@@ -418,7 +427,7 @@ mod tests {
     }
 
     /// Traverses the tree to check if the node masses are consistent
-    fn check_node_masses<T: RCFFloat>(tree: &Tree<T>, node_idx: usize) -> u32
+    fn check_node_masses<T: Float + Sum>(tree: &Tree<T>, node_idx: usize) -> u32
     {
         let node = tree.node_store().get(node_idx).unwrap();
         let mass = node.mass();

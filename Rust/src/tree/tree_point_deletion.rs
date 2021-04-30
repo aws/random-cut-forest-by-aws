@@ -1,4 +1,8 @@
-use crate::RCFFloat;
+extern crate num_traits;
+use num_traits::Float;
+
+use std::iter::Sum;
+
 use crate::tree::{BoundingBox, Cut, Internal, Node, Tree};
 
 /// Description of the result of a point deletion operation on a tree by a 
@@ -18,7 +22,9 @@ pub enum DeleteResult {
     MassDecreased(usize),
 }
 
-impl<T: RCFFloat> Tree<T> {
+impl<T> Tree<T> 
+    where T: Float + Sum
+{
 
     #[inline(always)]
     fn remove_node(&mut self, node_key: usize) {

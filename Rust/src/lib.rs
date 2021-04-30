@@ -33,13 +33,9 @@
 //! Sudipto Guha, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random
 //! cut forest based anomaly detection on streams."* International Conference
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
-#![feature(trait_alias)]
 
 mod store;
 pub use store::{NodeStore, PointStore};
 
 pub mod tree;
 pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, NodeTraverser, Tree};
-
-mod types;
-pub use types::RCFFloat;

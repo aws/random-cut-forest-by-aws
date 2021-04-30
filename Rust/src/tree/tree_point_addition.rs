@@ -1,4 +1,8 @@
-use crate::RCFFloat;
+extern crate num_traits;
+use num_traits::Float;
+
+use std::iter::Sum;
+
 use crate::tree::{BoundingBox, Cut, Node, Tree};
 
 /// The result of a point addition operation.
@@ -11,7 +15,9 @@ pub enum AddResult {
     MassIncreased(usize),
 }
 
-impl<T: RCFFloat> Tree<T> {
+impl<T> Tree<T> 
+    where T: Float + Sum
+{
 
     #[inline(always)]
     fn point_inside_node(&self, point: &Vec<T>, node_key: usize) -> bool {

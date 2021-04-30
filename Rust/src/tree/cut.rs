@@ -4,7 +4,9 @@ use num_traits::{Float, Zero};
 extern crate rand;
 use rand::distributions::Uniform;
 
-use crate::{BoundingBox, RCFFloat};
+use std::iter::Sum;
+
+use crate::BoundingBox;
 
 
 /// Hyperplane cut inside a bounding box.
@@ -58,7 +60,9 @@ pub struct Cut<T> {
     value: T,
 }
 
-impl<T> Cut<T> where T: RCFFloat {
+impl<T> Cut<T> 
+    where T: Float + Sum
+{
 
     /// Create a new cut from a given dimension and value.
     pub fn new(dimension: usize, value: T) -> Self {
