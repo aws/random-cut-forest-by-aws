@@ -205,4 +205,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         return sample.size();
     }
 
+    public double getInitialAcceptFraction() {
+        return initialAcceptFraction;
+    }
 }
