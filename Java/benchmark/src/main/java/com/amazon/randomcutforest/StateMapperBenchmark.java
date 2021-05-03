@@ -29,6 +29,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.profilers.ObjectGraphSizeProfiler;
 import com.amazon.randomcutforest.profilers.OutputSizeProfiler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -82,7 +83,8 @@ public class StateMapperBenchmark {
         @Setup(Level.Invocation)
         public void setUpForest() throws JsonProcessingException {
             RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision)
+                    .boundingBoxCachingEnabled(false).build();
 
             for (int i = 0; i < NUM_TRAIN_SAMPLES; i++) {
                 forest.update(trainingData[i]);
@@ -106,11 +108,13 @@ public class StateMapperBenchmark {
         }
     }
 
+    private RandomCutForest forest;
     private byte[] bytes;
 
     @TearDown(Level.Iteration)
     public void tearDown() {
         OutputSizeProfiler.setTestArray(bytes);
+        ObjectGraphSizeProfiler.setObject(forest);
     }
 
     @Benchmark
@@ -123,7 +127,7 @@ public class StateMapperBenchmark {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
             mapper.setSaveTreeState(state.saveTreeState);
-            RandomCutForest forest = mapper.toModel(forestState);
+            forest = mapper.toModel(forestState);
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);
             forest.update(testData[i]);
@@ -146,7 +150,7 @@ public class StateMapperBenchmark {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
             mapper.setSaveTreeState(state.saveTreeState);
-            RandomCutForest forest = mapper.toModel(forestState);
+            forest = mapper.toModel(forestState);
 
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);
@@ -172,7 +176,7 @@ public class StateMapperBenchmark {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContext(true);
             mapper.setSaveTreeState(state.saveTreeState);
-            RandomCutForest forest = mapper.toModel(forestState);
+            forest = mapper.toModel(forestState);
 
             double score = forest.getAnomalyScore(testData[i]);
             blackhole.consume(score);

@@ -182,13 +182,16 @@ benchmark methods will be executed.
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
 
-If you are running the `StateMapperBenchmark`, you can enable the String size profiler to measure the size of
-a state object encoded as a JSON string by the flag `-prof com.amazon.randomcutforest.profilers.StringSizeProfiler`
-to the command-line invocation. For example:
+### Custom Profilers
 
-```text
-% java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.OutputSizeProfiler
-```
+This library defines two custom JMH profilers for use in benchmarks:
+
+| Name | Benchmarks | Description | Command-line Example |
+| ---- | ---------- | ----------- | ------------ |
+| OutputSizeProfiler | StateMapperBenchmark | Measures the length of a String or byte array | `java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.OutputSizeProfiler` |
+| ObjectGraphSizeProfiler | StateMapperBenchmark | Wraps the `MemoryMeter::measureDeep` method in the [JAMM](https://github.com/jbellis/jamm) library to measure the amount of memory allocated in an object graph. When using this profiler, you need to set the `javaagent` flag to point to the location of the JAMM JAR file. | `java -javaagent:$HOME/.m2/repository/com/github/jbellis/jamm/0.3.3/jamm-0.3.3.jar -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.ObjectGraphSizeProfiler` 
+
+Note that you can enable OutputSizeProfiler and ObjectGraphSizeProfiler at the same time by adding their respective `-prof` flags to the command-line.
 
 ## Examples
 
