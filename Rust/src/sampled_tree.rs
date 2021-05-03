@@ -215,7 +215,7 @@ impl<T> SampledTree<T>
 
     /// Returns the total number of observations made by the tree.
     ///
-    /// For every point sent to [`SampledTree::sample`], the total number of
+    /// For every point sent to [`SampledTree::update`], the total number of
     /// observations is incremented independent of the sample size or whether
     /// or not the point is accepted into the sample.
     ///
