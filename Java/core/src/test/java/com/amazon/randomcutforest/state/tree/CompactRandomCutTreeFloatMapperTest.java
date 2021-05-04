@@ -54,10 +54,17 @@ public class CompactRandomCutTreeFloatMapperTest {
             Collections.shuffle(indexes);
 
             List<CompactRandomCutTreeFloat> trees = new ArrayList<>();
-            trees.add(new CompactRandomCutTreeFloat(capacity, 99L, pointStore, false, false, false));
-            trees.add(new CompactRandomCutTreeFloat(capacity, 99L, pointStore, false, false, true));
-            trees.add(new CompactRandomCutTreeFloat(capacity, 99L, pointStore, false, true, false));
-            trees.add(new CompactRandomCutTreeFloat(capacity, 99L, pointStore, false, true, true));
+            trees.add(new CompactRandomCutTreeFloat.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
+                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(false).storeSequenceIndexesEnabled(false)
+                    .build());
+            trees.add(new CompactRandomCutTreeFloat.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
+                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(false).storeSequenceIndexesEnabled(true)
+                    .build());
+            trees.add(new CompactRandomCutTreeFloat.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
+                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(true).storeSequenceIndexesEnabled(false)
+                    .build());
+            trees.add(new CompactRandomCutTreeFloat.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
+                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).build());
 
             trees.forEach(t -> IntStream.range(0, capacity).forEach(i -> t.addPoint(indexes.get(i), i)));
 

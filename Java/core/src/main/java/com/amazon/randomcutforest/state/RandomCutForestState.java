@@ -52,7 +52,7 @@ public class RandomCutForestState {
 
     private boolean partialTreesInUse;
 
-    private boolean boundingBoxCachingEnabled;
+    private double boundingBoxCacheFraction;
 
     private boolean storeSequenceIndexesEnabled;
 

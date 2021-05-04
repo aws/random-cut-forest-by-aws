@@ -84,7 +84,7 @@ public class StateMapperBenchmark {
         public void setUpForest() throws JsonProcessingException {
             RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
                     .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision)
-                    .boundingBoxCachingEnabled(false).build();
+                    .boundingBoxCacheFraction(0.0).build();
 
             for (int i = 0; i < NUM_TRAIN_SAMPLES; i++) {
                 forest.update(trainingData[i]);

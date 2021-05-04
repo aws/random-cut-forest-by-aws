@@ -147,7 +147,7 @@ public class RandomCutForest {
      * By default, bounding boxes will be used. Disabling this will force
      * enableCompact .
      */
-    public static final boolean DEFAULT_BOUNDING_BOX_CACHE_ENABLED = true;
+    public static final double DEFAULT_BOUNDING_BOX_CACHE_FRACTION = 1.0;
 
     /**
      * By default, nodes will not store center of mass.
@@ -221,9 +221,10 @@ public class RandomCutForest {
      */
     protected final Precision precision;
     /**
-     * The following set to false saves space, but enforces compact representation.
+     * The following can be set between 0 and 1 (inclusive) to achieve tradeoff
+     * between smaller space, lower throughput and larger space, larger throughput
      */
-    protected final boolean boundingBoxCachingEnabled;
+    protected final double boundingBoxCacheFraction;
     /**
      * Enable center of mass at internal nodes
      */
@@ -288,8 +289,11 @@ public class RandomCutForest {
         IStateCoordinator<Integer, double[]> stateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble(sampleSize, rng.nextLong(), tempStore,
-                    boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
+            ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
+                    .randomSeed(rng.nextLong()).pointStore(tempStore).boundingBoxCacheFraction(boundingBoxCacheFraction)
+                    .centerOfMassEnabled(centerOfMassEnabled).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .outputAfter(outputAfter).build();
+
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -311,8 +315,10 @@ public class RandomCutForest {
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat(sampleSize, rng.nextLong(), tempStore,
-                    boundingBoxCachingEnabled, centerOfMassEnabled, storeSequenceIndexesEnabled);
+            ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat.Builder().maxSize(sampleSize)
+                    .randomSeed(rng.nextLong()).pointStore(tempStore).boundingBoxCacheFraction(boundingBoxCacheFraction)
+                    .centerOfMassEnabled(centerOfMassEnabled).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .outputAfter(outputAfter).build();
             IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -326,7 +332,7 @@ public class RandomCutForest {
         IStateCoordinator<double[], double[]> stateCoordinator = new PassThroughCoordinator();
         ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[], double[]> tree = new RandomCutTree(rng.nextLong(), boundingBoxCachingEnabled,
+            ITree<double[], double[]> tree = new RandomCutTree(new Random(rng.nextLong()), boundingBoxCacheFraction,
                     centerOfMassEnabled, storeSequenceIndexesEnabled);
             IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
@@ -388,7 +394,8 @@ public class RandomCutForest {
                     " enable dynamic resizing ");
             checkArgument(builder.compactEnabled, " enable compact trees ");
         });
-
+        checkArgument(builder.boundingBoxCacheFraction >= 0 && builder.boundingBoxCacheFraction <= 1,
+                "incorrect cache fraction range");
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
         outputAfter = builder.outputAfter.orElse((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
@@ -401,7 +408,7 @@ public class RandomCutForest {
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
         compactEnabled = builder.compactEnabled;
         precision = builder.precision;
-        boundingBoxCachingEnabled = builder.boundingBoxCachingEnabled;
+        boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
         if (!builder.initialPointStoreSize.isPresent() && compactEnabled) {
@@ -535,8 +542,8 @@ public class RandomCutForest {
         return parallelExecutionEnabled;
     }
 
-    public boolean isBoundingBoxCachingEnabled() {
-        return boundingBoxCachingEnabled;
+    public double getBoundingBoxCacheFraction() {
+        return boundingBoxCacheFraction;
     }
 
     /**
@@ -1270,7 +1277,7 @@ public class RandomCutForest {
         private Optional<Integer> threadPoolSize = Optional.empty();
         private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
         private Precision precision = DEFAULT_PRECISION;
-        private boolean boundingBoxCachingEnabled = DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
+        private double boundingBoxCacheFraction = DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         private int shingleSize = DEFAULT_SHINGLE_SIZE;
         protected boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
         private boolean internalShinglingEnabled = DEFAULT_INTERNAL_SHINGLING_ENABLED;
@@ -1368,8 +1375,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T boundingBoxCachingEnabled(boolean boundingBoxCachingEnabled) {
-            this.boundingBoxCachingEnabled = boundingBoxCachingEnabled;
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
             return (T) this;
         }
 

@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.state;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Random;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -41,10 +42,12 @@ public class RandomCutForestMapperTest {
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
                 .sampleSize(sampleSize);
 
-        RandomCutForest cachedDouble = builder.boundingBoxCachingEnabled(true).precision(Precision.DOUBLE).build();
-        RandomCutForest cachedFloat = builder.boundingBoxCachingEnabled(true).precision(Precision.SINGLE).build();
-        RandomCutForest uncachedDouble = builder.boundingBoxCachingEnabled(false).precision(Precision.DOUBLE).build();
-        RandomCutForest uncachedFloat = builder.boundingBoxCachingEnabled(false).precision(Precision.SINGLE).build();
+        RandomCutForest cachedDouble = builder.boundingBoxCacheFraction(new Random().nextDouble())
+                .precision(Precision.DOUBLE).build();
+        RandomCutForest cachedFloat = builder.boundingBoxCacheFraction(new Random().nextDouble())
+                .precision(Precision.SINGLE).build();
+        RandomCutForest uncachedDouble = builder.boundingBoxCacheFraction(0.0).precision(Precision.DOUBLE).build();
+        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).precision(Precision.SINGLE).build();
 
         return Stream.of(cachedDouble, cachedFloat, uncachedDouble, uncachedFloat);
     }
@@ -66,7 +69,7 @@ public class RandomCutForestMapperTest {
         assertEquals(forest.isStoreSequenceIndexesEnabled(), forest2.isStoreSequenceIndexesEnabled());
         assertEquals(forest.isCompactEnabled(), forest2.isCompactEnabled());
         assertEquals(forest.getPrecision(), forest2.getPrecision());
-        assertEquals(forest.isBoundingBoxCachingEnabled(), forest2.isBoundingBoxCachingEnabled());
+        assertEquals(forest.getBoundingBoxCacheFraction(), forest2.getBoundingBoxCacheFraction());
         assertEquals(forest.isCenterOfMassEnabled(), forest2.isCenterOfMassEnabled());
         assertEquals(forest.isParallelExecutionEnabled(), forest2.isParallelExecutionEnabled());
         assertEquals(forest.getThreadPoolSize(), forest2.getThreadPoolSize());
