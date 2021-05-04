@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.function.Function;
 
@@ -53,28 +54,34 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     private final Random random;
     protected NodeReference root;
-    public final boolean enableCache;
     public final boolean enableCenterOfMass;
     public final boolean enableSequenceIndices;
     protected double boundingBoxCacheFraction = 1.0;
     Random cacheRandom = new Random(0);
+    protected int outputAfter;
 
-    public AbstractRandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass,
+    public AbstractRandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
-        this(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
+        this.random = random;
+        this.boundingBoxCacheFraction = cacheFraction;
+        this.enableCenterOfMass = enableCenterOfMass;
+        this.enableSequenceIndices = enableSequenceIndices;
     }
 
     public AbstractRandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         this.random = random;
-        this.enableCache = enableCache;
+        if (enableCache) {
+            this.boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+        } else {
+            this.boundingBoxCacheFraction = 0;
+        }
         this.enableCenterOfMass = enableCenterOfMass;
         this.enableSequenceIndices = enableSequenceIndices;
     }
 
     public AbstractRandomCutTree(AbstractRandomCutTree.Builder builder) {
         this.random = new Random(builder.randomSeed);
-        this.enableCache = builder.boundingBoxCachingEnabled;
         this.enableCenterOfMass = builder.centerOfMassEnabled;
         this.enableSequenceIndices = builder.storeSequenceIndexesEnabled;
         this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
@@ -269,7 +276,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // manages the bounding boxes and center of mass
     void updateAncestorNodesAfterDelete(NodeReference nodeReference, Point point) {
         NodeReference tempNode = nodeReference;
-        boolean boxNeedsUpdate = enableCache;
+        boolean boxNeedsUpdate = boundingBoxCacheFraction > 0;
         while (boxNeedsUpdate && tempNode != null) {
             AbstractBoundingBox<Point> box = recomputeBox(tempNode);
             boxNeedsUpdate = (box == null) || !(box.contains(point));
@@ -423,7 +430,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     void updateAncestorNodesAfterAdd(AbstractBoundingBox<Point> savedBox, NodeReference mergedNode, Point point,
             NodeReference parentIndex) {
         increaseMassOfAncestors(mergedNode);
-        if (enableCache) {
+        if (boundingBoxCacheFraction > 0) {
             setCachedBox(mergedNode, savedBox);
             NodeReference tempNode = getParent(mergedNode);
             while (tempNode != null && !tempNode.equals(parentIndex)) {
@@ -492,7 +499,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             boolean resolved = false;
             while (!resolved && followReference != null) {
                 AbstractBoundingBox<Point> existingBox;
-                if (enableCache) {
+                if (boundingBoxCacheFraction > 0) {
                     // if the boxes are being cached, use the box if present, otherwise
                     // generate and cache the box
                     existingBox = getBoundingBox(followReference);
@@ -683,13 +690,21 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return root;
     }
 
+    /**
+     * returns the number of samples that needs to be seen before returning
+     * meaningful inference
+     */
+    public int getOutputAfter() {
+        return outputAfter;
+    }
+
     // TODO: decide on ownership of builder constants, across the major classes
     public static class Builder<T> {
         protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
-        protected boolean boundingBoxCachingEnabled = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_ENABLED;
-        protected double boundingBoxCacheFraction = 1.0;
+        protected double boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         protected long randomSeed = new Random().nextLong();
+        protected Optional<Integer> outputAfter = Optional.empty();
 
         public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
             this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
@@ -701,11 +716,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             return (T) this;
         }
 
-        public T enableBoundingBoxCaching(boolean boundingBoxCacheEnabled) {
-            this.boundingBoxCachingEnabled = boundingBoxCacheEnabled;
-            return (T) this;
-        }
-
         public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
             this.boundingBoxCacheFraction = boundingBoxCacheFraction;
             return (T) this;
@@ -713,6 +723,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         public T randomSeed(long randomSeed) {
             this.randomSeed = randomSeed;
+            return (T) this;
+        }
+
+        public T outputAfter(int outputAfter) {
+            this.outputAfter = Optional.of(outputAfter);
             return (T) this;
         }
     }

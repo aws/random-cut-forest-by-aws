@@ -140,7 +140,7 @@ public class RandomCutForestMapper
         state.setTotalUpdates(forest.getTotalUpdates());
         state.setCompactEnabled(forest.isCompactEnabled());
         state.setInternalShinglingEnabled(forest.isInternalShinglingEnabled());
-        state.setBoundingBoxCachingEnabled(forest.isBoundingBoxCachingEnabled());
+        state.setBoundingBoxCacheFraction(forest.getBoundingBoxCacheFraction());
         state.setSaveSamplerState(saveSamplerState);
         state.setSaveTreeState(saveTreeState);
         state.setSaveCoordinatorState(saveCoordinatorState);
@@ -264,7 +264,7 @@ public class RandomCutForestMapper
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).shingleSize(state.getShingleSize())
-                .boundingBoxCachingEnabled(state.isBoundingBoxCachingEnabled()).compactEnabled(state.isCompactEnabled())
+                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction()).compactEnabled(state.isCompactEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
         if (state.isCompactEnabled()) {
@@ -372,9 +372,10 @@ public class RandomCutForestMapper
                     sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
                 }
             } else {
-                tree = new CompactRandomCutTreeFloat(state.getSampleSize(), rng.nextLong(), pointStore,
-                        state.isBoundingBoxCachingEnabled(), state.isCenterOfMassEnabled(),
-                        state.isStoreSequenceIndexesEnabled());
+                tree = new CompactRandomCutTreeFloat.Builder().maxSize(state.getSampleSize()).randomSeed(rng.nextLong())
+                        .pointStore(pointStore).boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
+                        .centerOfMassEnabled(state.isCenterOfMassEnabled())
+                        .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).build();
                 sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
             }
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -425,7 +426,7 @@ public class RandomCutForestMapper
             } else {
                 tree = new CompactRandomCutTreeDouble.Builder().maxSize(state.getSampleSize())
                         .randomSeed(rng.nextLong()).pointStore(pointStore)
-                        .enableBoundingBoxCaching(state.isBoundingBoxCachingEnabled())
+                        .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                         .centerOfMassEnabled(state.isCenterOfMassEnabled())
                         .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).build();
                 sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));

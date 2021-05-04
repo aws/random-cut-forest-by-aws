@@ -22,23 +22,15 @@ import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
-
-    public CompactRandomCutTreeFloat(int maxSize, long seed, IPointStore<float[]> pointStore, boolean cacheEnabled,
-            boolean centerOfMassEnabled, boolean enableSequenceIndices) {
-        this(new Builder().pointStore(pointStore).maxSize(maxSize).randomSeed(seed)
-                .storeSequenceIndexesEnabled(enableSequenceIndices).centerOfMassEnabled(centerOfMassEnabled)
-                .enableBoundingBoxCaching(cacheEnabled));
-    }
 
     public CompactRandomCutTreeFloat(CompactRandomCutTreeFloat.Builder builder) {
         super(builder);
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
-        if (builder.boundingBoxCachingEnabled) {
+        if (builder.boundingBoxCacheFraction > 0) {
             cachedBoxes = new BoundingBoxFloat[maxSize - 1];
         }
         if (builder.centerOfMassEnabled) {
@@ -48,7 +40,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
 
     @Override
     public void swapCaches(int[] map) {
-        checkArgument(enableCache, "incorrect call to swapping caches");
+        checkArgument(boundingBoxCacheFraction > 0, "incorrect call to swapping caches");
         BoundingBoxFloat[] newCache = new BoundingBoxFloat[maxSize - 1];
         for (int i = 0; i < maxSize - 1; i++) {
             if (map[i] != NULL) {

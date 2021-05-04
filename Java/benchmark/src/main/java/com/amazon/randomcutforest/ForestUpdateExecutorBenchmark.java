@@ -102,8 +102,9 @@ public class ForestUpdateExecutorBenchmark {
                 IStateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(store);
                 ComponentList<Integer, double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
-                    CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble(sampleSize, random.nextLong(),
-                            store, true, false, false);
+                    CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
+                            .randomSeed(random.nextLong()).pointStore(store).boundingBoxCacheFraction(1.0)
+                            .centerOfMassEnabled(false).storeSequenceIndexesEnabled(false).build();
                     SimpleStreamSampler<Integer> sampler = new SimpleStreamSampler<>(sampleSize, lambda,
                             random.nextLong(), false);
                     SamplerPlusTree<Integer, double[]> samplerTree = new SamplerPlusTree<>(sampler, tree);

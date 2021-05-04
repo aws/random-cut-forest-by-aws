@@ -43,11 +43,11 @@ public class CompactRandomCutTreeDoubleMapper implements
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
         CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder()
-                .enableBoundingBoxCaching(state.isEnableCache())
+                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
                 .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreDouble) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass()).build();
-        tree.setBoundingBoxCacheFraction(state.getBoundingBoxCacheFraction());
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass())
+                .outputAfter(state.getOutputAfter()).build();
         return tree;
 
     }
@@ -59,9 +59,9 @@ public class CompactRandomCutTreeDoubleMapper implements
         state.setMaxSize(model.getMaxSize());
         state.setRoot(model.getRootIndex());
         state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
-        state.setEnableCache(model.enableCache);
         state.setStoreSequenceIndices(model.enableSequenceIndices);
         state.setEnableCenterOfMass(model.enableCenterOfMass);
+        state.setOutputAfter(model.getOutputAfter());
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompress(compress);

@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 import java.util.Random;
 
+import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 
 /**
@@ -55,7 +56,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
      */
 
     protected RandomCutTree(Builder<?> builder) {
-        super(builder.random, builder.boundingBoxCachingEnabled, builder.centerOfMassEnabled,
+        super(builder.random, builder.boundingBoxCacheFraction, builder.centerOfMassEnabled,
                 builder.storeSequenceIndexesEnabled);
         super.root = null;
     }
@@ -101,16 +102,21 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
         return super.enableSequenceIndices;
     }
 
-    public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
-        super(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
+    public RandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
+            boolean enableSequenceIndices) {
+        super(random, cacheFraction, enableCenterOfMass, enableSequenceIndices);
         root = null;
-        setBoundingBoxCacheFraction(1.0);
+    }
+
+    public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
+        this(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
     }
 
     public RandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         super(random, enableCache, enableCenterOfMass, enableSequenceIndices);
         root = null;
+        setBoundingBoxCacheFraction(RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION);
     }
 
     @Override
@@ -342,7 +348,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     public static class Builder<T extends RandomCutTree.Builder<T>> {
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
-        private boolean boundingBoxCachingEnabled = true;
+        private double boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         private Random random;
 
         public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
@@ -355,8 +361,8 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
             return (T) this;
         }
 
-        public T enableBoundingBoxCaching(boolean boundingBoxCacheEnabled) {
-            this.boundingBoxCachingEnabled = boundingBoxCacheEnabled;
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
             return (T) this;
         }
 
@@ -371,7 +377,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
         }
 
         public RandomCutTree build() {
-            return new RandomCutTree(random, boundingBoxCachingEnabled, centerOfMassEnabled,
+            return new RandomCutTree(random, boundingBoxCacheFraction, centerOfMassEnabled,
                     storeSequenceIndexesEnabled);
         }
     }

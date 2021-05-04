@@ -44,11 +44,11 @@ public class CompactRandomCutTreeFloatMapper implements
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
         CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
-                .enableBoundingBoxCaching(state.isEnableCache())
+                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
                 .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreFloat) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass()).build();
-        tree.setBoundingBoxCacheFraction(state.getBoundingBoxCacheFraction());
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass())
+                .outputAfter(state.getOutputAfter()).build();
         return tree;
     }
 
@@ -59,10 +59,10 @@ public class CompactRandomCutTreeFloatMapper implements
         state.setRoot(model.getRoot());
         state.setMaxSize(model.getMaxSize());
         state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
-        state.setEnableCache(model.enableCache);
         state.setStoreSequenceIndices(model.enableSequenceIndices);
         state.setEnableCenterOfMass(model.enableCenterOfMass);
         state.setBoundingBoxCacheFraction(model.getBoundingBoxCacheFraction());
+        state.setOutputAfter(model.getOutputAfter());
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompress(compress);

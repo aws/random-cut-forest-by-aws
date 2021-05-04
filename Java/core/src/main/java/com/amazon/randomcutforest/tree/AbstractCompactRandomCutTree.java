@@ -70,6 +70,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
 
         this.maxSize = builder.maxSize;
+        if (builder.outputAfter.isPresent()) {
+            outputAfter = builder.outputAfter.get();
+        } else {
+            outputAfter = maxSize / 4;
+        }
 
         if (builder.root == NULL) {
             this.nodeStore = new NodeStore(maxSize - 1);

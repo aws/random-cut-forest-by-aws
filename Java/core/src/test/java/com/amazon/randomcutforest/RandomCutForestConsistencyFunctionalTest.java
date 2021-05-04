@@ -42,17 +42,17 @@ public class RandomCutForestConsistencyFunctionalTest {
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().dimensions(dimensions).sampleSize(sampleSize)
                 .randomSeed(randomSeed);
 
-        RandomCutForest pointerCachedSequential = builder.compactEnabled(false).boundingBoxCachingEnabled(true)
+        RandomCutForest pointerCachedSequential = builder.compactEnabled(false).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(false).build();
-        RandomCutForest pointerCachedParallel = builder.compactEnabled(false).boundingBoxCachingEnabled(true)
+        RandomCutForest pointerCachedParallel = builder.compactEnabled(false).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(true).build();
-        RandomCutForest pointerUncachedSequential = builder.compactEnabled(false).boundingBoxCachingEnabled(false)
+        RandomCutForest pointerUncachedSequential = builder.compactEnabled(false).boundingBoxCacheFraction(0.0)
                 .parallelExecutionEnabled(false).build();
-        RandomCutForest compactCachedSequential = builder.compactEnabled(true).boundingBoxCachingEnabled(true)
+        RandomCutForest compactCachedSequential = builder.compactEnabled(true).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(false).build();
-        RandomCutForest compactCachedParallel = builder.compactEnabled(true).boundingBoxCachingEnabled(true)
+        RandomCutForest compactCachedParallel = builder.compactEnabled(true).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(true).build();
-        RandomCutForest compactUncachedSequential = builder.compactEnabled(true).boundingBoxCachingEnabled(false)
+        RandomCutForest compactUncachedSequential = builder.compactEnabled(true).boundingBoxCacheFraction(0.0)
                 .parallelExecutionEnabled(false).build();
 
         NormalMixtureTestData testData = new NormalMixtureTestData();
@@ -89,12 +89,10 @@ public class RandomCutForestConsistencyFunctionalTest {
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().dimensions(dimensions).sampleSize(sampleSize)
                 .randomSeed(randomSeed).parallelExecutionEnabled(false).compactEnabled(true);
 
-        RandomCutForest compactFloatCached = builder.boundingBoxCachingEnabled(true).precision(Precision.SINGLE)
+        RandomCutForest compactFloatCached = builder.boundingBoxCacheFraction(1.0).precision(Precision.SINGLE).build();
+        RandomCutForest compactFloatUncached = builder.boundingBoxCacheFraction(0.0).precision(Precision.SINGLE)
                 .build();
-        RandomCutForest compactFloatUncached = builder.boundingBoxCachingEnabled(false).precision(Precision.SINGLE)
-                .build();
-        RandomCutForest compactDoubleCached = builder.boundingBoxCachingEnabled(true).precision(Precision.DOUBLE)
-                .build();
+        RandomCutForest compactDoubleCached = builder.boundingBoxCacheFraction(1.0).precision(Precision.DOUBLE).build();
 
         NormalMixtureTestData testData = new NormalMixtureTestData();
         int anomalies = 0;

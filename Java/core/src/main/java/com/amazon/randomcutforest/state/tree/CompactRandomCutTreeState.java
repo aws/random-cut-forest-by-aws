@@ -26,9 +26,9 @@ public class CompactRandomCutTreeState {
     private String version = V2_0;
     private int root;
     private int maxSize;
+    private int outputAfter;
     private boolean partialTreeInUse;
     private boolean storeSequenceIndices;
-    private boolean enableCache;
     private boolean enableCenterOfMass;
     private NodeStoreState nodeStoreState;
     private double boundingBoxCacheFraction;

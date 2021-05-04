@@ -840,7 +840,7 @@ public class RandomCutForestFunctionalTest {
     public void dynamicCachingChangeTest(int numDims, int numTrees, int numSamples, int numTrainSamples,
             int numTestSamples, int enableParallel, int numThreads) {
         RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).boundingBoxCachingEnabled(true).compactEnabled(false);
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compactEnabled(false);
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -849,7 +849,7 @@ public class RandomCutForestFunctionalTest {
         }
         RandomCutForest forest = forestBuilder.build();
         RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true).build();
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCacheFraction(1.0).build();
 
         int count = 0;
         for (double[] point : generate(numTrainSamples, numDims, 0)) {
@@ -879,7 +879,7 @@ public class RandomCutForestFunctionalTest {
     public void dynamicCachingChangeTestLarge(int numDims, int numTrees, int numSamples, int numTrainSamples,
             int numTestSamples, int enableParallel, int numThreads) {
         RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).boundingBoxCachingEnabled(true).compactEnabled(false);
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compactEnabled(false);
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -888,7 +888,7 @@ public class RandomCutForestFunctionalTest {
         }
         RandomCutForest forest = forestBuilder.build();
         RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCachingEnabled(true).build();
+                .sampleSize(numSamples).randomSeed(0).compactEnabled(true).boundingBoxCacheFraction(1.0).build();
 
         int count = 0;
         for (double[] point : generate(numTrainSamples, numDims, 0)) {
