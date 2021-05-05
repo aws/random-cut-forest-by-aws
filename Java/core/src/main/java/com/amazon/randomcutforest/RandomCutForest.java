@@ -242,6 +242,12 @@ public class RandomCutForest {
     protected ComponentList<?, ?> components;
 
     /**
+     * This flag is initialized to false. It is set to true when all component
+     * models are ready.
+     */
+    private boolean outputReady;
+
+    /**
      * An implementation of forest traversal algorithms.
      */
     protected AbstractForestTraversalExecutor traversalExecutor;
@@ -332,8 +338,10 @@ public class RandomCutForest {
         IStateCoordinator<double[], double[]> stateCoordinator = new PassThroughCoordinator();
         ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[], double[]> tree = new RandomCutTree(new Random(rng.nextLong()), boundingBoxCacheFraction,
-                    centerOfMassEnabled, storeSequenceIndexesEnabled);
+            ITree<double[], double[]> tree = RandomCutTree.builder().randomSeed(rng.nextLong())
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+
             IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
@@ -1238,7 +1246,7 @@ public class RandomCutForest {
      * @return true if all samplers are ready to output results.
      */
     public boolean isOutputReady() {
-        return stateCoordinator.getTotalUpdates() >= outputAfter;
+        return outputReady || (outputReady = components.stream().allMatch(IComponentModel::isOutputReady));
     }
 
     /**

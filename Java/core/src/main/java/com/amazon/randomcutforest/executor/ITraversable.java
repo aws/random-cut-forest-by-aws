@@ -66,4 +66,17 @@ public interface ITraversable {
      *         paths.
      */
     <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory);
+
+    /**
+     * After a new traversable model is initialized, it will not be able to return
+     * meaningful results to queries until it has been updated with (i.e., learned
+     * from) some number of points. The exact number of points may vary for
+     * different models. After this method returns true for the first time, it
+     * should continue to return true unless the user takes an explicit action to
+     * reset the model state.
+     *
+     * @return true if this model is ready to provide a meaningful response to a
+     *         traversal query, otherwise false.
+     */
+    boolean isOutputReady();
 }

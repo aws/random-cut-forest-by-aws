@@ -80,11 +80,18 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         this.enableSequenceIndices = enableSequenceIndices;
     }
 
-    public AbstractRandomCutTree(AbstractRandomCutTree.Builder builder) {
-        this.random = new Random(builder.randomSeed);
+    public AbstractRandomCutTree(AbstractRandomCutTree.Builder<?> builder) {
+        if (builder.random != null) {
+            this.random = builder.random;
+        } else {
+            this.random = new Random(builder.randomSeed);
+        }
         this.enableCenterOfMass = builder.centerOfMassEnabled;
         this.enableSequenceIndices = builder.storeSequenceIndexesEnabled;
         this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
+
+        // This should be set to an appropriate value in a subclass
+        outputAfter = Integer.MAX_VALUE;
     }
 
     @Override
@@ -698,12 +705,18 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return outputAfter;
     }
 
+    @Override
+    public boolean isOutputReady() {
+        return getMass() >= outputAfter;
+    }
+
     // TODO: decide on ownership of builder constants, across the major classes
     public static class Builder<T> {
         protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
         protected double boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         protected long randomSeed = new Random().nextLong();
+        protected Random random = null;
         protected Optional<Integer> outputAfter = Optional.empty();
 
         public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
@@ -723,6 +736,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         public T randomSeed(long randomSeed) {
             this.randomSeed = randomSeed;
+            return (T) this;
+        }
+
+        public T random(Random random) {
+            this.random = random;
             return (T) this;
         }
 
