@@ -143,7 +143,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     void addToBox(Node node, double[] point) {
-        node.setBoundingBox(node.getBoundingBox().addPoint(point));
+        node.addToBox(point);
     }
 
     @Override
@@ -172,9 +172,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     BoundingBox recomputeBox(Node nodeReference) {
-        nodeReference.setBoundingBox(
-                constructBoxInPlace(constructBoxInPlace(nodeReference.getLeftChild()), nodeReference.getRightChild()));
-        return nodeReference.getBoundingBox();
+        return nodeReference.recomputeBox();
     }
 
     @Override
