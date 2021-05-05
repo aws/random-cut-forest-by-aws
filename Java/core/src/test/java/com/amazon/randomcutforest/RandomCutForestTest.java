@@ -30,6 +30,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -87,6 +89,7 @@ public class RandomCutForestTest {
         components = new ComponentList<>();
         for (int i = 0; i < numberOfTrees; i++) {
             SimpleStreamSampler<double[]> sampler = mock(SimpleStreamSampler.class);
+            when(sampler.getCapacity()).thenReturn(sampleSize);
             RandomCutTree tree = mock(RandomCutTree.class);
             components.add(spy(new SamplerPlusTree<>(sampler, tree)));
 
@@ -797,5 +800,33 @@ public class RandomCutForestTest {
         long totalUpdates = 987654321L;
         when(updateCoordinator.getTotalUpdates()).thenReturn(totalUpdates);
         assertEquals(totalUpdates, forest.getTotalUpdates());
+    }
+
+    @Test
+    public void testIsOutputReady() {
+        assertFalse(forest.isOutputReady());
+
+        for (int i = 0; i < numberOfTrees / 2; i++) {
+            doReturn(true).when(components.get(i)).isOutputReady();
+        }
+        assertFalse(forest.isOutputReady());
+
+        for (int i = 0; i < numberOfTrees; i++) {
+            doReturn(true).when(components.get(i)).isOutputReady();
+        }
+        assertTrue(forest.isOutputReady());
+
+        // After forest.isOutputReady() returns true once, the result should be cached
+
+        for (int i = 0; i < numberOfTrees; i++) {
+            IComponentModel<?, ?> component = components.get(i);
+            reset(component);
+            doReturn(true).when(component).isOutputReady();
+        }
+        assertTrue(forest.isOutputReady());
+        for (int i = 0; i < numberOfTrees; i++) {
+            IComponentModel<?, ?> component = components.get(i);
+            verify(component, never()).isOutputReady();
+        }
     }
 }

@@ -39,11 +39,10 @@ import com.amazon.randomcutforest.tree.ITree;
  *            in this list.
  * @param <Q> The explicit data type of points being passed
  */
+@Getter
 public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
 
-    @Getter
     private ITree<P, Q> tree;
-    @Getter
     private IStreamSampler<P> sampler;
 
     /**
@@ -130,5 +129,10 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
         }
+    }
+
+    @Override
+    public boolean isOutputReady() {
+        return tree.isOutputReady();
     }
 }
