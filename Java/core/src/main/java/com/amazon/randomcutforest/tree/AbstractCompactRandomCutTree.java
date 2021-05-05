@@ -60,8 +60,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     protected INodeStore nodeStore;
     protected IPointStoreView<Point> pointStore;
-    protected IBoxCache<Point> cacheManager;
-    // protected AbstractBoundingBox<Point>[] cachedBoxes;
+    protected IBoxCache<Point> boxCache;
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
 
@@ -199,7 +198,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                 }
                 validateInternalState(currentNode == nodeStore.size(), "incorrect state");
 
-                cacheManager.swapCaches(map);
+                boxCache.swapCaches(map);
 
                 if (enableSequenceIndices) {
                     HashMap<Long, Integer>[] newSequence = new HashMap[maxSize];
@@ -257,17 +256,16 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected AbstractBoundingBox<Point> constructBoxInPlace(Integer nodeReference) {
         if (isLeaf(nodeReference)) {
             return getMutableLeafBoxFromLeafNode(nodeReference);
-        } else if (boundingBoxCacheFraction == 0) {
+        } else if (isBoundingBoxCacheEnabled()) {
             return constructBoxInPlace(constructBoxInPlace(getLeftChild(nodeReference)), getRightChild(nodeReference));
         } else {
-            AbstractBoundingBox<Point> oldBox = (cacheManager.inUse(nodeReference)) ? cacheManager.getBox(nodeReference)
-                    : null;
+            AbstractBoundingBox<Point> oldBox = boxCache.getBox(nodeReference);
             if (oldBox != null) { // note cachemanager can have a null box, after deserialization
                 return oldBox.copy();
             }
             AbstractBoundingBox<Point> currentBox = constructBoxInPlace(
                     constructBoxInPlace(getLeftChild(nodeReference)), getRightChild(nodeReference));
-            cacheManager.setBox(nodeReference, currentBox.copy());
+            boxCache.setBox(nodeReference, currentBox.copy());
             return currentBox;
         }
     }
@@ -286,14 +284,13 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     AbstractBoundingBox<Point> constructBoxInPlace(AbstractBoundingBox<Point> currentBox, Integer nodeReference) {
         if (isLeaf(nodeReference)) {
             return currentBox.addPoint(getPointFromLeafNode(nodeReference));
-        } else if (boundingBoxCacheFraction > 0) {
-            AbstractBoundingBox<Point> oldBox = (cacheManager.inUse(nodeReference)) ? cacheManager.getBox(nodeReference)
-                    : null;
+        } else if (isBoundingBoxCacheEnabled()) {
+            AbstractBoundingBox<Point> oldBox = boxCache.getBox(nodeReference);
             if (oldBox != null) {
                 return currentBox.addBox(oldBox);
             }
             AbstractBoundingBox<Point> newBox = constructBoxInPlace(nodeReference);
-            cacheManager.setBox(nodeReference, newBox);
+            boxCache.setBox(nodeReference, newBox);
             return currentBox.addBox(newBox);
         } else {
             return constructBoxInPlace(constructBoxInPlace(currentBox, getLeftChild(nodeReference)),
@@ -312,12 +309,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      */
     @Override
     AbstractBoundingBox<Point> recomputeBox(Integer node) {
-        if (cacheManager.getBox(node) != null) {
+        if (boxCache.getBox(node) != null) {
             // cannot invoke constructBoxInPlace(node) because that would re-use the old
             // box
             AbstractBoundingBox<Point> newBox = constructBoxInPlace(constructBoxInPlace(getLeftChild(node)),
                     getRightChild(node));
-            cacheManager.setBox(node, newBox);
+            boxCache.setBox(node, newBox);
             return newBox;
         }
         return null;
@@ -333,7 +330,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      * @param savedBox   the newly created box for this node.
      */
     void setCachedBox(Integer mergedNode, AbstractBoundingBox<Point> savedBox) {
-        cacheManager.setBox(mergedNode, savedBox);
+        boxCache.setBox(mergedNode, savedBox);
     }
 
     /**
@@ -344,7 +341,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      */
 
     void addToBox(Integer node, Point point) {
-        cacheManager.addToBox(node, point);
+        boxCache.addToBox(node, point);
     }
 
     // returns the point based on position in the store
@@ -518,6 +515,10 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             recomputePointSum(ref);
         }
         return pointSum[ref];
+    }
+
+    public boolean isBoundingBoxCacheEnabled() {
+        return boundingBoxCacheFraction > 0.0;
     }
 
     // TODO: fix ownership of default variables

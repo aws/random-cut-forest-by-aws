@@ -15,32 +15,41 @@
 
 package com.amazon.randomcutforest.tree;
 
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
 
-public class BoxCache<Point> implements IBoxCache<Point> {
+public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
     double cacheFraction;
     Random cacheRandom;
     long randomSeed;
     AbstractBoundingBox<Point>[] cachedBoxes;
     HashMap<Integer, Integer> cacheMap;
+    BitSet bitSet;
     int maxSize;
 
     protected BoxCache(long seed, double cacheFraction, int maxSize) {
         randomSeed = seed;
         this.cacheFraction = cacheFraction;
         this.maxSize = maxSize;
+        initialize();
+    }
+
+    abstract void initialize();
+
+    boolean isDirectMap() {
+        return cacheFraction >= 0.3;
     }
 
     @Override
-    public boolean inUse(int index) {
+    public boolean containsKey(int index) {
         if (cacheFraction == 0.0) {
             return false;
         } else if (cacheFraction == 1.0) {
             return true;
-        } else if (cacheFraction >= 0.5) {
-            return !cacheMap.containsKey(index);
+        } else if (isDirectMap()) {
+            return !bitSet.get(index);
         } else {
             return cacheMap.containsKey(index);
         }
@@ -48,10 +57,10 @@ public class BoxCache<Point> implements IBoxCache<Point> {
 
     @Override
     public void setBox(int index, AbstractBoundingBox<Point> box) {
-        if (!inUse(index)) {
+        if (!containsKey(index)) {
             return;
         }
-        if (cacheFraction >= 0.5) {
+        if (isDirectMap()) {
             cachedBoxes[index] = box;
         } else {
             cachedBoxes[cacheMap.get(index)] = box;
@@ -60,15 +69,17 @@ public class BoxCache<Point> implements IBoxCache<Point> {
 
     @Override
     public AbstractBoundingBox<Point> getBox(int index) {
-        if (!inUse(index)) {
+        if (!containsKey(index)) {
             return null;
         }
-        if (cacheFraction >= 0.5) {
+        if (isDirectMap()) {
             return cachedBoxes[index];
         } else {
             return cachedBoxes[cacheMap.get(index)];
         }
     }
+
+    abstract void remap(int[] map);
 
     @Override
     public void swapCaches(int[] map) {
@@ -80,17 +91,31 @@ public class BoxCache<Point> implements IBoxCache<Point> {
                 }
             }
             cacheMap = newMap;
+        } else if (bitSet != null) {
+            BitSet newBitSet = new BitSet(maxSize);
+            for (int i = 0; i < map.length; i++) {
+                if (bitSet.get(i)) {
+                    newBitSet.set(map[i]);
+                }
+            }
+            bitSet = newBitSet;
         }
     }
 
     @Override
     public void addToBox(int index, Point point) {
-        if (!inUse(index)) {
+        if (!containsKey(index)) {
             return;
         }
-        if (cacheFraction >= 0.5) {
+        if (isDirectMap()) {
+            if (cachedBoxes[index] == null) {
+                return;
+            }
             cachedBoxes[index].addPoint(point);
         } else {
+            if (cachedBoxes[cacheMap.get(index)] == null) {
+                return;
+            }
             cachedBoxes[cacheMap.get(index)].addPoint(point);
         }
     }

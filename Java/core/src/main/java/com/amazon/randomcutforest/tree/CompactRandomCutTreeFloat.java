@@ -30,7 +30,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         super(builder);
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
-        super.cacheManager = new BoxCacheFloat(0L, boundingBoxCacheFraction, maxSize - 1);
+        super.boxCache = new BoxCacheFloat(0L, boundingBoxCacheFraction, maxSize - 1);
         if (builder.centerOfMassEnabled) {
             pointSum = new float[maxSize - 1][];
         }

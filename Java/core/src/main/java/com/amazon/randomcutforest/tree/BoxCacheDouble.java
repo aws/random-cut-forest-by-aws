@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -22,20 +25,20 @@ public class BoxCacheDouble extends BoxCache<double[]> {
 
     public BoxCacheDouble(long seed, double cacheFraction, int maxSize) {
         super(seed, cacheFraction, maxSize);
-        initiateMaps();
     }
 
-    void initiateMaps() {
+    void initialize() {
         cacheRandom = new Random(randomSeed);
         if (cacheFraction < 1.0 && cacheFraction > 0.0) {
-            cacheMap = new HashMap<>();
-            if (this.cacheFraction >= 0.5) {
+            if (isDirectMap()) {
+                bitSet = new BitSet(maxSize);
                 cachedBoxes = new BoundingBox[maxSize];
                 int exclude = (int) Math.floor((1.0 - cacheFraction) * maxSize);
                 for (int i = 0; i < exclude; i++) {
-                    cacheMap.put(cacheRandom.nextInt(maxSize), 0);
+                    bitSet.set(cacheRandom.nextInt(maxSize));
                 }
             } else {
+                cacheMap = new HashMap<>();
                 int include = (int) Math.ceil(cacheFraction * maxSize);
                 cachedBoxes = new BoundingBox[include];
                 int count = 0;
@@ -46,6 +49,15 @@ public class BoxCacheDouble extends BoxCache<double[]> {
         } else if (cacheFraction == 1.0) {
             cachedBoxes = new BoundingBox[maxSize];
         }
+    }
+
+    void remap(int[] map) {
+        checkArgument(isDirectMap(), "incorrect invocation of remap");
+        BoundingBox[] newArray = new BoundingBox[maxSize];
+        for (int i = 0; i < map.length; i++) {
+            newArray[i] = (BoundingBox) cachedBoxes[map[i]];
+        }
+        cachedBoxes = newArray;
     }
 
 }

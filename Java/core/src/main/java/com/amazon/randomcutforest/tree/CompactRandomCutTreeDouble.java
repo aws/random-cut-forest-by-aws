@@ -27,7 +27,7 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         super(builder);
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
-        super.cacheManager = new BoxCacheDouble(0L, boundingBoxCacheFraction, maxSize - 1);
+        super.boxCache = new BoxCacheDouble(0L, boundingBoxCacheFraction, maxSize - 1);
         if (builder.centerOfMassEnabled) {
             pointSum = new double[maxSize - 1][];
         }
