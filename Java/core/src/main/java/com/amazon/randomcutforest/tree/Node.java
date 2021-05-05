@@ -43,7 +43,7 @@ public class Node implements INode<Node> {
      * enabled in RandomCutTree, this array will store the sum of all descendent
      * points.
      */
-    private final double[] pointSum;
+    private double[] pointSum;
     /**
      * Parent of this node.
      */
@@ -382,21 +382,18 @@ public class Node implements INode<Node> {
      *         disabled.
      */
     public double[] getCenterOfMass() {
-        // this will be 0 if the corresponding flag is not set in the forest
-        int dimensions = isLeaf() ? leafPoint.length
-                : (pointSum != null) ? pointSum.length : boundingBox.getDimensions();
-        double[] result = new double[dimensions];
-        // makes a new copy to avoid altering the sum
         if (leafPoint != null) {
-            System.arraycopy(leafPoint, 0, result, 0, dimensions);
+            return Arrays.copyOf(leafPoint, leafPoint.length);
         } else {
-            if (pointSum != null) {
-                for (int i = 0; i < dimensions; i++) {
-                    result[i] = pointSum[i] / mass;
-                }
+            if (pointSum == null) {
+                recomputePointSum();
             }
+            double[] result = new double[pointSum.length];
+            for (int i = 0; i < pointSum.length; i++) {
+                result[i] = pointSum[i] / mass;
+            }
+            return result;
         }
-        return result;
     }
 
     /**
@@ -491,14 +488,30 @@ public class Node implements INode<Node> {
         }
     }
 
+    BoundingBox recomputeBox() {
+        if (boundingBox != null) {
+            boundingBox = constructBoxInPlace();
+        }
+        return boundingBox;
+    }
+
     void recomputePointSum() {
         if (!isLeaf()) {
             double[] leftSum = getLeftChild().getPointSum();
             double[] rightSum = getRightChild().getPointSum();
             checkArgument(leftSum.length == rightSum.length, "incorrect state");
+            if (pointSum == null) {
+                pointSum = new double[leftSum.length];
+            }
             for (int i = 0; i < leftSum.length; i++) {
                 pointSum[i] = leftSum[i] + rightSum[i];
             }
+        }
+    }
+
+    void addToBox(double[] point) {
+        if (boundingBox != null) {
+            boundingBox.addPoint(point);
         }
     }
 

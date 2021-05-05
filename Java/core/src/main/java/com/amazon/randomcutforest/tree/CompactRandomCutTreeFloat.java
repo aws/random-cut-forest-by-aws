@@ -30,24 +30,10 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         super(builder);
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
-        if (builder.boundingBoxCacheFraction > 0) {
-            cachedBoxes = new BoundingBoxFloat[maxSize - 1];
-        }
+        super.boxCache = new BoxCacheFloat(0L, boundingBoxCacheFraction, maxSize - 1);
         if (builder.centerOfMassEnabled) {
             pointSum = new float[maxSize - 1][];
         }
-    }
-
-    @Override
-    public void swapCaches(int[] map) {
-        checkArgument(boundingBoxCacheFraction > 0, "incorrect call to swapping caches");
-        BoundingBoxFloat[] newCache = new BoundingBoxFloat[maxSize - 1];
-        for (int i = 0; i < maxSize - 1; i++) {
-            if (map[i] != NULL) {
-                newCache[map[i]] = (BoundingBoxFloat) cachedBoxes[i];
-            }
-        }
-        cachedBoxes = newCache;
     }
 
     @Override
