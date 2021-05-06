@@ -15,31 +15,48 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import java.util.Arrays;
 import java.util.Set;
 
-public class CompactNodeView implements INode<Integer> {
-    final AbstractCompactRandomCutTree<?> tree;
-    int currentNodeOffset;
+import com.amazon.randomcutforest.store.INodeStore;
 
-    public CompactNodeView(AbstractCompactRandomCutTree<?> tree, int initialNodeIndex) {
+public class CompactNodeView<Point> implements INode<Integer> {
+    final AbstractCompactRandomCutTree<Point> tree;
+    int currentNodeOffset;
+    IBoxCache<Point> boxCache;
+    INodeStore nodeStore;
+
+    public CompactNodeView(AbstractCompactRandomCutTree<Point> tree, int initialNodeIndex) {
         this.tree = tree;
         this.currentNodeOffset = initialNodeIndex;
+        boxCache = tree.boxCache;
+        nodeStore = tree.nodeStore;
     }
 
     public int getMass() {
-        return tree.getMass(currentNodeOffset);
+        return nodeStore.getMass(currentNodeOffset);
     }
 
     public IBoundingBoxView getBoundingBox() {
-        return tree.getBoundingBox(currentNodeOffset);
+        return getBox(currentNodeOffset);
+    }
+
+    IBoundingBoxView getBox(int node) {
+        if (!nodeStore.isLeaf(node)) {
+            IBoundingBoxView box = boxCache.getBox(node);
+            if (box != null)
+                return box;
+        }
+        return tree.getBoundingBox(node);
     }
 
     public IBoundingBoxView getSiblingBoundingBox(double[] point) {
         if (tree.leftOf(point, currentNodeOffset)) {
-            return tree.getBoundingBox(tree.getRightChild(currentNodeOffset));
+            return getBox(nodeStore.getRightIndex(currentNodeOffset));
         } else {
-            return tree.getBoundingBox(tree.getLeftChild(currentNodeOffset));
+            return getBox(nodeStore.getLeftIndex(currentNodeOffset));
         }
     }
 
@@ -48,12 +65,12 @@ public class CompactNodeView implements INode<Integer> {
     }
 
     public int getCutDimension() {
-        return tree.getCutDimension(currentNodeOffset);
+        return nodeStore.getCutDimension(currentNodeOffset);
     }
 
     @Override
     public double getCutValue() {
-        return tree.getCutValue(currentNodeOffset);
+        return nodeStore.getCutValue(currentNodeOffset);
     }
 
     public double[] getLeafPoint() {
@@ -61,27 +78,28 @@ public class CompactNodeView implements INode<Integer> {
     }
 
     public Set<Long> getSequenceIndexes() {
-        return null;
+        checkArgument(nodeStore.isLeaf(currentNodeOffset), " not a leaf node");
+        return tree.sequenceIndexes[nodeStore.computeLeafIndex(currentNodeOffset)].keySet();
     }
 
     @Override
     public boolean isLeaf() {
-        return tree.isLeaf(currentNodeOffset);
+        return nodeStore.isLeaf(currentNodeOffset);
     }
 
     @Override
     public INode<Integer> getLeftChild() {
-        return new CompactNodeView(tree, tree.getLeftChild(currentNodeOffset));
+        return new CompactNodeView<>(tree, nodeStore.getLeftIndex(currentNodeOffset));
     }
 
     @Override
     public INode<Integer> getRightChild() {
-        return new CompactNodeView(tree, tree.getRightChild(currentNodeOffset));
+        return new CompactNodeView<>(tree, nodeStore.getRightIndex(currentNodeOffset));
     }
 
     @Override
     public INode<Integer> getParent() {
-        return new CompactNodeView(tree, tree.getParent(currentNodeOffset));
+        return new CompactNodeView<>(tree, nodeStore.getParent(currentNodeOffset));
     }
 
 }
