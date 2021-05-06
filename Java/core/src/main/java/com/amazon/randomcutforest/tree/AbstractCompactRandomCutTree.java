@@ -211,6 +211,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     sequenceIndexes = newSequence;
                 }
                 root = 0;
+                if (enableCenterOfMass) {
+                    recomputePointSum(root);
+                }
             } else {
                 root = result.addLeaf(NULL, getPointReference(root), getMass(root));
             }
