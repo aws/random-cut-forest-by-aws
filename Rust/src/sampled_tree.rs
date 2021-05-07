@@ -52,8 +52,8 @@ impl<T> SampledTree<T>
     /// Create a new sampled tree.
     ///
     /// Specify the tree's `sample_size`, the number of point maintained by the
-    /// tree, and decay factor `lambda` for the time-decay sampler defined in
-    /// [`StreamSampler`].
+    /// tree, and decay factor `time_decay` for the time-decay sampler defined
+    /// in [`StreamSampler`].
     ///
     /// # Examples
     ///
@@ -61,9 +61,9 @@ impl<T> SampledTree<T>
     /// use random_cut_forest::SampledTree;
     /// let tree: SampledTree<f32> = SampledTree::new(128, 0.01);
     /// ```
-    pub fn new(sample_size: usize, lambda: f64) -> Self {
+    pub fn new(sample_size: usize, time_decay: f32) -> Self {
         let point_store: Rc<RefCell<PointStore<T>>> = Rc::new(RefCell::new(PointStore::new()));
-        SampledTree::new_with_point_store(sample_size, lambda, point_store)
+        SampledTree::new_with_point_store(sample_size, time_decay, point_store)
     }
 
     /// Create a new sampled tree with a given point store.
@@ -87,13 +87,13 @@ impl<T> SampledTree<T>
     /// ```
     pub fn new_with_point_store(
         sample_size: usize,
-        lambda: f64,
+        time_decay: f32,
         point_store: Rc<RefCell<PointStore<T>>>,
     ) -> Self {
         SampledTree {
             point_store: point_store.clone(),
             tree: Tree::new_with_point_store(point_store.clone()),
-            sampler: StreamSampler::new(sample_size, lambda),
+            sampler: StreamSampler::new(sample_size, time_decay),
         }
     }
 
@@ -110,7 +110,7 @@ impl<T> SampledTree<T>
     /// Update the sampled tree with a new point.
     ///
     /// The stream sampler decides if the new point will be accepted into the
-    /// tree as a function of the decay factor `lambda` and the input
+    /// tree as a function of the decay factor `time_decay` and the input
     /// `sequence_index` for this point.
     ///
     /// # Examples
@@ -201,7 +201,7 @@ impl<T> SampledTree<T>
     /// ```
     pub fn sample_size(&self) -> usize { self.sampler.capacity() }
 
-    /// Returns the decay factor of the random sampler.
+    /// Returns the time decay factor of the random sampler.
     ///
     /// # Examples
     ///
@@ -209,9 +209,9 @@ impl<T> SampledTree<T>
     /// use random_cut_forest::SampledTree;
     ///
     /// let tree: SampledTree<f32> = SampledTree::new(256, 0.001);
-    /// assert_eq!(tree.lambda(), 0.001);
+    /// assert_eq!(tree.time_decay(), 0.001);
     /// ```
-    pub fn lambda(&self) -> f64 { self.sampler.lambda() }
+    pub fn time_decay(&self) -> f32 { self.sampler.time_decay() }
 
     /// Returns the total number of observations made by the tree.
     ///

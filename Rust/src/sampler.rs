@@ -84,11 +84,11 @@ use std::collections::binary_heap;
 /// ```
 pub struct WeightedSample<T> {
     value: T,
-    weight: f64,
+    weight: f32,
 }
 
 impl<T> WeightedSample<T> {
-    pub fn new(value: T, weight: f64) -> Self {
+    pub fn new(value: T, weight: f32) -> Self {
         WeightedSample {
             value: value,
             weight: weight,
@@ -99,7 +99,7 @@ impl<T> WeightedSample<T> {
     pub fn value(&self) -> &T { &self.value }
 
     /// Get the weight of the sample.
-    pub fn weight(&self) -> &f64 { &self.weight }
+    pub fn weight(&self) -> &f32 { &self.weight }
 }
 
 /// Weighted samples are ordered by their weight. Because weighted samples are
@@ -155,11 +155,12 @@ pub enum SamplerResult<T> {
 /// their sequence index, are assigned a larger weight than older values.
 ///
 /// This sampler is based on a weighted reservoir sampling algorithm. As such,
-/// it has a time decay parameter `lambda`. The value of `lambda` indicates how
-/// aggressively the sampler should prefer to store the most recently obesrved
-/// samples. When `lambda == 0.0`, samples are uniformly retained; that is,
-/// given `N` observations a sampler of size `S` will keep `S` samples
-/// distributed uniformly across the `N` observations without replacement.
+/// it has a time decay parameter `time_decay`. The value of `time_decay`
+/// indicates how aggressively the sampler should prefer to store the most
+/// recently obesrved samples. When `time_decay == 0.0`, samples are uniformly
+/// retained; that is, given `N` observations a sampler of size `S` will keep
+/// `S` samples distributed uniformly across the `N` observations without
+/// replacement.
 ///
 /// # Examples
 ///
@@ -206,7 +207,7 @@ pub struct StreamSampler<T> {
     weighted_samples: BinaryHeap<WeightedSample<T>>,
     sample_size: usize,
     num_observations: usize,
-    lambda: f64,
+    time_decay: f32,
     rng: ChaCha8Rng,
 }
 
@@ -216,7 +217,7 @@ impl<T> StreamSampler<T> {
     /// Create a new stream sampler.
     ///
     /// A `sample_size` must be provided to indicate the number of samples that
-    /// the stream sampler can store. Additionally, a decay factor `lambda`
+    /// the stream sampler can store. Additionally, a decay factor `time_decay`
     /// must be provided to indicate how aggressively the sampler favors keeping
     /// more recently observed sampler.
     ///
@@ -228,16 +229,16 @@ impl<T> StreamSampler<T> {
     /// // create a new stream sampler on floats with capacity two
     /// let sampler: StreamSampler<&str> = StreamSampler::new(2, 0.1);
     /// ```
-    pub fn new(sample_size: usize, lambda: f64) -> Self {
-        if lambda < 0.0 {
-            panic!("Lambda must be non-negative")
+    pub fn new(sample_size: usize, time_decay: f32) -> Self {
+        if time_decay < 0.0 {
+            panic!("Time decay parameter must be non-negative")
         }
 
         StreamSampler {
             weighted_samples: BinaryHeap::with_capacity(sample_size),
             sample_size: sample_size,
             num_observations: 0,
-            lambda: lambda,
+            time_decay: time_decay,
             rng: ChaCha8Rng::from_entropy(),
         }
     }
@@ -255,7 +256,6 @@ impl<T> StreamSampler<T> {
     pub fn seed(&mut self, seed: u64) {
         self.rng = ChaCha8Rng::seed_from_u64(seed);
     }
-
 
     /// Sample a new value with a given sequence index.
     ///
@@ -318,7 +318,7 @@ impl<T> StreamSampler<T> {
     /// The weight of sample is used to determine the priority of the samples;
     /// the sampler maintains those samples with largest observed weight. Given
     /// a sequence index, `n`, the computed weight is `R = u^(1/w)` where
-    /// `w = exp(lambda * n)`.
+    /// `w = exp(lambda * n)` and `lambda` is the decay parameter.
     ///
     /// In practice we transform these weights into log-space for numerical
     /// stability. The more negative these transformed weights are the more
@@ -337,9 +337,9 @@ impl<T> StreamSampler<T> {
     /// println!("{}", sampler.compute_weight(2));
     /// println!("{}", sampler.compute_weight(1000)); // likely to be more negative
     /// ```
-    pub fn compute_weight(&mut self, sequence_index: usize) -> f64 {
-        let random: f64 = self.rng.gen();
-        -(sequence_index as f64) * self.lambda + (-random.ln()).ln()
+    pub fn compute_weight(&mut self, sequence_index: usize) -> f32 {
+        let random: f32 = self.rng.gen();
+        -(sequence_index as f32) * self.time_decay + (-random.ln()).ln()
     }
 
     /// Returns an iterator on the elements of the sampler.
@@ -354,7 +354,7 @@ impl<T> StreamSampler<T> {
     pub fn is_full(&self) -> bool { self.sample_size == self.weighted_samples.len() }
     pub fn capacity(&self) -> usize { self.sample_size }
     pub fn size(&self) -> usize { self.weighted_samples.len() }
-    pub fn lambda(&self) -> f64 { self.lambda }
+    pub fn time_decay(&self) -> f32 { self.time_decay }
 }
 
 
