@@ -14,8 +14,6 @@ use std::rc::Rc;
 use crate::store::{PointStore, NodeStore};
 use crate::tree::{Cut, Node};
 
-
-
 /// Random cut tree data structure on nodes and points.
 ///
 /// A random cut tree contains leaf nodes and internal nodes.
@@ -31,7 +29,6 @@ use crate::tree::{Cut, Node};
 /// a `Tree` to uniquely own its point store. In other cases, such as the case
 /// where we want share points across multiple trees in a forest, this tree's
 /// point store may live outside of this tree.
-/// 
 ///
 /// # Examples
 ///
@@ -55,7 +52,7 @@ pub struct Tree<T> {
 }
 
 
-impl<T> Tree<T> 
+impl<T> Tree<T>
     where T: Float + Sum
 {
 
@@ -189,6 +186,7 @@ impl<T> Tree<T>
     ///
     /// See [`NodeTraverser`] for more information.
     ///
+    ///
     /// # Examples
     ///
     /// ```
@@ -216,7 +214,7 @@ impl<T> Tree<T>
     /// ```
     pub fn traverse<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
         NodeTraverser::new(self, point)
-    }    
+    }
 
     // =========================================================================
     // Helper Functions
@@ -275,7 +273,7 @@ pub struct NodeTraverser<'a, T> {
     current_node_key: Option<usize>,
 }
 
-impl<'a, T> NodeTraverser<'a, T> 
+impl<'a, T> NodeTraverser<'a, T>
     where T: Float + Sum
 {
 
@@ -316,7 +314,7 @@ impl<'a, T> NodeTraverser<'a, T>
     }
 }
 
-impl<'a, T> Iterator for NodeTraverser<'a, T> 
+impl<'a, T> Iterator for NodeTraverser<'a, T>
     where T: Float + Sum
 {
     type Item = &'a Node<T>;

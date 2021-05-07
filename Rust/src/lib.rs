@@ -34,6 +34,12 @@
 //! cut forest based anomaly detection on streams."* International Conference
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
 
+mod sampler;
+pub use sampler::{SamplerResult, StreamSampler, WeightedSample};
+
+mod sampled_tree;
+pub use sampled_tree::SampledTree;
+
 mod store;
 pub use store::{NodeStore, PointStore};
 
