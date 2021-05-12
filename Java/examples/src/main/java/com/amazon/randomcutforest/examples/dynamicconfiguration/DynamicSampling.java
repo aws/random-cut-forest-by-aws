@@ -44,13 +44,13 @@ public class DynamicSampling implements Example {
         int dimensions = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.DOUBLE;
+        Precision precision = Precision.FLOAT_64;
         int dataSize = 4 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
 
-        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions).randomSeed(0)
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
-        RandomCutForest forest2 = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions).randomSeed(0)
+        RandomCutForest forest2 = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
 
         int first_anomalies = 0;

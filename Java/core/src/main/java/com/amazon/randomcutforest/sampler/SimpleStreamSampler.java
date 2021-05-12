@@ -95,8 +95,8 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         super();
         this.sampleSize = sampleSize;
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
-        this.random = random;
-        this.lambda = lambda;
+        this.rng = random;
+        this.timeDecay = lambda;
         this.initialAcceptFraction = initialAcceptFraction;
     }
 
@@ -123,12 +123,12 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
      * @return A weighted point that can be added to the sampler or null
      */
     public boolean acceptPoint(long sequenceIndex) {
-        checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
+        checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
 
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if ((sample.size() < sampleSize && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
+        if ((sample.size() < sampleSize && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
                 || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();

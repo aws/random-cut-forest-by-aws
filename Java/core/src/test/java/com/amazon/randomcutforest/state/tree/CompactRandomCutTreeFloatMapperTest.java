@@ -71,7 +71,7 @@ public class CompactRandomCutTreeFloatMapperTest {
             CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
             context.setMaxSize(capacity);
             context.setPointStore(pointStore);
-            context.setPrecision(Precision.DOUBLE);
+            context.setPrecision(Precision.FLOAT_64);
 
             return trees.stream().map(t -> Arguments.of(t, context));
         }

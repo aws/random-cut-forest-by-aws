@@ -124,7 +124,7 @@ public class RandomCutForestMapper
     @Override
     public RandomCutForestState toState(RandomCutForest forest) {
         if (saveTreeState) {
-            checkArgument(forest.isCompactEnabled(), "tree state cannot be saved for noncompact forests");
+            checkArgument(forest.isCompact(), "tree state cannot be saved for noncompact forests");
         }
 
         RandomCutForestState state = new RandomCutForestState();
@@ -138,13 +138,13 @@ public class RandomCutForestMapper
         state.setOutputAfter(forest.getOutputAfter());
         state.setStoreSequenceIndexesEnabled(forest.isStoreSequenceIndexesEnabled());
         state.setTotalUpdates(forest.getTotalUpdates());
-        state.setCompactEnabled(forest.isCompactEnabled());
+        state.setCompactEnabled(forest.isCompact());
         state.setInternalShinglingEnabled(forest.isInternalShinglingEnabled());
         state.setBoundingBoxCacheFraction(forest.getBoundingBoxCacheFraction());
         state.setSaveSamplerState(saveSamplerState);
         state.setSaveTreeState(saveTreeState);
         state.setSaveCoordinatorState(saveCoordinatorState);
-        state.setSinglePrecisionSet(forest.getPrecision() == Precision.SINGLE);
+        state.setSinglePrecisionSet(forest.getPrecision() == Precision.FLOAT_32);
         state.setCompress(compress);
         state.setPartialTreesInUse(partialTreesInUse);
 
@@ -155,11 +155,11 @@ public class RandomCutForestMapper
             state.setExecutorContext(executorContext);
         }
 
-        if (forest.isCompactEnabled()) {
+        if (forest.isCompact()) {
             if (saveCoordinatorState) {
                 PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
                 PointStoreState pointStoreState;
-                if (forest.getPrecision() == Precision.SINGLE) {
+                if (forest.getPrecision() == Precision.FLOAT_32) {
                     PointStoreFloatMapper mapper = new PointStoreFloatMapper();
                     mapper.setCompress(compress);
                     pointStoreState = mapper.toState((PointStoreFloat) pointStoreCoordinator.getStore());
@@ -196,7 +196,7 @@ public class RandomCutForestMapper
             state.setCompactSamplerStates(samplerStates);
 
             if (trees != null) {
-                if (forest.getPrecision() == Precision.SINGLE) {
+                if (forest.getPrecision() == Precision.FLOAT_32) {
                     CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
                     treeMapper.setCompress(compress);
                     treeMapper.setPartialTreeInUse(partialTreesInUse || forest.isStoreSequenceIndexesEnabled());
@@ -264,7 +264,7 @@ public class RandomCutForestMapper
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).shingleSize(state.getShingleSize())
-                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction()).compactEnabled(state.isCompactEnabled())
+                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction()).compact(state.isCompactEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
         if (state.isCompactEnabled()) {
@@ -291,7 +291,7 @@ public class RandomCutForestMapper
             SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(state.getSampleSize(), state.getLambda(),
                     rng.nextLong());
             sampler.setMaxSequenceIndex(compactData.getMaxSequenceIndex());
-            sampler.setSequenceIndexOfMostRecentLambdaUpdate(compactData.getSequenceIndexOfMostRecentLambdaUpdate());
+            sampler.setMostRecentTimeDecayUpdate(compactData.getMostRecentTimeDecayUpdate());
 
             for (Weighted<Integer> sample : compactData.getWeightedSample()) {
                 double[] point = pointStore.get(sample.getValue());
@@ -380,7 +380,7 @@ public class RandomCutForestMapper
             }
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
-        builder.precision(Precision.SINGLE);
+        builder.precision(Precision.FLOAT_32);
         return new RandomCutForest(builder, coordinator, components, rng);
     }
 
@@ -433,7 +433,7 @@ public class RandomCutForestMapper
             }
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
-        builder.precision(Precision.DOUBLE);
+        builder.precision(Precision.FLOAT_64);
         return new RandomCutForest(builder, coordinator, components, rng);
     }
 }

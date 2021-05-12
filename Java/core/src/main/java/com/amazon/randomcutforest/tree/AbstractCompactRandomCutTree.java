@@ -85,7 +85,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
             this.root = builder.root;
         }
 
-        if (enableSequenceIndices) {
+        if (storeSequenceIndexesEnabled) {
             sequenceIndexes = new HashMap[maxSize];
         }
     }
@@ -200,7 +200,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
                 boxCache.swapCaches(map);
 
-                if (enableSequenceIndices) {
+                if (storeSequenceIndexesEnabled) {
                     HashMap<Long, Integer>[] newSequence = new HashMap[maxSize];
                     for (int i = 0; i < maxSize; i++) { // iterate over leaves
                         if (map[i + maxSize - 1] != NULL) { // leaf is in use
@@ -211,7 +211,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     sequenceIndexes = newSequence;
                 }
                 root = 0;
-                if (enableCenterOfMass) {
+                if (centerOfMassEnabled) {
                     recomputePointSum(root);
                 }
             } else {

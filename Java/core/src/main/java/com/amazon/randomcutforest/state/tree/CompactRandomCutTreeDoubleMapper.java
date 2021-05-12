@@ -58,9 +58,9 @@ public class CompactRandomCutTreeDoubleMapper implements
         model.reorderNodesInBreadthFirstOrder();
         state.setMaxSize(model.getMaxSize());
         state.setRoot(model.getRootIndex());
-        state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
-        state.setStoreSequenceIndices(model.enableSequenceIndices);
-        state.setEnableCenterOfMass(model.enableCenterOfMass);
+        state.setPartialTreeInUse(model.storeSequenceIndexesEnabled || partialTreeInUse);
+        state.setStoreSequenceIndices(model.storeSequenceIndexesEnabled);
+        state.setEnableCenterOfMass(model.centerOfMassEnabled);
         state.setOutputAfter(model.getOutputAfter());
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();

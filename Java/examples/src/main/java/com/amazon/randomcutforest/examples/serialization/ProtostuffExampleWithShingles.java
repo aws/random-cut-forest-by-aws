@@ -56,8 +56,8 @@ public class ProtostuffExampleWithShingles implements Example {
         int dimensions = 10;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.DOUBLE;
-        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+        Precision precision = Precision.FLOAT_64;
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).shingleSize(dimensions)
                 .build();
         int count = 1;

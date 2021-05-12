@@ -64,7 +64,7 @@ public class StateMapperBenchmark {
         @Param({ "false", "true" })
         boolean saveTreeState;
 
-        @Param({ "SINGLE", "DOUBLE" })
+        @Param({ "FLOAT_32", "FLOAT_64" })
         Precision precision;
 
         double[][] trainingData;
@@ -82,7 +82,7 @@ public class StateMapperBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpForest() throws JsonProcessingException {
-            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision)
                     .boundingBoxCacheFraction(0.0).build();
 

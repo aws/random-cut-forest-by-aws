@@ -58,9 +58,9 @@ public class CompactRandomCutTreeFloatMapper implements
         model.reorderNodesInBreadthFirstOrder();
         state.setRoot(model.getRoot());
         state.setMaxSize(model.getMaxSize());
-        state.setPartialTreeInUse(model.enableSequenceIndices || partialTreeInUse);
-        state.setStoreSequenceIndices(model.enableSequenceIndices);
-        state.setEnableCenterOfMass(model.enableCenterOfMass);
+        state.setPartialTreeInUse(model.storeSequenceIndexesEnabled || partialTreeInUse);
+        state.setStoreSequenceIndices(model.storeSequenceIndexesEnabled);
+        state.setEnableCenterOfMass(model.centerOfMassEnabled);
         state.setBoundingBoxCacheFraction(model.getBoundingBoxCacheFraction());
         state.setOutputAfter(model.getOutputAfter());
 

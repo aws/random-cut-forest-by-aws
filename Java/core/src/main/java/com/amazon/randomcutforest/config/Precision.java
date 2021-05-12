@@ -19,5 +19,12 @@ package com.amazon.randomcutforest.config;
  * Options for floating-point precision.
  */
 public enum Precision {
-    SINGLE, DOUBLE
+    /**
+     * Single-precision (32 bit) floating point numbers.
+     */
+    FLOAT_32,
+    /**
+     * Double-precision (64 bit) floating point numbers.
+     */
+    FLOAT_64
 }

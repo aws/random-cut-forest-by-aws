@@ -39,15 +39,15 @@ public class RandomCutForestMapperTest {
     private static int sampleSize = 128;
 
     private static Stream<RandomCutForest> compactForestProvider() {
-        RandomCutForest.Builder<?> builder = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+        RandomCutForest.Builder<?> builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                 .sampleSize(sampleSize);
 
         RandomCutForest cachedDouble = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.DOUBLE).build();
+                .precision(Precision.FLOAT_64).build();
         RandomCutForest cachedFloat = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.SINGLE).build();
-        RandomCutForest uncachedDouble = builder.boundingBoxCacheFraction(0.0).precision(Precision.DOUBLE).build();
-        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).precision(Precision.SINGLE).build();
+                .precision(Precision.FLOAT_32).build();
+        RandomCutForest uncachedDouble = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_64).build();
+        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_32).build();
 
         return Stream.of(cachedDouble, cachedFloat, uncachedDouble, uncachedFloat);
     }
@@ -67,7 +67,7 @@ public class RandomCutForestMapperTest {
         assertEquals(forest.getNumberOfTrees(), forest2.getNumberOfTrees());
         assertEquals(forest.getLambda(), forest2.getLambda());
         assertEquals(forest.isStoreSequenceIndexesEnabled(), forest2.isStoreSequenceIndexesEnabled());
-        assertEquals(forest.isCompactEnabled(), forest2.isCompactEnabled());
+        assertEquals(forest.isCompact(), forest2.isCompact());
         assertEquals(forest.getPrecision(), forest2.getPrecision());
         assertEquals(forest.getBoundingBoxCacheFraction(), forest2.getBoundingBoxCacheFraction());
         assertEquals(forest.isCenterOfMassEnabled(), forest2.isCenterOfMassEnabled());
@@ -77,7 +77,7 @@ public class RandomCutForestMapperTest {
         PointStoreCoordinator coordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
         PointStoreCoordinator coordinator2 = (PointStoreCoordinator) forest2.getUpdateCoordinator();
 
-        if (forest.getPrecision() == Precision.DOUBLE) {
+        if (forest.getPrecision() == Precision.FLOAT_64) {
             PointStoreDouble store = (PointStoreDouble) coordinator.getStore();
             PointStoreDouble store2 = (PointStoreDouble) coordinator2.getStore();
             assertArrayEquals(store.getRefCount(), store2.getRefCount());
@@ -120,10 +120,10 @@ public class RandomCutForestMapperTest {
 
     @Test
     public void testRoundTripForEmptyForest() {
-        Precision precision = Precision.DOUBLE;
+        Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                .sampleSize(sampleSize).precision(precision).build();
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
+                .precision(precision).build();
 
         mapper.setSaveTreeState(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));

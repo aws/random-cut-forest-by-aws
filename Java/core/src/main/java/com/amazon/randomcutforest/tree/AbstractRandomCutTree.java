@@ -52,42 +52,42 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * and a root node is created, the root node's parent will be NULL, and so on.
      */
 
-    private final Random random;
+    private final Random rng;
     protected NodeReference root;
-    public final boolean enableCenterOfMass;
-    public final boolean enableSequenceIndices;
+    public final boolean centerOfMassEnabled;
+    public final boolean storeSequenceIndexesEnabled;
     protected double boundingBoxCacheFraction = 1.0;
     Random cacheRandom = new Random(0);
     protected int outputAfter;
 
-    public AbstractRandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
-            boolean enableSequenceIndices) {
-        this.random = random;
-        this.boundingBoxCacheFraction = cacheFraction;
-        this.enableCenterOfMass = enableCenterOfMass;
-        this.enableSequenceIndices = enableSequenceIndices;
+    public AbstractRandomCutTree(Random rng, double boundingBoxCacheFraction, boolean centerOfMassEnabled,
+            boolean storeSequenceIndexesEnabled) {
+        this.rng = rng;
+        this.boundingBoxCacheFraction = boundingBoxCacheFraction;
+        this.centerOfMassEnabled = centerOfMassEnabled;
+        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
     }
 
-    public AbstractRandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
-            boolean enableSequenceIndices) {
-        this.random = random;
-        if (enableCache) {
+    public AbstractRandomCutTree(Random rng, boolean boundingBoxCacheEnabled, boolean centerOfMassEnabled,
+            boolean storeSequenceIndexesEnabled) {
+        this.rng = rng;
+        if (boundingBoxCacheEnabled) {
             this.boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         } else {
             this.boundingBoxCacheFraction = 0;
         }
-        this.enableCenterOfMass = enableCenterOfMass;
-        this.enableSequenceIndices = enableSequenceIndices;
+        this.centerOfMassEnabled = centerOfMassEnabled;
+        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
     }
 
     public AbstractRandomCutTree(AbstractRandomCutTree.Builder<?> builder) {
         if (builder.random != null) {
-            this.random = builder.random;
+            this.rng = builder.random;
         } else {
-            this.random = new Random(builder.randomSeed);
+            this.rng = new Random(builder.randomSeed);
         }
-        this.enableCenterOfMass = builder.centerOfMassEnabled;
-        this.enableSequenceIndices = builder.storeSequenceIndexesEnabled;
+        this.centerOfMassEnabled = builder.centerOfMassEnabled;
+        this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
 
         // This should be set to an appropriate value in a subclass
@@ -269,7 +269,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract void recomputePointSum(NodeReference node);
 
     void updateAncestorPointSum(NodeReference node) {
-        if (enableCenterOfMass) {
+        if (centerOfMassEnabled) {
             NodeReference tempNode = node;
             while (tempNode != null) {
                 recomputePointSum(tempNode);
@@ -393,7 +393,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         Point point = getPointFromPointReference(pointReference);
         NodeReference nodeReference = findLeafAndVerify(point);
-        if (enableSequenceIndices) {
+        if (storeSequenceIndexesEnabled) {
             deleteSequenceIndex(nodeReference, sequenceNumber);
         }
         PointReference returnVal = getPointReference(nodeReference);
@@ -445,7 +445,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 tempNode = getParent(tempNode);
             }
         }
-        if (enableCenterOfMass) {
+        if (centerOfMassEnabled) {
             updateAncestorPointSum(mergedNode);
         }
     }
@@ -484,7 +484,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 }
                 incrementMass(followReference);
                 increaseMassOfAncestors(followReference);
-                if (enableSequenceIndices) {
+                if (storeSequenceIndexesEnabled) {
                     addSequenceIndex(followReference, sequenceNumber);
                 }
                 updateAncestorPointSum(followReference);
@@ -493,7 +493,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             } else {
                 // construct a potential cut
                 savedBox = getInternalTwoPointBox(point, oldPoint);
-                savedCut = randomCut(random, savedBox);
+                savedCut = randomCut(rng, savedBox);
                 currentUnmergedBox = getMutableLeafBoxFromLeafNode(followReference);
                 savedSiblingNode = followReference;
             }
@@ -526,7 +526,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                     // a cut is feasible at this level
                     // generate a new cut and see if it separates the new point
                     AbstractBoundingBox<Point> mergedBox = existingBox.copy().addPoint(point);
-                    Cut cut = randomCut(random, mergedBox);
+                    Cut cut = randomCut(rng, mergedBox);
                     // avoid generation of mergedBox?
                     int splitDimension = cut.getDimension();
                     double splitValue = cut.getValue();
@@ -569,7 +569,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             // manage bounding boxes, including caching, as well as centerOfMass
             updateAncestorNodesAfterAdd(savedBox, mergedNode, point, newParent);
         }
-        if (enableSequenceIndices) {
+        if (storeSequenceIndexesEnabled) {
             addSequenceIndex(leafNodeForAdd, sequenceNumber);
         }
 
