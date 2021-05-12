@@ -53,9 +53,9 @@ public class ProtostuffExample implements Example {
         int dimensions = 10;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.SINGLE;
+        Precision precision = Precision.FLOAT_32;
 
-        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
 
         int dataSize = 1000 * sampleSize;

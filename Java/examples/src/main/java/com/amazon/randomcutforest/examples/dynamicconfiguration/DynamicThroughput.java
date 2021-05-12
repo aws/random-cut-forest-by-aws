@@ -46,7 +46,7 @@ public class DynamicThroughput implements Example {
         int dimensions = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.DOUBLE;
+        Precision precision = Precision.FLOAT_64;
         int dataSize = 10 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
         // generate data once to eliminate caching issues
@@ -55,10 +55,10 @@ public class DynamicThroughput implements Example {
 
         for (int i = 0; i < 5; i++) {
 
-            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions).randomSeed(0)
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
                     .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
-            RandomCutForest forest2 = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                    .randomSeed(0).numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+            RandomCutForest forest2 = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
+                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
             forest2.setBoundingBoxCacheFraction(i * 0.25);
 
             int anomalies = 0;

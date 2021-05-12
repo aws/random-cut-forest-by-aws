@@ -27,12 +27,13 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * The decay factor used for generating the weight of the point. For greater
      * values of lambda we become more biased in favor of recent points.
      */
-    protected double lambda;
+    protected double timeDecay;
 
     /**
-     * The last timestamp when lambda was changed
+     * The sequence index corresponding to the most recent change to
+     * {@code timeDecay}.
      */
-    protected long sequenceIndexOfMostRecentLambdaUpdate = 0;
+    protected long mostRecentTimeDecayUpdate = 0;
 
     /**
      * most recent timestamp, used to determine lastUpdateOfLambda
@@ -42,12 +43,12 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
      * The accumulated sum of lambda before the last update
      */
-    protected double accumulatedLambda = 0;
+    protected double accumuluatedTimeDecay = 0;
 
     /**
      * The random number generator used in sampling.
      */
-    protected Random random;
+    protected Random rng;
 
     /**
      * The point evicted by the last call to {@link #update}, or null if the new
@@ -86,10 +87,10 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     protected float computeWeight(long sequenceIndex) {
         double randomNumber = 0d;
         while (randomNumber == 0d) {
-            randomNumber = random.nextDouble();
+            randomNumber = rng.nextDouble();
         }
         maxSequenceIndex = (maxSequenceIndex < sequenceIndex) ? sequenceIndex : maxSequenceIndex;
-        return (float) (-(sequenceIndex - sequenceIndexOfMostRecentLambdaUpdate) * lambda - accumulatedLambda
+        return (float) (-(sequenceIndex - mostRecentTimeDecayUpdate) * timeDecay - accumuluatedTimeDecay
                 + Math.log(-Math.log(randomNumber)));
     }
 
@@ -105,9 +106,9 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         // accumulatedLambda keeps track of adjustments and is zeroed out when the
         // arrays are
         // exported for some reason
-        accumulatedLambda += (maxSequenceIndex - sequenceIndexOfMostRecentLambdaUpdate) * lambda;
-        lambda = newLambda;
-        sequenceIndexOfMostRecentLambdaUpdate = maxSequenceIndex;
+        accumuluatedTimeDecay += (maxSequenceIndex - mostRecentTimeDecayUpdate) * timeDecay;
+        timeDecay = newLambda;
+        mostRecentTimeDecayUpdate = maxSequenceIndex;
     }
 
     /**
@@ -116,7 +117,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      *         points. A value of 0 corresponds to a uniform sample over the stream.
      */
     public double getTimeDecay() {
-        return lambda;
+        return timeDecay;
     }
 
     public long getMaxSequenceIndex() {
@@ -127,12 +128,12 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         maxSequenceIndex = index;
     }
 
-    public long getSequenceIndexOfMostRecentLambdaUpdate() {
-        return sequenceIndexOfMostRecentLambdaUpdate;
+    public long getMostRecentTimeDecayUpdate() {
+        return mostRecentTimeDecayUpdate;
     }
 
-    public void setSequenceIndexOfMostRecentLambdaUpdate(long index) {
-        sequenceIndexOfMostRecentLambdaUpdate = index;
+    public void setMostRecentTimeDecayUpdate(long index) {
+        mostRecentTimeDecayUpdate = index;
     }
 
     @Override

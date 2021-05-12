@@ -187,8 +187,8 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         } else {
             this.sequenceIndex = null;
         }
-        this.random = random;
-        this.lambda = lambda;
+        this.rng = random;
+        this.timeDecay = lambda;
         this.initialAcceptFraction = initialAcceptFraction;
     }
 
@@ -218,10 +218,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
 
     @Override
     public boolean acceptPoint(long sequenceIndex) {
-        checkState(sequenceIndex >= sequenceIndexOfMostRecentLambdaUpdate, "incorrect sequences submitted to sampler");
+        checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
-        if ((size < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
+        if ((size < capacity && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
                 || (weight < this.weight[0])) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
             if (size == capacity) {
@@ -348,14 +348,14 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * updates to lambda
      */
     private void reset_weights() {
-        if (accumulatedLambda == 0)
+        if (accumuluatedTimeDecay == 0)
             return;
         // now the weight computation of every element would not see this subtraction
         // which implies that every existing element should see the offset as addition
         for (int i = 0; i < size; i++) {
-            weight[i] += accumulatedLambda;
+            weight[i] += accumuluatedTimeDecay;
         }
-        accumulatedLambda = 0;
+        accumuluatedTimeDecay = 0;
     }
 
     /**
@@ -514,10 +514,10 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         this.capacity = builder.capacity;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.initialAcceptFraction = builder.initialAcceptFraction;
-        this.random = builder.random;
-        this.lambda = builder.lambda;
+        this.rng = builder.random;
+        this.timeDecay = builder.lambda;
         this.maxSequenceIndex = builder.maxSequenceIndex;
-        this.sequenceIndexOfMostRecentLambdaUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
+        this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
 
         if (builder.weight != null || builder.pointIndex != null || builder.weight != null
                 || builder.sequenceIndex != null || builder.validateHeap) {

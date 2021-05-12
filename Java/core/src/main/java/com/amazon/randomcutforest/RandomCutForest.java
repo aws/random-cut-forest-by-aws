@@ -110,7 +110,7 @@ public class RandomCutForest {
     /**
      * By default, trees will not create indexed references.
      */
-    public static final boolean DEFAULT_COMPACT_ENABLED = false;
+    public static final boolean DEFAULT_COMPACT = false;
 
     /**
      * By default, trees will accept every point until full.
@@ -141,7 +141,7 @@ public class RandomCutForest {
     /**
      * Default floating-point precision for internal data structures.
      */
-    public static final Precision DEFAULT_PRECISION = Precision.DOUBLE;
+    public static final Precision DEFAULT_PRECISION = Precision.FLOAT_64;
 
     /**
      * By default, bounding boxes will be used. Disabling this will force
@@ -209,7 +209,7 @@ public class RandomCutForest {
     /**
      * Enable compact representation
      */
-    protected final boolean compactEnabled;
+    protected final boolean compact;
     /**
      * enables internal shingling
      */
@@ -274,9 +274,9 @@ public class RandomCutForest {
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
         rng = builder.getRandom();
-        if (precision == Precision.SINGLE) {
+        if (precision == Precision.FLOAT_32) {
             initCompactFloat(builder);
-        } else if (compactEnabled) {
+        } else if (compact) {
             initCompactDouble(builder);
         } else {
             initNonCompact();
@@ -386,7 +386,7 @@ public class RandomCutForest {
         });
         builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
-        checkArgument(builder.precision == Precision.DOUBLE || builder.compactEnabled,
+        checkArgument(builder.precision == Precision.FLOAT_64 || builder.compact,
                 "single precision is only supported for compact trees");
         checkArgument(builder.internalShinglingEnabled || builder.shingleSize == 1
                 || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
@@ -395,12 +395,12 @@ public class RandomCutForest {
         if (builder.internalRotationEnabled) {
             checkArgument(builder.internalShinglingEnabled, " enable internal shingling");
         }
-        checkArgument(!builder.compactEnabled || builder.compactEnabled, " option not supported, enable compact trees");
+        checkArgument(!builder.compact || builder.compact, " option not supported, enable compact trees");
         builder.initialPointStoreSize.ifPresent(n -> {
             checkArgument(n > 0, "initial point store must be greater than 0");
             checkArgument(n > builder.sampleSize * builder.numberOfTrees || builder.dynamicResizingEnabled,
                     " enable dynamic resizing ");
-            checkArgument(builder.compactEnabled, " enable compact trees ");
+            checkArgument(builder.compact, " enable compact trees ");
         });
         checkArgument(builder.boundingBoxCacheFraction >= 0 && builder.boundingBoxCacheFraction <= 1,
                 "incorrect cache fraction range");
@@ -414,12 +414,12 @@ public class RandomCutForest {
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
-        compactEnabled = builder.compactEnabled;
+        compact = builder.compact;
         precision = builder.precision;
         boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
-        if (!builder.initialPointStoreSize.isPresent() && compactEnabled) {
+        if (!builder.initialPointStoreSize.isPresent() && compact) {
             builder.initialPointStoreSize = Optional.of(2 * sampleSize);
         }
 
@@ -525,8 +525,8 @@ public class RandomCutForest {
     /**
      * @return true if points are saved with sequence indexes, false otherwise.
      */
-    public boolean isCompactEnabled() {
-        return compactEnabled;
+    public boolean isCompact() {
+        return compact;
     }
 
     /**
@@ -1278,7 +1278,7 @@ public class RandomCutForest {
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         private Optional<Double> lambda = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
-        private boolean compactEnabled = DEFAULT_COMPACT_ENABLED;
+        private boolean compact = DEFAULT_COMPACT;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
@@ -1358,8 +1358,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T compactEnabled(boolean compactEnabled) {
-            this.compactEnabled = compactEnabled;
+        public T compact(boolean compact) {
+            this.compact = compact;
             return (T) this;
         }
 

@@ -64,7 +64,7 @@ public class RandomCutForestBenchmark {
         @Setup(Level.Invocation)
         public void setUpForest() {
             forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).dimensions(dimensions)
-                    .parallelExecutionEnabled(parallelExecutionEnabled).compactEnabled(true).randomSeed(99).build();
+                    .parallelExecutionEnabled(parallelExecutionEnabled).compact(true).randomSeed(99).build();
         }
     }
 

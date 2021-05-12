@@ -76,7 +76,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setCompressed(compress);
         state.setCapacity(model.getCapacity());
         state.setLambda(model.getTimeDecay());
-        state.setSequenceIndexOfMostRecentLambdaUpdate(model.getSequenceIndexOfMostRecentLambdaUpdate());
+        state.setSequenceIndexOfMostRecentLambdaUpdate(model.getMostRecentTimeDecayUpdate());
         state.setMaxSequenceIndex(model.getMaxSequenceIndex());
         state.setInitialAcceptFraction(model.getInitialAcceptFraction());
         state.setStoreSequenceIndicesEnabled(model.isStoreSequenceIndexesEnabled());

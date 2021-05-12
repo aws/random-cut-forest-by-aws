@@ -55,9 +55,9 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
         int dimensions = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.DOUBLE;
+        Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
                 .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
 
         int dataSize = 4 * sampleSize;
@@ -103,11 +103,10 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
             if (sampler.getMaxSequenceIndex() != sampler2.getMaxSequenceIndex()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
-            if (sampler.getSequenceIndexOfMostRecentLambdaUpdate() != sampler2
-                    .getSequenceIndexOfMostRecentLambdaUpdate()) {
+            if (sampler.getMostRecentTimeDecayUpdate() != sampler2.getMostRecentTimeDecayUpdate()) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
-            if (sampler2.getSequenceIndexOfMostRecentLambdaUpdate() != dataSize - 1) {
+            if (sampler2.getMostRecentTimeDecayUpdate() != dataSize - 1) {
                 throw new IllegalStateException("Incorrect sampler state");
             }
         }

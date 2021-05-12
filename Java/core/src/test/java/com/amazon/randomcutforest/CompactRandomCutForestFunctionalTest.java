@@ -71,21 +71,20 @@ public class CompactRandomCutForestFunctionalTest {
         randomSeed = 123;
 
         parallelExecutionForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .build();
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).storeSequenceIndexesEnabled(false).build();
 
         singleThreadedForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).storeSequenceIndexesEnabled(false)
                 .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(false).build();
 
         parallelExecutionForestFloat = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
-                .precision(Precision.SINGLE).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).storeSequenceIndexesEnabled(false)
+                .precision(Precision.FLOAT_32).build();
 
         singleThreadedForestFloat = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).storeSequenceIndexesEnabled(false)
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).storeSequenceIndexesEnabled(false)
                 .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(false)
-                .precision(Precision.SINGLE).build();
+                .precision(Precision.FLOAT_32).build();
 
         dataSize = 10_000;
 
@@ -239,7 +238,7 @@ public class CompactRandomCutForestFunctionalTest {
     public void treeSizeChangeTest(int numDims, int numTrees, int numSamples, int numTrainSamples, int numTestSamples,
             int enableParallel, int numThreads) {
         RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compactEnabled(true);
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compact(true);
         if (enableParallel == 0) {
             forestBuilder.parallelExecutionEnabled(false);
         }
@@ -248,8 +247,8 @@ public class CompactRandomCutForestFunctionalTest {
         }
         RandomCutForest forest = forestBuilder.build();
         RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
-                .sampleSize(50000).outputAfter(numSamples / 4).randomSeed(0).compactEnabled(true)
-                .boundingBoxCacheFraction(1.0).build();
+                .sampleSize(50000).outputAfter(numSamples / 4).randomSeed(0).compact(true).boundingBoxCacheFraction(1.0)
+                .build();
 
         int count = 0;
         assertEquals(numTrainSamples, numSamples);
@@ -474,7 +473,7 @@ public class CompactRandomCutForestFunctionalTest {
     @Test
     public void testUpdateWithSignedZeros() {
         RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(2).dimensions(1)
-                .randomSeed(randomSeed).compactEnabled(true).build();
+                .randomSeed(randomSeed).compact(true).build();
 
         forest.update(new double[] { 0.0 });
         forest.getAnomalyScore(new double[] { 0.0 });
@@ -504,7 +503,7 @@ public class CompactRandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compactEnabled(true).lambda(1e-5).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).lambda(1e-5).build();
 
         dataSize = 10_000;
 
@@ -634,8 +633,8 @@ public class CompactRandomCutForestFunctionalTest {
     public void testUpdateAfterRoundTrip() {
         int dimensions = 10;
         for (int trials = 0; trials < 1000; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compactEnabled(true).dimensions(dimensions)
-                    .sampleSize(64).precision(Precision.SINGLE).build();
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(64)
+                    .precision(Precision.FLOAT_32).build();
 
             Random r = new Random();
             for (int i = 0; i < 30; i++) {

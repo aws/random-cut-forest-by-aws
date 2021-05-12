@@ -42,14 +42,14 @@ public class ShinglingFunctionalTest {
         long randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize)
-                .precision(Precision.SINGLE).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize)
+                .precision(Precision.FLOAT_32).build();
         RandomCutForest anotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(1)
-                .precision(Precision.SINGLE).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(1)
+                .precision(Precision.FLOAT_32).build();
         RandomCutForest yetAnotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize)
-                .internalShinglingEnabled(true).precision(Precision.SINGLE).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize)
+                .internalShinglingEnabled(true).precision(Precision.FLOAT_32).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -106,11 +106,11 @@ public class ShinglingFunctionalTest {
         long randomSeed = 123;
 
         RandomCutForest newforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize).build();
         RandomCutForest anotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(1).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(1).build();
         RandomCutForest yetAnotherforest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize)
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize)
                 .internalShinglingEnabled(true).build();
 
         double amplitude = 50.0;
@@ -166,16 +166,15 @@ public class ShinglingFunctionalTest {
         long randomSeed = 123;
 
         RandomCutForest newforestA = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).precision(Precision.SINGLE)
-                .build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).precision(Precision.FLOAT_32).build();
 
         RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shinglesize).randomSeed(randomSeed).internalShinglingEnabled(true)
-                .internalRotationEnabled(true).compactEnabled(true).shingleSize(shinglesize).precision(Precision.SINGLE)
+                .internalRotationEnabled(true).compact(true).shingleSize(shinglesize).precision(Precision.FLOAT_32)
                 .build();
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize)
-                .precision(Precision.SINGLE).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize)
+                .precision(Precision.FLOAT_32).build();
         double amplitude = 50.0;
         double noise = 2.0;
         Random noiseprg = new Random(72);
@@ -231,13 +230,13 @@ public class ShinglingFunctionalTest {
         long randomSeed = 123;
 
         RandomCutForest newforestA = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).build();
 
         RandomCutForest newforestB = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shinglesize).randomSeed(randomSeed).internalShinglingEnabled(true)
-                .internalRotationEnabled(true).compactEnabled(true).shingleSize(shinglesize).build();
+                .internalRotationEnabled(true).compact(true).shingleSize(shinglesize).build();
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).shingleSize(shinglesize).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).shingleSize(shinglesize).build();
         double amplitude = 50.0;
         double noise = 2.0;
         Random noiseprg = new Random(72);
@@ -296,10 +295,10 @@ public class ShinglingFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).lambda(1.0 / 300).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compactEnabled(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).lambda(1.0 / 300).build();
 
         double amplitude = 50.0;
         double noise = 2.0;
@@ -444,8 +443,8 @@ public class ShinglingFunctionalTest {
     public void testUpdate() {
         int dimensions = 10;
 
-        RandomCutForest forest = RandomCutForest.builder().numberOfTrees(100).compactEnabled(true)
-                .dimensions(dimensions).randomSeed(0).sampleSize(200).precision(Precision.SINGLE).build();
+        RandomCutForest forest = RandomCutForest.builder().numberOfTrees(100).compact(true).dimensions(dimensions)
+                .randomSeed(0).sampleSize(200).precision(Precision.FLOAT_32).build();
 
         double[][] trainingData = genShingledData(1000, dimensions, 0);
         double[][] testData = genShingledData(100, dimensions, 1);

@@ -72,7 +72,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
      *         otherwise.
      */
     public boolean centerOfMassEnabled() {
-        return super.enableCenterOfMass;
+        return super.centerOfMassEnabled;
     }
 
     /**
@@ -80,7 +80,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
      *         otherwise.
      */
     public boolean storeSequenceIndexesEnabled() {
-        return super.enableSequenceIndices;
+        return super.storeSequenceIndexesEnabled;
     }
 
     public RandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
@@ -283,7 +283,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     protected Node addNode(Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
-        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, enableCenterOfMass);
+        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, centerOfMassEnabled);
         candidate.setMass(mass);
         return candidate;
     }
@@ -322,7 +322,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
 
     @Override
     protected void deleteSequenceIndex(Node node, long uniqueSequenceNumber) {
-        if (enableSequenceIndices) {
+        if (storeSequenceIndexesEnabled) {
             if (!node.getSequenceIndexes().contains(uniqueSequenceNumber)) {
                 throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
             }
