@@ -23,9 +23,9 @@
 //! }
 //!
 //! // compute anomaly scores using the trained model
-//! // let anomaly_scores: Vec<f32> = data.iter()
-//! //     .map(|p| rcf.anomaly_score(p))
-//! //     .collect();
+//! let anomaly_scores: Vec<f32> = data.iter()
+//!     .map(|p| rcf.anomaly_score(p))
+//!     .collect();
 //! ```
 //!
 //! ### References
@@ -33,6 +33,10 @@
 //! Sudipto Guha, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random
 //! cut forest based anomaly detection on streams."* International Conference
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
+//! 
+
+mod anomaly_score_visitor;
+pub use crate::anomaly_score_visitor::AnomalyScoreVisitor;
 
 mod random_cut_forest;
 pub use crate::random_cut_forest::{RandomCutForest, RandomCutForestBuilder};

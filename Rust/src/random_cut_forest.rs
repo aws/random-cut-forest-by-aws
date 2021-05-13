@@ -1,7 +1,9 @@
 extern crate num_traits;
 use num_traits::Float;
 
+use crate::AnomalyScoreVisitor;
 use crate::SampledTree;
+use crate::tree::{Tree, Node};
 
 use std::marker::PhantomData;
 use std::iter::Sum;
@@ -88,6 +90,60 @@ impl<T> RandomCutForest<T>
         for tree in self.trees.iter_mut() {
             tree.update(point.clone(), self.num_observations)
         }
+    }
+
+    /// Returns the anomaly score associated with the input point relative to 
+    /// the data used to update the random cut forest model.
+    /// 
+    /// Each constituent random cut tree reports an anomaly score based on its
+    /// random sample of observed data. The forest anomaly score is the mean 
+    /// of these per-tree scores.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
+    ///
+    /// // create a default RCF on two-dimensional data
+    /// let mut rcf: RandomCutForest<f32> = RandomCutForestBuilder::new(2).build();
+    ///
+    /// // train the forest on some vector data
+    /// # let data: Vec<Vec<f32>> = vec![vec![0.0, 0.0], vec![1.0, 1.0]];
+    /// for point in data.iter() {
+    ///     rcf.update(point.clone());
+    /// }
+    /// 
+    /// // compute an anomaly score on some query point
+    /// let query = vec![0.5, 0.5];
+    /// let score = rcf.anomaly_score(&query);
+    /// 
+    /// // compute the anomaly scores of the training points
+    /// let scores: Vec<f32> = data.iter().map(|p| rcf.anomaly_score(p)).collect();
+    /// ```
+    pub fn anomaly_score(&self, point: &Vec<T>) -> T {
+        let anomaly_score: T = self.trees.iter()
+            .map(|t| self.tree_anomaly_score(point, t.tree()))
+            .sum();
+        anomaly_score / T::from(self.num_trees()).unwrap()
+    }
+
+    /// Compute the anomaly score from a particular tree. Used by 
+    /// ['Self::anomaly_score'].
+    fn tree_anomaly_score(&self, point: &Vec<T>, tree: &Tree<T>) -> T {
+        // traverse nodes from the root to the leaf closest to the input point
+        let nodes: Vec<&Node<T>> = tree.traverse(point).collect();
+        let mut visitor = AnomalyScoreVisitor::new(tree, point);
+
+        // the nodes begin at depth zero (the root node). each subsequent node
+        // is at a lower depth. we reverse iterate starting at the leaf
+        for (depth, node) in nodes.iter().enumerate().rev() {
+            let depth: T = T::from(depth).unwrap();
+            match node {
+                Node::Leaf(leaf) => visitor.accept_leaf(leaf, depth),
+                Node::Internal(node) => visitor.accept(node, depth),
+            }
+        }
+        visitor.get_result()
     }
 
     /// Return the dimension of the data accepted by this random cut forest.
@@ -225,6 +281,26 @@ impl<T> RandomCutForestBuilder<T>
 mod tests {
     use super::*;
 
+    extern crate rand;
+    use rand::{Rng, thread_rng};
+    use rand_distr::StandardNormal;
+
+    /// Utility function for generating random vectors from a multi-dimensional
+    /// Gaussian distribution.
+    fn randn(num_points: usize, dimension: usize) -> Vec<Vec<f32>> {
+        let mut points: Vec<Vec<f32>> = Vec::with_capacity(num_points);
+        let mut rng = thread_rng();
+        for _ in 0..num_points {
+            let mut point: Vec<f32> = Vec::with_capacity(dimension);
+            for _ in 0..dimension {
+                point.push(rng.sample(StandardNormal));
+            }
+            points.push(point);
+        }
+
+        points
+    }
+
     #[test]
     fn update() {
         let mut forest = RandomCutForestBuilder::new(2)
@@ -244,5 +320,66 @@ mod tests {
         forest.update(vec![0.0, 2.0]);
         forest.update(vec![-2.0, 0.0]);
         forest.update(vec![0.0, -2.0]);
+    }
+
+    #[test]
+    fn gaussian_blob() {
+        let num_points = 1000;
+        let dimension = 3;
+        let mut forest: RandomCutForest<f32> = RandomCutForestBuilder::new(dimension).build();
+
+        let points = randn(num_points, dimension);
+        for point in points.iter() {
+            forest.update(point.clone());
+        }
+
+        let scores: Vec<f32> = points.iter().map(|p| forest.anomaly_score(&p)).collect();
+        let scores_mean: f32 = scores.iter().sum::<f32>() / num_points as f32;
+        let scores_max: f32 = scores.iter().fold(0.0, |max_s, s| f32::max(max_s, *s));
+
+        let anomaly = vec![5.0; dimension];
+        let anomalous_score = forest.anomaly_score(&anomaly);
+
+        println!("[gaussian_blob] scores mean      = {}", scores_mean);
+        println!("[gaussian_blob] scores max       = {}", scores_max);
+        println!("[gaussian_blob] anomalous score  = {}", anomalous_score);
+
+        assert!(anomalous_score > scores_mean);
+        assert!(anomalous_score > scores_max);
+    }
+
+    #[test]
+    fn double_gaussian() {
+        let num_points = 2000;
+        let dimension = 3;
+        let mut forest: RandomCutForest<f32> = RandomCutForestBuilder::new(dimension).build();
+
+        // create a "barbell" of points: two gaussian blobs centered at \pm 20
+        let mut points = randn(num_points, dimension);
+        for (i, point) in points.iter_mut().enumerate() {
+            if i < num_points / 2 {
+                point[0] -= 20.0;
+            } else {
+                point[0] += 20.0
+            }
+        }
+
+        for point in points.iter() {
+            forest.update(point.clone());
+        }
+
+        let scores: Vec<f32> = points.iter().map(|p| forest.anomaly_score(&p)).collect();
+        let scores_mean: f32 = scores.iter().sum::<f32>() / num_points as f32;
+        let scores_max: f32 = scores.iter().fold(0.0, |max_s, s| f32::max(max_s, *s));
+
+        let anomaly = vec![0.0; dimension];
+        let anomalous_score = forest.anomaly_score(&anomaly);
+
+        println!("[double_gaussian] scores mean      = {}", scores_mean);
+        println!("[double_gaussian] scores max       = {}", scores_max);
+        println!("[double_gaussian] anomalous score  = {}", anomalous_score);
+
+        assert!(anomalous_score > scores_mean);
+        assert!(anomalous_score > scores_max);
     }
 }
