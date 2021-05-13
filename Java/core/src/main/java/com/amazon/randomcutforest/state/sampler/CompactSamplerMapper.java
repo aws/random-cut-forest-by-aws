@@ -35,15 +35,12 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
      * validate that the weight array in a {@code CompactSamplerState} instance
      * satisfies the heap property. The heap property is not validated by default.
      */
-    private boolean validateHeap = false;
+    private boolean validateHeapEnabled = false;
 
     /**
      * used to compress data, can be set to false for debug
      */
-    private boolean compress = true;
-
-    // the following is for tests
-    private boolean copy = true;
+    private boolean compressionEnabled = true;
 
     @Override
     public CompactSampler toModel(CompactSamplerState state, long seed) {
@@ -61,9 +58,9 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
             sequenceIndex = null;
         }
 
-        return new CompactSampler.Builder().capacity(state.getCapacity()).lambda(state.getLambda())
+        return new CompactSampler.Builder<>().capacity(state.getCapacity()).lambda(state.getLambda())
                 .random(new Random(seed)).storeSequenceIndexesEnabled(state.isStoreSequenceIndicesEnabled())
-                .weight(weight).pointIndex(pointIndex).sequenceIndex(sequenceIndex).validateHeap(validateHeap)
+                .weight(weight).pointIndex(pointIndex).sequenceIndex(sequenceIndex).validateHeap(validateHeapEnabled)
                 .initialAcceptFraction(state.getInitialAcceptFraction())
                 .mostRecentLambdaUpdate(state.getSequenceIndexOfMostRecentLambdaUpdate())
                 .maxSequenceIndex(state.getMaxSequenceIndex()).size(state.getSize()).build();
@@ -73,7 +70,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
     public CompactSamplerState toState(CompactSampler model) {
         CompactSamplerState state = new CompactSamplerState();
         state.setSize(model.size());
-        state.setCompressed(compress);
+        state.setCompressed(compressionEnabled);
         state.setCapacity(model.getCapacity());
         state.setLambda(model.getTimeDecay());
         state.setSequenceIndexOfMostRecentLambdaUpdate(model.getMostRecentTimeDecayUpdate());

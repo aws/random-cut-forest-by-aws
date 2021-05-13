@@ -23,6 +23,7 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreFloat;
@@ -35,13 +36,13 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
      */
-    private boolean compress = true;
+    private boolean compressionEnabled = true;
 
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getPointData(), "pointData must not be null");
-        checkArgument(state.isSinglePrecisionSet(), "incorrect use");
+        checkArgument(state.getPrecisionEnumValue() == Precision.FLOAT_32, "precision must be " + Precision.FLOAT_32);
         int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
         float[] store = ArrayPacking.unpackFloats(state.getPointData(), state.getCurrentStoreCapacity() * dimensions);
@@ -66,7 +67,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     public PointStoreState toState(PointStoreFloat model) {
         model.compact();
         PointStoreState state = new PointStoreState();
-        state.setCompressed(compress);
+        state.setCompressed(compressionEnabled);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
@@ -79,7 +80,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
         state.setIndexCapacity(model.getIndexCapacity());
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
-        state.setSinglePrecisionSet(true);
+        state.setPrecision(Precision.FLOAT_32.name());
         int prefix = model.getValidPrefix();
         state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
         state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));

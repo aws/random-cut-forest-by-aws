@@ -27,11 +27,12 @@ public class CompactRandomCutTreeState {
     private int root;
     private int maxSize;
     private int outputAfter;
-    private boolean partialTreeInUse;
-    private boolean storeSequenceIndices;
-    private boolean enableCenterOfMass;
+    private boolean storeSequenceIndexesEnabled;
+    private boolean centerOfMassEnabled;
     private NodeStoreState nodeStoreState;
     private double boundingBoxCacheFraction;
+
+    private boolean partialTreeState;
 
     // to be used later
     private long seed;

@@ -64,7 +64,7 @@ public class JsonExample implements Example {
         // Convert to JSON and print the number of bytes
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
+        mapper.setSaveExecutorContextEnabled(true);
         ObjectMapper jsonMapper = new ObjectMapper();
 
         String json = jsonMapper.writeValueAsString(mapper.toState(forest));

@@ -23,6 +23,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.CommonUtils;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
@@ -32,26 +33,27 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> {
 
     /**
-     * if true, then stores the cut information as a floqt array (converted to bytes
+     * if single precision, then stores the cut information as a float array
+     * (converted to bytes)
      */
-    private boolean singlePrecisionSet = false;
+    private Precision precision = Precision.FLOAT_64;
 
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
      */
-    private boolean compress = true;
+    private boolean compressionEnabled = true;
 
     /**
      * determines if a sampler is needed to bring up a tree
      */
-    private boolean usePartialTrees = false;
+    private boolean partialTreeStateEnabled = false;
 
     @Override
     public NodeStore toModel(NodeStoreState state, long seed) {
         int capacity = state.getCapacity();
         int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
         double[] cutValue;
-        if (state.isSinglePrecisionSet()) {
+        if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
             cutValue = CommonUtils.toDoubleArray(ArrayPacking.unpackFloats(state.getCutValueData()));
         } else {
             cutValue = ArrayPacking.unpackDoubles(state.getCutValueData());
@@ -65,11 +67,11 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
 
         int[] leafMass;
         int[] leafPointIndex;
-        if (state.isUsePartialTrees()) {
+        if (state.isPartialTreeStateEnabled()) {
             leafMass = null;
             leafPointIndex = null;
         } else {
-            leafMass = ArrayPacking.unpackInts(state.getLeafmass(), state.isCompressed());
+            leafMass = ArrayPacking.unpackInts(state.getLeafMass(), state.isCompressed());
             leafPointIndex = ArrayPacking.unpackInts(state.getLeafPointIndex(), state.isCompressed());
         }
 
@@ -86,9 +88,9 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
     public NodeStoreState toState(NodeStore model) {
         NodeStoreState state = new NodeStoreState();
         state.setCapacity(model.getCapacity());
-        state.setCompressed(compress);
-        state.setUsePartialTrees(usePartialTrees);
-        state.setSinglePrecisionSet(singlePrecisionSet);
+        state.setCompressed(compressionEnabled);
+        state.setPartialTreeStateEnabled(partialTreeStateEnabled);
+        state.setPrecision(precision.name());
 
         int[] leftIndex = Arrays.copyOf(model.leftIndex, model.leftIndex.length);
         int[] rightIndex = Arrays.copyOf(model.rightIndex, model.rightIndex.length);
@@ -105,7 +107,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         }
 
         state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
-        if (state.isSinglePrecisionSet()) {
+        if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
             state.setCutValueData(ArrayPacking.pack(CommonUtils.toFloatArray(model.cutValue)));
         } else {
             state.setCutValueData(ArrayPacking.pack(model.cutValue, model.cutValue.length));
@@ -114,9 +116,9 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());
         state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));
         state.setLeafFreeIndexPointer(model.getLeafFreeIndexPointer());
-        if (!state.isUsePartialTrees()) {
+        if (!state.isPartialTreeStateEnabled()) {
             state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
-            state.setLeafmass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
+            state.setLeafMass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
         }
 
         return state;

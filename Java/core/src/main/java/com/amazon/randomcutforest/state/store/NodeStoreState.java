@@ -19,6 +19,8 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.config.Precision;
+
 @Data
 public class NodeStoreState {
 
@@ -28,7 +30,7 @@ public class NodeStoreState {
     private boolean compressed;
     private int[] cutDimension;
     private byte[] cutValueData;
-    private boolean singlePrecisionSet;
+    private String precision;
     private int root;
 
     private boolean canonicalAndNotALeaf;
@@ -41,7 +43,11 @@ public class NodeStoreState {
     private int[] leafFreeIndexes;
     private int leafFreeIndexPointer;
 
-    private boolean usePartialTrees;
-    private int[] leafmass;
+    private boolean partialTreeStateEnabled;
+    private int[] leafMass;
     private int[] leafPointIndex;
+
+    public Precision getPrecisionEnumValue() {
+        return Precision.valueOf(precision);
+    }
 }

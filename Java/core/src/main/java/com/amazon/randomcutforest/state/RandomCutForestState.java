@@ -21,6 +21,7 @@ import java.util.List;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
@@ -36,7 +37,7 @@ public class RandomCutForestState {
 
     private long totalUpdates;
 
-    private double lambda;
+    private double timeDecay;
 
     private int numberOfTrees;
 
@@ -48,27 +49,21 @@ public class RandomCutForestState {
 
     private int outputAfter;
 
-    private boolean compress;
+    private boolean compressed;
 
-    private boolean partialTreesInUse;
+    private boolean partialTreeState;
 
     private double boundingBoxCacheFraction;
 
     private boolean storeSequenceIndexesEnabled;
 
-    private boolean compactEnabled;
+    private boolean compact;
 
     private boolean internalShinglingEnabled;
 
     private boolean centerOfMassEnabled;
 
-    private boolean saveTreeState;
-
-    private boolean saveSamplerState;
-
-    private boolean saveCoordinatorState;
-
-    private boolean singlePrecisionSet;
+    private String precision;
 
     private PointStoreState pointStoreState;
 
@@ -78,4 +73,15 @@ public class RandomCutForestState {
 
     private ExecutorContext executorContext;
 
+    // Mapper options
+
+    private boolean saveTreeStateEnabled;
+
+    private boolean saveSamplerStateEnabled;
+
+    private boolean saveCoordinatorStateEnabled;
+
+    public Precision getPrecisionEnumValue() {
+        return Precision.valueOf(precision);
+    }
 }

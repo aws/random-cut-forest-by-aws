@@ -643,8 +643,8 @@ public class CompactRandomCutForestFunctionalTest {
 
             // serialize + deserialize
             RandomCutForestMapper mapper = new RandomCutForestMapper();
-            mapper.setSaveTreeState(true);
-            mapper.setSaveExecutorContext(true);
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
             RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
             // update re-instantiated forest

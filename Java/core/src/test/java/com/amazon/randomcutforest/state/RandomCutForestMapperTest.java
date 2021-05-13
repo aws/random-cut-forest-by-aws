@@ -57,7 +57,7 @@ public class RandomCutForestMapperTest {
     @BeforeEach
     public void setUp() {
         mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
+        mapper.setSaveExecutorContextEnabled(true);
     }
 
     public void assertCompactForestEquals(RandomCutForest forest, RandomCutForest forest2) {
@@ -114,7 +114,7 @@ public class RandomCutForestMapperTest {
     @ParameterizedTest
     @MethodSource("compactForestProvider")
     public void testRoundTripForCompactForestSaveTreeState(RandomCutForest forest) {
-        mapper.setSaveTreeState(true);
+        mapper.setSaveTreeStateEnabled(true);
         testRoundTripForCompactForest(forest);
     }
 
@@ -125,7 +125,7 @@ public class RandomCutForestMapperTest {
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
                 .precision(precision).build();
 
-        mapper.setSaveTreeState(true);
+        mapper.setSaveTreeStateEnabled(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
         assertCompactForestEquals(forest, forest2);

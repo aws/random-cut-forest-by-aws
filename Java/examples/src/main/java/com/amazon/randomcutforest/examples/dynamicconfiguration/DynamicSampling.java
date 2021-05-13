@@ -87,7 +87,7 @@ public class DynamicSampling implements Example {
 
         first_anomalies = second_anomalies = 0;
         RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
+        mapper.setSaveExecutorContextEnabled(true);
         RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
         copyForest.setLambda(50 * forest.getLambda());
         // force an adjustment to catch up
