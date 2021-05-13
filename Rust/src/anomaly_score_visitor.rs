@@ -7,7 +7,7 @@ use crate::tree::{BoundingBox, Internal, Leaf, Tree};
 
 
 /// A visitor on nodes used to compute an anomaly score.
-/// 
+///
 /// Given a tree and a point to score, the tree returns a branch of nodes using
 /// [`Tree::traverse()`]. This branch is a path from the leaf node in the tree
 /// closest to the point to score (in the L1 norm) to the root node of the tree.
@@ -15,7 +15,7 @@ use crate::tree::{BoundingBox, Internal, Leaf, Tree};
 /// then updates the score using the *separation probability* at each internal
 /// node; the probability that a random cut separates the point to score from
 /// that node's bounding box.
-/// 
+///
 /// ```text
 ///    ______________   ___
 ///   |             P|   |
@@ -24,11 +24,11 @@ use crate::tree::{BoundingBox, Internal, Leaf, Tree};
 ///   |         |    |   |
 ///   |    B    |    |   | l2
 ///   |_________|____|  _|_
-/// 
-///    |--------||---| 
+///
+///    |--------||---|
 ///        l1     d1
 /// ```
-/// 
+///
 /// The final anomaly score is retrieved using [`Self::get_result`].
 pub struct AnomalyScoreVisitor<'a, T> {
     // A tree on which an anomaly score will be computed
@@ -55,8 +55,8 @@ where
 {
 
     /// Initialize an anomaly score visitor with a tree and a point to score.
-    /// 
-    /// The anomaly score of this visitor is initialized to zero. 
+    ///
+    /// The anomaly score of this visitor is initialized to zero.
     pub fn new(
         tree: &'a Tree<T>,
         point_to_score: &'a Vec<T>,
@@ -71,7 +71,7 @@ where
     }
 
     /// Initialize the anomaly score from a leaf node.
-    /// 
+    ///
     /// A leaf node is the first node visited in the anomaly scoring process.
     /// The initial anomaly score depends whether the point at the leaf node
     /// is equal to the point to score.
@@ -80,7 +80,7 @@ where
         let point = point_store.get(leaf.point()).unwrap();
         if *self.point_to_score == *point {
             self.point_inside_box = true;
-            self.anomaly_score = damp::<T>(leaf.mass(), self.tree.mass()) * 
+            self.anomaly_score = damp::<T>(leaf.mass(), self.tree.mass()) *
                 score_seen(depth, leaf.mass());
         } else {
             self.anomaly_score = score_unseen(depth);
@@ -88,8 +88,8 @@ where
     }
 
     /// Update the anomaly score from an internal node.
-    /// 
-    /// After visiting a leaf node in [`Self::accept_leaf`] the remaining nodes 
+    ///
+    /// After visiting a leaf node in [`Self::accept_leaf`] the remaining nodes
     /// encountered while traversing up the tree to the root are internal
     /// nodes. The main piece of information used by this algorithm is the
     /// bounding box at these nodes.
@@ -108,9 +108,9 @@ where
     }
 
     /// Normalize and return the anomaly score computed by the visitor.
-    /// 
-    /// The anomaly score computed by the visiting process, via 
-    /// [`Self::accept_leaf()`] and [`Self::accept()`], is normalized using the 
+    ///
+    /// The anomaly score computed by the visiting process, via
+    /// [`Self::accept_leaf()`] and [`Self::accept()`], is normalized using the
     /// mass of the tree before returning. This is so that the resulting anomaly
     /// score is independent of the number of samples in the tree.
     pub fn get_result(&self) -> T {
@@ -158,7 +158,7 @@ where
 
         range_diff_sum / new_range_sum
     }
-    
+
 }
 
 #[inline(always)]

@@ -92,15 +92,15 @@ impl<T> RandomCutForest<T>
         }
     }
 
-    /// Returns the anomaly score associated with the input point relative to 
+    /// Returns the anomaly score associated with the input point relative to
     /// the data used to update the random cut forest model.
-    /// 
+    ///
     /// Each constituent random cut tree reports an anomaly score based on its
-    /// random sample of observed data. The forest anomaly score is the mean 
+    /// random sample of observed data. The forest anomaly score is the mean
     /// of these per-tree scores.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
     ///
@@ -112,11 +112,11 @@ impl<T> RandomCutForest<T>
     /// for point in data.iter() {
     ///     rcf.update(point.clone());
     /// }
-    /// 
+    ///
     /// // compute an anomaly score on some query point
     /// let query = vec![0.5, 0.5];
     /// let score = rcf.anomaly_score(&query);
-    /// 
+    ///
     /// // compute the anomaly scores of the training points
     /// let scores: Vec<f32> = data.iter().map(|p| rcf.anomaly_score(p)).collect();
     /// ```
@@ -127,7 +127,7 @@ impl<T> RandomCutForest<T>
         anomaly_score / T::from(self.num_trees()).unwrap()
     }
 
-    /// Compute the anomaly score from a particular tree. Used by 
+    /// Compute the anomaly score from a particular tree. Used by
     /// ['Self::anomaly_score'].
     fn tree_anomaly_score(&self, point: &Vec<T>, tree: &Tree<T>) -> T {
         // traverse nodes from the root to the leaf closest to the input point
