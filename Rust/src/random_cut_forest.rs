@@ -42,7 +42,6 @@ use std::iter::Sum;
 pub struct RandomCutForest<T> {
     dimension: usize,
     num_observations: usize,
-    num_trees: usize,
     sample_size: usize,
     time_decay: f32,
     trees: Vec<SampledTree<T>>,
@@ -101,7 +100,7 @@ impl<T> RandomCutForest<T>
     pub fn num_observations(&self) -> usize { self.num_observations }
 
     /// Return the number of trees in this forest.
-    pub fn num_trees(&self) -> usize { self.num_trees }
+    pub fn num_trees(&self) -> usize { self.trees.len() }
 
     /// Return the number of samples/observations stored in each tree.
     pub fn sample_size(&self) -> usize { self.sample_size }
@@ -113,7 +112,7 @@ impl<T> RandomCutForest<T>
 
 /// Convenient mechanism for creating [`RandomCutForest`]s.
 ///
-/// Random cut forests are highly configurable and come with large number of
+/// Random cut forests are highly configurable and come with a large number of
 /// parameters, many of which have reasonable default values. This builder
 /// makes it easier to construct a random cut forest model
 ///
@@ -212,7 +211,6 @@ impl<T> RandomCutForestBuilder<T>
 
         RandomCutForest {
             dimension: self.dimension,
-            num_trees: self.num_trees,
             sample_size: self.sample_size,
             time_decay: self.time_decay,
             trees: trees,
