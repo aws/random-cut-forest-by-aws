@@ -13,23 +13,21 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.sampler;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-/**
- * This class converts a SimpleStreamSampler to the compact form; maintaining a
- * pointstore.
- */
+/** This class converts a SimpleStreamSampler to the compact form; maintaining a pointstore. */
 public class ArraySamplersToCompactStateConverter {
 
     private final Map<double[], Integer> pointMap;
@@ -37,7 +35,8 @@ public class ArraySamplersToCompactStateConverter {
     private final List<CompactSamplerState> compactSamplerStates;
     boolean storeSequenceIndexesEnabled;
 
-    public ArraySamplersToCompactStateConverter(boolean storeSequenceIndexesEnabled, int dimensions, int capacity) {
+    public ArraySamplersToCompactStateConverter(
+            boolean storeSequenceIndexesEnabled, int dimensions, int capacity) {
         pointMap = new HashMap<>();
         pointStoreDouble = new PointStoreDouble(dimensions, capacity);
         compactSamplerStates = new ArrayList<>();
@@ -83,7 +82,8 @@ public class ArraySamplersToCompactStateConverter {
         samplerState.setPointIndex(pointIndex);
         samplerState.setWeight(weight);
         samplerState.setSequenceIndex(sequenceIndex);
-        samplerState.setSequenceIndexOfMostRecentLambdaUpdate(sampler.getMostRecentTimeDecayUpdate());
+        samplerState.setSequenceIndexOfMostRecentLambdaUpdate(
+                sampler.getMostRecentTimeDecayUpdate());
         samplerState.setMaxSequenceIndex(sampler.getMaxSequenceIndex());
         samplerState.setInitialAcceptFraction(sampler.getInitialAcceptFraction());
 

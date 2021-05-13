@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,7 +24,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +45,7 @@ public class IndexManagerTest {
 
     @Test
     public void testNewFromState() {
-        int[] freeIndexes = { 4, 0, 3, 1, 2 };
+        int[] freeIndexes = {4, 0, 3, 1, 2};
         int freeIndexPointer = 2;
         IndexManager manager = new IndexManager(freeIndexes, freeIndexPointer);
         assertEquals(freeIndexes.length, manager.getCapacity());
@@ -64,7 +64,8 @@ public class IndexManagerTest {
         }
 
         // should have returned index 0, 1, 2, and 3
-        assertIterableEquals(Arrays.asList(0, 1, 2, 3), indexes.stream().sorted().collect(Collectors.toList()));
+        assertIterableEquals(
+                Arrays.asList(0, 1, 2, 3), indexes.stream().sorted().collect(Collectors.toList()));
 
         // store is full
         assertThrows(IllegalStateException.class, () -> store.takeIndex());

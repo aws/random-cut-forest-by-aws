@@ -13,15 +13,15 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.amazon.randomcutforest.store.PointStoreFloat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.store.PointStoreFloat;
 
 public class PointStoreFloatMapperTest {
     private PointStoreFloatMapper mapper;
@@ -37,11 +37,11 @@ public class PointStoreFloatMapperTest {
         int capacity = 4;
         PointStoreFloat store = new PointStoreFloat(dimensions, capacity);
 
-        double[] point1 = { 1.1, -22.2 };
+        double[] point1 = {1.1, -22.2};
         int index1 = store.add(point1, 1);
-        double[] point2 = { 3.3, -4.4 };
+        double[] point2 = {3.3, -4.4};
         int index2 = store.add(point2, 2);
-        double[] point3 = { 10.1, 100.1 };
+        double[] point3 = {10.1, 100.1};
         int index3 = store.add(point3, 3);
 
         PointStoreFloat store2 = mapper.toModel(mapper.toState(store));

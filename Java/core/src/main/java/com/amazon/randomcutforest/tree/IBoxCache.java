@@ -13,50 +13,49 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 public interface IBoxCache<Point> {
 
     /**
-     * a function that decides if the bounding for an internal node is managed by
-     * the cache or otherwise if the bounding box is not managed then it would not
-     * be stored and would be rebuilt on demand
-     * 
+     * a function that decides if the bounding for an internal node is managed by the cache or
+     * otherwise if the bounding box is not managed then it would not be stored and would be rebuilt
+     * on demand
+     *
      * @param index internal node
      * @return true if the box is managed and is/can be cached
      */
     boolean containsKey(int index);
 
     /**
-     * sets a box in the cache; the check whether the box is managed by the cache is
-     * performed internally
-     * 
+     * sets a box in the cache; the check whether the box is managed by the cache is performed
+     * internally
+     *
      * @param index internal node
-     * @param box   bounding box corresponding to that node
+     * @param box bounding box corresponding to that node
      */
     void setBox(int index, AbstractBoundingBox<Point> box);
 
     /**
-     *
      * @param index internal node
-     * @return the bounding of the node (if present) or null otherwise (even if the
-     *         box is not managed)
+     * @return the bounding of the node (if present) or null otherwise (even if the box is not
+     *     managed)
      */
     AbstractBoundingBox<Point> getBox(int index);
 
     /**
      * swaps the managed boxes
-     * 
+     *
      * @param map a renaming of the internal nodes, node i is renamed to map[i]
      */
     void swapCaches(int[] map);
 
     /**
      * adds a point to a bounding box, if it is managed
-     * 
+     *
      * @param index internal node
      * @param point point to be added
      */
     void addToBox(int index, Point point);
-
 }

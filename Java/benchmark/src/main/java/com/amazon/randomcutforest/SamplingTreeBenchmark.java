@@ -13,8 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
+
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -26,11 +32,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import com.amazon.randomcutforest.executor.SamplerPlusTree;
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.RandomCutTree;
-
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(value = 1)
@@ -41,13 +42,13 @@ public class SamplingTreeBenchmark {
 
     @State(Scope.Thread)
     public static class BenchmarkState {
-        @Param({ "1", "16", "256" })
+        @Param({"1", "16", "256"})
         int dimensions;
 
-        @Param({ "0.0", "1e-5" })
+        @Param({"0.0", "1e-5"})
         double lambda;
 
-        @Param({ "false", "true" })
+        @Param({"false", "true"})
         boolean storeSequenceIndexesEnabled;
 
         double[][] data;
@@ -61,10 +62,17 @@ public class SamplingTreeBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpTree() {
-            SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler(RandomCutForest.DEFAULT_SAMPLE_SIZE, lambda,
-                    99, storeSequenceIndexesEnabled);
-            RandomCutTree tree = RandomCutTree.builder().randomSeed(101)
-                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).build();
+            SimpleStreamSampler<double[]> sampler =
+                    new SimpleStreamSampler(
+                            RandomCutForest.DEFAULT_SAMPLE_SIZE,
+                            lambda,
+                            99,
+                            storeSequenceIndexesEnabled);
+            RandomCutTree tree =
+                    RandomCutTree.builder()
+                            .randomSeed(101)
+                            .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                            .build();
             samplingTree = new SamplerPlusTree<>(sampler, tree);
         }
     }

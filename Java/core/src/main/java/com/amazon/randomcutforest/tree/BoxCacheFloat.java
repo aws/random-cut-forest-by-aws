@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -59,5 +60,4 @@ public class BoxCacheFloat extends BoxCache<float[]> {
         }
         cachedBoxes = newArray;
     }
-
 }

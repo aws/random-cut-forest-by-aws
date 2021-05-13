@@ -13,13 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.anomalydetection;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarScoreVisitor {
 
@@ -29,22 +30,21 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      * Construct a new SimulatedTransductiveScalarScoreVisitor
      *
      * @param pointToScore The point whose anomaly score we are computing
-     * @param treeMass     The total mass of the RandomCutTree that is scoring the
-     *                     point
-     * @param scoreSeen    is the part of the score function when the point has been
-     *                     seen
-     * @param scoreUnseen  is the part of the score when the point has not been seen
-     * @param damp         corresponds to the dampening of the effect of the seen
-     *                     points
-     * @param vecSepBuild  A function that provides the probabilities of choosing
-     *                     different dimensions given a BoundingBox when the tree
-     *                     was built.
-     * @param vecSepScore  A function that corresponds to importance of dimensions
-     *                     during scoring
+     * @param treeMass The total mass of the RandomCutTree that is scoring the point
+     * @param scoreSeen is the part of the score function when the point has been seen
+     * @param scoreUnseen is the part of the score when the point has not been seen
+     * @param damp corresponds to the dampening of the effect of the seen points
+     * @param vecSepBuild A function that provides the probabilities of choosing different
+     *     dimensions given a BoundingBox when the tree was built.
+     * @param vecSepScore A function that corresponds to importance of dimensions during scoring
      */
-    public SimulatedTransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
-            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSepBuild,
+    public SimulatedTransductiveScalarScoreVisitor(
+            double[] pointToScore,
+            int treeMass,
+            BiFunction<Double, Double, Double> scoreSeen,
+            BiFunction<Double, Double, Double> scoreUnseen,
+            BiFunction<Double, Double, Double> damp,
+            Function<IBoundingBoxView, double[]> vecSepBuild,
             Function<IBoundingBoxView, double[]> vecSepScore) {
         super(pointToScore, treeMass, scoreSeen, scoreUnseen, damp, vecSepScore);
         this.vecSepBuild = vecSepBuild;
@@ -53,7 +53,7 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
     /**
      * Update the anomaly score based on the next step of the tree traversal.
      *
-     * @param node        The current node in the tree traversal
+     * @param node The current node in the tree traversal
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
@@ -71,7 +71,6 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
         }
 
         score = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass()) + weight * score;
-
     }
 
     // The above function differs from TransductiveScalarScoreVisitor only in the

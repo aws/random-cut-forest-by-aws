@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
+
 
 import java.util.Set;
 
@@ -33,5 +35,4 @@ public interface INodeView {
     double[] getLeafPoint();
 
     Set<Long> getSequenceIndexes();
-
 }

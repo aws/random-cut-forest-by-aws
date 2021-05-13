@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
 import static org.mockito.Mockito.mock;
@@ -21,7 +22,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.PrintWriter;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,9 +48,19 @@ public class ImputeRunnerTest {
         headerRow = true;
         runner = new ImputeRunner();
 
-        runner.parse("--number-of-trees", Integer.toString(numberOfTrees), "--sample-size",
-                Integer.toString(sampleSize), "--window-size", Integer.toString(windowSize), "--delimiter", delimiter,
-                "--missing-value-marker", missingValueMarker, "--header-row", Boolean.toString(headerRow));
+        runner.parse(
+                "--number-of-trees",
+                Integer.toString(numberOfTrees),
+                "--sample-size",
+                Integer.toString(sampleSize),
+                "--window-size",
+                Integer.toString(windowSize),
+                "--delimiter",
+                delimiter,
+                "--missing-value-marker",
+                missingValueMarker,
+                "--header-row",
+                Boolean.toString(headerRow));
 
         in = mock(BufferedReader.class);
         out = mock(PrintWriter.class);
@@ -58,7 +68,11 @@ public class ImputeRunnerTest {
 
     @Test
     public void testRun() throws Exception {
-        when(in.readLine()).thenReturn("a,b").thenReturn("1.0,2.0").thenReturn("4.0,X").thenReturn(null);
+        when(in.readLine())
+                .thenReturn("a,b")
+                .thenReturn("1.0,2.0")
+                .thenReturn("4.0,X")
+                .thenReturn(null);
         runner.run(in, out);
         verify(out).println("a,b");
         verify(out).println("1.0,2.0");
@@ -67,7 +81,7 @@ public class ImputeRunnerTest {
 
     @Test
     public void testWriteHeader() {
-        String[] line = new String[] { "a", "b" };
+        String[] line = new String[] {"a", "b"};
         runner.prepareAlgorithm(2);
         runner.writeHeader(line, out);
         verify(out).println("a,b");
@@ -75,14 +89,13 @@ public class ImputeRunnerTest {
 
     @Test
     public void testProcessLine() {
-        String[] line = new String[] { "1.0", "2.0" };
+        String[] line = new String[] {"1.0", "2.0"};
         runner.prepareAlgorithm(2);
         runner.processLine(line, out);
         verify(out).println("1.0,2.0");
 
-        line = new String[] { missingValueMarker, "2.0" };
+        line = new String[] {missingValueMarker, "2.0"};
         runner.processLine(line, out);
         verify(out).println("0.0,0.0");
     }
-
 }

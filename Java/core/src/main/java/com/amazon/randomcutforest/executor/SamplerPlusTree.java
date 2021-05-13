@@ -13,14 +13,10 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-
-import java.util.Optional;
-import java.util.function.Function;
-
-import lombok.Getter;
 
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.MultiVisitor;
@@ -29,14 +25,15 @@ import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
+import java.util.Optional;
+import java.util.function.Function;
+import lombok.Getter;
 
 /**
- * A SamplerPlusTree corresponds to a combination of sampler and tree where the
- * information is passed via P and the tree can seek explicit point information
- * of type Q
+ * A SamplerPlusTree corresponds to a combination of sampler and tree where the information is
+ * passed via P and the tree can seek explicit point information of type Q
  *
- * @param <P> The internal point representation expected by the component models
- *            in this list.
+ * @param <P> The internal point representation expected by the component models in this list.
  * @param <Q> The explicit data type of points being passed
  */
 @Getter
@@ -46,12 +43,11 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     private IStreamSampler<P> sampler;
 
     /**
-     * Constructor of a pair of sampler + tree. The sampler is the driver's seat
-     * because it aceepts/rejects independently of the tree and the tree has to
-     * remain consistent.
+     * Constructor of a pair of sampler + tree. The sampler is the driver's seat because it
+     * aceepts/rejects independently of the tree and the tree has to remain consistent.
      *
      * @param sampler the sampler
-     * @param tree    the corresponding tree
+     * @param tree the corresponding tree
      */
     public SamplerPlusTree(IStreamSampler<P> sampler, ITree<P, Q> tree) {
         checkNotNull(sampler, "sampler must not be null");
@@ -61,22 +57,18 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     }
 
     /**
-     * This is main function that maintains the coordination between the sampler and
-     * the tree. The sampler proposes acceptance (by setting the weight in
-     * queueEntry) and in that case the evictedPoint is set. That evictedPoint is
-     * removed from the tree and in that case its reference deleteRef of type T is
-     * noted. The point is then added to the tree where the tree may propose a new
-     * reference newRef because the point is already present in the tree. The
-     * sampler entry is modified and added to the sampler. The pair of the newRef
-     * and deleteRef are returned for plausible bookkeeping in update executors.
+     * This is main function that maintains the coordination between the sampler and the tree. The
+     * sampler proposes acceptance (by setting the weight in queueEntry) and in that case the
+     * evictedPoint is set. That evictedPoint is removed from the tree and in that case its
+     * reference deleteRef of type T is noted. The point is then added to the tree where the tree
+     * may propose a new reference newRef because the point is already present in the tree. The
+     * sampler entry is modified and added to the sampler. The pair of the newRef and deleteRef are
+     * returned for plausible bookkeeping in update executors.
      *
-     * @param point         point in consideration for updating the sampler plus
-     *                      tree
-     * @param sequenceIndex a time stamp that is used to generate weight in the
-     *                      timed sampling
+     * @param point point in consideration for updating the sampler plus tree
+     * @param sequenceIndex a time stamp that is used to generate weight in the timed sampling
      * @return the pair of (newRef,deleteRef) with potential Optional.empty()
      */
-
     @Override
     public UpdateResult<P> update(P point, long sequenceIndex) {
         P deleteRef = null;
@@ -104,7 +96,8 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     }
 
     @Override
-    public <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
+    public <R> R traverseMulti(
+            double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
         return tree.traverseMulti(point, visitorFactory);
     }
 

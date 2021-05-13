@@ -13,16 +13,17 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
+
+import com.amazon.randomcutforest.RandomCutForest;
 import java.util.Collections;
 import java.util.List;
 
-import com.amazon.randomcutforest.RandomCutForest;
-
 /**
- * A line transformer that updates its internal RandomCutForest instance but
- * does not produce any output.
+ * A line transformer that updates its internal RandomCutForest instance but does not produce any
+ * output.
  */
 public class UpdateOnlyTransformer implements LineTransformer {
 

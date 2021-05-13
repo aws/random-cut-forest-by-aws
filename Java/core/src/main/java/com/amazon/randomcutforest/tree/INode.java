@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 public interface INode<NodeReference> extends INodeView {
@@ -24,5 +25,4 @@ public interface INode<NodeReference> extends INodeView {
     INode<NodeReference> getRightChild();
 
     INode<NodeReference> getParent();
-
 }

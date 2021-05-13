@@ -13,38 +13,34 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.Visitor;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.Visitor;
-
 /**
- * A Random Cut Tree is a tree data structure whose leaves represent points
- * inserted into the tree and whose interior nodes represent regions of space
- * defined by Bounding Boxes and Cuts. New nodes and leaves are added to the
- * tree by making random cuts.
+ * A Random Cut Tree is a tree data structure whose leaves represent points inserted into the tree
+ * and whose interior nodes represent regions of space defined by Bounding Boxes and Cuts. New nodes
+ * and leaves are added to the tree by making random cuts.
  *
- * This tree is implemented based on pointers and uses he same logic as the
- * Compact Random Cut trees, providing an alternate implementation to
- * RandomCutTree corresponding to the initial version.
+ * <p>This tree is implemented based on pointers and uses he same logic as the Compact Random Cut
+ * trees, providing an alternate implementation to RandomCutTree corresponding to the initial
+ * version.
  *
- * The main use of this class is to be updated with points sampled from a
- * stream, and to define traversal methods. Users can then implement a
- * {@link Visitor} which can be submitted to a traversal method in order to
- * compute a statistic from the tree.
+ * <p>The main use of this class is to be updated with points sampled from a stream, and to define
+ * traversal methods. Users can then implement a {@link Visitor} which can be submitted to a
+ * traversal method in order to compute a statistic from the tree.
  */
 public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[]> {
 
     public static final int DEFAULT_OUTPUT_AFTER = 64;
 
-    /**
-     * @return a new RandomCutTree builder.
-     */
+    /** @return a new RandomCutTree builder. */
     public static Builder<?> builder() {
         return new Builder<>();
     }
@@ -52,48 +48,49 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     /**
      * Create a new RandomCutTree with optional arguments set to default values.
      *
-     * @param randomSeed The random seed used to create the random number generator
-     *                   for this tree.
+     * @param randomSeed The random seed used to create the random number generator for this tree.
      * @return a new RandomCutTree with optional arguments set to default values.
      */
     public static RandomCutTree defaultTree(long randomSeed) {
         return builder().randomSeed(randomSeed).build();
     }
 
-    /**
-     * @return a new RandomCutTree with optional arguments set to default values.
-     */
+    /** @return a new RandomCutTree with optional arguments set to default values. */
     public static RandomCutTree defaultTree() {
         return builder().random(new Random()).build();
     }
 
-    /**
-     * @return true if nodes in this tree retain the center of mass, false
-     *         otherwise.
-     */
+    /** @return true if nodes in this tree retain the center of mass, false otherwise. */
     public boolean centerOfMassEnabled() {
         return super.centerOfMassEnabled;
     }
 
-    /**
-     * @return true if points in this tree are saved with sequence indexes, false
-     *         otherwise.
-     */
+    /** @return true if points in this tree are saved with sequence indexes, false otherwise. */
     public boolean storeSequenceIndexesEnabled() {
         return super.storeSequenceIndexesEnabled;
     }
 
-    public RandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
+    public RandomCutTree(
+            Random random,
+            double cacheFraction,
+            boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         super(random, cacheFraction, enableCenterOfMass, enableSequenceIndices);
         root = null;
     }
 
-    public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
+    public RandomCutTree(
+            long seed,
+            boolean enableCache,
+            boolean enableCenterOfMass,
+            boolean enableSequenceIndices) {
         this(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
     }
 
-    public RandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
+    public RandomCutTree(
+            Random random,
+            boolean enableCache,
+            boolean enableCenterOfMass,
             boolean enableSequenceIndices) {
         super(random, enableCache, enableCenterOfMass, enableSequenceIndices);
         root = null;
@@ -149,7 +146,8 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(
+            double[] first, double[] second) {
         return new BoundingBox(first, second);
     }
 
@@ -170,7 +168,9 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     @Override
     protected BoundingBox getMutableLeafBoxFromLeafNode(Node node) {
         double[] leafPoint = node.getLeafPoint();
-        return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length), Arrays.copyOf(leafPoint, leafPoint.length),
+        return new BoundingBox(
+                Arrays.copyOf(leafPoint, leafPoint.length),
+                Arrays.copyOf(leafPoint, leafPoint.length),
                 0);
     }
 
@@ -234,8 +234,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    protected void delete(Node node) {
-    }
+    protected void delete(Node node) {}
 
     @Override
     protected int getCutDimension(Node node) {
@@ -282,8 +281,15 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    protected Node addNode(Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
-        Node candidate = new Node(leftChild, rightChild, new Cut(cutDimension, cutValue), null, centerOfMassEnabled);
+    protected Node addNode(
+            Node leftChild, Node rightChild, int cutDimension, double cutValue, int mass) {
+        Node candidate =
+                new Node(
+                        leftChild,
+                        rightChild,
+                        new Cut(cutDimension, cutValue),
+                        null,
+                        centerOfMassEnabled);
         candidate.setMass(mass);
         return candidate;
     }
@@ -307,8 +313,7 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
-    void setLeafPointReference(Node node, double[] point) {
-    }
+    void setLeafPointReference(Node node, double[] point) {}
 
     @Override
     protected int getMass(Node node) {
@@ -324,7 +329,8 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     protected void deleteSequenceIndex(Node node, long uniqueSequenceNumber) {
         if (storeSequenceIndexesEnabled) {
             if (!node.getSequenceIndexes().contains(uniqueSequenceNumber)) {
-                throw new IllegalStateException("Error in sequence index. Inconsistency in trees in delete step.");
+                throw new IllegalStateException(
+                        "Error in sequence index. Inconsistency in trees in delete step.");
             }
         }
         node.deleteSequenceIndex(uniqueSequenceNumber);

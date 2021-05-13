@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -23,21 +24,18 @@ import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 import java.util.Arrays;
 
 /**
- * A fixed-size buffer for storing interior tree nodes. An interior node is
- * defined by its location in the tree (parent and child nodes), its random cut,
- * and its bounding box. The NodeStore class uses arrays to store these field
- * values for a collection of nodes. An index in the store can be used to look
- * up the field values for a particular node.
+ * A fixed-size buffer for storing interior tree nodes. An interior node is defined by its location
+ * in the tree (parent and child nodes), its random cut, and its bounding box. The NodeStore class
+ * uses arrays to store these field values for a collection of nodes. An index in the store can be
+ * used to look up the field values for a particular node.
  *
- * The internal nodes (handled by this store) corresponds to
- * [0..upperRangeLimit]
+ * <p>The internal nodes (handled by this store) corresponds to [0..upperRangeLimit]
  *
- * If we think of an array of Node objects as being row-oriented (where each row
- * is a Node), then this class is analogous to a column-oriented database of
- * Nodes.
+ * <p>If we think of an array of Node objects as being row-oriented (where each row is a Node), then
+ * this class is analogous to a column-oriented database of Nodes.
  *
- * Note that a NodeStore does not store instances of the
- * {@link com.amazon.randomcutforest.tree.Node} class.
+ * <p>Note that a NodeStore does not store instances of the {@link
+ * com.amazon.randomcutforest.tree.Node} class.
  */
 public class NodeStore implements INodeStore {
 
@@ -54,7 +52,7 @@ public class NodeStore implements INodeStore {
 
     /**
      * Create a new NodeStore with the given capacity.
-     * 
+     *
      * @param capacity The maximum number of Nodes whose data can be stored.
      */
     public NodeStore(int capacity) {
@@ -74,13 +72,23 @@ public class NodeStore implements INodeStore {
         Arrays.fill(leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
     }
 
-    public NodeStore(int capacity, int[] leftIndex, int[] rightIndex, int[] cutDimension, double[] cutValue,
-            int[] leafMass, int[] leafPointIndex, int[] freeNodeIndexes, int freeNodeIndexPointer,
-            int[] freeLeafIndexes, int freeLeafIndexPointer) {
+    public NodeStore(
+            int capacity,
+            int[] leftIndex,
+            int[] rightIndex,
+            int[] cutDimension,
+            double[] cutValue,
+            int[] leafMass,
+            int[] leafPointIndex,
+            int[] freeNodeIndexes,
+            int freeNodeIndexPointer,
+            int[] freeLeafIndexes,
+            int freeLeafIndexPointer) {
         // TODO validations
         this.capacity = capacity;
         this.freeNodeManager = new IndexManager(capacity, freeNodeIndexes, freeNodeIndexPointer);
-        this.freeLeafManager = new IndexManager(capacity + 1, freeLeafIndexes, freeLeafIndexPointer);
+        this.freeLeafManager =
+                new IndexManager(capacity + 1, freeLeafIndexes, freeLeafIndexPointer);
         this.parentIndex = getParentIndex(leftIndex, rightIndex);
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
@@ -115,16 +123,22 @@ public class NodeStore implements INodeStore {
 
     /**
      * Add new node data to this store.
-     * 
-     * @param mass         Node mass.
-     * @param parentIndex  Index of the parent node.
-     * @param leftIndex    Index of the left child node.
-     * @param rightIndex   Index of the right child node.
+     *
+     * @param mass Node mass.
+     * @param parentIndex Index of the parent node.
+     * @param leftIndex Index of the left child node.
+     * @param rightIndex Index of the right child node.
      * @param cutDimension The dimension of the cut in this node.
-     * @param cutValue     The value of the cut in this node.
+     * @param cutValue The value of the cut in this node.
      * @return the index of the newly stored node.
      */
-    public int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass) {
+    public int addNode(
+            int parentIndex,
+            int leftIndex,
+            int rightIndex,
+            int cutDimension,
+            double cutValue,
+            int mass) {
         int index = freeNodeManager.takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = cutDimension;
@@ -250,16 +264,19 @@ public class NodeStore implements INodeStore {
 
     int[] getParentIndex(int[] leftIndex, int[] rightIndex) {
         int capacity = leftIndex.length;
-        checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
+        checkState(
+                rightIndex.length == capacity, "incorrect function call, arrays should be equal");
         int[] parentIndex = new int[2 * capacity + 1];
         Arrays.fill(parentIndex, NULL);
         for (short i = 0; i < capacity; i++) {
             if (leftIndex[i] != NULL) {
-                checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
+                checkState(
+                        parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
                 parentIndex[leftIndex[i]] = i;
             }
             if (rightIndex[i] != NULL) {
-                checkState(parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
+                checkState(
+                        parentIndex[rightIndex[i]] == NULL, "incorrect state, conflicting parent");
                 parentIndex[rightIndex[i]] = i;
             }
         }
@@ -354,5 +371,4 @@ public class NodeStore implements INodeStore {
         }
         return check;
     }
-
 }

@@ -13,25 +13,26 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.sampler;
 
 /**
- * A simple wrapper class representing a point that has been sampled by a
- * sampler. A sampled point can be added to or removed from a tree.
- * 
+ * A simple wrapper class representing a point that has been sampled by a sampler. A sampled point
+ * can be added to or removed from a tree.
+ *
  * @param <P> The point representation used by this sampled point.
  */
 public interface ISampled<P> {
     /**
      * Return the sampled value.
-     * 
+     *
      * @return the sampled value.
      */
     P getValue();
 
     /**
      * Return the sequence index of the sampled value.
-     * 
+     *
      * @return the sequence index of the sampled value.
      */
     long getSequenceIndex();

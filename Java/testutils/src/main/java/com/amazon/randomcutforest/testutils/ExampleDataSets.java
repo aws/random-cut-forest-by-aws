@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.testutils;
 
 import static java.lang.Math.PI;
@@ -22,17 +23,15 @@ import static java.lang.Math.sin;
 import java.util.Random;
 
 /**
- * This class samples point from a mixture of 2 multi-variate normal
- * distribution with covariance matrices of the form sigma * I. One of the
- * normal distributions is considered the base distribution, the second is
- * considered the anomaly distribution, and there are random transitions between
- * the two.
+ * This class samples point from a mixture of 2 multi-variate normal distribution with covariance
+ * matrices of the form sigma * I. One of the normal distributions is considered the base
+ * distribution, the second is considered the anomaly distribution, and there are random transitions
+ * between the two.
  */
 public class ExampleDataSets {
 
     public static double[][] generateFan(int numberPerBlade, int numberOfBlades) {
-        if ((numberOfBlades > 12) || (numberPerBlade <= 0))
-            return null;
+        if ((numberOfBlades > 12) || (numberPerBlade <= 0)) return null;
         int newDimensions = 2;
         int dataSize = numberOfBlades * numberPerBlade;
 
@@ -57,12 +56,10 @@ public class ExampleDataSets {
                     transformedData[j][0] = vec[0] + 0.6 * sin(2 * PI * i / numberOfBlades);
                     transformedData[j][1] = vec[1] + 0.6 * cos(2 * PI * i / numberOfBlades);
                     break;
-                } else
-                    ++i;
+                } else ++i;
             }
         }
         return transformedData;
-
     }
 
     static double[] rotateClockWise(double[] point, double theta) {
@@ -71,5 +68,4 @@ public class ExampleDataSets {
         result[1] = -sin(theta) * point[0] + cos(theta) * point[1];
         return result;
     }
-
 }

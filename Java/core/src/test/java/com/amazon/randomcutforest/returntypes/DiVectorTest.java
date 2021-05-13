@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -21,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.Arrays;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -84,10 +84,10 @@ public class DiVectorTest {
         double z = 9.9;
         DiVector result = vector.scale(z);
 
-        double[] expected = new double[] { 1.1 * 9.9, 0.0, 3.1 * 9.9 };
+        double[] expected = new double[] {1.1 * 9.9, 0.0, 3.1 * 9.9};
         assertArrayEquals(expected, result.high);
 
-        expected = new double[] { 0.0, 2.2 * 9.9, 0.0 };
+        expected = new double[] {0.0, 2.2 * 9.9, 0.0};
         assertArrayEquals(expected, result.low);
 
         DiVector emptyVector = new DiVector(dimensions);

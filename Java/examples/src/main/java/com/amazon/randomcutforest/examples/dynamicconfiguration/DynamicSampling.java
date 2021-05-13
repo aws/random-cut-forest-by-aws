@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.dynamicconfiguration;
+
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
@@ -48,10 +50,24 @@ public class DynamicSampling implements Example {
         int dataSize = 4 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
-        RandomCutForest forest2 = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .randomSeed(0)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
+        RandomCutForest forest2 =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .randomSeed(0)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
 
         int first_anomalies = 0;
         int second_anomalies = 0;
@@ -67,7 +83,11 @@ public class DynamicSampling implements Example {
             forest.update(point);
             forest2.update(point);
         }
-        System.out.println("Unusual scores: forest one " + first_anomalies + ", second one " + second_anomalies);
+        System.out.println(
+                "Unusual scores: forest one "
+                        + first_anomalies
+                        + ", second one "
+                        + second_anomalies);
         // should be roughly equal
 
         first_anomalies = second_anomalies = 0;
@@ -82,7 +102,11 @@ public class DynamicSampling implements Example {
             forest.update(point);
             forest2.update(point);
         }
-        System.out.println("Unusual scores: forest one " + first_anomalies + ", second one " + second_anomalies);
+        System.out.println(
+                "Unusual scores: forest one "
+                        + first_anomalies
+                        + ", second one "
+                        + second_anomalies);
         // forest2 should adapt faster
 
         first_anomalies = second_anomalies = 0;
@@ -108,8 +132,12 @@ public class DynamicSampling implements Example {
             forest2.update(point);
         }
         // both should show the similar rate of adjustment
-        System.out.println("Unusual scores: forest one " + first_anomalies + ", second one " + second_anomalies
-                + ", forced (first) " + forced_change_anomalies);
-
+        System.out.println(
+                "Unusual scores: forest one "
+                        + first_anomalies
+                        + ", second one "
+                        + second_anomalies
+                        + ", forced (first) "
+                        + forced_change_anomalies);
     }
 }

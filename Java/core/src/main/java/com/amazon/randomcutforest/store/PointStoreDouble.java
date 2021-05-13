@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -20,28 +21,36 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import java.util.Arrays;
 
 /**
- * PointStore is a fixed size repository of points, where each point is a float
- * array of a specified length. A PointStore counts references to points that
- * are added, and frees space internally when a given point is no longer in use.
- * The primary use of this store is to enable compression since the points in
- * two different trees do not have to be stored separately.
+ * PointStore is a fixed size repository of points, where each point is a float array of a specified
+ * length. A PointStore counts references to points that are added, and frees space internally when
+ * a given point is no longer in use. The primary use of this store is to enable compression since
+ * the points in two different trees do not have to be stored separately.
  *
- * Stored points are referenced by index values which can be used to look up the
- * point values and increment and decrement reference counts. Valid index values
- * are between 0 (inclusive) and capacity (exclusive).
+ * <p>Stored points are referenced by index values which can be used to look up the point values and
+ * increment and decrement reference counts. Valid index values are between 0 (inclusive) and
+ * capacity (exclusive).
  */
 public class PointStoreDouble extends PointStore<double[], double[]> {
 
     public PointStoreDouble(Builder builder) {
         super(builder);
-        checkArgument(builder.store == null || builder.store.length == currentStoreCapacity * dimensions,
+        checkArgument(
+                builder.store == null || builder.store.length == currentStoreCapacity * dimensions,
                 " incorrect store length");
-        store = (builder.store == null) ? new double[currentStoreCapacity * dimensions] : builder.store;
+        store =
+                (builder.store == null)
+                        ? new double[currentStoreCapacity * dimensions]
+                        : builder.store;
     }
 
     public PointStoreDouble(int dimensions, int capacity) {
-        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).indexCapacity(capacity)
-                .currentStoreCapacity(capacity));
+        this(
+                new Builder()
+                        .dimensions(dimensions)
+                        .shingleSize(1)
+                        .capacity(capacity)
+                        .indexCapacity(capacity)
+                        .currentStoreCapacity(capacity));
     }
 
     @Override
@@ -71,20 +80,18 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     }
 
     /**
-     * Test whether the given point is equal to the point stored at the given index.
-     * This operation uses point-wise <code>==</code> to test for equality.
+     * Test whether the given point is equal to the point stored at the given index. This operation
+     * uses point-wise <code>==</code> to test for equality.
      *
      * @param index The index value of the point we are comparing to.
      * @param point The point we are comparing for equality.
-     * @return true if the point stored at the index is equal to the given point,
-     *         false otherwise.
+     * @return true if the point stored at the index is equal to the given point, false otherwise.
      * @throws IllegalArgumentException if the index value is not valid.
-     * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
-     * @throws IllegalArgumentException if the length of the point does not match
-     *                                  the point store's dimensions.
+     * @throws IllegalArgumentException if the current reference count for this index is
+     *     nonpositive.
+     * @throws IllegalArgumentException if the length of the point does not match the point store's
+     *     dimensions.
      */
-
     @Override
     public boolean pointEquals(int index, double[] point) {
         indexManager.checkValidIndex(index);
@@ -102,12 +109,11 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     /**
      * Get a copy of the point at the given index.
      *
-     * @param index An index value corresponding to a storage location in this point
-     *              store.
+     * @param index An index value corresponding to a storage location in this point store.
      * @return a copy of the point stored at the given index.
      * @throws IllegalArgumentException if the index value is not valid.
-     * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
+     * @throws IllegalArgumentException if the current reference count for this index is
+     *     nonpositive.
      */
     @Override
     public double[] get(int index) {

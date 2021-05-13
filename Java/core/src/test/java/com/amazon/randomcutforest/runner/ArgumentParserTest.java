@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,8 +46,21 @@ public class ArgumentParserTest {
 
     @Test
     public void testParse() {
-        parser.parse("--number-of-trees", "222", "--sample-size", "123", "--window-size", "50", "--shingle-size", "4",
-                "--shingle-cyclic", "true", "--delimiter", "\t", "--header-row", "true");
+        parser.parse(
+                "--number-of-trees",
+                "222",
+                "--sample-size",
+                "123",
+                "--window-size",
+                "50",
+                "--shingle-size",
+                "4",
+                "--shingle-cyclic",
+                "true",
+                "--delimiter",
+                "\t",
+                "--header-row",
+                "true");
 
         assertEquals(222, parser.getNumberOfTrees());
         assertEquals(123, parser.getSampleSize());

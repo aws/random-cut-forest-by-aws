@@ -13,8 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
+
+import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.MultiVisitorFactory;
+import com.amazon.randomcutforest.VisitorFactory;
+import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
@@ -23,14 +29,9 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import com.amazon.randomcutforest.ComponentList;
-import com.amazon.randomcutforest.MultiVisitorFactory;
-import com.amazon.randomcutforest.VisitorFactory;
-import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-
 /**
- * An implementation of forest traversal methods that uses a private thread pool
- * to visit trees in parallel.
+ * An implementation of forest traversal methods that uses a private thread pool to visit trees in
+ * parallel.
  */
 public class ParallelForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
@@ -44,31 +45,50 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(
+            double[] point,
+            VisitorFactory<R> visitorFactory,
+            BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
-        return submitAndJoin(() -> components.parallelStream().map(c -> c.traverse(point, visitorFactory))
-                .reduce(accumulator).map(finisher))
-                        .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(
+                        () ->
+                                components.parallelStream()
+                                        .map(c -> c.traverse(point, visitorFactory))
+                                        .reduce(accumulator)
+                                        .map(finisher))
+                .orElseThrow(
+                        () -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(
+            double[] point, VisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         return submitAndJoin(
-                () -> components.parallelStream().map(c -> c.traverse(point, visitorFactory)).collect(collector));
+                () ->
+                        components.parallelStream()
+                                .map(c -> c.traverse(point, visitorFactory))
+                                .collect(collector));
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
-            ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
+    public <R, S> S traverseForest(
+            double[] point,
+            VisitorFactory<R> visitorFactory,
+            ConvergingAccumulator<R> accumulator,
+            Function<R, S> finisher) {
 
         for (int i = 0; i < components.size(); i += threadPoolSize) {
             final int start = i;
             final int end = Math.min(start + threadPoolSize, components.size());
 
-            List<R> results = submitAndJoin(() -> components.subList(start, end).parallelStream()
-                    .map(c -> c.traverse(point, visitorFactory)).collect(Collectors.toList()));
+            List<R> results =
+                    submitAndJoin(
+                            () ->
+                                    components.subList(start, end).parallelStream()
+                                            .map(c -> c.traverse(point, visitorFactory))
+                                            .collect(Collectors.toList()));
             results.forEach(accumulator::accept);
 
             if (accumulator.isConverged()) {
@@ -80,20 +100,31 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
-            BinaryOperator<R> accumulator, Function<R, S> finisher) {
+    public <R, S> S traverseForestMulti(
+            double[] point,
+            MultiVisitorFactory<R> visitorFactory,
+            BinaryOperator<R> accumulator,
+            Function<R, S> finisher) {
 
-        return submitAndJoin(() -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory))
-                .reduce(accumulator).map(finisher))
-                        .orElseThrow(() -> new IllegalStateException("accumulator returned an empty result"));
+        return submitAndJoin(
+                        () ->
+                                components.parallelStream()
+                                        .map(c -> c.traverseMulti(point, visitorFactory))
+                                        .reduce(accumulator)
+                                        .map(finisher))
+                .orElseThrow(
+                        () -> new IllegalStateException("accumulator returned an empty result"));
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
-            Collector<R, ?, S> collector) {
+    public <R, S> S traverseForestMulti(
+            double[] point, MultiVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         return submitAndJoin(
-                () -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector));
+                () ->
+                        components.parallelStream()
+                                .map(c -> c.traverseMulti(point, visitorFactory))
+                                .collect(collector));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

@@ -13,11 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.profilers;
+
 
 import java.util.Collection;
 import java.util.Collections;
-
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
@@ -27,10 +28,7 @@ import org.openjdk.jmh.results.IterationResult;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.ScalarResult;
 
-/**
- * A profiler that uses the JAMM memory meter to measure the size of an object
- * graph.
- */
+/** A profiler that uses the JAMM memory meter to measure the size of an object graph. */
 public class ObjectGraphSizeProfiler implements InternalProfiler {
 
     private static Object object;
@@ -41,18 +39,20 @@ public class ObjectGraphSizeProfiler implements InternalProfiler {
     }
 
     @Override
-    public void beforeIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams) {
-    }
+    public void beforeIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams) {}
 
     @Override
-    public Collection<? extends Result> afterIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams,
+    public Collection<? extends Result> afterIteration(
+            BenchmarkParams benchmarkParams,
+            IterationParams iterationParams,
             IterationResult iterationResult) {
         long size = 0;
         if (object != null) {
             size = meter.measureDeep(object);
             object = null;
         }
-        ScalarResult result = new ScalarResult("+object-graph-size.bytes", size, "bytes", AggregationPolicy.AVG);
+        ScalarResult result =
+                new ScalarResult("+object-graph-size.bytes", size, "bytes", AggregationPolicy.AVG);
         return Collections.singleton(result);
     }
 

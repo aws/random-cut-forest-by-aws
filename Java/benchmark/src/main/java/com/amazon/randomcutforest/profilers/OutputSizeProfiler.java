@@ -13,11 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.profilers;
+
 
 import java.util.Collection;
 import java.util.Collections;
-
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.InternalProfiler;
@@ -27,9 +28,9 @@ import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.ScalarResult;
 
 /**
- * This simple profile outputs the size of a provided byte array or string as
- * part of the JMH metrics. We use it to measure the size of output in
- * {@link com.amazon.randomcutforest.StateMapperBenchmark}.
+ * This simple profile outputs the size of a provided byte array or string as part of the JMH
+ * metrics. We use it to measure the size of output in {@link
+ * com.amazon.randomcutforest.StateMapperBenchmark}.
  */
 public class OutputSizeProfiler implements InternalProfiler {
 
@@ -44,18 +45,20 @@ public class OutputSizeProfiler implements InternalProfiler {
     }
 
     @Override
-    public void beforeIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams) {
-    }
+    public void beforeIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams) {}
 
     @Override
-    public Collection<? extends Result> afterIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams,
+    public Collection<? extends Result> afterIteration(
+            BenchmarkParams benchmarkParams,
+            IterationParams iterationParams,
             IterationResult iterationResult) {
         int length = 0;
         if (bytes != null) {
             length = bytes.length;
             bytes = null;
         }
-        ScalarResult result = new ScalarResult("+output-size.bytes", length, "bytes", AggregationPolicy.AVG);
+        ScalarResult result =
+                new ScalarResult("+output-size.bytes", length, "bytes", AggregationPolicy.AVG);
         return Collections.singleton(result);
     }
 

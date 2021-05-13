@@ -13,18 +13,17 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.amazon.randomcutforest.RandomCutForest;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.RandomCutForest;
 
 public class UpdateOnlyTransformerTest {
 
@@ -41,7 +40,7 @@ public class UpdateOnlyTransformerTest {
     public void testGetResultValues() {
         List<String> result = transformer.getResultValues(1.0, 2.0, 3.0);
         assertTrue(result.isEmpty());
-        verify(forest).update(new double[] { 1.0, 2.0, 3.0 });
+        verify(forest).update(new double[] {1.0, 2.0, 3.0});
     }
 
     @Test

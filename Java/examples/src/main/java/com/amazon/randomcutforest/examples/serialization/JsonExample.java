@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.serialization;
+
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
@@ -24,8 +26,8 @@ import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Serialize a Random Cut Forest to JSON using
- * <a href="https://github.com/FasterXML/jackson">Jackson</a>.
+ * Serialize a Random Cut Forest to JSON using <a
+ * href="https://github.com/FasterXML/jackson">Jackson</a>.
  */
 public class JsonExample implements Example {
 
@@ -52,8 +54,14 @@ public class JsonExample implements Example {
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
 
         int dataSize = 4 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
@@ -69,13 +77,15 @@ public class JsonExample implements Example {
 
         String json = jsonMapper.writeValueAsString(mapper.toState(forest));
 
-        System.out.printf("dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n", dimensions,
-                numberOfTrees, sampleSize, precision);
+        System.out.printf(
+                "dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n",
+                dimensions, numberOfTrees, sampleSize, precision);
         System.out.printf("JSON size = %d bytes%n", json.getBytes().length);
 
         // Restore from JSON and compare anomaly scores produced by the two forests
 
-        RandomCutForest forest2 = mapper.toModel(jsonMapper.readValue(json, RandomCutForestState.class));
+        RandomCutForest forest2 =
+                mapper.toModel(jsonMapper.readValue(json, RandomCutForestState.class));
 
         int testSize = 100;
         double delta = Math.log(sampleSize) / Math.log(2) * 0.05;

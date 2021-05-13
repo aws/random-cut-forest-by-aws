@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,7 +45,7 @@ public class CutTest {
 
     @Test
     public void testIsLeftOf() {
-        double[] point = new double[] { 1.0, 2.0, 3.0, 4.0 };
+        double[] point = new double[] {1.0, 2.0, 3.0, 4.0};
         assertTrue(Cut.isLeftOf(point, cut));
 
         point[2] = 99.9;

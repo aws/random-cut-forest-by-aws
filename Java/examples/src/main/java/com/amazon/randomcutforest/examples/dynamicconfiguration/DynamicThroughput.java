@@ -13,15 +13,16 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.dynamicconfiguration;
 
-import java.time.Duration;
-import java.time.Instant;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.time.Duration;
+import java.time.Instant;
 
 public class DynamicThroughput implements Example {
 
@@ -55,10 +56,24 @@ public class DynamicThroughput implements Example {
 
         for (int i = 0; i < 5; i++) {
 
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
-            RandomCutForest forest2 = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+            RandomCutForest forest =
+                    RandomCutForest.builder()
+                            .compact(true)
+                            .dimensions(dimensions)
+                            .randomSeed(0)
+                            .numberOfTrees(numberOfTrees)
+                            .sampleSize(sampleSize)
+                            .precision(precision)
+                            .build();
+            RandomCutForest forest2 =
+                    RandomCutForest.builder()
+                            .compact(true)
+                            .dimensions(dimensions)
+                            .randomSeed(0)
+                            .numberOfTrees(numberOfTrees)
+                            .sampleSize(sampleSize)
+                            .precision(precision)
+                            .build();
             forest2.setBoundingBoxCacheFraction(i * 0.25);
 
             int anomalies = 0;
@@ -94,10 +109,12 @@ public class DynamicThroughput implements Example {
                 throw new IllegalStateException("score mismatch");
             }
 
-            System.out.println("So far so good! Caching fraction = " + (i * 0.25) + ", Time ="
-                    + Duration.between(start, finish).toMillis() + " ms (note only one forest is changing)");
+            System.out.println(
+                    "So far so good! Caching fraction = "
+                            + (i * 0.25)
+                            + ", Time ="
+                            + Duration.between(start, finish).toMillis()
+                            + " ms (note only one forest is changing)");
         }
-
     }
-
 }

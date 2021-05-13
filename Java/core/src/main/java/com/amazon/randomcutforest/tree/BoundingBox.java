@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -21,14 +22,12 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 
 /**
- * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n
- * there are min and max values a_i and b_i, with a_i less than or equal to b_i,
- * such that the bounding box is equal to the set of points x whose ith
- * coordinate is between a_i and b_i.
+ * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n there are min and max
+ * values a_i and b_i, with a_i less than or equal to b_i, such that the bounding box is equal to
+ * the set of points x whose ith coordinate is between a_i and b_i.
  *
- * {@link Node}s in a {@link RandomCutTree} contain a BoundingBox, which is
- * always the smallest BoundingBox that contains all leaf points which are
- * descendents of the Node.
+ * <p>{@link Node}s in a {@link RandomCutTree} contain a BoundingBox, which is always the smallest
+ * BoundingBox that contains all leaf points which are descendents of the Node.
  */
 public class BoundingBox extends AbstractBoundingBox<double[]> {
 
@@ -42,8 +41,8 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
 
     /**
      * creates a box out of the union of two points
-     * 
-     * @param first  first point
+     *
+     * @param first first point
      * @param second second point
      */
     public BoundingBox(final double[] first, final double[] second) {
@@ -53,12 +52,13 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
             maxValues[i] = Math.max(first[i], second[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
-
     }
 
     @Override
     public BoundingBox copy() {
-        return new BoundingBox(Arrays.copyOf(minValues, minValues.length), Arrays.copyOf(maxValues, maxValues.length),
+        return new BoundingBox(
+                Arrays.copyOf(minValues, minValues.length),
+                Arrays.copyOf(maxValues, maxValues.length),
                 rangeSum);
     }
 
@@ -134,7 +134,8 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
 
     @Override
     public String toString() {
-        return String.format("BoundingBox(%s, %s)", Arrays.toString(minValues), Arrays.toString(maxValues));
+        return String.format(
+                "BoundingBox(%s, %s)", Arrays.toString(minValues), Arrays.toString(maxValues));
     }
 
     @Override
@@ -149,10 +150,10 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
     }
 
     /**
-     * Two bounding boxes are considered equal if they have the same dimensions and
-     * all their min values and max values are the same. Min and max values are
-     * compared as primitive doubles using ==, so two bounding boxes are not equal
-     * if their min and max values are merely very close.
+     * Two bounding boxes are considered equal if they have the same dimensions and all their min
+     * values and max values are the same. Min and max values are compared as primitive doubles
+     * using ==, so two bounding boxes are not equal if their min and max values are merely very
+     * close.
      *
      * @param other An object to test for equality
      * @return true if other is a bounding box with the same min and max values
@@ -164,7 +165,8 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
         }
 
         AbstractBoundingBox<double[]> otherBox = (BoundingBox) other;
-        return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
+        return Arrays.equals(minValues, otherBox.minValues)
+                && Arrays.equals(maxValues, otherBox.maxValues);
     }
 
     @Override

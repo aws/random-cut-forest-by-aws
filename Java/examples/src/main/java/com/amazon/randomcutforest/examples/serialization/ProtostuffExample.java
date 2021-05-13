@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.serialization;
+
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
@@ -21,15 +23,14 @@ import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
 
 /**
- * Serialize a Random Cut Forest using the
- * <a href="https://github.com/protostuff/protostuff">protostuff</a> library.
+ * Serialize a Random Cut Forest using the <a
+ * href="https://github.com/protostuff/protostuff">protostuff</a> library.
  */
 public class ProtostuffExample implements Example {
     public static void main(String[] args) throws Exception {
@@ -55,8 +56,14 @@ public class ProtostuffExample implements Example {
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
 
         int dataSize = 1000 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
@@ -79,8 +86,9 @@ public class ProtostuffExample implements Example {
             buffer.clear();
         }
 
-        System.out.printf("dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n", dimensions,
-                numberOfTrees, sampleSize, precision);
+        System.out.printf(
+                "dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n",
+                dimensions, numberOfTrees, sampleSize, precision);
         System.out.printf("protostuff size = %d bytes%n", bytes.length);
 
         // Restore from protostuff and compare anomaly scores produced by the two

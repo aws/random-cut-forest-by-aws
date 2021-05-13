@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,7 +48,9 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        int index1 =
+                store.addNode(
+                        parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
         assertEquals(1, store.size());
         assertEquals(mass1, store.mass[index1]);
         assertEquals(parentIndex1, store.parentIndex[index1]);
@@ -63,7 +66,9 @@ public class NodeStoreTest {
         int cutDimension2 = 14;
         float cutValue2 = 15.5f;
 
-        int index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
+        int index2 =
+                store.addNode(
+                        parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
         assertEquals(2, store.size());
         assertEquals(mass2, store.mass[index2]);
         assertEquals(parentIndex2, store.parentIndex[index2]);
@@ -94,8 +99,16 @@ public class NodeStoreTest {
             store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
         }
 
-        assertThrows(IllegalStateException.class,
-                () -> store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1));
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        store.addNode(
+                                parentIndex1,
+                                leftIndex1,
+                                rightIndex1,
+                                cutDimension1,
+                                cutValue1,
+                                mass1));
     }
 
     @Test
@@ -107,7 +120,9 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        int index1 =
+                store.addNode(
+                        parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
         int mass2 = 11;
         short parentIndex2 = 11;
@@ -116,7 +131,9 @@ public class NodeStoreTest {
         int cutDimension2 = 14;
         float cutValue2 = 15.5f;
 
-        int index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
+        int index2 =
+                store.addNode(
+                        parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
 
         store.freeNodeManager.releaseIndex(index1);
         assertEquals(1, store.size());
@@ -139,15 +156,20 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        int index1 =
+                store.addNode(
+                        parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
         store.freeNodeManager.releaseIndex(index1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex(index1));
+        assertThrows(
+                IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex(index1));
     }
 
     @Test
     public void testRemoveFromEmptyStore() {
-        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex((short) 0));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> store.freeNodeManager.releaseIndex((short) 0));
     }
 
     @Test
@@ -161,6 +183,8 @@ public class NodeStoreTest {
 
         store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex((short) -1));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> store.freeNodeManager.releaseIndex((short) -1));
     }
 }

@@ -13,13 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import lombok.Data;
-
 import com.amazon.randomcutforest.config.Precision;
+import lombok.Data;
 
 @Data
 public class NodeStoreState {

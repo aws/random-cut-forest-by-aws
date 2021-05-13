@@ -13,12 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.config;
 
 /**
- * This interface is used by model classes to configure model parameters by
- * name. This is intended primarily for settings that a user may want to change
- * at runtime.
+ * This interface is used by model classes to configure model parameters by name. This is intended
+ * primarily for settings that a user may want to change at runtime.
  */
 public interface IDynamicConfig {
 

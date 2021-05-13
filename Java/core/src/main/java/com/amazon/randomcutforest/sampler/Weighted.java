@@ -13,31 +13,26 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.sampler;
+
 
 import lombok.Data;
 
 /**
- * A container class representing a weighted value. This generic type is used in
- * sampler implementations to store points along with weights that were computed
- * as part of sampling.
+ * A container class representing a weighted value. This generic type is used in sampler
+ * implementations to store points along with weights that were computed as part of sampling.
  *
  * @param <P> The representation of the point value.
  */
 @Data
 public class Weighted<P> implements ISampled<P> {
-    /**
-     * The sampled value.
-     */
+    /** The sampled value. */
     private final P value;
 
-    /**
-     * The weight assigned to this value.
-     */
+    /** The weight assigned to this value. */
     private final float weight;
 
-    /**
-     * The sequence index of the sampled value.
-     */
+    /** The sequence index of the sampled value. */
     private final long sequenceIndex;
 }

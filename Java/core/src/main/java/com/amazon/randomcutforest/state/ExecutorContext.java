@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state;
+
 
 import lombok.Data;
 

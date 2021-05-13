@@ -13,21 +13,22 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
+
+import com.amazon.randomcutforest.ComponentList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
-import com.amazon.randomcutforest.ComponentList;
-
 /**
- * An implementation of forest traversal methods that uses a private thread pool
- * to visit trees in parallel.
- * 
+ * An implementation of forest traversal methods that uses a private thread pool to visit trees in
+ * parallel.
+ *
  * @param <PointReference> references to a point
- * @param <Point>          explicit data type of a point
+ * @param <Point> explicit data type of a point
  */
 public class ParallelForestUpdateExecutor<PointReference, Point>
         extends AbstractForestUpdateExecutor<PointReference, Point> {
@@ -35,8 +36,10 @@ public class ParallelForestUpdateExecutor<PointReference, Point>
     private ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
-    public ParallelForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
-            ComponentList<PointReference, Point> components, int threadPoolSize) {
+    public ParallelForestUpdateExecutor(
+            IStateCoordinator<PointReference, Point> updateCoordinator,
+            ComponentList<PointReference, Point> components,
+            int threadPoolSize) {
         super(updateCoordinator, components);
         this.threadPoolSize = threadPoolSize;
         forkJoinPool = new ForkJoinPool(threadPoolSize);
@@ -44,8 +47,12 @@ public class ParallelForestUpdateExecutor<PointReference, Point>
 
     @Override
     protected List<UpdateResult<PointReference>> update(PointReference point, long seqNum) {
-        return submitAndJoin(() -> components.parallelStream().map(t -> t.update(point, seqNum))
-                .filter(UpdateResult::isStateChange).collect(Collectors.toList()));
+        return submitAndJoin(
+                () ->
+                        components.parallelStream()
+                                .map(t -> t.update(point, seqNum))
+                                .filter(UpdateResult::isStateChange)
+                                .collect(Collectors.toList()));
     }
 
     private <T> T submitAndJoin(Callable<T> callable) {

@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -66,7 +67,6 @@ public class DensityOutputTest {
             other1.probMass.low[i] = other2.probMass.low[i] = 8 * i + 4;
             other1.distances.low[i] = other2.distances.low[i] = 10 * i + 5;
             other1.measure.low[i] = other2.measure.low[i] = 12 * i + 6;
-
         }
 
         assertArrayEquals(other1.probMass.high, other2.probMass.high);
@@ -93,7 +93,6 @@ public class DensityOutputTest {
         assertArrayEquals(other1.probMass.low, other2.probMass.low);
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
-
     }
 
     @Test
@@ -127,19 +126,23 @@ public class DensityOutputTest {
         sumOfPoints = output.measure.getHighLowSum();
 
         for (int i = 0; i < dimensions; i++) {
-            assertEquals(output.measure.high[i] * density / sumOfPoints, densityVector.high[i], EPSILON);
-            assertEquals(output.measure.low[i] * density / sumOfPoints, densityVector.low[i], EPSILON);
+            assertEquals(
+                    output.measure.high[i] * density / sumOfPoints, densityVector.high[i], EPSILON);
+            assertEquals(
+                    output.measure.low[i] * density / sumOfPoints, densityVector.low[i], EPSILON);
         }
 
-        assertEquals(output.getDensity(DensityOutput.DEFAULT_SUM_OF_POINTS_SCALING_FACTOR, dimensions),
+        assertEquals(
+                output.getDensity(DensityOutput.DEFAULT_SUM_OF_POINTS_SCALING_FACTOR, dimensions),
                 output.getDensity());
 
-        densityVector = output.getDirectionalDensity(DensityOutput.DEFAULT_SUM_OF_POINTS_SCALING_FACTOR, dimensions);
+        densityVector =
+                output.getDirectionalDensity(
+                        DensityOutput.DEFAULT_SUM_OF_POINTS_SCALING_FACTOR, dimensions);
         DiVector defaultDensityVector = output.getDirectionalDensity();
         for (int i = 0; i < dimensions; i++) {
             assertEquals(densityVector.high[i], defaultDensityVector.high[i], EPSILON);
             assertEquals(densityVector.low[i], defaultDensityVector.low[i], EPSILON);
         }
     }
-
 }

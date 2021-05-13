@@ -13,14 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
+import com.amazon.randomcutforest.store.INodeStore;
 import java.util.Arrays;
 import java.util.Set;
-
-import com.amazon.randomcutforest.store.INodeStore;
 
 public class CompactNodeView<Point> implements INode<Integer> {
     final AbstractCompactRandomCutTree<Point> tree;
@@ -46,8 +46,7 @@ public class CompactNodeView<Point> implements INode<Integer> {
     IBoundingBoxView getBox(int node) {
         if (!nodeStore.isLeaf(node)) {
             IBoundingBoxView box = boxCache.getBox(node);
-            if (box != null)
-                return box;
+            if (box != null) return box;
         }
         return tree.getBoundingBox(node);
     }
@@ -101,5 +100,4 @@ public class CompactNodeView<Point> implements INode<Integer> {
     public INode<Integer> getParent() {
         return new CompactNodeView<>(tree, nodeStore.getParent(currentNodeOffset));
     }
-
 }

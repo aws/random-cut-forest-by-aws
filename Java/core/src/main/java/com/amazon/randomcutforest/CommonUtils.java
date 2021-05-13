@@ -13,28 +13,25 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
-import java.util.Objects;
 
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import java.util.Objects;
 
-/**
- * A collection of common utility functions.
- */
+/** A collection of common utility functions. */
 public class CommonUtils {
 
-    private CommonUtils() {
-    }
+    private CommonUtils() {}
 
     /**
-     * Throws an {@link IllegalArgumentException} with the specified message if the
-     * specified input is false.
+     * Throws an {@link IllegalArgumentException} with the specified message if the specified input
+     * is false.
      *
      * @param condition A condition to test.
-     * @param message   The error message to include in the
-     *                  {@code IllegalArgumentException} if {@code condition} is
-     *                  false.
+     * @param message The error message to include in the {@code IllegalArgumentException} if {@code
+     *     condition} is false.
      * @throws IllegalArgumentException if {@code condition} is false.
      */
     public static void checkArgument(boolean condition, String message) {
@@ -44,12 +41,12 @@ public class CommonUtils {
     }
 
     /**
-     * Throws an {@link IllegalStateException} with the specified message if the
-     * specified input is false.
+     * Throws an {@link IllegalStateException} with the specified message if the specified input is
+     * false.
      *
      * @param condition A condition to test.
-     * @param message   The error message to include in the
-     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @param message The error message to include in the {@code IllegalStateException} if {@code
+     *     condition} is false.
      * @throws IllegalStateException if {@code condition} is false.
      */
     public static void checkState(boolean condition, String message) {
@@ -59,12 +56,12 @@ public class CommonUtils {
     }
 
     /**
-     * Throws an {@link IllegalStateException} with the specified message if the
-     * specified input is false. This would eventually become asserts.
+     * Throws an {@link IllegalStateException} with the specified message if the specified input is
+     * false. This would eventually become asserts.
      *
      * @param condition A condition to test.
-     * @param message   The error message to include in the
-     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @param message The error message to include in the {@code IllegalStateException} if {@code
+     *     condition} is false.
      * @throws IllegalStateException if {@code condition} is false.
      */
     public static void validateInternalState(boolean condition, String message) {
@@ -74,13 +71,13 @@ public class CommonUtils {
     }
 
     /**
-     * Throws a {@link NullPointerException} with the specified message if the
-     * specified input is null.
+     * Throws a {@link NullPointerException} with the specified message if the specified input is
+     * null.
      *
-     * @param <T>     An arbitrary type.
-     * @param object  An object reference to test for nullity.
-     * @param message The error message to include in the
-     *                {@code NullPointerException} if {@code object} is null.
+     * @param <T> An arbitrary type.
+     * @param object An object reference to test for nullity.
+     * @param message The error message to include in the {@code NullPointerException} if {@code
+     *     object} is null.
      * @return {@code object} if not null.
      * @throws NullPointerException if the supplied object is null.
      */
@@ -90,17 +87,17 @@ public class CommonUtils {
     }
 
     /**
-     * Compute the probability of separation for a bounding box adn a point. This
-     * method considers the bounding box created by merging the query point into the
-     * existing bounding box, and computes the probability that a random cut would
-     * separate the query point from the merged bounding box.
+     * Compute the probability of separation for a bounding box adn a point. This method considers
+     * the bounding box created by merging the query point into the existing bounding box, and
+     * computes the probability that a random cut would separate the query point from the merged
+     * bounding box.
      *
      * @param boundingBox is the bounding box used in RandomCutTree
-     * @param queryPoint  is the multidimensional point
+     * @param queryPoint is the multidimensional point
      * @return the probability of separation choosing a random cut
      */
-
-    public static double getProbabilityOfSeparation(final IBoundingBoxView boundingBox, double[] queryPoint) {
+    public static double getProbabilityOfSeparation(
+            final IBoundingBoxView boundingBox, double[] queryPoint) {
         double sumOfNewRange = 0d;
         double sumOfDifferenceInRange = 0d;
 
@@ -125,15 +122,14 @@ public class CommonUtils {
 
         if (sumOfNewRange <= 0) {
             return 0;
-        } else
-            return sumOfDifferenceInRange / sumOfNewRange;
+        } else return sumOfDifferenceInRange / sumOfNewRange;
     }
 
     /**
      * The default anomaly scoring function for points that contained in a tree.
      *
      * @param depth The depth of the leaf node where this method is invoked
-     * @param mass  The number of times the point has been seen before
+     * @param mass The number of times the point has been seen before
      * @return The score contribution from this previously-seen point
      */
     public static double defaultScoreSeenFunction(double depth, double mass) {
@@ -141,11 +137,10 @@ public class CommonUtils {
     }
 
     /**
-     * The default anomaly scoring function for points not already contained in a
-     * tree.
+     * The default anomaly scoring function for points not already contained in a tree.
      *
      * @param depth The depth of the leaf node where this method is invoked
-     * @param mass  The number of times the point has been seen before
+     * @param mass The number of times the point has been seen before
      * @return The score contribution from this point
      */
     public static double defaultScoreUnseenFunction(double depth, double mass) {
@@ -157,14 +152,13 @@ public class CommonUtils {
     }
 
     /**
-     * Some algorithms which return a scalar value need to scale that value by tree
-     * mass for consistency. This is the default method for computing the scale
-     * factor in these cases. The function has to be associative in its first
-     * argument (when the second is fixed) That is, fn (x1, y) + fn (x2, y) = fn (x1
-     * + x2, y)
-     * 
+     * Some algorithms which return a scalar value need to scale that value by tree mass for
+     * consistency. This is the default method for computing the scale factor in these cases. The
+     * function has to be associative in its first argument (when the second is fixed) That is, fn
+     * (x1, y) + fn (x2, y) = fn (x1 + x2, y)
+     *
      * @param scalarValue The value being scaled
-     * @param mass        The mass of the tree where this method is invoked
+     * @param mass The mass of the tree where this method is invoked
      * @return The original value scaled appropriately for this tree
      */
     public static double defaultScalarNormalizerFunction(double scalarValue, double mass) {
@@ -172,17 +166,15 @@ public class CommonUtils {
     }
 
     /**
-     * The following function forms the core of RCFs, given a BoundingBox it
-     * produces the probability of cutting in different dimensions. While this
-     * function is absorbed in the logic of the different simpler scoring methods,
-     * the scoring methods that are mode advanced (for example, trying to simulate
-     * an Transductive Isolation Forest with streaming) require this function. A
-     * different function can be used to simulate via non-RCFs.
-     * 
+     * The following function forms the core of RCFs, given a BoundingBox it produces the
+     * probability of cutting in different dimensions. While this function is absorbed in the logic
+     * of the different simpler scoring methods, the scoring methods that are mode advanced (for
+     * example, trying to simulate an Transductive Isolation Forest with streaming) require this
+     * function. A different function can be used to simulate via non-RCFs.
+     *
      * @param boundingBox bounding box of a set of points
      * @return array of probabilities of cutting in that specific dimension
      */
-
     public static double[] defaultRCFgVecFunction(IBoundingBoxView boundingBox) {
         double[] answer = new double[boundingBox.getDimensions()];
 
@@ -196,8 +188,8 @@ public class CommonUtils {
             }
         }
         return answer;
-
-    };
+    }
+    ;
 
     public static double[] toDoubleArray(float[] point) {
         checkNotNull(point, "point must not be null");

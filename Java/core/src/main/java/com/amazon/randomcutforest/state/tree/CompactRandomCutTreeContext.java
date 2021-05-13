@@ -13,12 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.tree;
 
-import lombok.Data;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.IPointStore;
+import lombok.Data;
 
 @Data
 public class CompactRandomCutTreeContext {

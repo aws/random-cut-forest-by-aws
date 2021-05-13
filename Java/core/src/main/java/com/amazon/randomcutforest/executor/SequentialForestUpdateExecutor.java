@@ -13,30 +13,34 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
+
+import com.amazon.randomcutforest.ComponentList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.amazon.randomcutforest.ComponentList;
-
 /**
  * Traverse the trees in a forest sequentially.
- * 
+ *
  * @param <PointReference> references to a point
- * @param <Point>          explicit data type of a point
+ * @param <Point> explicit data type of a point
  */
 public class SequentialForestUpdateExecutor<PointReference, Point>
         extends AbstractForestUpdateExecutor<PointReference, Point> {
 
-    public SequentialForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
+    public SequentialForestUpdateExecutor(
+            IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components) {
         super(updateCoordinator, components);
     }
 
     @Override
     protected List<UpdateResult<PointReference>> update(PointReference point, long seqNum) {
-        return components.stream().map(t -> t.update(point, seqNum)).filter(UpdateResult::isStateChange)
+        return components.stream()
+                .map(t -> t.update(point, seqNum))
+                .filter(UpdateResult::isStateChange)
                 .collect(Collectors.toList());
     }
 }

@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -32,7 +33,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -73,18 +73,23 @@ public class SimpleStreamSamplerTest {
         assertEquals(0, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
 
-        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.5).thenReturn(0.0).thenReturn(0.01).thenReturn(0.0)
+        when(random.nextDouble())
+                .thenReturn(0.0)
+                .thenReturn(0.5)
+                .thenReturn(0.0)
+                .thenReturn(0.01)
+                .thenReturn(0.0)
                 .thenReturn(0.99);
 
         sampler.acceptPoint(10L);
         double weight1 = sampler.acceptPointState.getWeight();
-        sampler.addPoint(new double[] { 1.1 });
+        sampler.addPoint(new double[] {1.1});
         sampler.acceptPoint(11L);
         double weight2 = sampler.acceptPointState.getWeight();
-        sampler.addPoint(new double[] { -2.2 });
+        sampler.addPoint(new double[] {-2.2});
         sampler.acceptPoint(12L);
         double weight3 = sampler.acceptPointState.getWeight();
-        sampler.addPoint(new double[] { 3.3 });
+        sampler.addPoint(new double[] {3.3});
 
         assertEquals(3, sampler.size());
         assertEquals(sampleSize, sampler.getCapacity());
@@ -93,13 +98,13 @@ public class SimpleStreamSamplerTest {
         samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
         assertEquals(3, samples.size());
 
-        assertArrayEquals(new double[] { 3.3 }, samples.get(0).getValue());
+        assertArrayEquals(new double[] {3.3}, samples.get(0).getValue());
         assertEquals(weight3, samples.get(0).getWeight());
 
-        assertArrayEquals(new double[] { 1.1 }, samples.get(1).getValue());
+        assertArrayEquals(new double[] {1.1}, samples.get(1).getValue());
         assertEquals(weight1, samples.get(1).getWeight());
 
-        assertArrayEquals(new double[] { -2.2 }, samples.get(2).getValue());
+        assertArrayEquals(new double[] {-2.2}, samples.get(2).getValue());
         assertEquals(weight2, samples.get(2).getWeight());
     }
 
@@ -109,7 +114,7 @@ public class SimpleStreamSamplerTest {
         for (int i = 0; i < sampleSize; i++) {
             assertTrue(sampler.acceptPoint(i));
             assertNotNull(sampler.acceptPointState);
-            sampler.addPoint(new double[] { Math.random() });
+            sampler.addPoint(new double[] {Math.random()});
         }
 
         // In subsequent calls to sample, either the result is empty or else
@@ -121,9 +126,10 @@ public class SimpleStreamSamplerTest {
                 numAccepted++;
                 assertTrue(sampler.getEvictedPoint().isPresent());
                 assertNotNull(sampler.acceptPointState);
-                Weighted<double[]> evictedPoint = (Weighted<double[]>) sampler.getEvictedPoint().get();
+                Weighted<double[]> evictedPoint =
+                        (Weighted<double[]>) sampler.getEvictedPoint().get();
                 assertTrue(sampler.acceptPointState.getWeight() < evictedPoint.getWeight());
-                sampler.addPoint(new double[] { Math.random() });
+                sampler.addPoint(new double[] {Math.random()});
             }
         }
         assertTrue(numAccepted > 0, "the sampler did not accept any points");
@@ -133,7 +139,7 @@ public class SimpleStreamSamplerTest {
     public void testUpdate() {
         SimpleStreamSampler<double[]> samplerSpy = spy(sampler);
         for (int i = 0; i < sampleSize; i++) {
-            assertTrue(samplerSpy.update(new double[] { i + 0.0 }, i));
+            assertTrue(samplerSpy.update(new double[] {i + 0.0}, i));
         }
 
         // all points should be added to the sampler until the sampler is full
@@ -144,7 +150,7 @@ public class SimpleStreamSamplerTest {
 
         int numSampled = 0;
         for (int i = sampleSize; i < 2 * sampleSize; i++) {
-            if (samplerSpy.update(new double[] { i + 0.0 }, i)) {
+            if (samplerSpy.update(new double[] {i + 0.0}, i)) {
                 numSampled++;
             }
         }
@@ -156,12 +162,17 @@ public class SimpleStreamSamplerTest {
 
     @Test
     public void testGetScore() {
-        when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
+        when(random.nextDouble())
+                .thenReturn(0.0)
+                .thenReturn(0.25)
+                .thenReturn(0.0)
+                .thenReturn(0.75)
+                .thenReturn(0.0)
                 .thenReturn(0.50);
 
-        sampler.update(new double[] { 1.0 }, 101);
-        sampler.update(new double[] { 2.0 }, 102);
-        sampler.update(new double[] { 3.0 }, 103);
+        sampler.update(new double[] {1.0}, 101);
+        sampler.update(new double[] {2.0}, 102);
+        sampler.update(new double[] {3.0}, 103);
 
         double[] expectedScores = new double[3];
         expectedScores[0] = -lambda * 101L + Math.log(-Math.log(0.25));

@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.util;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -22,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Random;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,12 +36,14 @@ public class ArrayPackingTest {
 
     @Test
     public void testLogMax() {
-        long[] bases = new long[] { 2, 101, 3_456_789 };
-        Arrays.stream(bases).forEach(base -> {
-            int log = ArrayPacking.logMax(base);
-            assertTrue(Math.pow(base, log + 1) >= Integer.MAX_VALUE);
-            assertTrue(Math.pow(base, log) < Integer.MAX_VALUE);
-        });
+        long[] bases = new long[] {2, 101, 3_456_789};
+        Arrays.stream(bases)
+                .forEach(
+                        base -> {
+                            int log = ArrayPacking.logMax(base);
+                            assertTrue(Math.pow(base, log + 1) >= Integer.MAX_VALUE);
+                            assertTrue(Math.pow(base, log) < Integer.MAX_VALUE);
+                        });
     }
 
     @Test
@@ -55,8 +57,10 @@ public class ArrayPackingTest {
     public void testIntsPackRoundTrip() {
         int inputLength = 100;
         int[] inputArray = rng.ints().limit(inputLength).toArray();
-        assertArrayEquals(inputArray, ArrayPacking.unpackInts(ArrayPacking.pack(inputArray, false), false));
-        assertArrayEquals(inputArray, ArrayPacking.unpackInts(ArrayPacking.pack(inputArray, true), true));
+        assertArrayEquals(
+                inputArray, ArrayPacking.unpackInts(ArrayPacking.pack(inputArray, false), false));
+        assertArrayEquals(
+                inputArray, ArrayPacking.unpackInts(ArrayPacking.pack(inputArray, true), true));
     }
 
     @Test

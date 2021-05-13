@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -38,8 +39,13 @@ public class OneSidedConvergingDiVectorTest {
         minValuesAccepted = 5;
         maxValuesAccepted = 100;
         dimensions = 2;
-        accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions, highIsCritical, precision,
-                minValuesAccepted, maxValuesAccepted);
+        accumulator =
+                new OneSidedConvergingDiVectorAccumulator(
+                        dimensions,
+                        highIsCritical,
+                        precision,
+                        minValuesAccepted,
+                        maxValuesAccepted);
     }
 
     @Test

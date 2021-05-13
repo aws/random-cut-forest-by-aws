@@ -13,34 +13,34 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
+
 
 import com.amazon.randomcutforest.tree.INodeView;
 
 /**
- * This is the interface for a visitor which can be used to query a ITraversable
- * to produce a result. A visitor is submitted to
- * ITraversable#traverse(double[], Visitor), and during the traversal the
- * {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in
- * the traversal path.
- * <p>
- * See ITraversable#traverse(double[], Visitor) for details about the traversal
- * path.
+ * This is the interface for a visitor which can be used to query a ITraversable to produce a
+ * result. A visitor is submitted to ITraversable#traverse(double[], Visitor), and during the
+ * traversal the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in the
+ * traversal path.
+ *
+ * <p>See ITraversable#traverse(double[], Visitor) for details about the traversal path.
  */
 public interface Visitor<R> {
     /**
      * Visit a node in the traversal path.
      *
-     * @param node        the node being visited
+     * @param node the node being visited
      * @param depthOfNode the depth of the node being visited
      */
     void accept(INodeView node, int depthOfNode);
 
     /**
-     * Visit the leaf node in the traversal path. By default this method proxies to
-     * {@link #accept(INodeView, int)}.
+     * Visit the leaf node in the traversal path. By default this method proxies to {@link
+     * #accept(INodeView, int)}.
      *
-     * @param leafNode    the leaf node being visited
+     * @param leafNode the leaf node being visited
      * @param depthOfNode the depth of the leaf node
      */
     default void acceptLeaf(INodeView leafNode, final int depthOfNode) {
@@ -48,8 +48,8 @@ public interface Visitor<R> {
     }
 
     /**
-     * At the end of the traversal, this method is called to obtain the result
-     * computed by the visitor.
+     * At the end of the traversal, this method is called to obtain the result computed by the
+     * visitor.
      *
      * @return the result value computed by the visitor.
      */

@@ -13,11 +13,10 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
-/**
- * A view of the PointStore that forces a read only access to the store.
- */
+/** A view of the PointStore that forces a read only access to the store. */
 public interface IPointStoreView<Point> {
     int getDimensions();
 
@@ -38,23 +37,20 @@ public interface IPointStoreView<Point> {
     int[] transformIndices(int[] indexList);
 
     /**
-     * useful for managing points, convex combinations, etc., e.g. needed for center
-     * of mass
-     * 
-     * @param index  identifier of the point
+     * useful for managing points, convex combinations, etc., e.g. needed for center of mass
+     *
+     * @param index identifier of the point
      * @param factor multiplier
-     * @return the new point; or raises an exception if such an object cannot be
-     *         defined
+     * @return the new point; or raises an exception if such an object cannot be defined
      */
     Point getScaledPoint(int index, double factor);
 
     /**
-     * Prints the point given the index, irrespective of the encoding of the point.
-     * Used in exceptions and error messages
-     * 
+     * Prints the point given the index, irrespective of the encoding of the point. Used in
+     * exceptions and error messages
+     *
      * @param index index of the point in the store
      * @return a string that can be printed
      */
     String toString(int index);
-
 }

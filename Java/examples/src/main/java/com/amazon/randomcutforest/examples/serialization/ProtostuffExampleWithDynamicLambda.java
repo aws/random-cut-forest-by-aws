@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.serialization;
+
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
@@ -23,15 +25,14 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
 
 /**
- * Serialize a Random Cut Forest using the
- * <a href="https://github.com/protostuff/protostuff">protostuff</a> library.
+ * Serialize a Random Cut Forest using the <a
+ * href="https://github.com/protostuff/protostuff">protostuff</a> library.
  */
 public class ProtostuffExampleWithDynamicLambda implements Example {
     public static void main(String[] args) throws Exception {
@@ -57,8 +58,14 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
 
         int dataSize = 4 * sampleSize;
         NormalMixtureTestData testData = new NormalMixtureTestData();
@@ -81,8 +88,9 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
             buffer.clear();
         }
 
-        System.out.printf("dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n", dimensions,
-                numberOfTrees, sampleSize, precision);
+        System.out.printf(
+                "dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n",
+                dimensions, numberOfTrees, sampleSize, precision);
         System.out.printf("protostuff size = %d bytes%n", bytes.length);
 
         // Restore from protostuff and compare anomaly scores produced by the two
@@ -97,8 +105,11 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
         forest2.setLambda(10 * forest2.getLambda());
 
         for (int i = 0; i < numberOfTrees; i++) {
-            CompactSampler sampler = (CompactSampler) ((SamplerPlusTree) forest.getComponents().get(i)).getSampler();
-            CompactSampler sampler2 = (CompactSampler) ((SamplerPlusTree) forest2.getComponents().get(i)).getSampler();
+            CompactSampler sampler =
+                    (CompactSampler) ((SamplerPlusTree) forest.getComponents().get(i)).getSampler();
+            CompactSampler sampler2 =
+                    (CompactSampler)
+                            ((SamplerPlusTree) forest2.getComponents().get(i)).getSampler();
 
             if (sampler.getMaxSequenceIndex() != sampler2.getMaxSequenceIndex()) {
                 throw new IllegalStateException("Incorrect sampler state");

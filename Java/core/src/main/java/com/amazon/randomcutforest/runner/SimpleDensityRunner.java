@@ -13,8 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.returntypes.DiVector;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,18 +28,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.returntypes.DiVector;
-
 /**
- * A command-line application that computes directional density. Points are read
- * from STDIN and output is written to STDOUT. Output consists of the original
- * input point with the directional density vector appended.
+ * A command-line application that computes directional density. Points are read from STDIN and
+ * output is written to STDOUT. Output consists of the original input point with the directional
+ * density vector appended.
  */
 public class SimpleDensityRunner extends SimpleRunner {
 
     public SimpleDensityRunner() {
-        super(SimpleDensityRunner.class.getName(),
+        super(
+                SimpleDensityRunner.class.getName(),
                 "Compute directional density vectors from the input rows and append them to the output rows.",
                 SimpleDensityRunner.SimpleDensityTransformer::new);
     }
@@ -44,7 +46,8 @@ public class SimpleDensityRunner extends SimpleRunner {
         SimpleDensityRunner runner = new SimpleDensityRunner();
         runner.parse(args);
         System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+        runner.run(
+                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
                 new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
         System.out.println("Done.");
     }

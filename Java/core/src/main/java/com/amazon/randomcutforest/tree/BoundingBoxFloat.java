@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -22,8 +23,8 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import java.util.Arrays;
 
 /**
- * A single precision implementation of AbstractBoundingBox which also satisfies
- * the interface for Visitor classes
+ * A single precision implementation of AbstractBoundingBox which also satisfies the interface for
+ * Visitor classes
  */
 public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
 
@@ -42,13 +43,14 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
             maxValues[i] = Math.max(first[i], second[i]);
             rangeSum += maxValues[i] - minValues[i];
         }
-
     }
 
     @Override
     public AbstractBoundingBox<float[]> copy() {
-        return new BoundingBoxFloat(Arrays.copyOf(minValues, minValues.length),
-                Arrays.copyOf(maxValues, maxValues.length), rangeSum);
+        return new BoundingBoxFloat(
+                Arrays.copyOf(minValues, minValues.length),
+                Arrays.copyOf(maxValues, maxValues.length),
+                rangeSum);
     }
 
     @Override
@@ -105,9 +107,7 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
         return minValues.length;
     }
 
-    /**
-     * @return the sum of side lengths for this BoundingBox.
-     */
+    /** @return the sum of side lengths for this BoundingBox. */
     public double getRangeSum() {
         return rangeSum;
     }
@@ -133,9 +133,8 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
     }
 
     /**
-     * Returns true if the given point is contained in this bounding box. This is
-     * equivalent to the point being a member of the set defined by this bounding
-     * box.
+     * Returns true if the given point is contained in this bounding box. This is equivalent to the
+     * point being a member of the set defined by this bounding box.
      *
      * @param point with which we're performing the comparison
      * @return whether the point is contained by the bounding box
@@ -157,14 +156,15 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
 
     @Override
     public String toString() {
-        return String.format("BoundingBox(%s, %s)", Arrays.toString(minValues), Arrays.toString(maxValues));
+        return String.format(
+                "BoundingBox(%s, %s)", Arrays.toString(minValues), Arrays.toString(maxValues));
     }
 
     /**
-     * Two bounding boxes are considered equal if they have the same dimensions and
-     * all their min values and max values are the same. Min and max values are
-     * compared as primitive doubles using ==, so two bounding boxes are not equal
-     * if their min and max values are merely very close.
+     * Two bounding boxes are considered equal if they have the same dimensions and all their min
+     * values and max values are the same. Min and max values are compared as primitive doubles
+     * using ==, so two bounding boxes are not equal if their min and max values are merely very
+     * close.
      *
      * @param other An object to test for equality
      * @return true if other is a bounding box with the same min and max values
@@ -176,7 +176,8 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
         }
 
         AbstractBoundingBox<float[]> otherBox = (BoundingBoxFloat) other;
-        return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
+        return Arrays.equals(minValues, otherBox.minValues)
+                && Arrays.equals(maxValues, otherBox.maxValues);
     }
 
     @Override

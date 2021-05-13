@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state;
 
 public interface IContextualStateMapper<Model, State, ContextState> {

@@ -13,12 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.anomalydetection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.function.BiFunction;
-
 import org.junit.jupiter.api.Test;
 
 public class DynamicAttributionVisitorTest {
@@ -27,8 +27,9 @@ public class DynamicAttributionVisitorTest {
         BiFunction<Double, Double, Double> scoreSeen = (x, y) -> (x + y) / 2;
         BiFunction<Double, Double, Double> scoreUneen = (x, y) -> 0.75 * x + 0.25 * y;
         BiFunction<Double, Double, Double> damp = (x, y) -> Math.sqrt(x * y);
-        DynamicAttributionVisitor visitor = new DynamicAttributionVisitor(new double[] { 1.1, -2.2 }, 100, 2, scoreSeen,
-                scoreUneen, damp);
+        DynamicAttributionVisitor visitor =
+                new DynamicAttributionVisitor(
+                        new double[] {1.1, -2.2}, 100, 2, scoreSeen, scoreUneen, damp);
 
         int x = 9;
         int y = 4;

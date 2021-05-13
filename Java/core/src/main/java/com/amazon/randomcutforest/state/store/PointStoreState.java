@@ -13,103 +13,60 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
+import com.amazon.randomcutforest.config.Precision;
 import lombok.Data;
 
-import com.amazon.randomcutforest.config.Precision;
-
 /**
- * A class for storing the state of a
- * {@link com.amazon.randomcutforest.store.PointStoreDouble} or a
- * {@link com.amazon.randomcutforest.store.PointStoreFloat}. Depending on which
- * kind of point store was serialized, one of the fields {@code doubleData} or
- * {@code floatData} will be null.
+ * A class for storing the state of a {@link com.amazon.randomcutforest.store.PointStoreDouble} or a
+ * {@link com.amazon.randomcutforest.store.PointStoreFloat}. Depending on which kind of point store
+ * was serialized, one of the fields {@code doubleData} or {@code floatData} will be null.
  */
 @Data
 public class PointStoreState {
-    /**
-     * version string for future extensibility
-     */
+    /** version string for future extensibility */
     private String version = V2_0;
-    /**
-     * size of each point saved
-     */
+    /** size of each point saved */
     private int dimensions;
-    /**
-     * capacity of the store
-     */
+    /** capacity of the store */
     private int capacity;
-    /**
-     * shingle size of the points
-     */
+    /** shingle size of the points */
     private int shingleSize;
-    /**
-     * precision of points in the point store state
-     */
+    /** precision of points in the point store state */
     private String precision;
-    /**
-     * location beyond which the store has no useful information
-     */
+    /** location beyond which the store has no useful information */
     private int startOfFreeSegment;
-    /**
-     * Point data converted to raw bytes.
-     */
+    /** Point data converted to raw bytes. */
     private byte[] pointData;
-    /**
-     * use compressed representatiomn for arrays
-     */
+    /** use compressed representatiomn for arrays */
     private boolean compressed;
-    /**
-     * An array of reference counts for each stored point.
-     */
+    /** An array of reference counts for each stored point. */
     private int[] refCount;
-    /**
-     * is direct mapping enabled
-     */
+    /** is direct mapping enabled */
     private boolean directLocationMap;
-    /**
-     * location data for indirect maps
-     */
+    /** location data for indirect maps */
     private int[] locationList;
-    /**
-     * reverse location data to be usable in future
-     */
+    /** reverse location data to be usable in future */
     private int[] reverseLocationList;
-    /**
-     * flag to avoid null issues in the future
-     */
+    /** flag to avoid null issues in the future */
     private boolean reverseAvailable;
-    /**
-     * boolean indicating use of overlapping shingles; need not be used in certain
-     * cases
-     */
+    /** boolean indicating use of overlapping shingles; need not be used in certain cases */
     private boolean internalShinglingEnabled;
-    /**
-     * internal shingle
-     */
+    /** internal shingle */
     private double[] internalShingle;
-    /**
-     * last timestamp
-     */
+    /** last timestamp */
     private long lastTimeStamp;
-    /**
-     * rotation for internal shingles
-     */
+    /** rotation for internal shingles */
     private boolean rotationEnabled;
-    /**
-     * dynamic resizing
-     */
+    /** dynamic resizing */
     private boolean dynamicResizingEnabled;
-    /**
-     * current store capacity
-     */
+    /** current store capacity */
     private int currentStoreCapacity;
-    /**
-     * current index capacity
-     */
+    /** current index capacity */
     private int indexCapacity;
 
     public Precision getPrecisionEnumValue() {

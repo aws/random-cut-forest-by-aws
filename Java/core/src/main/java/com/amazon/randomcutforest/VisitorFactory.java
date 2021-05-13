@@ -13,15 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.ITree;
+import java.util.function.Function;
 
-/**
- * This is the interface for a visitor factory
- */
+/** This is the interface for a visitor factory */
 @FunctionalInterface
-public interface VisitorFactory<R> extends Function<ITree<?, ?>, Visitor<R>> {
-}
+public interface VisitorFactory<R> extends Function<ITree<?, ?>, Visitor<R>> {}

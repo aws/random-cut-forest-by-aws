@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.sampler;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
@@ -20,59 +21,37 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 import lombok.Data;
 
 /**
- * A data object representing the state of a
- * {@link com.amazon.randomcutforest.sampler.CompactSampler}.
+ * A data object representing the state of a {@link
+ * com.amazon.randomcutforest.sampler.CompactSampler}.
  */
 @Data
 public class CompactSamplerState {
-    /**
-     * a version string for extensibility
-     */
+    /** a version string for extensibility */
     private String version = V2_0;
 
-    /**
-     * An array of sampler weights.
-     */
+    /** An array of sampler weights. */
     private float[] weight;
     /**
-     * An array of index values identifying the points in the sample. These indexes
-     * will correspond to a {@link com.amazon.randomcutforest.store.PointStore}.
+     * An array of index values identifying the points in the sample. These indexes will correspond
+     * to a {@link com.amazon.randomcutforest.store.PointStore}.
      */
     private int[] pointIndex;
-    /**
-     * boolean for deciding to store sequence indices
-     */
+    /** boolean for deciding to store sequence indices */
     private boolean storeSequenceIndicesEnabled;
-    /**
-     * The sequence indexes of points in the sample.
-     */
+    /** The sequence indexes of points in the sample. */
     private long[] sequenceIndex;
-    /**
-     * The number of points in the sample.
-     */
+    /** The number of points in the sample. */
     private int size;
-    /**
-     * The maximum number of points that the sampler can contain.
-     */
+    /** The maximum number of points that the sampler can contain. */
     private int capacity;
-    /**
-     * The behavior of the sampler at initial sampling
-     */
+    /** The behavior of the sampler at initial sampling */
     private double initialAcceptFraction;
-    /**
-     * The lambda time-decay parameter for this sampler
-     */
+    /** The lambda time-decay parameter for this sampler */
     private double lambda;
-    /**
-     * Last update of lambda
-     */
+    /** Last update of lambda */
     private long sequenceIndexOfMostRecentLambdaUpdate;
-    /**
-     * maximum timestamp seen in update/computeWeight
-     */
+    /** maximum timestamp seen in update/computeWeight */
     private long maxSequenceIndex;
-    /**
-     * boolean indicating if the compression is enabled
-     */
+    /** boolean indicating if the compression is enabled */
     private boolean compressed;
 }

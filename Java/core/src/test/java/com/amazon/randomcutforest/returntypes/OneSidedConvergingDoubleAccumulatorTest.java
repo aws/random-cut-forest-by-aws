@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,9 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * This test doubles as a test of the abstract OneSidedStdDevAccumulator class
- */
+/** This test doubles as a test of the abstract OneSidedStdDevAccumulator class */
 public class OneSidedConvergingDoubleAccumulatorTest {
 
     private boolean highIsCritical;
@@ -39,8 +38,9 @@ public class OneSidedConvergingDoubleAccumulatorTest {
         precision = 0.1;
         minValuesAccepted = 5;
         maxValuesAccepted = 100;
-        accumulator = new OneSidedConvergingDoubleAccumulator(highIsCritical, precision, minValuesAccepted,
-                maxValuesAccepted);
+        accumulator =
+                new OneSidedConvergingDoubleAccumulator(
+                        highIsCritical, precision, minValuesAccepted, maxValuesAccepted);
     }
 
     @Test
@@ -99,8 +99,9 @@ public class OneSidedConvergingDoubleAccumulatorTest {
     @Test
     public void testConvergenceLowIsCritical() {
         highIsCritical = false;
-        accumulator = new OneSidedConvergingDoubleAccumulator(highIsCritical, precision, minValuesAccepted,
-                maxValuesAccepted);
+        accumulator =
+                new OneSidedConvergingDoubleAccumulator(
+                        highIsCritical, precision, minValuesAccepted, maxValuesAccepted);
 
         accumulator.accept(0.0);
         accumulator.accept(10.0);

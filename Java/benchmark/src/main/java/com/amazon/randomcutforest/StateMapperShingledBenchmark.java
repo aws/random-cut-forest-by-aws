@@ -13,13 +13,23 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.profilers.OutputSizeProfiler;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.protostuff.LinkedBuffer;
+import io.protostuff.ProtostuffIOUtil;
+import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
 import java.util.Random;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -33,18 +43,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.profilers.OutputSizeProfiler;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.protostuff.LinkedBuffer;
-import io.protostuff.ProtostuffIOUtil;
-import io.protostuff.Schema;
-import io.protostuff.runtime.RuntimeSchema;
-
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
 @Fork(value = 1)
@@ -55,19 +53,19 @@ public class StateMapperShingledBenchmark {
 
     @State(Scope.Thread)
     public static class BenchmarkState {
-        @Param({ "10" })
+        @Param({"10"})
         int dimensions;
 
-        @Param({ "50" })
+        @Param({"50"})
         int numberOfTrees;
 
-        @Param({ "256" })
+        @Param({"256"})
         int sampleSize;
 
-        @Param({ "false", "true" })
+        @Param({"false", "true"})
         boolean saveTreeState;
 
-        @Param({ "FLOAT_32", "FLOAT_64" })
+        @Param({"FLOAT_32", "FLOAT_64"})
         Precision precision;
 
         double[][] trainingData;
@@ -84,9 +82,15 @@ public class StateMapperShingledBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpForest() throws JsonProcessingException {
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).shingleSize(dimensions)
-                    .build();
+            RandomCutForest forest =
+                    RandomCutForest.builder()
+                            .compact(true)
+                            .dimensions(dimensions)
+                            .numberOfTrees(numberOfTrees)
+                            .sampleSize(sampleSize)
+                            .precision(precision)
+                            .shingleSize(dimensions)
+                            .build();
 
             for (int i = 0; i < NUM_TRAIN_SAMPLES; i++) {
                 forest.update(trainingData[i]);
@@ -100,7 +104,8 @@ public class StateMapperShingledBenchmark {
             ObjectMapper jsonMapper = new ObjectMapper();
             json = jsonMapper.writeValueAsString(forestState);
 
-            Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
+            Schema<RandomCutForestState> schema =
+                    RuntimeSchema.getSchema(RandomCutForestState.class);
             LinkedBuffer buffer = LinkedBuffer.allocate(512);
             try {
                 protostuff = ProtostuffIOUtil.toByteArray(forestState, schema, buffer);
@@ -139,13 +144,15 @@ public class StateMapperShingledBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(NUM_TEST_SAMPLES)
-    public String roundTripFromJson(BenchmarkState state, Blackhole blackhole) throws JsonProcessingException {
+    public String roundTripFromJson(BenchmarkState state, Blackhole blackhole)
+            throws JsonProcessingException {
         String json = state.json;
         double[][] testData = state.testData;
 
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
             ObjectMapper jsonMapper = new ObjectMapper();
-            RandomCutForestState forestState = jsonMapper.readValue(json, RandomCutForestState.class);
+            RandomCutForestState forestState =
+                    jsonMapper.readValue(json, RandomCutForestState.class);
 
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContextEnabled(true);
@@ -169,7 +176,8 @@ public class StateMapperShingledBenchmark {
         double[][] testData = state.testData;
 
         for (int i = 0; i < NUM_TEST_SAMPLES; i++) {
-            Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
+            Schema<RandomCutForestState> schema =
+                    RuntimeSchema.getSchema(RandomCutForestState.class);
             RandomCutForestState forestState = schema.newMessage();
             ProtostuffIOUtil.mergeFrom(bytes, forestState, schema);
 
@@ -215,13 +223,13 @@ public class StateMapperShingledBenchmark {
         return answer;
     }
 
-    private static double[] getShinglePoint(double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
+    private static double[] getShinglePoint(
+            double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
         double[] shingledPoint = new double[shingleLength];
         int i = 0;
         for (int j = 0; j < shingleLength; ++j) {
             double point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
             shingledPoint[i++] = point;
-
         }
         return shingledPoint;
     }

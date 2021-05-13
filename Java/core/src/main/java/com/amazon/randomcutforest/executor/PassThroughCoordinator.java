@@ -13,18 +13,19 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
+
 
 import java.util.List;
 
 /**
- * A minimal implementation of {@link IStateCoordinator} that does not transform
- * the input point.
+ * A minimal implementation of {@link IStateCoordinator} that does not transform the input point.
  */
 public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], double[]> {
     /**
      * Return the input point without making a copy.
-     * 
+     *
      * @param point The input point.
      * @return the input point.
      */
@@ -35,9 +36,9 @@ public class PassThroughCoordinator extends AbstractUpdateCoordinator<double[], 
 
     /**
      * Increment the totalUpdates counter. The method arguments are not used.
-     * 
+     *
      * @param updateResults A list of points that were deleted.
-     * @param updateInput   The corresponding output from {@link #initUpdate}, which
+     * @param updateInput The corresponding output from {@link #initUpdate}, which
      */
     @Override
     public void completeUpdate(List<UpdateResult<double[]>> updateResults, double[] updateInput) {

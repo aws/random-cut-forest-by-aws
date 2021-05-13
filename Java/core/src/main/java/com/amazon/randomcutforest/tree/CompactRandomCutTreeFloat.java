@@ -13,16 +13,16 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
+import com.amazon.randomcutforest.store.IPointStoreView;
 import java.util.Arrays;
 import java.util.Random;
-
-import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
@@ -88,7 +88,8 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     public static class Builder extends AbstractCompactRandomCutTree.Builder<Builder> {
         private IPointStoreView<float[]> pointStoreView;
 
-        public CompactRandomCutTreeFloat.Builder pointStore(IPointStoreView<float[]> pointStoreView) {
+        public CompactRandomCutTreeFloat.Builder pointStore(
+                IPointStoreView<float[]> pointStoreView) {
             this.pointStoreView = pointStoreView;
             return this;
         }
@@ -99,12 +100,12 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     /**
-     * Return a new {@link Cut}, which is chosen uniformly over the space of
-     * possible cuts for the given bounding box. The cut is over single precision,
-     * although the representation is over doubles still.
+     * Return a new {@link Cut}, which is chosen uniformly over the space of possible cuts for the
+     * given bounding box. The cut is over single precision, although the representation is over
+     * doubles still.
      *
      * @param random A random number generator
-     * @param box    A bounding box that we want to find a random cut for.
+     * @param box A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
     @Override

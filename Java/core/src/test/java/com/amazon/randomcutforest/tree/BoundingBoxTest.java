@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -36,8 +37,8 @@ public class BoundingBoxTest {
 
     @BeforeEach
     public void setUp() {
-        point1 = new double[] { 1.5, 2.7 };
-        point2 = new double[] { 3.0, 1.2 };
+        point1 = new double[] {1.5, 2.7};
+        point2 = new double[] {3.0, 1.2};
         box1 = new BoundingBox(point1);
         box2 = new BoundingBox(point2);
     }
@@ -101,17 +102,21 @@ public class BoundingBoxTest {
 
     @Test
     public void testContainsBoundingBox() {
-        BoundingBox box1 = new BoundingBox(new double[] { 0.0, 0.0 })
-                .getMergedBox(new BoundingBox(new double[] { 10.0, 10.0 }));
+        BoundingBox box1 =
+                new BoundingBox(new double[] {0.0, 0.0})
+                        .getMergedBox(new BoundingBox(new double[] {10.0, 10.0}));
 
-        BoundingBox box2 = new BoundingBox(new double[] { 2.0, 2.0 })
-                .getMergedBox(new BoundingBox(new double[] { 8.0, 8.0 }));
+        BoundingBox box2 =
+                new BoundingBox(new double[] {2.0, 2.0})
+                        .getMergedBox(new BoundingBox(new double[] {8.0, 8.0}));
 
-        BoundingBox box3 = new BoundingBox(new double[] { -4.0, -4.0 })
-                .getMergedBox(new BoundingBox(new double[] { -1.0, -1.0 }));
+        BoundingBox box3 =
+                new BoundingBox(new double[] {-4.0, -4.0})
+                        .getMergedBox(new BoundingBox(new double[] {-1.0, -1.0}));
 
-        BoundingBox box4 = new BoundingBox(new double[] { 1.0, -1.0 })
-                .getMergedBox(new BoundingBox(new double[] { 5.0, 5.0 }));
+        BoundingBox box4 =
+                new BoundingBox(new double[] {1.0, -1.0})
+                        .getMergedBox(new BoundingBox(new double[] {5.0, 5.0}));
 
         // completely contains
         assertTrue(box1.contains(box2));
@@ -128,25 +133,26 @@ public class BoundingBoxTest {
 
     @Test
     public void testContainsPoint() {
-        BoundingBox box1 = new BoundingBox(new double[] { 0.0, 0.0 })
-                .getMergedBox(new BoundingBox(new double[] { 10.0, 10.0 }));
+        BoundingBox box1 =
+                new BoundingBox(new double[] {0.0, 0.0})
+                        .getMergedBox(new BoundingBox(new double[] {10.0, 10.0}));
 
-        assertTrue(box1.contains(new double[] { 0.0, 0.1 }));
-        assertTrue(box1.contains(new double[] { 5.5, 6.5 }));
-        assertFalse(box1.contains(new double[] { -0.7, -4.5 }));
-        assertFalse(box1.contains(new double[] { 5.0, 11.0 }));
+        assertTrue(box1.contains(new double[] {0.0, 0.1}));
+        assertTrue(box1.contains(new double[] {5.5, 6.5}));
+        assertFalse(box1.contains(new double[] {-0.7, -4.5}));
+        assertFalse(box1.contains(new double[] {5.0, 11.0}));
     }
 
     @Test
     public void testEqualsAndHashCode() {
-        double[] minValues1 = new double[] { -0.1, 0.1 };
-        double[] maxValues1 = new double[] { -0.1, 0.1 };
+        double[] minValues1 = new double[] {-0.1, 0.1};
+        double[] maxValues1 = new double[] {-0.1, 0.1};
 
-        double[] minValues2 = new double[] { -0.1 + 1e-8, 0.1 };
-        double[] maxValues2 = new double[] { -0.1, 0.1 - 1e-8 };
+        double[] minValues2 = new double[] {-0.1 + 1e-8, 0.1};
+        double[] maxValues2 = new double[] {-0.1, 0.1 - 1e-8};
 
-        double[] minValues3 = new double[] { -0.1, 0.1, 100 };
-        double[] maxValues3 = new double[] { -0.1, 0.1, 4 };
+        double[] minValues3 = new double[] {-0.1, 0.1, 100};
+        double[] maxValues3 = new double[] {-0.1, 0.1, 4};
 
         BoundingBox box1 = new BoundingBox(minValues1).getMergedBox(maxValues1);
         BoundingBox box2 = new BoundingBox(minValues1).getMergedBox(maxValues1);

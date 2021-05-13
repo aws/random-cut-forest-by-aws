@@ -13,27 +13,26 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.tree;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 
 public class CompactRandomCutTreeDoubleMapperTest {
 
@@ -42,31 +41,58 @@ public class CompactRandomCutTreeDoubleMapperTest {
 
     private static class TreeProvider implements ArgumentsProvider {
         @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
+        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
+                throws Exception {
             IPointStore<double[]> pointStore = new PointStoreDouble(dimensions, capacity);
             List<Integer> indexes = new ArrayList<>();
 
             for (int i = 0; i < capacity; i++) {
-                pointStore.add(new double[] { Math.random(), Math.random() }, 0);
+                pointStore.add(new double[] {Math.random(), Math.random()}, 0);
                 indexes.add(i);
             }
 
             Collections.shuffle(indexes);
 
             List<CompactRandomCutTreeDouble> trees = new ArrayList<>();
-            trees.add(new CompactRandomCutTreeDouble.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
-                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(false).storeSequenceIndexesEnabled(false)
-                    .build());
-            trees.add(new CompactRandomCutTreeDouble.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
-                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(false).storeSequenceIndexesEnabled(true)
-                    .build());
-            trees.add(new CompactRandomCutTreeDouble.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
-                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(true).storeSequenceIndexesEnabled(false)
-                    .build());
-            trees.add(new CompactRandomCutTreeDouble.Builder().maxSize(capacity).randomSeed(99L).pointStore(pointStore)
-                    .boundingBoxCacheFraction(0.0).centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).build());
+            trees.add(
+                    new CompactRandomCutTreeDouble.Builder()
+                            .maxSize(capacity)
+                            .randomSeed(99L)
+                            .pointStore(pointStore)
+                            .boundingBoxCacheFraction(0.0)
+                            .centerOfMassEnabled(false)
+                            .storeSequenceIndexesEnabled(false)
+                            .build());
+            trees.add(
+                    new CompactRandomCutTreeDouble.Builder()
+                            .maxSize(capacity)
+                            .randomSeed(99L)
+                            .pointStore(pointStore)
+                            .boundingBoxCacheFraction(0.0)
+                            .centerOfMassEnabled(false)
+                            .storeSequenceIndexesEnabled(true)
+                            .build());
+            trees.add(
+                    new CompactRandomCutTreeDouble.Builder()
+                            .maxSize(capacity)
+                            .randomSeed(99L)
+                            .pointStore(pointStore)
+                            .boundingBoxCacheFraction(0.0)
+                            .centerOfMassEnabled(true)
+                            .storeSequenceIndexesEnabled(false)
+                            .build());
+            trees.add(
+                    new CompactRandomCutTreeDouble.Builder()
+                            .maxSize(capacity)
+                            .randomSeed(99L)
+                            .pointStore(pointStore)
+                            .boundingBoxCacheFraction(0.0)
+                            .centerOfMassEnabled(true)
+                            .storeSequenceIndexesEnabled(true)
+                            .build());
 
-            trees.forEach(t -> IntStream.range(0, capacity).forEach(i -> t.addPoint(indexes.get(i), i)));
+            trees.forEach(
+                    t -> IntStream.range(0, capacity).forEach(i -> t.addPoint(indexes.get(i), i)));
 
             CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
             context.setMaxSize(capacity);
@@ -86,7 +112,8 @@ public class CompactRandomCutTreeDoubleMapperTest {
 
     @ParameterizedTest
     @ArgumentsSource(TreeProvider.class)
-    public void testRoundTrip(CompactRandomCutTreeDouble tree, CompactRandomCutTreeContext context) {
+    public void testRoundTrip(
+            CompactRandomCutTreeDouble tree, CompactRandomCutTreeContext context) {
         CompactRandomCutTreeDouble tree2 = mapper.toModel(mapper.toState(tree), context);
 
         assertEquals(tree.getRoot(), tree2.getRoot());

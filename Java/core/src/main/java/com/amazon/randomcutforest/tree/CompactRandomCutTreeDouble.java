@@ -13,13 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.store.IPointStoreView;
+import java.util.Arrays;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
 
@@ -39,7 +39,8 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(
+            double[] first, double[] second) {
         return new BoundingBox(first, second);
     }
 

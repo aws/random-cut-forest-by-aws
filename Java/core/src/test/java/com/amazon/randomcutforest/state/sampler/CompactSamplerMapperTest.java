@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.sampler;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -22,15 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.amazon.randomcutforest.sampler.CompactSampler;
 import java.util.Random;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import com.amazon.randomcutforest.sampler.CompactSampler;
 
 public class CompactSamplerMapperTest {
 
@@ -59,18 +58,23 @@ public class CompactSamplerMapperTest {
             partiallyFullSampler2.update(pointReference, baseIndex + i);
         }
 
-        return Stream.of(Arguments.of("full sampler without sequence indexes", fullSampler1),
+        return Stream.of(
+                Arguments.of("full sampler without sequence indexes", fullSampler1),
                 Arguments.of("full sampler with sequence indexes", fullSampler2),
-                Arguments.of("partially full sampler without sequence indexes", partiallyFullSampler1),
-                Arguments.of("partially full sampler with sequence indexes", partiallyFullSampler2));
+                Arguments.of(
+                        "partially full sampler without sequence indexes", partiallyFullSampler1),
+                Arguments.of(
+                        "partially full sampler with sequence indexes", partiallyFullSampler2));
     }
 
     public static Stream<Arguments> samplerProvider() {
         CompactSampler emptySampler1 = new CompactSampler(sampleSize, lambda, seed, false);
         CompactSampler emptySampler2 = new CompactSampler(sampleSize, lambda, seed, true);
 
-        return Stream.concat(nonemptySamplerProvider(),
-                Stream.of(Arguments.of("empty sampler without sequence indexes", emptySampler1),
+        return Stream.concat(
+                nonemptySamplerProvider(),
+                Stream.of(
+                        Arguments.of("empty sampler without sequence indexes", emptySampler1),
                         Arguments.of("empty sampler with sequence indexes", emptySampler2)));
     }
 
@@ -83,8 +87,12 @@ public class CompactSamplerMapperTest {
     }
 
     private void assertValidMapping(CompactSampler original, CompactSampler mapped) {
-        assertArrayEquals(original.getWeightArray(), mapped.getWeightArray(), "different weight arrays");
-        assertArrayEquals(original.getPointIndexArray(), mapped.getPointIndexArray(), "different point index arrays");
+        assertArrayEquals(
+                original.getWeightArray(), mapped.getWeightArray(), "different weight arrays");
+        assertArrayEquals(
+                original.getPointIndexArray(),
+                mapped.getPointIndexArray(),
+                "different point index arrays");
         assertEquals(original.getCapacity(), mapped.getCapacity());
         assertEquals(original.size(), mapped.size());
         assertEquals(original.getTimeDecay(), mapped.getTimeDecay());
@@ -92,7 +100,9 @@ public class CompactSamplerMapperTest {
 
         if (original.isStoreSequenceIndexesEnabled()) {
             assertTrue(mapped.isStoreSequenceIndexesEnabled());
-            assertArrayEquals(original.getSequenceIndexArray(), mapped.getSequenceIndexArray(),
+            assertArrayEquals(
+                    original.getSequenceIndexArray(),
+                    mapped.getSequenceIndexArray(),
                     "different sequence index arrays");
         } else {
             assertFalse(mapped.isStoreSequenceIndexesEnabled());

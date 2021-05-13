@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 public interface IBoundingBoxView {
@@ -35,5 +36,4 @@ public interface IBoundingBoxView {
 
     // merges and keeps the older box unchaged
     IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);
-
 }

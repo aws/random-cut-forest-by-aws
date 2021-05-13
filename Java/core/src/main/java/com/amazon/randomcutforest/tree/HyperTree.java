@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -50,11 +51,13 @@ public class HyperTree extends RandomCutTree {
         }
     }
 
-    private Node makeTreeInt(List<double[]> pointList, int seed, int level,
+    private Node makeTreeInt(
+            List<double[]> pointList,
+            int seed,
+            int level,
             Function<IBoundingBoxView, double[]> vecBuild) {
 
-        if (pointList.size() == 0)
-            return null;
+        if (pointList.size() == 0) return null;
 
         BoundingBox thisBox = new BoundingBox(pointList.get(0));
         for (int i = 1; i < pointList.size(); i++) {
@@ -78,9 +81,7 @@ public class HyperTree extends RandomCutTree {
         for (int j = 0; j < pointList.size(); j++) {
             if (isLeftOf(pointList.get(j), cut)) {
                 leftList.add(pointList.get(j));
-            } else
-                rightList.add(pointList.get(j));
-
+            } else rightList.add(pointList.get(j));
         }
         Node leftNode = makeTreeInt(leftList, leftSeed, level + 1, vecBuild);
         Node rightNode = makeTreeInt(rightList, rightSeed, level + 1, vecBuild);
@@ -91,7 +92,8 @@ public class HyperTree extends RandomCutTree {
         return thisNode;
     }
 
-    private Cut getCut(IBoundingBoxView bb, Random ring, Function<IBoundingBoxView, double[]> vecSeparation) {
+    private Cut getCut(
+            IBoundingBoxView bb, Random ring, Function<IBoundingBoxView, double[]> vecSeparation) {
         Random rng = new Random(ring.nextInt());
         double cutf = rng.nextDouble();
         double dimf = rng.nextDouble();

@@ -13,19 +13,18 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
+
 
 import com.amazon.randomcutforest.config.IDynamicConfig;
 import com.amazon.randomcutforest.executor.ITraversable;
 import com.amazon.randomcutforest.executor.IUpdatable;
 
 /**
- *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
+ * @param <PointReference> The internal point representation expected by the component models in
+ *     this list.
+ * @param <Point> The explicit data type of points being passed
  */
-
 public interface IComponentModel<PointReference, Point>
-        extends ITraversable, IUpdatable<PointReference>, IDynamicConfig {
-}
+        extends ITraversable, IUpdatable<PointReference>, IDynamicConfig {}

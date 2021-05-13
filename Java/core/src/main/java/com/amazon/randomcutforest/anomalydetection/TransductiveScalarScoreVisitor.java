@@ -13,13 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.anomalydetection;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
 
@@ -28,7 +29,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * scoring we make adjustments so that it appears (to the best of simulation
      * ability) that the tree was built using the knowledge of the point being
      * scored
-     * 
+     *
      */
     protected final Function<IBoundingBoxView, double[]> vecSepScore;
 
@@ -36,28 +37,24 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * Construct a new SimulatedTransductiveScalarScoreVisitor
      *
      * @param pointToScore The point whose anomaly score we are computing
-     * @param treeMass     The total mass of the RandomCutTree that is scoring the
-     *                     point
-     * @param scoreSeen    is the part of the score function when the point has been
-     *                     seen
-     * @param scoreUnseen  is the part of the score when the point has not been seen
-     * @param damp         corresponds to the dampening of the effect of the seen
-     *                     points
-     * @param vecSep       A function that provides the probabilities of choosing
-     *                     different dimensions given a BoundingBox when the tree
-     *                     was built. This must be the same as the probabilies of
-     *                     Transductive inference during scoring. For extenstions
-     *                     where these are different, see
-     *                     SimulatedTransductiveScalarScoreVisitor
-     *
-     *                     Note that scores are not normalized because the function
-     *                     ranges are unknown as is the case with
-     *                     DynamicScoreVisitor
+     * @param treeMass The total mass of the RandomCutTree that is scoring the point
+     * @param scoreSeen is the part of the score function when the point has been seen
+     * @param scoreUnseen is the part of the score when the point has not been seen
+     * @param damp corresponds to the dampening of the effect of the seen points
+     * @param vecSep A function that provides the probabilities of choosing different dimensions
+     *     given a BoundingBox when the tree was built. This must be the same as the probabilies of
+     *     Transductive inference during scoring. For extenstions where these are different, see
+     *     SimulatedTransductiveScalarScoreVisitor
+     *     <p>Note that scores are not normalized because the function ranges are unknown as is the
+     *     case with DynamicScoreVisitor
      */
-
-    public TransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
-            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSep) {
+    public TransductiveScalarScoreVisitor(
+            double[] pointToScore,
+            int treeMass,
+            BiFunction<Double, Double, Double> scoreSeen,
+            BiFunction<Double, Double, Double> scoreUnseen,
+            BiFunction<Double, Double, Double> damp,
+            Function<IBoundingBoxView, double[]> vecSep) {
         super(pointToScore, treeMass, 0, scoreSeen, scoreUnseen, damp);
         this.vecSepScore = vecSep;
         // build function is the same as scoring function
@@ -66,7 +63,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
     /**
      * Update the anomaly score based on the next step of the tree traversal.
      *
-     * @param node        The current node in the tree traversal
+     * @param node The current node in the tree traversal
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
@@ -86,17 +83,14 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
         }
 
         score = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass()) + weight * score;
-
     }
 
     /**
-     * Compute the probability that a random cut would separate the point from the
-     * rest of the bounding box. This method is intended to compute the probability
-     * for a non-leaf Node, and will throw an exception if a leaf-node bounding box
-     * is detected.
+     * Compute the probability that a random cut would separate the point from the rest of the
+     * bounding box. This method is intended to compute the probability for a non-leaf Node, and
+     * will throw an exception if a leaf-node bounding box is detected.
      *
-     * @param boundingBox The bounding box that we are computing the probability of
-     *                    separation from.
+     * @param boundingBox The bounding box that we are computing the probability of separation from.
      * @return is the probability
      */
     @Override
@@ -121,8 +115,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
                 double newRange = maxVal - minVal;
                 if (newRange > oldRange) {
                     sumOfNumerator += vec[i] * (newRange - oldRange) / newRange;
-                } else
-                    coordInsideBox[i] = true;
+                } else coordInsideBox[i] = true;
             }
         }
 
@@ -147,7 +140,9 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
     // written in the more general form so that it can be used for the Simulated
     // version as well without any changes.
 
-    protected double getWeight(int dim, Function<IBoundingBoxView, double[]> vecSepBuild,
+    protected double getWeight(
+            int dim,
+            Function<IBoundingBoxView, double[]> vecSepBuild,
             final IBoundingBoxView boundingBox) {
 
         double[] vecSmall = vecSepBuild.apply(boundingBox);
@@ -162,7 +157,8 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
             sumLarge += vecLarge[i];
         }
 
-        return (boundingBox.getRange(dim) / largeBox.getRange(dim)) * (sumSmall / sumLarge)
+        return (boundingBox.getRange(dim) / largeBox.getRange(dim))
+                * (sumSmall / sumLarge)
                 * (vecLarge[dim] / vecSmall[dim]);
         // this can be larger than 1
         // For RCFs vecLarge[dim] = largeBox.getRange(dim) and

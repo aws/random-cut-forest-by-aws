@@ -13,13 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
 import static org.mockito.Mockito.mock;
 
 import java.io.BufferedReader;
 import java.io.PrintWriter;
-
 import org.junit.jupiter.api.BeforeEach;
 
 public class SimpleDensityRunnerTest {
@@ -44,9 +44,19 @@ public class SimpleDensityRunnerTest {
         headerRow = true;
         runner = new SimpleDensityRunner();
 
-        runner.parse("--number-of-trees", Integer.toString(numberOfTrees), "--sample-size",
-                Integer.toString(sampleSize), "--shingle-size", Integer.toString(shingleSize), "--window-size",
-                Integer.toString(windowSize), "--delimiter", delimiter, "--header-row", Boolean.toString(headerRow));
+        runner.parse(
+                "--number-of-trees",
+                Integer.toString(numberOfTrees),
+                "--sample-size",
+                Integer.toString(sampleSize),
+                "--shingle-size",
+                Integer.toString(shingleSize),
+                "--window-size",
+                Integer.toString(windowSize),
+                "--delimiter",
+                delimiter,
+                "--header-row",
+                Boolean.toString(headerRow));
 
         in = mock(BufferedReader.class);
         out = mock(PrintWriter.class);
@@ -59,26 +69,26 @@ public class SimpleDensityRunnerTest {
      * "a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down");
      * verify(out).println("1.0,2.0,0.0,0.0,0.0,0.0");
      * verify(out).println("4.0,5.0,0.0,0.0,0.0,0.0"); }
-     * 
+     *
      * @Test public void testWriteHeader() { String[] line = new String[] {"a",
      * "b"}; runner.prepareAlgorithm(2); runner.writeHeader(line, out);
      * verify(out).println(
      * "a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down"); }
-     * 
+     *
      * @Test public void testProcessLine() { String[] line = new String[] {"1.0",
      * "2.0"}; runner.prepareAlgorithm(2); runner.processLine(line, out);
      * verify(out).println("1.0,2.0,0.0,0.0,0.0,0.0"); }
-     * 
+     *
      * @Test public void testSimpleDensityTransformer() { RandomCutForest forest =
      * mock(RandomCutForest.class); when(forest.getDimensions()).thenReturn(2);
-     * 
+     *
      * SimpleDensityRunner.SimpleDensityTransformer transformer = new
      * SimpleDensityRunner.SimpleDensityTransformer(forest);
-     * 
+     *
      * DensityOutput expected = new DensityOutput(2, 256); expected.probMass.high[0]
      * = 0.0; expected.probMass.low[0] = 9.0; expected.probMass.high[1] = 8.0;
      * expected.probMass.low[1] = 7.0;
-     * 
+     *
      * when(forest.getSimpleDensity(1.0, 2.0)).thenReturn(expected);
      * assertEquals(Arrays.asList("0.0", "9.0", "8.0", "7.0"),
      * transformer.getResultValues(1.0, 2.0));

@@ -13,34 +13,27 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
- * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n
- * there are min and max values a_i and b_i, with a_i less than or equal to b_i,
- * such that the bounding box is equal to the set of points x whose ith
- * coordinate is between a_i and b_i. Thus topologically we need the two corners
- * which define a box. While the current library considers specific realized
- * boxes, these boxes may correspond to implicit representations.
- *
+ * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n there are min and max
+ * values a_i and b_i, with a_i less than or equal to b_i, such that the bounding box is equal to
+ * the set of points x whose ith coordinate is between a_i and b_i. Thus topologically we need the
+ * two corners which define a box. While the current library considers specific realized boxes,
+ * these boxes may correspond to implicit representations.
  */
 public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
 
-    /**
-     * An array containing the minimum value corresponding to each dimension.
-     */
+    /** An array containing the minimum value corresponding to each dimension. */
     protected final Point minValues;
 
-    /**
-     * An array containing the maximum value corresponding to each dimensions
-     */
+    /** An array containing the maximum value corresponding to each dimensions */
     protected final Point maxValues;
 
-    /**
-     * The sum of side lengths defined by this bounding box.
-     */
+    /** The sum of side lengths defined by this bounding box. */
     protected double rangeSum;
 
     /**
@@ -70,19 +63,18 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     public abstract AbstractBoundingBox<Point> copy();
 
     /**
-     * Return a new bounding box which is the smallest bounding box that contains
-     * this bounding box and otherBoundingBox.
+     * Return a new bounding box which is the smallest bounding box that contains this bounding box
+     * and otherBoundingBox.
      *
      * @param otherBox the bounding box being merged with this box
-     * @return the smallest bounding box that contains this bounding box and
-     *         otherBoundingBox;
+     * @return the smallest bounding box that contains this bounding box and otherBoundingBox;
      */
     public abstract IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);
 
     /**
-     * The following will perform merge in place; unless the current box is a point;
-     * in which case it would produce a new box
-     * 
+     * The following will perform merge in place; unless the current box is a point; in which case
+     * it would produce a new box
+     *
      * @param point to be added to this box
      * @return merged bounding box
      */
@@ -96,14 +88,10 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
      */
     public abstract AbstractBoundingBox<Point> addBox(final AbstractBoundingBox<Point> otherBox);
 
-    /**
-     * @return dimensions of the box
-     */
+    /** @return dimensions of the box */
     public abstract int getDimensions();
 
-    /**
-     * @return the sum of side lengths for this BoundingBox.
-     */
+    /** @return the sum of side lengths for this BoundingBox. */
     public double getRangeSum() {
         return rangeSum;
     }
@@ -125,9 +113,8 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     public abstract double getMinValue(final int dimension);
 
     /**
-     * Returns true if the given point is contained in this bounding box. This is
-     * equivalent to the point being a member of the set defined by this bounding
-     * box.
+     * Returns true if the given point is contained in this bounding box. This is equivalent to the
+     * point being a member of the set defined by this bounding box.
      *
      * @param point with which we're performing the comparison
      * @return whether the point is contained by the bounding box
@@ -146,12 +133,12 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     public abstract boolean contains(Point point);
 
     /**
-     * Returns true if the given bounding box is contained inside this bounding box.
-     * Equivalently, if the given bounding box is a subset of this bounding box.
+     * Returns true if the given bounding box is contained inside this bounding box. Equivalently,
+     * if the given bounding box is a subset of this bounding box.
      *
      * @param other Another bounding box that we are comparing to this bounding box.
-     * @return true if the given bounding box is contained inside this bounding box,
-     *         false otherwise.
+     * @return true if the given bounding box is contained inside this bounding box, false
+     *     otherwise.
      */
     public boolean contains(AbstractBoundingBox<?> other) {
         checkArgument(getDimensions() == other.getDimensions(), "incorrect dimensions");
@@ -164,11 +151,11 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     }
 
     /**
-     * Test whether a given scalar value falls between the min and max values in the
-     * given dimension.
+     * Test whether a given scalar value falls between the min and max values in the given
+     * dimension.
      *
-     * @return whether the value of a point is between the minimum or maximum value
-     *         of the bounding box for the given dimension
+     * @return whether the value of a point is between the minimum or maximum value of the bounding
+     *     box for the given dimension
      */
     public boolean contains(int dimension, double value) {
         return getMaxValue(dimension) >= value && value >= getMinValue(dimension);
@@ -186,10 +173,10 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     public abstract String toString();
 
     /**
-     * Two bounding boxes are considered equal if they have the same dimensions and
-     * all their min values and max values are the same. Min and max values are
-     * compared as primitive doubles using ==, so two bounding boxes are not equal
-     * if their min and max values are merely very close.
+     * Two bounding boxes are considered equal if they have the same dimensions and all their min
+     * values and max values are the same. Min and max values are compared as primitive doubles
+     * using ==, so two bounding boxes are not equal if their min and max values are merely very
+     * close.
      *
      * @param other An object to test for equality
      * @return true if other is a bounding box with the same min and max values

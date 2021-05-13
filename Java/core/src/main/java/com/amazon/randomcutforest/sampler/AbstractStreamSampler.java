@@ -13,54 +13,45 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
-import java.util.Random;
-
 import com.amazon.randomcutforest.config.Config;
+import java.util.Random;
 
 public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
-     * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
+     * The decay factor used for generating the weight of the point. For greater values of lambda we
+     * become more biased in favor of recent points.
      */
     protected double timeDecay;
 
-    /**
-     * The sequence index corresponding to the most recent change to
-     * {@code timeDecay}.
-     */
+    /** The sequence index corresponding to the most recent change to {@code timeDecay}. */
     protected long mostRecentTimeDecayUpdate = 0;
 
-    /**
-     * most recent timestamp, used to determine lastUpdateOfLambda
-     */
+    /** most recent timestamp, used to determine lastUpdateOfLambda */
     protected long maxSequenceIndex = 0;
 
-    /**
-     * The accumulated sum of lambda before the last update
-     */
+    /** The accumulated sum of lambda before the last update */
     protected double accumuluatedTimeDecay = 0;
 
-    /**
-     * The random number generator used in sampling.
-     */
+    /** The random number generator used in sampling. */
     protected Random rng;
 
     /**
-     * The point evicted by the last call to {@link #update}, or null if the new
-     * point was not accepted by the sampler.
+     * The point evicted by the last call to {@link #update}, or null if the new point was not
+     * accepted by the sampler.
      */
     protected transient ISampled<Integer> evictedPoint;
 
     /**
-     * This field is used to temporarily store the result from a call to
-     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
+     * This field is used to temporarily store the result from a call to {@link #acceptPoint} for
+     * use in the subsequent call to {@link #addPoint}.
      *
-     * Visible for testing.
+     * <p>Visible for testing.
      */
     protected AcceptPointState acceptPointState;
 
@@ -73,15 +64,14 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * Weight is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
      *
      * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
-     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
+     *   <li><code>w(i) = exp(lambda * sequenceIndex)</code>
+     *   <li><code>u(i)</code> is chosen uniformly from (0, 1)
      * </ul>
-     * <p>
-     * A higher score means lower priority. So the points with the lower score have
-     * higher chance of making it to the sample.
      *
-     * @param sequenceIndex The sequenceIndex of the point whose score is being
-     *                      computed.
+     * <p>A higher score means lower priority. So the points with the lower score have higher chance
+     * of making it to the sample.
+     *
+     * @param sequenceIndex The sequenceIndex of the point whose score is being computed.
      * @return the weight value used to define point priority
      */
     protected float computeWeight(long sequenceIndex) {
@@ -90,16 +80,17 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             randomNumber = rng.nextDouble();
         }
         maxSequenceIndex = (maxSequenceIndex < sequenceIndex) ? sequenceIndex : maxSequenceIndex;
-        return (float) (-(sequenceIndex - mostRecentTimeDecayUpdate) * timeDecay - accumuluatedTimeDecay
-                + Math.log(-Math.log(randomNumber)));
+        return (float)
+                (-(sequenceIndex - mostRecentTimeDecayUpdate) * timeDecay
+                        - accumuluatedTimeDecay
+                        + Math.log(-Math.log(randomNumber)));
     }
 
     /**
-     * sets the lambda on the fly. Note that the assumption is that the times stamps
-     * corresponding to changes to lambda and sequenceIndexes are non-decreasing --
-     * the sequenceIndexes can be out of order among themselves within two different
-     * times when lambda was changed.
-     * 
+     * sets the lambda on the fly. Note that the assumption is that the times stamps corresponding
+     * to changes to lambda and sequenceIndexes are non-decreasing -- the sequenceIndexes can be out
+     * of order among themselves within two different times when lambda was changed.
+     *
      * @param newLambda the new sampling rate
      */
     public void setTimeDecay(double newLambda) {
@@ -112,9 +103,9 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     }
 
     /**
-     * @return the lambda value that determines the rate of decay of previously seen
-     *         points. Larger values of lambda indicate a greater bias toward recent
-     *         points. A value of 0 corresponds to a uniform sample over the stream.
+     * @return the lambda value that determines the rate of decay of previously seen points. Larger
+     *     values of lambda indicate a greater bias toward recent points. A value of 0 corresponds
+     *     to a uniform sample over the stream.
      */
     public double getTimeDecay() {
         return timeDecay;
@@ -139,7 +130,8 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     @Override
     public <T> void setConfig(String name, T value, Class<T> clazz) {
         if (Config.TIME_DECAY.equals(name)) {
-            checkArgument(Double.class.isAssignableFrom(clazz),
+            checkArgument(
+                    Double.class.isAssignableFrom(clazz),
                     String.format("Setting '%s' must be a double value", name));
             setTimeDecay((Double) value);
         } else {
@@ -151,7 +143,8 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     public <T> T getConfig(String name, Class<T> clazz) {
         checkNotNull(clazz, "clazz must not be null");
         if (Config.TIME_DECAY.equals(name)) {
-            checkArgument(clazz.isAssignableFrom(Double.class),
+            checkArgument(
+                    clazz.isAssignableFrom(Double.class),
                     String.format("Setting '%s' must be a double value", name));
             return clazz.cast(getTimeDecay());
         } else {

@@ -13,39 +13,33 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
-
-import java.util.Arrays;
-
-import lombok.Getter;
-import lombok.Setter;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import java.util.Arrays;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> {
 
     /**
-     * if single precision, then stores the cut information as a float array
-     * (converted to bytes)
+     * if single precision, then stores the cut information as a float array (converted to bytes)
      */
     private Precision precision = Precision.FLOAT_64;
 
-    /**
-     * If true, then the arrays are compressed via simple data dependent scheme
-     */
+    /** If true, then the arrays are compressed via simple data dependent scheme */
     private boolean compressionEnabled = true;
 
-    /**
-     * determines if a sampler is needed to bring up a tree
-     */
+    /** determines if a sampler is needed to bring up a tree */
     private boolean partialTreeStateEnabled = false;
 
     @Override
@@ -54,7 +48,8 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
         double[] cutValue;
         if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
-            cutValue = CommonUtils.toDoubleArray(ArrayPacking.unpackFloats(state.getCutValueData()));
+            cutValue =
+                    CommonUtils.toDoubleArray(ArrayPacking.unpackFloats(state.getCutValueData()));
         } else {
             cutValue = ArrayPacking.unpackDoubles(state.getCutValueData());
         }
@@ -72,16 +67,29 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
             leafPointIndex = null;
         } else {
             leafMass = ArrayPacking.unpackInts(state.getLeafMass(), state.isCompressed());
-            leafPointIndex = ArrayPacking.unpackInts(state.getLeafPointIndex(), state.isCompressed());
+            leafPointIndex =
+                    ArrayPacking.unpackInts(state.getLeafPointIndex(), state.isCompressed());
         }
 
-        int[] nodeFreeIndexes = ArrayPacking.unpackInts(state.getNodeFreeIndexes(), state.isCompressed());
+        int[] nodeFreeIndexes =
+                ArrayPacking.unpackInts(state.getNodeFreeIndexes(), state.isCompressed());
         int nodeFreeIndexPointer = state.getNodeFreeIndexPointer();
-        int[] leafFreeIndexes = ArrayPacking.unpackInts(state.getLeafFreeIndexes(), state.isCompressed());
+        int[] leafFreeIndexes =
+                ArrayPacking.unpackInts(state.getLeafFreeIndexes(), state.isCompressed());
         int leafFreeIndexPointer = state.getLeafFreeIndexPointer();
 
-        return new NodeStore(capacity, leftIndex, rightIndex, cutDimension, cutValue, leafMass, leafPointIndex,
-                nodeFreeIndexes, nodeFreeIndexPointer, leafFreeIndexes, leafFreeIndexPointer);
+        return new NodeStore(
+                capacity,
+                leftIndex,
+                rightIndex,
+                cutDimension,
+                cutValue,
+                leafMass,
+                leafPointIndex,
+                nodeFreeIndexes,
+                nodeFreeIndexPointer,
+                leafFreeIndexes,
+                leafFreeIndexPointer);
     }
 
     @Override
@@ -112,12 +120,15 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         } else {
             state.setCutValueData(ArrayPacking.pack(model.cutValue, model.cutValue.length));
         }
-        state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
+        state.setNodeFreeIndexes(
+                ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
         state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());
-        state.setLeafFreeIndexes(ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));
+        state.setLeafFreeIndexes(
+                ArrayPacking.pack(model.getLeafFreeIndexes(), state.isCompressed()));
         state.setLeafFreeIndexPointer(model.getLeafFreeIndexPointer());
         if (!state.isPartialTreeStateEnabled()) {
-            state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
+            state.setLeafPointIndex(
+                    ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
             state.setLeafMass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
         }
 

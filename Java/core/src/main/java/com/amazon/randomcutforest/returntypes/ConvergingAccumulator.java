@@ -13,12 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 /**
- * An accumulator which can be used to short-circuit the number of trees visited
- * if the responses from the trees seen so far appear to be converging to a
- * value. for an example
+ * An accumulator which can be used to short-circuit the number of trees visited if the responses
+ * from the trees seen so far appear to be converging to a value. for an example
  *
  * @param <R> The result type being accumulated.
  * @see com.amazon.randomcutforest.RandomCutForest
@@ -27,24 +27,19 @@ public interface ConvergingAccumulator<R> {
     /**
      * Add a new result value to this accumulator.
      *
-     * @param value A single result value which should be accumulated together with
-     *              other results.
+     * @param value A single result value which should be accumulated together with other results.
      */
     void accept(R value);
 
     /**
-     * @return 'true' if the accumulator has converged and we can stop accepting new
-     *         values, 'false' otherwise.
+     * @return 'true' if the accumulator has converged and we can stop accepting new values, 'false'
+     *     otherwise.
      */
     boolean isConverged();
 
-    /**
-     * @return the number of values that have been accepted by this accumulator.
-     */
+    /** @return the number of values that have been accepted by this accumulator. */
     int getValuesAccepted();
 
-    /**
-     * @return the accumulated.
-     */
+    /** @return the accumulated. */
     R getAccumulatedValue();
 }

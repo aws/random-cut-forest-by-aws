@@ -13,13 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.tree;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import lombok.Data;
-
 import com.amazon.randomcutforest.state.store.NodeStoreState;
+import lombok.Data;
 
 @Data
 public class CompactRandomCutTreeState {
@@ -38,5 +38,4 @@ public class CompactRandomCutTreeState {
     private long seed;
     private int id;
     private int dimensions;
-
 }

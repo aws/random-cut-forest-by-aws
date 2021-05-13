@@ -13,53 +13,64 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-
-import java.util.Arrays;
-
-import lombok.Getter;
-import lombok.Setter;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import java.util.Arrays;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, PointStoreState> {
-    /**
-     * If true, then the arrays are compressed via simple data dependent scheme
-     */
+    /** If true, then the arrays are compressed via simple data dependent scheme */
     private boolean compressionEnabled = true;
 
     @Override
     public PointStoreDouble toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getPointData(), "pointData must not be null");
-        checkArgument(state.getPrecisionEnumValue() == Precision.FLOAT_64, "precision must be " + Precision.FLOAT_64);
+        checkArgument(
+                state.getPrecisionEnumValue() == Precision.FLOAT_64,
+                "precision must be " + Precision.FLOAT_64);
         int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
-        double[] store = ArrayPacking.unpackDoubles(state.getPointData(), state.getCurrentStoreCapacity() * dimensions);
+        double[] store =
+                ArrayPacking.unpackDoubles(
+                        state.getPointData(), state.getCurrentStoreCapacity() * dimensions);
         int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
+        int[] refCount =
+                ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
 
-        return PointStoreDouble.builder().internalRotationEnabled(state.isRotationEnabled())
+        return PointStoreDouble.builder()
+                .internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
                 .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .directLocationEnabled(state.isDirectLocationMap()).indexCapacity(indexCapacity)
-                .currentStoreCapacity(state.getCurrentStoreCapacity()).capacity(state.getCapacity())
-                .shingleSize(state.getShingleSize()).dimensions(state.getDimensions()).locationList(locationList)
-                .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
-                .knownShingle(state.getInternalShingle()).store(store).build();
+                .directLocationEnabled(state.isDirectLocationMap())
+                .indexCapacity(indexCapacity)
+                .currentStoreCapacity(state.getCurrentStoreCapacity())
+                .capacity(state.getCapacity())
+                .shingleSize(state.getShingleSize())
+                .dimensions(state.getDimensions())
+                .locationList(locationList)
+                .nextTimeStamp(state.getLastTimeStamp())
+                .startOfFreeSegment(startOfFreeSegment)
+                .refCount(refCount)
+                .knownShingle(state.getInternalShingle())
+                .store(store)
+                .build();
     }
 
     @Override
@@ -82,7 +93,8 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setPrecision(Precision.FLOAT_64.name());
         int prefix = model.getValidPrefix();
         state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
-        state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
+        state.setLocationList(
+                ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
         state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

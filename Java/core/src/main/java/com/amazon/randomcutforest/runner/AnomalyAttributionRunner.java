@@ -13,8 +13,12 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.returntypes.DiVector;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,18 +28,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.returntypes.DiVector;
-
 /**
- * A command-line application that computes anomaly attribution. Points are read
- * from STDIN and output is written to STDOUT. Output consists of the original
- * input point with the anomaly attribution vector appended.
+ * A command-line application that computes anomaly attribution. Points are read from STDIN and
+ * output is written to STDOUT. Output consists of the original input point with the anomaly
+ * attribution vector appended.
  */
 public class AnomalyAttributionRunner extends SimpleRunner {
 
     public AnomalyAttributionRunner() {
-        super(AnomalyAttributionRunner.class.getName(),
+        super(
+                AnomalyAttributionRunner.class.getName(),
                 "Compute directional anomaly scores from the input rows and append them to the output rows.",
                 AnomalyAttributionTransformer::new);
     }
@@ -44,7 +46,8 @@ public class AnomalyAttributionRunner extends SimpleRunner {
         AnomalyAttributionRunner runner = new AnomalyAttributionRunner();
         runner.parse(args);
         System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+        runner.run(
+                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
                 new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
         System.out.println("Done.");
     }
@@ -95,5 +98,4 @@ public class AnomalyAttributionRunner extends SimpleRunner {
             return forest;
         }
     }
-
 }

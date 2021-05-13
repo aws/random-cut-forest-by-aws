@@ -13,23 +13,23 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 /**
- * A store for points of precision type P, which can be double[] or float[]
- * which can be added to a store by the update coordinator and made accessible
- * to the trees in a read only manner.
- * 
+ * A store for points of precision type P, which can be double[] or float[] which can be added to a
+ * store by the update coordinator and made accessible to the trees in a read only manner.
+ *
  * @param <Point> precision type
  */
 public interface IPointStore<Point> extends IPointStoreView<Point> {
     /**
-     * Adds to the store; there may be a loss of precision if enableFloat is on in
-     * the Forest level. But external interface of the forest is double[]
+     * Adds to the store; there may be a loss of precision if enableFloat is on in the Forest level.
+     * But external interface of the forest is double[]
      *
-     * Note that delete is automatic, that is when no trees are accessing the point
-     * 
-     * @param point       point to be added
+     * <p>Note that delete is automatic, that is when no trees are accessing the point
+     *
+     * @param point point to be added
      * @param sequenceNum sequence number of the point
      * @return index of the stored point
      */
@@ -40,5 +40,4 @@ public interface IPointStore<Point> extends IPointStoreView<Point> {
 
     // decrements and returns the decremented value
     int decrementRefCount(int index);
-
 }

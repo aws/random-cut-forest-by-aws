@@ -13,46 +13,43 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
-import java.util.Optional;
-import java.util.Random;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.config.Config;
+import java.util.Optional;
+import java.util.Random;
+import java.util.function.Function;
 
 /**
- * A Compact Random Cut Tree is a tree data structure whose leaves represent
- * points inserted into the tree and whose interior nodes represent regions of
- * space defined by Bounding Boxes and Cuts. New nodes and leaves are added to
- * the tree by making random cuts.
+ * A Compact Random Cut Tree is a tree data structure whose leaves represent points inserted into
+ * the tree and whose interior nodes represent regions of space defined by Bounding Boxes and Cuts.
+ * New nodes and leaves are added to the tree by making random cuts.
  *
- * The offsets are encoded as follows: an offset greater or equal maxSize
- * corresponds to a leaf node of offset (offset - maxSize) otherwise the offset
- * corresponds to an internal node
+ * <p>The offsets are encoded as follows: an offset greater or equal maxSize corresponds to a leaf
+ * node of offset (offset - maxSize) otherwise the offset corresponds to an internal node
  *
- * The main use of this class is to be updated with points sampled from a
- * stream, and to define traversal methods. Users can then implement a
- * {@link Visitor} which can be submitted to a traversal method in order to
- * compute a statistic from the tree.
+ * <p>The main use of this class is to be updated with points sampled from a stream, and to define
+ * traversal methods. Users can then implement a {@link Visitor} which can be submitted to a
+ * traversal method in order to compute a statistic from the tree.
  */
 public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference>
         implements ITree<PointReference, Point> {
 
     /**
-     * The index value used to represent the absence of a node. For example, when
-     * the tree is created the root node index will be NULL. After a point is added
-     * and a root node is created, the root node's parent will be NULL, and so on.
+     * The index value used to represent the absence of a node. For example, when the tree is
+     * created the root node index will be NULL. After a point is added and a root node is created,
+     * the root node's parent will be NULL, and so on.
      */
-
     private final Random rng;
+
     protected NodeReference root;
     public final boolean centerOfMassEnabled;
     public final boolean storeSequenceIndexesEnabled;
@@ -60,7 +57,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     Random cacheRandom = new Random(0);
     protected int outputAfter;
 
-    public AbstractRandomCutTree(Random rng, double boundingBoxCacheFraction, boolean centerOfMassEnabled,
+    public AbstractRandomCutTree(
+            Random rng,
+            double boundingBoxCacheFraction,
+            boolean centerOfMassEnabled,
             boolean storeSequenceIndexesEnabled) {
         this.rng = rng;
         this.boundingBoxCacheFraction = boundingBoxCacheFraction;
@@ -68,7 +68,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
     }
 
-    public AbstractRandomCutTree(Random rng, boolean boundingBoxCacheEnabled, boolean centerOfMassEnabled,
+    public AbstractRandomCutTree(
+            Random rng,
+            boolean boundingBoxCacheEnabled,
+            boolean centerOfMassEnabled,
             boolean storeSequenceIndexesEnabled) {
         this.rng = rng;
         if (boundingBoxCacheEnabled) {
@@ -97,7 +100,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     @Override
     public <T> void setConfig(String name, T value, Class<T> clazz) {
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
-            checkArgument(Double.class.isAssignableFrom(clazz),
+            checkArgument(
+                    Double.class.isAssignableFrom(clazz),
                     String.format("Setting '%s' must be a double value", name));
             setBoundingBoxCacheFraction((Double) value);
         } else {
@@ -109,7 +113,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public <T> T getConfig(String name, Class<T> clazz) {
         checkNotNull(clazz, "clazz must not be null");
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
-            checkArgument(clazz.isAssignableFrom(Double.class),
+            checkArgument(
+                    clazz.isAssignableFrom(Double.class),
                     String.format("Setting '%s' must be a double value", name));
             return clazz.cast(boundingBoxCacheFraction);
         } else {
@@ -127,11 +132,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * Return a new {@link Cut}, which is chosen uniformly over the space of
-     * possible cuts for the given bounding box.
+     * Return a new {@link Cut}, which is chosen uniformly over the space of possible cuts for the
+     * given bounding box.
      *
      * @param random A random number generator
-     * @param box    A bounding box that we want to find a random cut for.
+     * @param box A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
     protected Cut randomCut(Random random, AbstractBoundingBox<?> box) {
@@ -173,14 +178,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     protected abstract AbstractBoundingBox<Point> getInternalTwoPointBox(Point first, Point second);
 
     /**
-     * Takes a node reference and produces a bounding box; cannot return null If
-     * bounding boxes are cached then the bounding boxes of the descendants are
-     * populated as well. Otherwise a bounding box is continually modified in place
-     * to build the bounding box.
+     * Takes a node reference and produces a bounding box; cannot return null If bounding boxes are
+     * cached then the bounding boxes of the descendants are populated as well. Otherwise a bounding
+     * box is continually modified in place to build the bounding box.
      *
      * @param nodeReference reference of node
-     * @return the bounding box corresponding to the node, irrespective of any
-     *         caching
+     * @return the bounding box corresponding to the node, irrespective of any caching
      */
     protected AbstractBoundingBox<Point> getBoundingBox(NodeReference nodeReference) {
         if (isLeaf(nodeReference)) {
@@ -190,11 +193,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // function for getting the bounding boxes for leaf nodes
-    protected abstract AbstractBoundingBox<Point> getLeafBoxFromLeafNode(NodeReference nodeReference);
+    protected abstract AbstractBoundingBox<Point> getLeafBoxFromLeafNode(
+            NodeReference nodeReference);
 
     // function for getting the bounding boxes for leaf nodes that can be mutated in
     // place
-    protected abstract AbstractBoundingBox<Point> getMutableLeafBoxFromLeafNode(NodeReference nodeReference);
+    protected abstract AbstractBoundingBox<Point> getMutableLeafBoxFromLeafNode(
+            NodeReference nodeReference);
 
     protected abstract AbstractBoundingBox<Point> constructBoxInPlace(NodeReference nodeReference);
 
@@ -211,58 +216,63 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // is a leaf or otherwise
-    abstract protected boolean isLeaf(NodeReference node);
+    protected abstract boolean isLeaf(NodeReference node);
 
     // decreases mass of a node and returns it
-    abstract protected int decrementMass(NodeReference node);
+    protected abstract int decrementMass(NodeReference node);
 
     // increases mass of a node and returns it
-    abstract protected int incrementMass(NodeReference node);
+    protected abstract int incrementMass(NodeReference node);
 
     // returns the sibling of a node
-    abstract protected NodeReference getSibling(NodeReference nodeReference);
+    protected abstract NodeReference getSibling(NodeReference nodeReference);
 
-    abstract protected NodeReference getParent(NodeReference nodeReference);
+    protected abstract NodeReference getParent(NodeReference nodeReference);
 
-    abstract protected void setParent(NodeReference nodeReference, NodeReference parent);
+    protected abstract void setParent(NodeReference nodeReference, NodeReference parent);
 
-    abstract protected void delete(NodeReference nodeReference);
-
-    // only valid for internal nodes
-    abstract protected int getCutDimension(NodeReference nodeReference);
+    protected abstract void delete(NodeReference nodeReference);
 
     // only valid for internal nodes
-    abstract protected double getCutValue(NodeReference nodeReference);
+    protected abstract int getCutDimension(NodeReference nodeReference);
 
-    abstract protected NodeReference getLeftChild(NodeReference nodeReference);
+    // only valid for internal nodes
+    protected abstract double getCutValue(NodeReference nodeReference);
 
-    abstract protected NodeReference getRightChild(NodeReference nodeReference);
+    protected abstract NodeReference getLeftChild(NodeReference nodeReference);
+
+    protected abstract NodeReference getRightChild(NodeReference nodeReference);
 
     // replaces child (with designated parent) by otherNode
     abstract void replaceChild(NodeReference parent, NodeReference child, NodeReference otherNode);
 
     // implements the delete step in RCF
-    abstract protected void replaceNodeBySibling(NodeReference grandParent, NodeReference Parent, NodeReference node);
+    protected abstract void replaceNodeBySibling(
+            NodeReference grandParent, NodeReference Parent, NodeReference node);
 
     // creates a new leaf node
-    abstract protected NodeReference addLeaf(PointReference pointIndex);
+    protected abstract NodeReference addLeaf(PointReference pointIndex);
 
     // creates an internal node
-    abstract protected NodeReference addNode(NodeReference leftChild, NodeReference rightChild, int cutDimension,
-            double cutValue, int mass);
+    protected abstract NodeReference addNode(
+            NodeReference leftChild,
+            NodeReference rightChild,
+            int cutDimension,
+            double cutValue,
+            int mass);
 
     // increases the mass of all ancestor nodes when an added point is internal to
     // some bounding box
     // note the bounding boxes of these ancestor nodes will remain unchanged
-    abstract protected void increaseMassOfAncestors(NodeReference mergedNode);
+    protected abstract void increaseMassOfAncestors(NodeReference mergedNode);
 
-    abstract protected void decreaseMassOfAncestors(NodeReference mergedNode);
+    protected abstract void decreaseMassOfAncestors(NodeReference mergedNode);
 
-    abstract protected int getMass(NodeReference nodeReference);
+    protected abstract int getMass(NodeReference nodeReference);
 
-    abstract protected void addSequenceIndex(NodeReference node, long uniqueSequenceNumber);
+    protected abstract void addSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
-    abstract protected void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
+    protected abstract void deleteSequenceIndex(NodeReference node, long uniqueSequenceNumber);
 
     // the following does not need the information of the point in the current time
     // however that information may be of use for different type of Points
@@ -293,18 +303,19 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * finds the reference to the leaf node which corresponds to the path followed
-     * in the tree by an input point
-     * 
+     * finds the reference to the leaf node which corresponds to the path followed in the tree by an
+     * input point
+     *
      * @param point point
      * @return reference of the leaf node
      */
     NodeReference findLeaf(Point point) {
         NodeReference nodeReference = root;
         while (!isLeaf(nodeReference)) {
-            nodeReference = (leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))
-                    ? getLeftChild(nodeReference)
-                    : getRightChild(nodeReference);
+            nodeReference =
+                    (leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))
+                            ? getLeftChild(nodeReference)
+                            : getRightChild(nodeReference);
         }
         return nodeReference;
     }
@@ -313,27 +324,34 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         NodeReference nodeReference = findLeaf(point);
         Point oldPoint = getPointFromLeafNode(nodeReference);
         if (!equals(oldPoint, point)) {
-            throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference)) + " "
-                    + nodeReference + " node " + false + " Inconsistency in trees.");
+            throw new IllegalStateException(
+                    toString(point)
+                            + " "
+                            + toString(getPointFromLeafNode(nodeReference))
+                            + " "
+                            + nodeReference
+                            + " node "
+                            + false
+                            + " Inconsistency in trees.");
         }
         return nodeReference;
     }
 
     /**
-     * the following function returns the number of copies of a point in the tree
-     * and switches the reference to the provided reference. This may be useful for
-     * collating duplicate points across trees.
-     * 
+     * the following function returns the number of copies of a point in the tree and switches the
+     * reference to the provided reference. This may be useful for collating duplicate points across
+     * trees.
+     *
      * @param leafReference reference of the leaf node
-     * @param newRef        reference of the point stored at the leaf node
+     * @param newRef reference of the point stored at the leaf node
      * @return the number of copies of the point at leaf node
      */
     abstract void setLeafPointReference(NodeReference leafReference, PointReference newRef);
 
     /**
-     * the following switches the reference of any copy of the point used to the new
-     * reference if the point does not exist then an exception is raised
-     * 
+     * the following switches the reference of any copy of the point used to the new reference if
+     * the point does not exist then an exception is raised
+     *
      * @param newRef the new reference of the point
      */
     protected void switchLeafReference(PointReference newRef) {
@@ -343,12 +361,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * returns the reference to a point used by the tree, or null if the point is
-     * not being used
-     * 
+     * returns the reference to a point used by the tree, or null if the point is not being used
+     *
      * @param newReference a new reference to the point
-     * @return the exisitng reference to that point, or null if the actual point is
-     *         not in use
+     * @return the exisitng reference to that point, or null if the actual point is not in use
      */
     protected PointReference getEquivalentReference(PointReference newReference) {
         Point point = getPointFromPointReference(newReference);
@@ -364,14 +380,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * the following returns the number of copies of a point given a reference. If
-     * the point is not in the tree then an exception is raised; but if the
-     * reference in the tree is not the same then the answer is zero
-     * 
+     * the following returns the number of copies of a point given a reference. If the point is not
+     * in the tree then an exception is raised; but if the reference in the tree is not the same
+     * then the answer is zero
+     *
      * @param reference a reference to a point
      * @return the number of copies the exact reference is present
      */
-
     protected int getCopiesOfReference(PointReference reference) {
         checkNotNull(reference, " reference cannot be null ");
         NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(reference));
@@ -380,13 +395,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     /**
      * deletes a point from the tree
-     * 
+     *
      * @param pointReference the reference of the point
-     * @param sequenceNumber the sequence number (in case we are storing that in the
-     *                       leaves)
+     * @param sequenceNumber the sequence number (in case we are storing that in the leaves)
      * @return the reference used by the leaf node (after verifying equality)
      */
-
     @Override
     public PointReference deletePoint(PointReference pointReference, long sequenceNumber) {
         checkState(root != null, "root must not be null");
@@ -434,7 +447,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     abstract void addToBox(NodeReference node, Point point);
 
-    void updateAncestorNodesAfterAdd(AbstractBoundingBox<Point> savedBox, NodeReference mergedNode, Point point,
+    void updateAncestorNodesAfterAdd(
+            AbstractBoundingBox<Point> savedBox,
+            NodeReference mergedNode,
+            Point point,
             NodeReference parentIndex) {
         increaseMassOfAncestors(mergedNode);
         if (boundingBoxCacheFraction > 0) {
@@ -454,13 +470,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * adds a point to the tree
      *
      * @param pointReference the reference of the point to be added
-     * @param sequenceNumber the index of the point in PointStore and the
-     *                       corresponding timestamp
-     *
-     * @return the reference of the inserted point, which can be the input or a
-     *         reference to a previously seen copy
+     * @param sequenceNumber the index of the point in PointStore and the corresponding timestamp
+     * @return the reference of the inserted point, which can be the input or a reference to a
+     *     previously seen copy
      */
-
     public PointReference addPoint(PointReference pointReference, long sequenceNumber) {
 
         NodeReference leafNodeForAdd;
@@ -476,7 +489,10 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             NodeReference followReference = findLeaf(point);
 
             PointReference leafPointReference = getPointReference(followReference);
-            Point oldPoint = (leafPointReference == null) ? null : getPointFromPointReference(leafPointReference);
+            Point oldPoint =
+                    (leafPointReference == null)
+                            ? null
+                            : getPointFromPointReference(leafPointReference);
             if (leafPointReference == null || equals(oldPoint, point)) {
                 // the inserted point is equal to an existing leaf point
                 if (leafPointReference == null) {
@@ -511,8 +527,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                     // generate and cache the box
                     existingBox = getBoundingBox(followReference);
                 } else {
-                    NodeReference sibling = (leftOf(point, getCutDimension(followReference),
-                            getCutValue(followReference))) ? getRightChild(followReference)
+                    NodeReference sibling =
+                            (leftOf(
+                                            point,
+                                            getCutDimension(followReference),
+                                            getCutValue(followReference)))
+                                    ? getRightChild(followReference)
                                     : getLeftChild(followReference);
                     // the boxes are not present, merge the bounding box of the sibling of the last
                     // seen child to the stored box in the state and save it
@@ -553,9 +573,20 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             double cutValue = savedCut.getValue();
             int oldMass = getMass(savedSiblingNode);
             leafNodeForAdd = addLeaf(pointReference);
-            NodeReference mergedNode = leftOf(point, cutDimension, cutValue)
-                    ? addNode(leafNodeForAdd, savedSiblingNode, cutDimension, cutValue, (oldMass + 1))
-                    : addNode(savedSiblingNode, leafNodeForAdd, cutDimension, cutValue, (oldMass + 1));
+            NodeReference mergedNode =
+                    leftOf(point, cutDimension, cutValue)
+                            ? addNode(
+                                    leafNodeForAdd,
+                                    savedSiblingNode,
+                                    cutDimension,
+                                    cutValue,
+                                    (oldMass + 1))
+                            : addNode(
+                                    savedSiblingNode,
+                                    leafNodeForAdd,
+                                    cutDimension,
+                                    cutValue,
+                                    (oldMass + 1));
 
             NodeReference oldParent = getParent(savedSiblingNode);
             if (oldParent == null) {
@@ -574,7 +605,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         }
 
         return pointReference;
-
     }
 
     /**
@@ -583,12 +613,12 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @param nodeReference node identifier of a leaf node
      * @return actual values in double precision
      */
-    abstract protected double[] getPoint(NodeReference nodeReference);
+    protected abstract double[] getPoint(NodeReference nodeReference);
 
     /**
      * Used by visitors to test left/right
-     * 
-     * @param point         Actual point in double precision
+     *
+     * @param point Actual point in double precision
      * @param nodeReference identifier of the node
      * @return left/right decision
      */
@@ -597,25 +627,22 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     // provides a view of the root node
-    abstract protected INode<NodeReference> getNode(NodeReference node);
+    protected abstract INode<NodeReference> getNode(NodeReference node);
 
     /**
-     * Starting from the root, traverse the canonical path to a leaf node and visit
-     * the nodes along the path. The canonical path is determined by the input
-     * point: at each interior node, we select the child node by comparing the
-     * node's {@link Cut} to the corresponding coordinate value in the input point.
-     * The method recursively traverses to the leaf node first and then invokes the
-     * visitor on each node in reverse order. That is, if the path to the leaf node
-     * determined by the input point is root, node1, node2, ..., node(N-1), nodeN,
-     * leaf; then we will first invoke visitor::acceptLeaf on the leaf node, and
-     * then we will invoke visitor::accept on the remaining nodes in the following
-     * order: nodeN, node(N-1), ..., node2, node1, and root.
+     * Starting from the root, traverse the canonical path to a leaf node and visit the nodes along
+     * the path. The canonical path is determined by the input point: at each interior node, we
+     * select the child node by comparing the node's {@link Cut} to the corresponding coordinate
+     * value in the input point. The method recursively traverses to the leaf node first and then
+     * invokes the visitor on each node in reverse order. That is, if the path to the leaf node
+     * determined by the input point is root, node1, node2, ..., node(N-1), nodeN, leaf; then we
+     * will first invoke visitor::acceptLeaf on the leaf node, and then we will invoke
+     * visitor::accept on the remaining nodes in the following order: nodeN, node(N-1), ..., node2,
+     * node1, and root.
      *
-     * @param point          A point which determines the traversal path from the
-     *                       root to a leaf node.
-     * @param visitorFactory A visitor that will be invoked for each node on the
-     *                       path.
-     * @param <R>            The return type of the Visitor.
+     * @param point A point which determines the traversal path from the root to a leaf node.
+     * @param visitorFactory A visitor that will be invoked for each node on the path.
+     * @param <R> The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
@@ -626,8 +653,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return visitor.getResult();
     }
 
-    private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference node,
-            int depthOfNode) {
+    private <R> void traversePathToLeafAndVisitNodes(
+            double[] point, Visitor<R> visitor, NodeReference node, int depthOfNode) {
         if (isLeaf(node)) {
             visitor.acceptLeaf(getNode(node), depthOfNode);
         } else {
@@ -638,22 +665,19 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     }
 
     /**
-     * This is a traversal method which follows the standard traversal path (defined
-     * in {@link #traverse(double[], Function)}) but at Node in checks to see
-     * whether the visitor should split. If a split is triggered, then independent
-     * copies of the visitor are sent down each branch of the tree and then merged
-     * before propagating the result.
+     * This is a traversal method which follows the standard traversal path (defined in {@link
+     * #traverse(double[], Function)}) but at Node in checks to see whether the visitor should
+     * split. If a split is triggered, then independent copies of the visitor are sent down each
+     * branch of the tree and then merged before propagating the result.
      *
-     * @param point          A point which determines the traversal path from the
-     *                       root to a leaf node.
-     * @param visitorFactory A visitor that will be invoked for each node on the
-     *                       path.
-     * @param <R>            The return type of the Visitor.
+     * @param point A point which determines the traversal path from the root to a leaf node.
+     * @param visitorFactory A visitor that will be invoked for each node on the path.
+     * @param <R> The return type of the Visitor.
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
-
     @Override
-    public <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
+    public <R> R traverseMulti(
+            double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");
@@ -662,7 +686,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return visitor.getResult();
     }
 
-    private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {
+    private <R> void traverseTreeMulti(
+            double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {
         if (isLeaf(node)) {
             visitor.acceptLeaf(getNode(node), depthOfNode);
         } else {
@@ -672,35 +697,26 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 traverseTreeMulti(point, newVisitor, getRightChild(node), depthOfNode + 1);
                 visitor.combine(newVisitor);
             } else {
-                NodeReference nextNode = leftOf(point, node) ? getLeftChild(node) : getRightChild(node);
+                NodeReference nextNode =
+                        leftOf(point, node) ? getLeftChild(node) : getRightChild(node);
                 traverseTreeMulti(point, visitor, nextNode, depthOfNode + 1);
             }
             visitor.accept(getNode(node), depthOfNode);
         }
     }
 
-    /**
-     *
-     * @return the mass of the tree
-     */
+    /** @return the mass of the tree */
     @Override
     public int getMass() {
         return root == null ? 0 : getMass(root);
     }
 
-    /**
-     *
-     * @return the root of the tree
-     */
-
+    /** @return the root of the tree */
     public NodeReference getRoot() {
         return root;
     }
 
-    /**
-     * returns the number of samples that needs to be seen before returning
-     * meaningful inference
-     */
+    /** returns the number of samples that needs to be seen before returning meaningful inference */
     public int getOutputAfter() {
         return outputAfter;
     }
@@ -712,9 +728,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     // TODO: decide on ownership of builder constants, across the major classes
     public static class Builder<T> {
-        protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+        protected boolean storeSequenceIndexesEnabled =
+                RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
-        protected double boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+        protected double boundingBoxCacheFraction =
+                RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         protected long randomSeed = new Random().nextLong();
         protected Random random = null;
         protected Optional<Integer> outputAfter = Optional.empty();

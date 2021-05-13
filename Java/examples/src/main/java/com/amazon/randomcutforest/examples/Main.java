@@ -13,13 +13,14 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples;
 
-import java.util.Map;
-import java.util.TreeMap;
 
 import com.amazon.randomcutforest.examples.serialization.JsonExample;
 import com.amazon.randomcutforest.examples.serialization.ProtostuffExample;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class Main {
 
@@ -68,5 +69,4 @@ public class Main {
             System.out.printf(formatString, example.command(), example.description());
         }
     }
-
 }

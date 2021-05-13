@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.util;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -25,15 +26,12 @@ import java.util.Arrays;
 public class ArrayPacking {
 
     /**
-     * For a given base value, return the smallest int value {@code p} so that
-     * {@code base^(p + 1) >= Integer.MAX_VALUE}. If
-     * {@code base >= Integer.MAX_VALUE}, return 1.
-     * 
-     * @param base Compute the approximate log of {@code Integer.MAX_VALUE} in this
-     *             base.
-     * @return the largest int value {@code p} so that
-     *         {@code base^p >= Integer.MAX_VALUE} or 1 if
-     *         {@code base >= Integer.MAX_VALUE}.
+     * For a given base value, return the smallest int value {@code p} so that {@code base^(p + 1)
+     * >= Integer.MAX_VALUE}. If {@code base >= Integer.MAX_VALUE}, return 1.
+     *
+     * @param base Compute the approximate log of {@code Integer.MAX_VALUE} in this base.
+     * @return the largest int value {@code p} so that {@code base^p >= Integer.MAX_VALUE} or 1 if
+     *     {@code base >= Integer.MAX_VALUE}.
      */
     public static int logMax(long base) {
         checkArgument(base > 1, "Absolute value of base must be greater than 1");
@@ -48,12 +46,11 @@ public class ArrayPacking {
     }
 
     /**
-     * Pack an array of ints. If {@code compress} is true, then this method will
-     * apply arithmetic compression to the inputs, otherwise it returns a copy of
-     * the input.
+     * Pack an array of ints. If {@code compress} is true, then this method will apply arithmetic
+     * compression to the inputs, otherwise it returns a copy of the input.
      *
      * @param inputArray An array of ints to pack.
-     * @param compress   A flag indicating whether to apply arithmetic compression.
+     * @param compress A flag indicating whether to apply arithmetic compression.
      * @return an array of packed ints.
      */
     public static int[] pack(int[] inputArray, boolean compress) {
@@ -61,19 +58,19 @@ public class ArrayPacking {
     }
 
     /**
-     * Pack an array of ints. If {@code compress} is true, then this method will
-     * apply arithmetic compression to the inputs, otherwise it returns a copy of
-     * the input.
+     * Pack an array of ints. If {@code compress} is true, then this method will apply arithmetic
+     * compression to the inputs, otherwise it returns a copy of the input.
      *
      * @param inputArray An array of ints to pack.
-     * @param length     The length of the output array. Only the first
-     *                   {@code length} values in {@code inputArray} will be packed.
-     * @param compress   A flag indicating whether to apply arithmetic compression.
+     * @param length The length of the output array. Only the first {@code length} values in {@code
+     *     inputArray} will be packed.
+     * @param compress A flag indicating whether to apply arithmetic compression.
      * @return an array of packed ints.
      */
     public static int[] pack(int[] inputArray, int length, boolean compress) {
         checkNotNull(inputArray, "inputArray must not be null");
-        checkArgument(0 <= length && length <= inputArray.length,
+        checkArgument(
+                0 <= length && length <= inputArray.length,
                 "length must be between 0 and inputArray.length (inclusive)");
 
         if (!compress || length < 3) {
@@ -88,7 +85,7 @@ public class ArrayPacking {
         }
         long base = (long) max - min + 1;
         if (base == 1) {
-            return new int[] { min, max, length };
+            return new int[] {min, max, length};
         } else {
             int packNum = logMax(base);
 
@@ -110,16 +107,14 @@ public class ArrayPacking {
             checkArgument(used + 3 == output.length, "incorrect state");
             return output;
         }
-
     }
 
     /**
      * Unpack an array previously created by {@link #pack(int[], int, boolean)}.
-     * 
-     * @param packedArray An array previously created by
-     *                    {@link #pack(int[], int, boolean)}.
-     * @param decompress  A flag indicating whether the packed array was created
-     *                    with arithmetic compression enabled.
+     *
+     * @param packedArray An array previously created by {@link #pack(int[], int, boolean)}.
+     * @param decompress A flag indicating whether the packed array was created with arithmetic
+     *     compression enabled.
      * @return the array of unpacked ints.
      */
     public static int[] unpackInts(int[] packedArray, boolean decompress) {
@@ -129,21 +124,20 @@ public class ArrayPacking {
             return Arrays.copyOf(packedArray, packedArray.length);
         }
 
-        return (packedArray.length < 3) ? unpackInts(packedArray, packedArray.length, decompress)
+        return (packedArray.length < 3)
+                ? unpackInts(packedArray, packedArray.length, decompress)
                 : unpackInts(packedArray, packedArray[2], decompress);
     }
 
     /**
      * Unpack an array previously created by {@link #pack(int[], int, boolean)}.
-     * 
-     * @param packedArray An array previously created by
-     *                    {@link #pack(int[], int, boolean)}.
-     * @param length      The desired length of the output array. If this number is
-     *                    different from the length of the array that was originally
-     *                    packed, then the result will be truncated or padded with
-     *                    zeros as needed.
-     * @param decompress  A flag indicating whether the packed array was created
-     *                    with arithmetic compression enabled.
+     *
+     * @param packedArray An array previously created by {@link #pack(int[], int, boolean)}.
+     * @param length The desired length of the output array. If this number is different from the
+     *     length of the array that was originally packed, then the result will be truncated or
+     *     padded with zeros as needed.
+     * @param decompress A flag indicating whether the packed array was created with arithmetic
+     *     compression enabled.
      * @return the array of unpacked ints.
      */
     public static int[] unpackInts(int[] packedArray, int length, boolean decompress) {
@@ -181,7 +175,7 @@ public class ArrayPacking {
 
     /**
      * Pack an array of doubles into an array of bytes.
-     * 
+     *
      * @param array An array of doubles.
      * @return An array of bytes representing the original array of doubles.
      */
@@ -192,15 +186,15 @@ public class ArrayPacking {
 
     /**
      * Pack an array of doubles into an array of bytes.
-     * 
-     * @param array  An array of doubles.
-     * @param length The number of doubles in the input array to pack into the
-     *               resulting byte array.
+     *
+     * @param array An array of doubles.
+     * @param length The number of doubles in the input array to pack into the resulting byte array.
      * @return An array of bytes representing the original array of doubles.
      */
     public static byte[] pack(double[] array, int length) {
         checkNotNull(array, "array must not be null");
-        checkArgument(0 <= length && length <= array.length,
+        checkArgument(
+                0 <= length && length <= array.length,
                 "length must be between 0 and inputArray.length (inclusive)");
 
         ByteBuffer buf = ByteBuffer.allocate(length * Double.BYTES);
@@ -213,7 +207,7 @@ public class ArrayPacking {
 
     /**
      * Pack an array of floats into an array of bytes.
-     * 
+     *
      * @param array An array of floats.
      * @return An array of bytes representing the original array of floats.
      */
@@ -224,15 +218,15 @@ public class ArrayPacking {
 
     /**
      * Pack an array of floats into an array of bytes.
-     * 
-     * @param array  An array of floats.
-     * @param length The number of doubles in the input array to pack into the
-     *               resulting byte array.
+     *
+     * @param array An array of floats.
+     * @param length The number of doubles in the input array to pack into the resulting byte array.
      * @return An array of bytes representing the original array of floats.
      */
     public static byte[] pack(float[] array, int length) {
         checkNotNull(array, "array must not be null");
-        checkArgument(0 <= length && length <= array.length,
+        checkArgument(
+                0 <= length && length <= array.length,
                 "length must be between 0 and inputArray.length (inclusive)");
 
         ByteBuffer buf = ByteBuffer.allocate(length * Float.BYTES);
@@ -245,10 +239,10 @@ public class ArrayPacking {
 
     /**
      * Unpack an array of bytes as an array of doubles.
-     * 
+     *
      * @param bytes An array of bytes.
-     * @return an array of doubles obtained by marshalling consecutive bytes in the
-     *         input array into doubles.
+     * @return an array of doubles obtained by marshalling consecutive bytes in the input array into
+     *     doubles.
      */
     public static double[] unpackDoubles(byte[] bytes) {
         checkNotNull(bytes, "bytes must not be null");
@@ -257,17 +251,18 @@ public class ArrayPacking {
 
     /**
      * Unpack an array of bytes as an array of doubles.
-     * 
-     * @param bytes  An array of bytes.
-     * @param length The desired length of the resulting double array. The input
-     *               will be truncated or padded with zeros as needed.
-     * @return an array of doubles obtained by marshalling consecutive bytes in the
-     *         input array into doubles.
+     *
+     * @param bytes An array of bytes.
+     * @param length The desired length of the resulting double array. The input will be truncated
+     *     or padded with zeros as needed.
+     * @return an array of doubles obtained by marshalling consecutive bytes in the input array into
+     *     doubles.
      */
     public static double[] unpackDoubles(byte[] bytes, int length) {
         checkNotNull(bytes, "bytes must not be null");
         checkArgument(length >= 0, "length must be greater than or equal to 0");
-        checkArgument(bytes.length % Double.BYTES == 0, "bytes.length must be divisible by Double.BYTES");
+        checkArgument(
+                bytes.length % Double.BYTES == 0, "bytes.length must be divisible by Double.BYTES");
 
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         double[] result = new double[length];
@@ -282,10 +277,10 @@ public class ArrayPacking {
 
     /**
      * Unpack an array of bytes as an array of floats.
-     * 
+     *
      * @param bytes An array of bytes.
-     * @return an array of floats obtained by marshalling consecutive bytes in the
-     *         input array into floats.
+     * @return an array of floats obtained by marshalling consecutive bytes in the input array into
+     *     floats.
      */
     public static float[] unpackFloats(byte[] bytes) {
         checkNotNull(bytes, "bytes must not be null");
@@ -294,17 +289,18 @@ public class ArrayPacking {
 
     /**
      * Unpack an array of bytes as an array of floats.
-     * 
-     * @param bytes  An array of bytes.
-     * @param length The desired length of the resulting float array. The input will
-     *               be truncated or padded with zeros as needed.
-     * @return an array of doubles obtained by marshalling consecutive bytes in the
-     *         input array into floats.
+     *
+     * @param bytes An array of bytes.
+     * @param length The desired length of the resulting float array. The input will be truncated or
+     *     padded with zeros as needed.
+     * @return an array of doubles obtained by marshalling consecutive bytes in the input array into
+     *     floats.
      */
     public static float[] unpackFloats(byte[] bytes, int length) {
         checkNotNull(bytes, "bytes must not be null");
         checkArgument(length >= 0, "length must be greater than or equal to 0");
-        checkArgument(bytes.length % Float.BYTES == 0, "bytes.length must be divisible by Float.BYTES");
+        checkArgument(
+                bytes.length % Float.BYTES == 0, "bytes.length must be divisible by Float.BYTES");
 
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         float[] result = new float[length];

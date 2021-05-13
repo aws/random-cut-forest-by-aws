@@ -13,8 +13,11 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
 
+
+import com.amazon.randomcutforest.RandomCutForest;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,17 +27,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
-import com.amazon.randomcutforest.RandomCutForest;
-
 /**
- * A command-line application that computes anomaly scores. Points are read from
- * STDIN and output is written to STDOUT. Output consists of the original input
- * point with the anomaly score appended.
+ * A command-line application that computes anomaly scores. Points are read from STDIN and output is
+ * written to STDOUT. Output consists of the original input point with the anomaly score appended.
  */
 public class AnomalyScoreRunner extends SimpleRunner {
 
     public AnomalyScoreRunner() {
-        super(AnomalyScoreRunner.class.getName(),
+        super(
+                AnomalyScoreRunner.class.getName(),
                 "Compute scalar anomaly scores from the input rows and append them to the output rows.",
                 AnomalyScoreTransformer::new);
     }
@@ -43,7 +44,8 @@ public class AnomalyScoreRunner extends SimpleRunner {
         AnomalyScoreRunner runner = new AnomalyScoreRunner();
         runner.parse(args);
         System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+        runner.run(
+                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
                 new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
         System.out.println("Done.");
     }

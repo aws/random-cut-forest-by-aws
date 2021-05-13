@@ -13,33 +13,31 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.sampler;
 
-import java.util.Arrays;
-import java.util.Random;
-
-import lombok.Getter;
-import lombok.Setter;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import java.util.Arrays;
+import java.util.Random;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 public class CompactSamplerMapper implements IStateMapper<CompactSampler, CompactSamplerState> {
 
     /**
-     * This flag is passed to the constructor for {@code CompactSampler} when a new
-     * sampler is constructed in {@link #toModel}. If true, then the sampler will
-     * validate that the weight array in a {@code CompactSamplerState} instance
-     * satisfies the heap property. The heap property is not validated by default.
+     * This flag is passed to the constructor for {@code CompactSampler} when a new sampler is
+     * constructed in {@link #toModel}. If true, then the sampler will validate that the weight
+     * array in a {@code CompactSamplerState} instance satisfies the heap property. The heap
+     * property is not validated by default.
      */
     private boolean validateHeapEnabled = false;
 
-    /**
-     * used to compress data, can be set to false for debug
-     */
+    /** used to compress data, can be set to false for debug */
     private boolean compressionEnabled = true;
 
     @Override
@@ -50,7 +48,12 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
 
         int size = state.getSize();
         System.arraycopy(state.getWeight(), 0, weight, 0, size);
-        System.arraycopy(ArrayPacking.unpackInts(state.getPointIndex(), state.isCompressed()), 0, pointIndex, 0, size);
+        System.arraycopy(
+                ArrayPacking.unpackInts(state.getPointIndex(), state.isCompressed()),
+                0,
+                pointIndex,
+                0,
+                size);
         if (state.isStoreSequenceIndicesEnabled()) {
             sequenceIndex = new long[state.getCapacity()];
             System.arraycopy(state.getSequenceIndex(), 0, sequenceIndex, 0, size);
@@ -58,12 +61,20 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
             sequenceIndex = null;
         }
 
-        return new CompactSampler.Builder<>().capacity(state.getCapacity()).lambda(state.getLambda())
-                .random(new Random(seed)).storeSequenceIndexesEnabled(state.isStoreSequenceIndicesEnabled())
-                .weight(weight).pointIndex(pointIndex).sequenceIndex(sequenceIndex).validateHeap(validateHeapEnabled)
+        return new CompactSampler.Builder<>()
+                .capacity(state.getCapacity())
+                .lambda(state.getLambda())
+                .random(new Random(seed))
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndicesEnabled())
+                .weight(weight)
+                .pointIndex(pointIndex)
+                .sequenceIndex(sequenceIndex)
+                .validateHeap(validateHeapEnabled)
                 .initialAcceptFraction(state.getInitialAcceptFraction())
                 .mostRecentLambdaUpdate(state.getSequenceIndexOfMostRecentLambdaUpdate())
-                .maxSequenceIndex(state.getMaxSequenceIndex()).size(state.getSize()).build();
+                .maxSequenceIndex(state.getMaxSequenceIndex())
+                .size(state.getSize())
+                .build();
     }
 
     @Override
@@ -79,10 +90,10 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setStoreSequenceIndicesEnabled(model.isStoreSequenceIndexesEnabled());
 
         state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
-        state.setPointIndex(ArrayPacking.pack(model.getPointIndexArray(), model.size(), state.isCompressed()));
+        state.setPointIndex(
+                ArrayPacking.pack(model.getPointIndexArray(), model.size(), state.isCompressed()));
         if (model.isStoreSequenceIndexesEnabled()) {
             state.setSequenceIndex(Arrays.copyOf(model.getSequenceIndexArray(), model.size()));
-
         }
 
         return state;

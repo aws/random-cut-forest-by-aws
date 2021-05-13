@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -23,10 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.amazon.randomcutforest.CommonUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.CommonUtils;
 
 public class PointStoreFloatTest {
 
@@ -54,7 +54,7 @@ public class PointStoreFloatTest {
 
     @Test
     public void testAdd() {
-        double[] point1 = { 1.2f, -3.4f };
+        double[] point1 = {1.2f, -3.4f};
         int offset1 = pointStore.add(point1, 1);
         assertTrue(offset1 >= 0 && offset1 < capacity);
         assertEquals(1, pointStore.getRefCount(offset1));
@@ -65,7 +65,7 @@ public class PointStoreFloatTest {
         assertArrayEquals(point1, CommonUtils.toDoubleArray(retrievedPoint1));
         assertArrayEquals(CommonUtils.toFloatArray(point1), retrievedPoint1);
 
-        double[] point2 = { 111.2f, -333.4f };
+        double[] point2 = {111.2f, -333.4f};
         int offset2 = pointStore.add(point2, 2);
         assertTrue(offset2 >= 0 && offset2 < capacity);
         assertEquals(1, pointStore.getRefCount(offset2));
@@ -87,7 +87,9 @@ public class PointStoreFloatTest {
     @Test
     public void testAddInvalid() {
         // invalid dimensions in point
-        assertThrows(IllegalArgumentException.class, () -> pointStore.add(new double[] { 1.1f, -2.2f, 3.3f }, 3));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> pointStore.add(new double[] {1.1f, -2.2f, 3.3f}, 3));
 
         for (int i = 0; i < capacity; i++) {
             double[] point = new double[dimensions];
@@ -97,7 +99,8 @@ public class PointStoreFloatTest {
         }
 
         // point store is full
-        assertThrows(IllegalStateException.class, () -> pointStore.add(new double[] { 1.1f, -2.2f }, 0));
+        assertThrows(
+                IllegalStateException.class, () -> pointStore.add(new double[] {1.1f, -2.2f}, 0));
     }
 
     @Test
@@ -108,7 +111,7 @@ public class PointStoreFloatTest {
 
     @Test
     public void testIncrementRefCount() {
-        double[] point = { 1.2f, -3.4f };
+        double[] point = {1.2f, -3.4f};
         int offset = pointStore.add(point, 0);
         assertEquals(1, pointStore.getRefCount(offset));
 
@@ -124,7 +127,7 @@ public class PointStoreFloatTest {
 
     @Test
     public void testDecrementRefCount() {
-        double[] point = { 1.2f, -3.4f };
+        double[] point = {1.2f, -3.4f};
         int offset = pointStore.add(point, 0);
         pointStore.incrementRefCount(offset);
         assertEquals(2, pointStore.getRefCount(offset));
@@ -147,19 +150,25 @@ public class PointStoreFloatTest {
 
     @Test
     public void testPointEquals() {
-        double[] point = { 1.2f, -3.4f };
+        double[] point = {1.2f, -3.4f};
         int offset = pointStore.add(point, 0);
         assertTrue(pointStore.pointEquals(offset, CommonUtils.toFloatArray(point)));
-        assertFalse(pointStore.pointEquals(offset, new float[] { 5.6f, -7.8f }));
+        assertFalse(pointStore.pointEquals(offset, new float[] {5.6f, -7.8f}));
     }
 
     @Test
     public void testPointEqualsInvalid() {
-        double[] point = { 1.2f, -3.4f };
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(-1, CommonUtils.toFloatArray(point)));
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(0, CommonUtils.toFloatArray(point)));
+        double[] point = {1.2f, -3.4f};
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> pointStore.pointEquals(-1, CommonUtils.toFloatArray(point)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> pointStore.pointEquals(0, CommonUtils.toFloatArray(point)));
 
         int offset = pointStore.add(point, 0);
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(offset, new float[] { 99.9f }));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> pointStore.pointEquals(offset, new float[] {99.9f}));
     }
 }

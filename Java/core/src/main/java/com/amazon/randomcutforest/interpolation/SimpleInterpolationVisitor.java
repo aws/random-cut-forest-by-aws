@@ -13,20 +13,21 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.interpolation;
 
-import java.util.Arrays;
 
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+import java.util.Arrays;
 
 /**
- * A Visitor which computes several geometric measures that related a given
- * query point to the points stored in a RandomCutTree.
- **/
+ * A Visitor which computes several geometric measures that related a given query point to the
+ * points stored in a RandomCutTree.
+ */
 public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure> {
 
     private final double[] pointToScore;
@@ -38,17 +39,17 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     double[] directionalDistanceVector;
     double[] differenceInRangeVector;
     /**
-     * A flag that states whether the point to score is known to be contained inside
-     * the bounding box of Nodes being accepted. Assumes nodes are accepted in
-     * leaf-to-root order.
+     * A flag that states whether the point to score is known to be contained inside the bounding
+     * box of Nodes being accepted. Assumes nodes are accepted in leaf-to-root order.
      */
     boolean pointInsideBox;
     /**
-     * An array that keeps track of whether each margin of the point being scored is
-     * outside inside the box considered during the recursive call to compute the
-     * score. Assumes nodes are accepted in leaf-to-root order.
+     * An array that keeps track of whether each margin of the point being scored is outside inside
+     * the box considered during the recursive call to compute the score. Assumes nodes are accepted
+     * in leaf-to-root order.
      */
     boolean[] coordInsideBox;
+
     private boolean pointEqualsLeaf;
     private IBoundingBoxView theShadowBox;
     private double savedMass;
@@ -58,12 +59,12 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      * Construct a new Visitor
      *
      * @param pointToScore The point whose anomaly score we are computing
-     * @param sampleSize   The sub-sample size used by the RandomCutTree that is
-     *                     scoring the point
-     * @param pointMass    indicates the mass/duplicity of the current point
+     * @param sampleSize The sub-sample size used by the RandomCutTree that is scoring the point
+     * @param pointMass indicates the mass/duplicity of the current point
      * @param centerOfMass indicates if the tree has centerOfMass
      */
-    public SimpleInterpolationVisitor(double[] pointToScore, int sampleSize, double pointMass, boolean centerOfMass) {
+    public SimpleInterpolationVisitor(
+            double[] pointToScore, int sampleSize, double pointMass, boolean centerOfMass) {
         this.pointToScore = Arrays.copyOf(pointToScore, pointToScore.length);
         this.sampleSize = sampleSize;
         // the samplesize may be useful to scale
@@ -78,9 +79,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
         coordInsideBox = new boolean[pointToScore.length];
     }
 
-    /**
-     * @return The score computed up until this point.
-     */
+    /** @return The score computed up until this point. */
     @Override
     public InterpolationMeasure getResult() {
         return stored;
@@ -96,8 +95,10 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
 
         if (pointEqualsLeaf) {
             largeBox = node.getBoundingBox();
-            theShadowBox = theShadowBox == null ? node.getSiblingBoundingBox(pointToScore)
-                    : theShadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
+            theShadowBox =
+                    theShadowBox == null
+                            ? node.getSiblingBoundingBox(pointToScore)
+                            : theShadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
             smallBox = theShadowBox;
         } else {
             smallBox = node.getBoundingBox();
@@ -117,36 +118,40 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
             // otherwise the center of mass is the 0 vector
             for (int i = 0; i < pointToScore.length; i++) {
                 double prob = differenceInRangeVector[2 * i] / sumOfNewRange;
-                stored.probMass.high[i] = prob * influenceVal + (1 - probOfCut) * stored.probMass.high[i];
+                stored.probMass.high[i] =
+                        prob * influenceVal + (1 - probOfCut) * stored.probMass.high[i];
                 stored.measure.high[i] = prob * fieldVal + (1 - probOfCut) * stored.measure.high[i];
-                stored.distances.high[i] = prob * directionalDistanceVector[2 * i] * influenceVal
-                        + (1 - probOfCut) * stored.distances.high[i];
-
+                stored.distances.high[i] =
+                        prob * directionalDistanceVector[2 * i] * influenceVal
+                                + (1 - probOfCut) * stored.distances.high[i];
             }
             for (int i = 0; i < pointToScore.length; i++) {
                 double prob = differenceInRangeVector[2 * i + 1] / sumOfNewRange;
-                stored.probMass.low[i] = prob * influenceVal + (1 - probOfCut) * stored.probMass.low[i];
+                stored.probMass.low[i] =
+                        prob * influenceVal + (1 - probOfCut) * stored.probMass.low[i];
                 stored.measure.low[i] = prob * fieldVal + (1 - probOfCut) * stored.measure.low[i];
-                stored.distances.low[i] = prob * directionalDistanceVector[2 * i + 1] * influenceVal
-                        + (1 - probOfCut) * stored.distances.low[i];
-
+                stored.distances.low[i] =
+                        prob * directionalDistanceVector[2 * i + 1] * influenceVal
+                                + (1 - probOfCut) * stored.distances.low[i];
             }
-
         }
     }
 
     @Override
     public void acceptLeaf(INodeView leafNode, int depthOfNode) {
-        updateForCompute(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
+        updateForCompute(
+                leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
         if (sumOfDifferenceInRange <= 0) { // values must be equal
             savedMass = pointMass + leafNode.getMass();
             pointEqualsLeaf = true;
             for (int i = 0; i < pointToScore.length; i++) {
-                stored.measure.high[i] = stored.measure.low[i] = 0.5 * selfField(leafNode, savedMass)
-                        / pointToScore.length;
-                stored.probMass.high[i] = stored.probMass.low[i] = 0.5 * selfInfluence(leafNode, savedMass)
-                        / pointToScore.length;
+                stored.measure.high[i] =
+                        stored.measure.low[i] =
+                                0.5 * selfField(leafNode, savedMass) / pointToScore.length;
+                stored.probMass.high[i] =
+                        stored.probMass.low[i] =
+                                0.5 * selfInfluence(leafNode, savedMass) / pointToScore.length;
             }
             Arrays.fill(coordInsideBox, false);
         } else {
@@ -163,15 +168,16 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
                 double prob = differenceInRangeVector[2 * i + 1] / sumOfNewRange;
                 stored.probMass.low[i] = prob * influenceVal;
                 stored.measure.low[i] = prob * fieldVal;
-                stored.distances.low[i] = prob * directionalDistanceVector[2 * i + 1] * influenceVal;
+                stored.distances.low[i] =
+                        prob * directionalDistanceVector[2 * i + 1] * influenceVal;
             }
         }
     }
 
     /**
-     * Update instance variables based on the difference between the large box and
-     * small box. The values set by this method are used in {@link #accept} and
-     * {@link #acceptLeaf} to update the stored density.
+     * Update instance variables based on the difference between the large box and small box. The
+     * values set by this method are used in {@link #accept} and {@link #acceptLeaf} to update the
+     * stored density.
      *
      * @param smallBox
      * @param largeBox
@@ -210,24 +216,22 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     /**
      * The functions below can be changed for arbitrary interpolations.
      *
-     * @param node/leafNode corresponds to the node in the tree influencing the
-     *                      current point
-     * @param centerOfMass  feature flag describing if the center of mass is enabled
-     *                      in tree in general this can be used for arbitrary
-     *                      extensions of the node class with additional
-     *                      information.
-     * @param thisMass      duplicity of query
-     * @param thislocation  location of query
-     * @return is the value or a 0/1 function -- the functions can be thresholded
-     *         based of geometric coordinates of the query and the node. Many
-     *         different Kernels can be expressed in this decomposed manner.
+     * @param node/leafNode corresponds to the node in the tree influencing the current point
+     * @param centerOfMass feature flag describing if the center of mass is enabled in tree in
+     *     general this can be used for arbitrary extensions of the node class with additional
+     *     information.
+     * @param thisMass duplicity of query
+     * @param thislocation location of query
+     * @return is the value or a 0/1 function -- the functions can be thresholded based of geometric
+     *     coordinates of the query and the node. Many different Kernels can be expressed in this
+     *     decomposed manner.
      */
-
     double fieldExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influenceExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double influenceExt(
+            INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
         return 1.0;
     }
 
@@ -246,5 +250,4 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
     double selfInfluence(INodeView leafnode, double mass) {
         return 1.0;
     }
-
 }

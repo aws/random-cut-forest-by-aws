@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -65,7 +66,6 @@ public class InterpolationMeasureTest {
             other1.probMass.low[i] = other2.probMass.low[i] = 8 * i + 4;
             other1.distances.low[i] = other2.distances.low[i] = 10 * i + 5;
             other1.measure.low[i] = other2.measure.low[i] = 12 * i + 6;
-
         }
 
         assertArrayEquals(other1.probMass.high, other2.probMass.high);
@@ -92,7 +92,6 @@ public class InterpolationMeasureTest {
         assertArrayEquals(other1.probMass.low, other2.probMass.low);
         assertArrayEquals(other1.distances.low, other2.distances.low);
         assertArrayEquals(other1.measure.low, other2.measure.low);
-
     }
 
     @Test
@@ -131,9 +130,6 @@ public class InterpolationMeasureTest {
             assertEquals((2 * i + 1) * 0.9, result.probMass.low[i]);
             assertEquals((4 * i + 2) * 0.9, result.distances.low[i]);
             assertEquals((6 * i + 3) * 0.9, result.measure.low[i]);
-
         }
-
     }
-
 }

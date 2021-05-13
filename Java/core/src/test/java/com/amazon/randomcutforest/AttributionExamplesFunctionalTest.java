@@ -13,18 +13,17 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Random;
-
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("functional")
 public class AttributionExamplesFunctionalTest {
@@ -58,8 +57,15 @@ public class AttributionExamplesFunctionalTest {
         int newDimensions = 30;
         randomSeed = 101;
         sampleSize = 256;
-        RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(sampleSize)
-                .dimensions(newDimensions).randomSeed(randomSeed).compact(false).boundingBoxCacheFraction(0.0).build();
+        RandomCutForest newForest =
+                RandomCutForest.builder()
+                        .numberOfTrees(100)
+                        .sampleSize(sampleSize)
+                        .dimensions(newDimensions)
+                        .randomSeed(randomSeed)
+                        .compact(false)
+                        .boundingBoxCacheFraction(0.0)
+                        .build();
 
         dataSize = 2000 + 5;
 
@@ -71,18 +77,21 @@ public class AttributionExamplesFunctionalTest {
         // ignoring anomaly cluster for now
         transitionToBaseProbability = 1.0;
         Random prg = new Random(0);
-        NormalMixtureTestData generator = new NormalMixtureTestData(baseMu, baseSigma, anomalyMu, anomalySigma,
-                transitionToAnomalyProbability, transitionToBaseProbability);
+        NormalMixtureTestData generator =
+                new NormalMixtureTestData(
+                        baseMu,
+                        baseSigma,
+                        anomalyMu,
+                        anomalySigma,
+                        transitionToAnomalyProbability,
+                        transitionToBaseProbability);
         double[][] data = generator.generateTestData(dataSize, newDimensions, 100);
 
         for (int i = 0; i < 2000; i++) {
             // shrink, shift at random
-            for (int j = 0; j < newDimensions; j++)
-                data[i][j] *= 0.01;
-            if (prg.nextDouble() < 0.5)
-                data[i][0] += 5.0;
-            else
-                data[i][0] -= 5.0;
+            for (int j = 0; j < newDimensions; j++) data[i][j] *= 0.01;
+            if (prg.nextDouble() < 0.5) data[i][0] += 5.0;
+            else data[i][0] -= 5.0;
             newForest.update(data[i]);
         }
 
@@ -111,8 +120,7 @@ public class AttributionExamplesFunctionalTest {
             assertTrue(score2 > 2.0);
             assertEquals(attr2.getHighLowSum(), score2, 1E-10);
 
-            for (int j = 0; j < newDimensions; j++)
-                data[i][j] *= 0.01;
+            for (int j = 0; j < newDimensions; j++) data[i][j] *= 0.01;
             newForest.update(data[i]);
             // 5 different anomalous points
         }
@@ -160,9 +168,16 @@ public class AttributionExamplesFunctionalTest {
         int newDimensions = 30;
         randomSeed = 179;
         sampleSize = 256;
-        DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().numberOfTrees(100)
-                .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).compact(false)
-                .boundingBoxCacheFraction(1.0).lambda(1e-5).build();
+        DynamicScoringRandomCutForest newForest =
+                DynamicScoringRandomCutForest.builder()
+                        .numberOfTrees(100)
+                        .sampleSize(sampleSize)
+                        .dimensions(newDimensions)
+                        .randomSeed(randomSeed)
+                        .compact(false)
+                        .boundingBoxCacheFraction(1.0)
+                        .lambda(1e-5)
+                        .build();
 
         dataSize = 2000 + 5;
 
@@ -174,18 +189,21 @@ public class AttributionExamplesFunctionalTest {
         // ignoring anomaly cluster for now
         transitionToBaseProbability = 1.0;
         Random prg = new Random(0);
-        NormalMixtureTestData generator = new NormalMixtureTestData(baseMu, baseSigma, anomalyMu, anomalySigma,
-                transitionToAnomalyProbability, transitionToBaseProbability);
+        NormalMixtureTestData generator =
+                new NormalMixtureTestData(
+                        baseMu,
+                        baseSigma,
+                        anomalyMu,
+                        anomalySigma,
+                        transitionToAnomalyProbability,
+                        transitionToBaseProbability);
         double[][] data = generator.generateTestData(dataSize, newDimensions, 100);
 
         for (int i = 0; i < 2000; i++) {
             // shrink, shift at random
-            for (int j = 0; j < newDimensions; j++)
-                data[i][j] *= 0.01;
-            if (prg.nextDouble() < 0.5)
-                data[i][0] += 5.0;
-            else
-                data[i][0] -= 5.0;
+            for (int j = 0; j < newDimensions; j++) data[i][j] *= 0.01;
+            if (prg.nextDouble() < 0.5) data[i][0] += 5.0;
+            else data[i][0] -= 5.0;
             newForest.update(data[i]);
         }
 
@@ -193,10 +211,16 @@ public class AttributionExamplesFunctionalTest {
         double[] queryTwo = new double[30];
         queryTwo[1] = 1;
         double originalScoreTwo = newForest.getAnomalyScore(queryTwo);
-        DiVector originalAttrTwo = newForest.getDynamicAttribution(queryTwo, 0, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+        DiVector originalAttrTwo =
+                newForest.getDynamicAttribution(
+                        queryTwo,
+                        0,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
 
-        originalAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+        originalAttrTwo.componentwiseTransform(
+                x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
         assertTrue(originalScoreTwo > 3.0);
 
         assertEquals(originalScoreTwo, originalAttrTwo.getHighLowSum(), 1E-10);
@@ -210,16 +234,33 @@ public class AttributionExamplesFunctionalTest {
         for (int i = 2000; i < 2000 + 5; i++) {
             double score = newForest.getAnomalyScore(queryOne);
             double score2 = newForest.getAnomalyScore(queryTwo);
-            DiVector attr2 = newForest.getDynamicAttribution(queryTwo, 0, CommonUtils::defaultScoreSeenFunction,
-                    CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-            attr2.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+            DiVector attr2 =
+                    newForest.getDynamicAttribution(
+                            queryTwo,
+                            0,
+                            CommonUtils::defaultScoreSeenFunction,
+                            CommonUtils::defaultScoreUnseenFunction,
+                            CommonUtils::defaultDampFunction);
+            attr2.componentwiseTransform(
+                    x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
-            double score3 = newForest.getDynamicScore(queryTwo, 1, CommonUtils::defaultScoreSeenFunction,
-                    CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+            double score3 =
+                    newForest.getDynamicScore(
+                            queryTwo,
+                            1,
+                            CommonUtils::defaultScoreSeenFunction,
+                            CommonUtils::defaultScoreUnseenFunction,
+                            CommonUtils::defaultDampFunction);
             score3 = CommonUtils.defaultScalarNormalizerFunction(score3, sampleSize);
-            DiVector attr3 = newForest.getDynamicAttribution(queryTwo, 1, CommonUtils::defaultScoreSeenFunction,
-                    CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-            attr3.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+            DiVector attr3 =
+                    newForest.getDynamicAttribution(
+                            queryTwo,
+                            1,
+                            CommonUtils::defaultScoreSeenFunction,
+                            CommonUtils::defaultScoreUnseenFunction,
+                            CommonUtils::defaultDampFunction);
+            attr3.componentwiseTransform(
+                    x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
             // verify
             assertTrue(score > 2.0);
@@ -228,16 +269,21 @@ public class AttributionExamplesFunctionalTest {
             assertEquals(attr2.getHighLowSum(), score2, 1E-10);
             assertEquals(attr3.getHighLowSum(), score3, 1E-10);
 
-            for (int j = 0; j < newDimensions; j++)
-                data[i][j] *= 0.01;
+            for (int j = 0; j < newDimensions; j++) data[i][j] *= 0.01;
             newForest.update(data[i]);
             // 5 different anomalous points
         }
 
         double midScoreTwo = newForest.getAnomalyScore(queryTwo);
-        DiVector midAttrTwo = newForest.getDynamicAttribution(queryTwo, 0, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        midAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+        DiVector midAttrTwo =
+                newForest.getDynamicAttribution(
+                        queryTwo,
+                        0,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        midAttrTwo.componentwiseTransform(
+                x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(midScoreTwo > 2.5);
         assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-10);
@@ -247,12 +293,24 @@ public class AttributionExamplesFunctionalTest {
         // reversal of the dominant dimension
         // still an anomaly; but the attribution is masked by points
 
-        double midUnmaskedScore = newForest.getDynamicScore(queryTwo, 1, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        midUnmaskedScore = CommonUtils.defaultScalarNormalizerFunction(midUnmaskedScore, sampleSize);
-        DiVector midUnmaskedAttr = newForest.getDynamicAttribution(queryTwo, 1, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        midUnmaskedAttr.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+        double midUnmaskedScore =
+                newForest.getDynamicScore(
+                        queryTwo,
+                        1,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        midUnmaskedScore =
+                CommonUtils.defaultScalarNormalizerFunction(midUnmaskedScore, sampleSize);
+        DiVector midUnmaskedAttr =
+                newForest.getDynamicAttribution(
+                        queryTwo,
+                        1,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        midUnmaskedAttr.componentwiseTransform(
+                x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(midUnmaskedScore > 3.0);
         assertEquals(midUnmaskedScore, midUnmaskedAttr.getHighLowSum(), 1E-10);
@@ -269,9 +327,15 @@ public class AttributionExamplesFunctionalTest {
         }
 
         double finalScoreTwo = newForest.getAnomalyScore(queryTwo);
-        DiVector finalAttrTwo = newForest.getDynamicAttribution(queryTwo, 0, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        finalAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+        DiVector finalAttrTwo =
+                newForest.getDynamicAttribution(
+                        queryTwo,
+                        0,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        finalAttrTwo.componentwiseTransform(
+                x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
         assertTrue(finalScoreTwo > 2.5);
         assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-10);
 
@@ -280,12 +344,24 @@ public class AttributionExamplesFunctionalTest {
         // the drop in high[0] and low[0] is steep and the attribution has shifted
 
         // different thresholds
-        double finalUnmaskedScore = newForest.getDynamicScore(queryTwo, 5, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        finalUnmaskedScore = CommonUtils.defaultScalarNormalizerFunction(finalUnmaskedScore, sampleSize);
-        DiVector finalUnmaskedAttr = newForest.getDynamicAttribution(queryTwo, 5, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-        finalUnmaskedAttr.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
+        double finalUnmaskedScore =
+                newForest.getDynamicScore(
+                        queryTwo,
+                        5,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        finalUnmaskedScore =
+                CommonUtils.defaultScalarNormalizerFunction(finalUnmaskedScore, sampleSize);
+        DiVector finalUnmaskedAttr =
+                newForest.getDynamicAttribution(
+                        queryTwo,
+                        5,
+                        CommonUtils::defaultScoreSeenFunction,
+                        CommonUtils::defaultScoreUnseenFunction,
+                        CommonUtils::defaultDampFunction);
+        finalUnmaskedAttr.componentwiseTransform(
+                x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(finalUnmaskedScore > 3.0);
         assertEquals(finalUnmaskedScore, finalUnmaskedAttr.getHighLowSum(), 1E-10);
@@ -296,5 +372,4 @@ public class AttributionExamplesFunctionalTest {
         // the attributions in dimension 0 continue to be reduced, but do not vanish
         // or become small as in the other case; the gap is not a factor of 4
     }
-
 }

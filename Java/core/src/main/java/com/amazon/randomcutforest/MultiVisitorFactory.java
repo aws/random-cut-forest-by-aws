@@ -13,20 +13,19 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
 
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.tree.ITree;
+import java.util.function.Function;
 
 /**
  * This is the interface for a visitor which can be used with
- * {RandomCutTree::traversePathToLeafAndVisitNodesMulti}. In this traversal
- * method, we optionally choose to split the visitor into two copies when
- * visiting nodes. Each copy then visits one of the paths down from that node.
- * The results from both visitors are combined before returning back up the
- * tree.
+ * {RandomCutTree::traversePathToLeafAndVisitNodesMulti}. In this traversal method, we optionally
+ * choose to split the visitor into two copies when visiting nodes. Each copy then visits one of the
+ * paths down from that node. The results from both visitors are combined before returning back up
+ * the tree.
  */
 @FunctionalInterface
-public interface MultiVisitorFactory<R> extends Function<ITree<?, ?>, MultiVisitor<R>> {
-}
+public interface MultiVisitorFactory<R> extends Function<ITree<?, ?>, MultiVisitor<R>> {}

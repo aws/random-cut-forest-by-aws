@@ -13,10 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.tree;
 
-import lombok.Getter;
-import lombok.Setter;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
@@ -25,18 +24,21 @@ import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
-public class CompactRandomCutTreeFloatMapper implements
-        IContextualStateMapper<CompactRandomCutTreeFloat, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
+public class CompactRandomCutTreeFloatMapper
+        implements IContextualStateMapper<
+                CompactRandomCutTreeFloat, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
     private boolean partialTreeStateEnabled = false;
     private boolean compressed = true;
 
     @Override
-    public CompactRandomCutTreeFloat toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
-            long seed) {
+    public CompactRandomCutTreeFloat toModel(
+            CompactRandomCutTreeState state, CompactRandomCutTreeContext context, long seed) {
 
         INodeStore nodeStore;
 
@@ -44,12 +46,18 @@ public class CompactRandomCutTreeFloatMapper implements
         nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
-        CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
-                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).maxSize(state.getMaxSize())
-                .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreFloat) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
-                .outputAfter(state.getOutputAfter()).build();
+        CompactRandomCutTreeFloat tree =
+                new CompactRandomCutTreeFloat.Builder()
+                        .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
+                        .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
+                        .maxSize(state.getMaxSize())
+                        .root(state.getRoot())
+                        .randomSeed(seed)
+                        .pointStore((PointStoreFloat) context.getPointStore())
+                        .nodeStore(nodeStore)
+                        .centerOfMassEnabled(state.isCenterOfMassEnabled())
+                        .outputAfter(state.getOutputAfter())
+                        .build();
         return tree;
     }
 

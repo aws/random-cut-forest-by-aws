@@ -13,16 +13,15 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.amazon.randomcutforest.store.NodeStore;
 import java.util.stream.IntStream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.store.NodeStore;
 
 public class NodeStoreMapperTest {
     private NodeStoreMapper mapper;
@@ -44,11 +43,13 @@ public class NodeStoreMapperTest {
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
 
-        IntStream.of(index1, index2, index3, index4).forEach(i -> {
-            assertEquals(store.getLeftIndex(i), store2.getLeftIndex(i));
-            assertEquals(store.getRightIndex(i), store2.getRightIndex(i));
-            assertEquals(store.getCutDimension(i), store2.getCutDimension(i));
-            assertEquals(store.getCutValue(i), store2.getCutValue(i));
-        });
+        IntStream.of(index1, index2, index3, index4)
+                .forEach(
+                        i -> {
+                            assertEquals(store.getLeftIndex(i), store2.getLeftIndex(i));
+                            assertEquals(store.getRightIndex(i), store2.getRightIndex(i));
+                            assertEquals(store.getCutDimension(i), store2.getCutDimension(i));
+                            assertEquals(store.getCutValue(i), store2.getCutValue(i));
+                        });
     }
 }

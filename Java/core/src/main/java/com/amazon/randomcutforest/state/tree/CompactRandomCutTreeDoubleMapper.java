@@ -13,10 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state.tree;
 
-import lombok.Getter;
-import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
@@ -24,32 +23,42 @@ import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
-public class CompactRandomCutTreeDoubleMapper implements
-        IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
+public class CompactRandomCutTreeDoubleMapper
+        implements IContextualStateMapper<
+                CompactRandomCutTreeDouble,
+                CompactRandomCutTreeState,
+                CompactRandomCutTreeContext> {
 
     private boolean partialTreeStateEnabled = false;
     private boolean compress = true;
 
     @Override
-    public CompactRandomCutTreeDouble toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
-            long seed) {
+    public CompactRandomCutTreeDouble toModel(
+            CompactRandomCutTreeState state, CompactRandomCutTreeContext context, long seed) {
 
         INodeStore nodeStore;
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
-        CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder()
-                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).maxSize(state.getMaxSize())
-                .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreDouble) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
-                .outputAfter(state.getOutputAfter()).build();
+        CompactRandomCutTreeDouble tree =
+                new CompactRandomCutTreeDouble.Builder()
+                        .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
+                        .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
+                        .maxSize(state.getMaxSize())
+                        .root(state.getRoot())
+                        .randomSeed(seed)
+                        .pointStore((PointStoreDouble) context.getPointStore())
+                        .nodeStore(nodeStore)
+                        .centerOfMassEnabled(state.isCenterOfMassEnabled())
+                        .outputAfter(state.getOutputAfter())
+                        .build();
         return tree;
-
     }
 
     @Override

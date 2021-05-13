@@ -13,20 +13,23 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest;
+
 
 import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * A ComponentList is an ArrayList specialized to contain IComponentModel
- * instances. Executor classes operate on ComponentLists.
+ * A ComponentList is an ArrayList specialized to contain IComponentModel instances. Executor
+ * classes operate on ComponentLists.
  *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
+ * @param <PointReference> The internal point representation expected by the component models in
+ *     this list.
+ * @param <Point> The explicit data type of points being passed
  */
-public class ComponentList<PointReference, Point> extends ArrayList<IComponentModel<PointReference, Point>> {
+public class ComponentList<PointReference, Point>
+        extends ArrayList<IComponentModel<PointReference, Point>> {
     public ComponentList() {
         super();
     }
@@ -38,5 +41,4 @@ public class ComponentList<PointReference, Point> extends ArrayList<IComponentMo
     public ComponentList(int initialCapacity) {
         super(initialCapacity);
     }
-
 }

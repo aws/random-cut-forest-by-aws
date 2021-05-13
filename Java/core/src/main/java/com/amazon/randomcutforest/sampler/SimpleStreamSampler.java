@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
@@ -27,70 +28,62 @@ import java.util.Queue;
 import java.util.Random;
 
 /**
- * <p>
- * SimpleStreamSampler is an implementation of time-based reservoir sampling.
- * When a point is submitted to the sampler, the decision to accept the point
- * gives more weight to newer points compared to older points. The newness of a
- * point is determined by its sequence index, and larger sequence indexes are
- * considered newer.
- * </p>
- * <p>
- * The sampler algorithm is an example of the general weighted reservoir
- * sampling algorithm, which works like this:
- * </p>
+ * SimpleStreamSampler is an implementation of time-based reservoir sampling. When a point is
+ * submitted to the sampler, the decision to accept the point gives more weight to newer points
+ * compared to older points. The newness of a point is determined by its sequence index, and larger
+ * sequence indexes are considered newer.
+ *
+ * <p>The sampler algorithm is an example of the general weighted reservoir sampling algorithm,
+ * which works like this:
+ *
  * <ol>
- * <li>For each item i choose a random number u(i) uniformly from the interval
- * (0, 1) and compute the weight function <code>-(1 / c(i)) * log u(i)</code>,
- * for a given coefficient function c(i).</li>
- * <li>For a sample size of N, maintain a list of the N items with the smallest
- * weights.</li>
- * <li>When a new item is submitted to sampler, compute its weight. If it is
- * smaller than the largest weight currently contained in the sampler, then the
- * item with the largest weight is evicted from the sample and replaced by the
- * new item.</li>
+ *   <li>For each item i choose a random number u(i) uniformly from the interval (0, 1) and compute
+ *       the weight function <code>-(1 / c(i)) * log u(i)</code>, for a given coefficient function
+ *       c(i).
+ *   <li>For a sample size of N, maintain a list of the N items with the smallest weights.
+ *   <li>When a new item is submitted to sampler, compute its weight. If it is smaller than the
+ *       largest weight currently contained in the sampler, then the item with the largest weight is
+ *       evicted from the sample and replaced by the new item.
  * </ol>
- * <p>
- * The coefficient function used by SimpleStreamSampler is:
- * <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
- * </p>
- * <p>
- * For a specialized version of this algorithm that uses less runtime memory,
- * see {@link CompactSampler}.
- * </p>
+ *
+ * <p>The coefficient function used by SimpleStreamSampler is: <code>
+ * c(i) = exp(lambda * sequenceIndex(i))</code>.
+ *
+ * <p>For a specialized version of this algorithm that uses less runtime memory, see {@link
+ * CompactSampler}.
  */
 public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
 
     /**
-     * A min-heap containing the weighted points currently in sample. The head
-     * element is the lowest priority point in the sample (or, equivalently, is the
-     * point with the greatest weight).
+     * A min-heap containing the weighted points currently in sample. The head element is the lowest
+     * priority point in the sample (or, equivalently, is the point with the greatest weight).
      */
     private final Queue<Weighted<P>> sample;
 
-    /**
-     * The number of points in the sample when full.
-     */
+    /** The number of points in the sample when full. */
     private final int sampleSize;
 
-    /**
-     * initial behavior
-     */
+    /** initial behavior */
     private final double initialAcceptFraction;
 
     /**
-     * The point evicted by the last call to {@link #update}, or if the new point
-     * was not accepted by the sampler.
+     * The point evicted by the last call to {@link #update}, or if the new point was not accepted
+     * by the sampler.
      */
     private transient ISampled<P> evictedPoint;
     /**
-     * This field is used to temporarily store the result from a call to
-     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
+     * This field is used to temporarily store the result from a call to {@link #acceptPoint} for
+     * use in the subsequent call to {@link #addPoint}.
      *
-     * Visible for testing.
+     * <p>Visible for testing.
      */
     protected AcceptPointState acceptPointState;
 
-    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices,
+    public SimpleStreamSampler(
+            final int sampleSize,
+            final double lambda,
+            Random random,
+            boolean storeSequenceIndices,
             double initialAcceptFraction) {
         super();
         this.sampleSize = sampleSize;
@@ -100,11 +93,16 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         this.initialAcceptFraction = initialAcceptFraction;
     }
 
-    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
+    public SimpleStreamSampler(
+            final int sampleSize,
+            final double lambda,
+            Random random,
+            boolean storeSequenceIndices) {
         this(sampleSize, lambda, random, false, DEFAULT_INITIAL_ACCEPT_FRACTION);
     }
 
-    public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
+    public SimpleStreamSampler(
+            int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
         this(sampleSize, lambda, new Random(seed), storeSequenceIndices);
     }
 
@@ -113,22 +111,24 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     }
 
     /**
-     * Submit a new point to the sampler. When the point is submitted, a new weight
-     * is computed for the point using the computeWeight method. If the new weight
-     * is smaller than the largest weight currently in the sampler, then the new
-     * point is accepted into the sampler and the point corresponding to the largest
-     * weight is evicted.
+     * Submit a new point to the sampler. When the point is submitted, a new weight is computed for
+     * the point using the computeWeight method. If the new weight is smaller than the largest
+     * weight currently in the sampler, then the new point is accepted into the sampler and the
+     * point corresponding to the largest weight is evicted.
      *
      * @param sequenceIndex The timestamp value being submitted.
      * @return A weighted point that can be added to the sampler or null
      */
     public boolean acceptPoint(long sequenceIndex) {
-        checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
+        checkState(
+                sequenceIndex >= mostRecentTimeDecayUpdate,
+                "incorrect sequences submitted to sampler");
 
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if ((sample.size() < sampleSize && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
+        if ((sample.size() < sampleSize
+                        && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
                 || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();
@@ -140,25 +140,29 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     }
 
     /**
-     * adds the sample to sampler; if the sampler was full, then the sampler has
-     * already evicted a point in determining the weight.
-     * 
+     * adds the sample to sampler; if the sampler was full, then the sampler has already evicted a
+     * point in determining the weight.
+     *
      * @param point to be entered in sampler
      */
-
     @Override
     public void addPoint(P point) {
-        checkState(acceptPointState != null,
+        checkState(
+                acceptPointState != null,
                 "this method should only be called after a successful call to acceptSample(long)");
-        sample.add(new Weighted<>(point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
+        sample.add(
+                new Weighted<>(
+                        point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
         acceptPointState = null;
-        checkState(sample.size() <= sampleSize, "The number of points in the sampler is greater than the sample size");
+        checkState(
+                sample.size() <= sampleSize,
+                "The number of points in the sampler is greater than the sample size");
     }
 
     /**
-     * Add a Weighted value directly to the sample. This method is intended to be
-     * used to restore a sampler to a pre-existing state.
-     * 
+     * Add a Weighted value directly to the sample. This method is intended to be used to restore a
+     * sampler to a pre-existing state.
+     *
      * @param point A weighted point.
      */
     public void addSample(Weighted<P> point) {
@@ -166,40 +170,32 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     }
 
     /**
-     * @return the point evicted by the most recent call to {@link #update}, or null
-     *         if no point was evicted.
+     * @return the point evicted by the most recent call to {@link #update}, or null if no point was
+     *     evicted.
      */
     @Override
     public Optional<ISampled<P>> getEvictedPoint() {
         return Optional.ofNullable(evictedPoint);
     }
 
-    /**
-     * @return the list of sampled points with weights.
-     */
+    /** @return the list of sampled points with weights. */
     public List<Weighted<P>> getWeightedSample() {
         return new ArrayList<>(sample);
     }
 
-    /**
-     * @return the list of sampled points.
-     */
+    /** @return the list of sampled points. */
     @Override
     public List<ISampled<P>> getSample() {
         return new ArrayList<>(sample);
     }
 
-    /**
-     * @return the number of points contained by the sampler when full.
-     */
+    /** @return the number of points contained by the sampler when full. */
     @Override
     public int getCapacity() {
         return sampleSize;
     }
 
-    /**
-     * @return the number of points currently contained by the sampler.
-     */
+    /** @return the number of points currently contained by the sampler. */
     @Override
     public int size() {
         return sample.size();

@@ -13,21 +13,20 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
-import java.util.List;
-
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
+import java.util.List;
 
 /**
  * pointstore coordinator for compact RCF
- * 
+ *
  * @param <Point> the datatype of the actual point
  */
-
 public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer, Point> {
 
     private final IPointStore<Point> store;
@@ -46,10 +45,11 @@ public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Inte
     @Override
     public void completeUpdate(List<UpdateResult<Integer>> updateResults, Integer updateInput) {
         if (updateInput != null) { // can be null for initial shingling
-            updateResults.forEach(result -> {
-                result.getAddedPoint().ifPresent(store::incrementRefCount);
-                result.getDeletedPoint().ifPresent(store::decrementRefCount);
-            });
+            updateResults.forEach(
+                    result -> {
+                        result.getAddedPoint().ifPresent(store::incrementRefCount);
+                        result.getDeletedPoint().ifPresent(store::decrementRefCount);
+                    });
             store.decrementRefCount(updateInput);
         }
         totalUpdates++;

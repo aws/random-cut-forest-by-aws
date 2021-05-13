@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.imputation;
 
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
@@ -22,12 +23,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.tree.BoundingBox;
 import com.amazon.randomcutforest.tree.Node;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ImputeVisitorTest {
 
@@ -42,9 +42,9 @@ public class ImputeVisitorTest {
         // The second value of queryPoint and the 2nd and 3rd values of missingIndexes
         // should be ignored in all tests
 
-        queryPoint = new double[] { -1.0, 1000.0, 3.0 };
+        queryPoint = new double[] {-1.0, 1000.0, 3.0};
         numberOfMissingValues = 1;
-        missingIndexes = new int[] { 1, 99, -888 };
+        missingIndexes = new int[] {1, 99, -888};
 
         visitor = new ImputeVisitor(queryPoint, numberOfMissingValues, missingIndexes);
     }
@@ -66,7 +66,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = { queryPoint[0], 2.0, queryPoint[2] };
+        double[] point = {queryPoint[0], 2.0, queryPoint[2]};
         Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
@@ -75,7 +75,7 @@ public class ImputeVisitorTest {
 
         visitor.acceptLeaf(leafNode, leafDepth);
 
-        double[] expected = new double[] { -1.0, 2.0, 3.0 };
+        double[] expected = new double[] {-1.0, 2.0, 3.0};
         assertArrayEquals(expected, visitor.getResult());
 
         assertEquals(defaultScoreSeenFunction(leafDepth, leafMass), visitor.getRank());
@@ -83,7 +83,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testAcceptLeafEqualsZeroDepth() {
-        double[] point = { queryPoint[0], 2.0, queryPoint[2] };
+        double[] point = {queryPoint[0], 2.0, queryPoint[2]};
         Node leafNode = spy(new Node(point));
 
         int leafDepth = 0;
@@ -92,7 +92,7 @@ public class ImputeVisitorTest {
 
         visitor.acceptLeaf(leafNode, leafDepth);
 
-        double[] expected = new double[] { -1.0, 2.0, 3.0 };
+        double[] expected = new double[] {-1.0, 2.0, 3.0};
         assertArrayEquals(expected, visitor.getResult());
 
         assertEquals(0.0, visitor.getRank());
@@ -100,7 +100,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = { queryPoint[0], 2.0, -111.11 };
+        double[] point = {queryPoint[0], 2.0, -111.11};
         Node leafNode = spy(new Node(point));
 
         int leafDepth = 100;
@@ -109,7 +109,7 @@ public class ImputeVisitorTest {
 
         visitor.acceptLeaf(leafNode, leafDepth);
 
-        double[] expected = new double[] { -1.0, 2.0, 3.0 };
+        double[] expected = new double[] {-1.0, 2.0, 3.0};
         assertArrayEquals(expected, visitor.getResult());
 
         assertEquals(defaultScoreUnseenFunction(leafDepth, leafMass), visitor.getRank());
@@ -118,7 +118,7 @@ public class ImputeVisitorTest {
     @Test
     public void testAccept() {
 
-        double[] point = { queryPoint[0], 2.0, -111.11 };
+        double[] point = {queryPoint[0], 2.0, -111.11};
         Node node = spy(new Node(point));
 
         int depth = 100;
@@ -127,13 +127,14 @@ public class ImputeVisitorTest {
 
         visitor.acceptLeaf(node, depth);
 
-        double[] expected = new double[] { -1.0, 2.0, 3.0 };
+        double[] expected = new double[] {-1.0, 2.0, 3.0};
         assertArrayEquals(expected, visitor.getResult());
 
         assertEquals(defaultScoreUnseenFunction(depth, leafMass), visitor.getRank());
 
         depth--;
-        BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] { 99.0, 4.0, -19.0 });
+        BoundingBox boundingBox =
+                node.getBoundingBox().getMergedBox(new double[] {99.0, 4.0, -19.0});
         node = spy(new Node(null, null, null, boundingBox));
         when(node.getMass()).thenReturn(leafMass + 2);
 
@@ -142,22 +143,19 @@ public class ImputeVisitorTest {
         assertArrayEquals(expected, visitor.getResult());
 
         double p = CommonUtils.getProbabilityOfSeparation(boundingBox, expected);
-        double expectedRank = p * defaultScoreUnseenFunction(depth, node.getMass()) + (1 - p) * oldRank;
+        double expectedRank =
+                p * defaultScoreUnseenFunction(depth, node.getMass()) + (1 - p) * oldRank;
         assertEquals(expectedRank, visitor.getRank(), EPSILON);
     }
 
     /**
-     * TODO: fix the mocks
-     * 
-     * @Test public void testTrigger() { Cut cut = mock(Cut.class);
-     *       when(cut.getDimension()).thenReturn(1).thenReturn(0);
-     * 
-     *       Node node = mock(Node.class); when(node.getCut()).thenReturn(cut);
-     * 
-     *       assertTrue(visitor.trigger(node)); assertFalse(visitor.trigger(node));
-     *       }
+     * TODO: fix the mocks @Test public void testTrigger() { Cut cut = mock(Cut.class);
+     * when(cut.getDimension()).thenReturn(1).thenReturn(0);
+     *
+     * <p>Node node = mock(Node.class); when(node.getCut()).thenReturn(cut);
+     *
+     * <p>assertTrue(visitor.trigger(node)); assertFalse(visitor.trigger(node)); }
      */
-
     @Test
     public void testNewCopy() {
         ImputeVisitor copy = (ImputeVisitor) visitor.newCopy();
@@ -168,11 +166,11 @@ public class ImputeVisitorTest {
 
     @Test
     public void testMerge() {
-        double[] otherPoint = new double[] { 99, 100, 101 };
+        double[] otherPoint = new double[] {99, 100, 101};
         ImputeVisitor other = new ImputeVisitor(otherPoint, 0, null);
 
         // set other.rank to a small value
-        Node node = new Node(new double[] { 0, 0, 0 });
+        Node node = new Node(new double[] {0, 0, 0});
         other.acceptLeaf(node, 99);
 
         assertTrue(other.getRank() < visitor.getRank());

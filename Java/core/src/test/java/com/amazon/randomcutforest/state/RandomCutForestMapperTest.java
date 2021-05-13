@@ -13,18 +13,11 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.state;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.Random;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
@@ -32,6 +25,12 @@ import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class RandomCutForestMapperTest {
 
@@ -39,15 +38,24 @@ public class RandomCutForestMapperTest {
     private static int sampleSize = 128;
 
     private static Stream<RandomCutForest> compactForestProvider() {
-        RandomCutForest.Builder<?> builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .sampleSize(sampleSize);
+        RandomCutForest.Builder<?> builder =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .sampleSize(sampleSize);
 
-        RandomCutForest cachedDouble = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.FLOAT_64).build();
-        RandomCutForest cachedFloat = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.FLOAT_32).build();
-        RandomCutForest uncachedDouble = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_64).build();
-        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_32).build();
+        RandomCutForest cachedDouble =
+                builder.boundingBoxCacheFraction(new Random().nextDouble())
+                        .precision(Precision.FLOAT_64)
+                        .build();
+        RandomCutForest cachedFloat =
+                builder.boundingBoxCacheFraction(new Random().nextDouble())
+                        .precision(Precision.FLOAT_32)
+                        .build();
+        RandomCutForest uncachedDouble =
+                builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_64).build();
+        RandomCutForest uncachedFloat =
+                builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_32).build();
 
         return Stream.of(cachedDouble, cachedFloat, uncachedDouble, uncachedFloat);
     }
@@ -66,7 +74,8 @@ public class RandomCutForestMapperTest {
         assertEquals(forest.getOutputAfter(), forest2.getOutputAfter());
         assertEquals(forest.getNumberOfTrees(), forest2.getNumberOfTrees());
         assertEquals(forest.getLambda(), forest2.getLambda());
-        assertEquals(forest.isStoreSequenceIndexesEnabled(), forest2.isStoreSequenceIndexesEnabled());
+        assertEquals(
+                forest.isStoreSequenceIndexesEnabled(), forest2.isStoreSequenceIndexesEnabled());
         assertEquals(forest.isCompact(), forest2.isCompact());
         assertEquals(forest.getPrecision(), forest2.getPrecision());
         assertEquals(forest.getBoundingBoxCacheFraction(), forest2.getBoundingBoxCacheFraction());
@@ -94,7 +103,6 @@ public class RandomCutForestMapperTest {
             assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
             assertEquals(store.getCapacity(), store2.getCapacity());
             assertEquals(store.size(), store2.size());
-
         }
     }
 
@@ -122,8 +130,13 @@ public class RandomCutForestMapperTest {
     public void testRoundTripForEmptyForest() {
         Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
-                .precision(precision).build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .build();
 
         mapper.setSaveTreeStateEnabled(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));

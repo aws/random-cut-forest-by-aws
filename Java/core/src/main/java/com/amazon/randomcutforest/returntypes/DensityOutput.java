@@ -13,26 +13,21 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.returntypes;
 
-/**
- * DensityOutput extends InterpolationMeasure with methods for computing density
- * estimates.
- */
+/** DensityOutput extends InterpolationMeasure with methods for computing density estimates. */
 public class DensityOutput extends InterpolationMeasure {
 
-    /**
-     * Default scaling factor (q) to use in the getDensity method.
-     */
+    /** Default scaling factor (q) to use in the getDensity method. */
     public static final double DEFAULT_SUM_OF_POINTS_SCALING_FACTOR = 0.001;
 
     /**
-     * Create a new DensityOutput object with the given number of spatial
-     * dimensions. Note that the number of half-dimensions will be 2 * dimensions.
+     * Create a new DensityOutput object with the given number of spatial dimensions. Note that the
+     * number of half-dimensions will be 2 * dimensions.
      *
      * @param dimensions The number of spatial dimensions.
-     * @param sampleSize The samplesize of each tree in forest, which may be used
-     *                   for normalization.
+     * @param sampleSize The samplesize of each tree in forest, which may be used for normalization.
      */
     public DensityOutput(int dimensions, int sampleSize) {
         super(dimensions, sampleSize);
@@ -48,14 +43,12 @@ public class DensityOutput extends InterpolationMeasure {
     }
 
     /**
-     * Compute a scalar density estimate. The scaling factor q is multiplied by the
-     * sum of points measure and added to the denominator in the density expression
-     * to prevent divide-by-0 errors.
+     * Compute a scalar density estimate. The scaling factor q is multiplied by the sum of points
+     * measure and added to the denominator in the density expression to prevent divide-by-0 errors.
      *
-     * @param q                 A scaling factor applied to the sum of points in the
-     *                          measure.
-     * @param manifoldDimension The number of dimensions of the submanifold on which
-     *                          we are estimating a density.
+     * @param q A scaling factor applied to the sum of points in the measure.
+     * @param manifoldDimension The number of dimensions of the submanifold on which we are
+     *     estimating a density.
      * @return a scalar density estimate.
      */
     public double getDensity(double q, int manifoldDimension) {
@@ -68,7 +61,10 @@ public class DensityOutput extends InterpolationMeasure {
         double sumOfFactors = 0;
 
         for (int i = 0; i < dimensions; i++) {
-            double t = probMass.getHighLowSum(i) > 0 ? distances.getHighLowSum(i) / probMass.getHighLowSum(i) : 0;
+            double t =
+                    probMass.getHighLowSum(i) > 0
+                            ? distances.getHighLowSum(i) / probMass.getHighLowSum(i)
+                            : 0;
             if (t > 0) {
                 t = Math.exp(Math.log(t) * manifoldDimension) * probMass.getHighLowSum(i);
             }
@@ -79,8 +75,8 @@ public class DensityOutput extends InterpolationMeasure {
     }
 
     /**
-     * Compute a scalar density estimate. This method uses the default scaling
-     * factor and the full number of dimensions.
+     * Compute a scalar density estimate. This method uses the default scaling factor and the full
+     * number of dimensions.
      *
      * @return a scalar density estimate.
      */
@@ -89,19 +85,20 @@ public class DensityOutput extends InterpolationMeasure {
     }
 
     /**
-     * Compute a directional density estimate. The scaling factor q is multiplied by
-     * the sum of points measure and added to the denominator in the density
-     * expression to prevent divide-by-0 errors.
+     * Compute a directional density estimate. The scaling factor q is multiplied by the sum of
+     * points measure and added to the denominator in the density expression to prevent divide-by-0
+     * errors.
      *
-     * @param q                 A scaling factor applied to the sum of points in the
-     *                          measure.
-     * @param manifoldDimension The number of dimensions of the submanifold on which
-     *                          we are estimating a density.
+     * @param q A scaling factor applied to the sum of points in the measure.
+     * @param manifoldDimension The number of dimensions of the submanifold on which we are
+     *     estimating a density.
      * @return a directional density estimate.
      */
     public DiVector getDirectionalDensity(double q, int manifoldDimension) {
         double density = getDensity(q, manifoldDimension);
-        double sumOfPts = measure.getHighLowSum(); // normalization not performed since this would be used in a ratio
+        double sumOfPts =
+                measure.getHighLowSum(); // normalization not performed since this would be used in
+        // a ratio
         DiVector factors = new DiVector(super.getDimensions());
 
         if (sumOfPts > 0) {
@@ -112,8 +109,8 @@ public class DensityOutput extends InterpolationMeasure {
     }
 
     /**
-     * Compute a directional density estimate. This method uses the default scaling
-     * factor and the full number of dimensions.
+     * Compute a directional density estimate. This method uses the default scaling factor and the
+     * full number of dimensions.
      *
      * @return a scalar density estimate.
      */

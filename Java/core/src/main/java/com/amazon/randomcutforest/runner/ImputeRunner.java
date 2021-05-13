@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.runner;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,12 +27,11 @@ import java.util.Arrays;
 import java.util.StringJoiner;
 
 /**
- * A command-line application that imputes missing values. Points are read from
- * STDIN and output is written to STDOUT. One output point is written for each
- * input point. If the input point does not contain any missing value
- * indicators, then it is copied as-is to the output. If an input point contains
- * one or more missing value indicators, then the missing values are imputed and
- * the imputed point is written to the output.
+ * A command-line application that imputes missing values. Points are read from STDIN and output is
+ * written to STDOUT. One output point is written for each input point. If the input point does not
+ * contain any missing value indicators, then it is copied as-is to the output. If an input point
+ * contains one or more missing value indicators, then the missing values are imputed and the
+ * imputed point is written to the output.
  */
 public class ImputeRunner extends SimpleRunner {
 
@@ -46,7 +47,8 @@ public class ImputeRunner extends SimpleRunner {
         ImputeRunner runner = new ImputeRunner();
         runner.parse(args);
         System.out.println("Reading from stdin... (Ctrl-c to exit)");
-        runner.run(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
+        runner.run(
+                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
                 new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
         System.out.println("Done.");
     }
@@ -71,8 +73,11 @@ public class ImputeRunner extends SimpleRunner {
 
         if (numberOfMissingValues > 0) {
             parsePoint(values);
-            double[] imputedPoint = algorithm.getForest().imputeMissingValues(pointBuffer, numberOfMissingValues,
-                    missingIndexes);
+            double[] imputedPoint =
+                    algorithm
+                            .getForest()
+                            .imputeMissingValues(
+                                    pointBuffer, numberOfMissingValues, missingIndexes);
             StringJoiner joiner = new StringJoiner(argumentParser.getDelimiter());
             Arrays.stream(imputedPoint).mapToObj(Double::toString).forEach(joiner::add);
             out.println(joiner.toString());
@@ -86,11 +91,16 @@ public class ImputeRunner extends SimpleRunner {
         private final StringArgument missingValueMarker;
 
         public ImputeArgumentParser() {
-            super(ImputeRunner.class.getName(),
+            super(
+                    ImputeRunner.class.getName(),
                     "Read rows with missing values and write rows with missing values imputed.");
 
-            missingValueMarker = new StringArgument(null, "--missing-value-marker",
-                    "String used to represent a missing value in the data.", "NA");
+            missingValueMarker =
+                    new StringArgument(
+                            null,
+                            "--missing-value-marker",
+                            "String used to represent a missing value in the data.",
+                            "NA");
 
             addArgument(missingValueMarker);
 

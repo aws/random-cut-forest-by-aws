@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,15 +23,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.amazon.randomcutforest.store.PointStoreDouble;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
-import com.amazon.randomcutforest.store.PointStoreDouble;
 
 public class PointStoreCoordinatorTest {
 
@@ -45,7 +44,7 @@ public class PointStoreCoordinatorTest {
 
     @Test
     public void testInitUpdate() {
-        double[] point = { 1.2, -3.4 };
+        double[] point = {1.2, -3.4};
         int index = 123;
 
         ArgumentCaptor<double[]> captor = ArgumentCaptor.forClass(double[].class);
@@ -61,10 +60,12 @@ public class PointStoreCoordinatorTest {
     public void testCompleteUpdate() {
         List<UpdateResult<Integer>> updateResults = new ArrayList<>();
 
-        UpdateResult<Integer> result1 = UpdateResult.<Integer>builder().addedPoint(1).deletedPoint(100).build();
+        UpdateResult<Integer> result1 =
+                UpdateResult.<Integer>builder().addedPoint(1).deletedPoint(100).build();
         updateResults.add(result1);
 
-        UpdateResult<Integer> result2 = UpdateResult.<Integer>builder().addedPoint(2).deletedPoint(200).build();
+        UpdateResult<Integer> result2 =
+                UpdateResult.<Integer>builder().addedPoint(2).deletedPoint(200).build();
         updateResults.add(result2);
 
         UpdateResult<Integer> result3 = UpdateResult.<Integer>builder().addedPoint(3).build();

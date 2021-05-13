@@ -13,16 +13,17 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.testutils;
+
 
 import java.util.Random;
 
 /**
- * This class samples point from a mixture of 2 multi-variate normal
- * distribution with covariance matrices of the form sigma * I. One of the
- * normal distributions is considered the base distribution, the second is
- * considered the anomaly distribution, and there are random transitions between
- * the two.
+ * This class samples point from a mixture of 2 multi-variate normal distribution with covariance
+ * matrices of the form sigma * I. One of the normal distributions is considered the base
+ * distribution, the second is considered the anomaly distribution, and there are random transitions
+ * between the two.
  */
 public class NormalMixtureTestData {
 
@@ -33,8 +34,13 @@ public class NormalMixtureTestData {
     private final double transitionToAnomalyProbability;
     private final double transitionToBaseProbability;
 
-    public NormalMixtureTestData(double baseMu, double baseSigma, double anomalyMu, double anomalySigma,
-            double transitionToAnomalyProbability, double transitionToBaseProbability) {
+    public NormalMixtureTestData(
+            double baseMu,
+            double baseSigma,
+            double anomalyMu,
+            double anomalySigma,
+            double transitionToAnomalyProbability,
+            double transitionToBaseProbability) {
         this.baseMu = baseMu;
         this.baseSigma = baseSigma;
         this.anomalyMu = anomalyMu;
@@ -60,10 +66,8 @@ public class NormalMixtureTestData {
         boolean anomaly = false;
 
         NormalDistribution dist;
-        if (seed != 0)
-            dist = new NormalDistribution(new Random(seed));
-        else
-            dist = new NormalDistribution(new Random());
+        if (seed != 0) dist = new NormalDistribution(new Random(seed));
+        else dist = new NormalDistribution(new Random());
 
         for (int i = 0; i < numberOfRows; i++) {
             if (!anomaly) {

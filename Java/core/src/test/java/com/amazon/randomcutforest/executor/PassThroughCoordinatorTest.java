@@ -13,13 +13,13 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.Collections;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +33,7 @@ public class PassThroughCoordinatorTest {
 
     @Test
     public void testInitUpdate() {
-        double[] point = new double[] { 1.1, -2.2, 30.30 };
+        double[] point = new double[] {1.1, -2.2, 30.30};
         assertSame(point, coordinator.initUpdate(point, 0));
     }
 
@@ -41,7 +41,7 @@ public class PassThroughCoordinatorTest {
     public void testCompleteUpdate() {
         int totalUpdates = 10;
         for (int i = 0; i < totalUpdates; i++) {
-            coordinator.completeUpdate(Collections.emptyList(), new double[] { i });
+            coordinator.completeUpdate(Collections.emptyList(), new double[] {i});
         }
         assertEquals(totalUpdates, coordinator.getTotalUpdates());
     }

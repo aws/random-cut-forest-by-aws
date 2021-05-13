@@ -13,7 +13,9 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.tree;
+
 
 import com.amazon.randomcutforest.config.IDynamicConfig;
 import com.amazon.randomcutforest.executor.ITraversable;
@@ -21,9 +23,9 @@ import com.amazon.randomcutforest.executor.ITraversable;
 /**
  * A tree that can potentially interact with a coordinator
  *
- * @param <PointReference> The internal point representation expected by the
- *                         component models in this list.
- * @param <Point>          The explicit data type of points being passed
+ * @param <PointReference> The internal point representation expected by the component models in
+ *     this list.
+ * @param <Point> The explicit data type of points being passed
  */
 public interface ITree<PointReference, Point> extends ITraversable, IDynamicConfig {
     int getMass();

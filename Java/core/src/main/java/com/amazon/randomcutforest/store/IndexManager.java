@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
@@ -25,8 +26,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * This class defines common functionality for Store classes, including
- * maintaining the stack of free pointers.
+ * This class defines common functionality for Store classes, including maintaining the stack of
+ * free pointers.
  */
 public class IndexManager {
 
@@ -37,7 +38,7 @@ public class IndexManager {
 
     /**
      * Create a new indexmanager with the given capacity.
-     * 
+     *
      * @param capacity The total number of values that can be saved in this store.
      */
     public IndexManager(int capacity) {
@@ -45,12 +46,11 @@ public class IndexManager {
     }
 
     /**
-     * creates a new index manager with a given capacity and a bitset representing
-     * the indices already in use
-     * 
+     * creates a new index manager with a given capacity and a bitset representing the indices
+     * already in use
+     *
      * @param capacity total number of indices
-     * @param bits     bitset correspond to the used indices, and null corresponding
-     *                 to
+     * @param bits bitset correspond to the used indices, and null corresponding to
      */
     public IndexManager(int capacity, BitSet bits) {
         checkArgument(capacity > 0, "capacity must be greater than 0");
@@ -68,22 +68,18 @@ public class IndexManager {
         } else {
             freeIndexes = new int[0];
         }
-
     }
 
     /**
-     * Construct a new IndexManager with the given capacity, array of free indexes
-     * and a value corresponding to the number of free indices
+     * Construct a new IndexManager with the given capacity, array of free indexes and a value
+     * corresponding to the number of free indices
      *
-     * @param capacity         the size of the index
-     * @param freeIndexes      An array of unoccupied index values.
-     * @param freeIndexPointer Entries in freeIndexes between 0 (inclusive) and
-     *                         freeIndexPointer (inclusive) contain valid index
-     *                         values. if freeIndexPointer is larger than the length
-     *                         of the freeIndices array then the implcit guarantee
-     *                         is that location i greater or equal
-     *                         freeIndexes.length contains index value (capacity - i
-     *                         -1)
+     * @param capacity the size of the index
+     * @param freeIndexes An array of unoccupied index values.
+     * @param freeIndexPointer Entries in freeIndexes between 0 (inclusive) and freeIndexPointer
+     *     (inclusive) contain valid index values. if freeIndexPointer is larger than the length of
+     *     the freeIndices array then the implcit guarantee is that location i greater or equal
+     *     freeIndexes.length contains index value (capacity - i -1)
      */
     public IndexManager(int capacity, int[] freeIndexes, int freeIndexPointer) {
         checkNotNull(freeIndexes, "freeIndexes must not be null");
@@ -102,7 +98,6 @@ public class IndexManager {
                 occupied.clear(capacity - i - 1);
             }
         }
-
     }
 
     // the following is only used in testing
@@ -112,7 +107,9 @@ public class IndexManager {
 
     public IndexManager(IndexManager manager, int newCapacity) {
         this(newCapacity);
-        checkArgument(manager.occupied.cardinality() == manager.capacity, " incorrect application, not full");
+        checkArgument(
+                manager.occupied.cardinality() == manager.capacity,
+                " incorrect application, not full");
         occupied.or(manager.occupied);
         freeIndexPointer = newCapacity - manager.capacity - 1;
     }
@@ -122,7 +119,8 @@ public class IndexManager {
     }
 
     private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {
-        checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
+        checkArgument(
+                -1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
                 "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");
 
         int capacity = freeIndexes.length;
@@ -131,29 +129,26 @@ public class IndexManager {
         for (int i = 0; i <= freeIndexPointer; i++) {
             int index = freeIndexes[i];
             checkArgument(!freeIndexSet.contains(index), "free index values must not be repeated");
-            checkArgument(0 <= freeIndexes[i] && freeIndexes[i] < capacity,
+            checkArgument(
+                    0 <= freeIndexes[i] && freeIndexes[i] < capacity,
                     "entries in freeIndexes must be between 0 (inclusive) and freeIndexes.length (exclusive)");
             freeIndexSet.add(index);
         }
     }
 
-    /**
-     * @return the maximum number of nodes whose data can be stored.
-     */
+    /** @return the maximum number of nodes whose data can be stored. */
     public int getCapacity() {
         return capacity;
     }
 
-    /**
-     * @return the number of nodes whose data is currently stored.
-     */
+    /** @return the number of nodes whose data is currently stored. */
     public int size() {
         return capacity - freeIndexPointer - 1;
     }
 
     /**
      * Take an index from the free index stack.
-     * 
+     *
      * @return a free index that can be used to store a value.
      */
     protected int takeIndex() {
@@ -170,9 +165,9 @@ public class IndexManager {
     }
 
     /**
-     * Release an index. After the release, the index value may be returned in a
-     * future call to {@link #takeIndex()}.
-     * 
+     * Release an index. After the release, the index value may be returned in a future call to
+     * {@link #takeIndex()}.
+     *
      * @param index The index value to release.
      */
     protected void releaseIndex(int index) {
@@ -195,7 +190,9 @@ public class IndexManager {
     }
 
     protected void checkValidIndex(int index) {
-        checkArgument(index >= 0 && index < capacity, "index must be between 0 (inclusive) and capacity (exclusive)");
+        checkArgument(
+                index >= 0 && index < capacity,
+                "index must be between 0 (inclusive) and capacity (exclusive)");
         checkArgument(occupied.get(index), "this index is not being used");
     }
 
@@ -210,5 +207,4 @@ public class IndexManager {
             return freeIndexes;
         }
     }
-
 }

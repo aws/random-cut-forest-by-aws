@@ -13,26 +13,25 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.executor;
+
 
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * A partial implementation of the {@link IStateCoordinator} interface that
- * defines a protected instance variable to track total updates and implements
- * the {@link IStateCoordinator#getTotalUpdates()} method. Classes that extend
- * AbstractStateCoordinator are responsible for incrementing the totalUpdates
- * counter after completing an update successfully.
+ * A partial implementation of the {@link IStateCoordinator} interface that defines a protected
+ * instance variable to track total updates and implements the {@link
+ * IStateCoordinator#getTotalUpdates()} method. Classes that extend AbstractStateCoordinator are
+ * responsible for incrementing the totalUpdates counter after completing an update successfully.
  *
  * @param <PointReference> An internal point representation.
- * @param <Point>          Data type of potential exchanges of data
+ * @param <Point> Data type of potential exchanges of data
  */
 public abstract class AbstractUpdateCoordinator<PointReference, Point>
         implements IStateCoordinator<PointReference, Point> {
-    @Getter
-    @Setter
-    protected long totalUpdates;
+    @Getter @Setter protected long totalUpdates;
 
     public AbstractUpdateCoordinator() {
         totalUpdates = 0;

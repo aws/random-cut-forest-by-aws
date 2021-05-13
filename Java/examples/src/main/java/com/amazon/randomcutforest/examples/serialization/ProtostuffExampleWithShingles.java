@@ -13,26 +13,25 @@
  * permissions and limitations under the License.
  */
 
+
 package com.amazon.randomcutforest.examples.serialization;
 
 import static java.lang.Math.PI;
-
-import java.util.Random;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
-
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
+import java.util.Random;
 
 /**
- * Serialize a Random Cut Forest using the
- * <a href="https://github.com/protostuff/protostuff">protostuff</a> library.
+ * Serialize a Random Cut Forest using the <a
+ * href="https://github.com/protostuff/protostuff">protostuff</a> library.
  */
 public class ProtostuffExampleWithShingles implements Example {
     public static void main(String[] args) throws Exception {
@@ -57,9 +56,15 @@ public class ProtostuffExampleWithShingles implements Example {
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_64;
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(precision).shingleSize(dimensions)
-                .build();
+        RandomCutForest forest =
+                RandomCutForest.builder()
+                        .compact(true)
+                        .dimensions(dimensions)
+                        .numberOfTrees(numberOfTrees)
+                        .sampleSize(sampleSize)
+                        .precision(precision)
+                        .shingleSize(dimensions)
+                        .build();
         int count = 1;
         int dataSize = 1000 * sampleSize;
         for (double[] point : generateShingledData(dataSize, dimensions, 0)) {
@@ -82,8 +87,9 @@ public class ProtostuffExampleWithShingles implements Example {
             buffer.clear();
         }
 
-        System.out.printf("dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n", dimensions,
-                numberOfTrees, sampleSize, precision);
+        System.out.printf(
+                "dimensions = %d, numberOfTrees = %d, sampleSize = %d, precision = %s%n",
+                dimensions, numberOfTrees, sampleSize, precision);
         System.out.printf("protostuff size = %d bytes%n", bytes.length);
 
         // Restore from protostuff and compare anomaly scores produced by the two
@@ -145,13 +151,13 @@ public class ProtostuffExampleWithShingles implements Example {
         return answer;
     }
 
-    private static double[] getShinglePoint(double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
+    private static double[] getShinglePoint(
+            double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
         double[] shingledPoint = new double[shingleLength];
         int i = 0;
         for (int j = 0; j < shingleLength; ++j) {
             double point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
             shingledPoint[i++] = point;
-
         }
         return shingledPoint;
     }
@@ -161,7 +167,8 @@ public class ProtostuffExampleWithShingles implements Example {
         double[] data = new double[num];
         Random noiseprg = new Random(seed);
         for (int i = 0; i < num; i++) {
-            data[i] = amplitude * Math.cos(2 * PI * (i + 50) / 1000) + noise * noiseprg.nextDouble();
+            data[i] =
+                    amplitude * Math.cos(2 * PI * (i + 50) / 1000) + noise * noiseprg.nextDouble();
         }
 
         return data;
