@@ -19,6 +19,8 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.config.Precision;
+
 /**
  * A class for storing the state of a
  * {@link com.amazon.randomcutforest.store.PointStoreDouble} or a
@@ -45,9 +47,9 @@ public class PointStoreState {
      */
     private int shingleSize;
     /**
-     * boolean for precision
+     * precision of points in the point store state
      */
-    private boolean singlePrecisionSet;
+    private String precision;
     /**
      * location beyond which the store has no useful information
      */
@@ -109,4 +111,8 @@ public class PointStoreState {
      * current index capacity
      */
     private int indexCapacity;
+
+    public Precision getPrecisionEnumValue() {
+        return Precision.valueOf(precision);
+    }
 }

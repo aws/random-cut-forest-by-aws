@@ -318,7 +318,7 @@ public class RandomCutForest {
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
                 .build();
 
-        IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator(tempStore);
+        IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat.Builder().maxSize(sampleSize)

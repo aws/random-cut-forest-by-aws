@@ -452,8 +452,8 @@ public class ShinglingFunctionalTest {
         for (int i = 0; i < testData.length; i++) {
 
             RandomCutForestMapper mapper = new RandomCutForestMapper();
-            mapper.setSaveExecutorContext(true);
-            mapper.setSaveTreeState(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            mapper.setSaveTreeStateEnabled(true);
 
             double score = forest.getAnomalyScore(testData[i]);
             forest.update(testData[i]);

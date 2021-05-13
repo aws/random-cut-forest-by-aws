@@ -79,7 +79,7 @@ public class CompactSamplerMapperTest {
     @BeforeEach
     public void setUp() {
         mapper = new CompactSamplerMapper();
-        mapper.setValidateHeap(false);
+        mapper.setValidateHeapEnabled(false);
     }
 
     private void assertValidMapping(CompactSampler original, CompactSampler mapped) {
@@ -101,26 +101,9 @@ public class CompactSamplerMapperTest {
     }
 
     @ParameterizedTest
-    @MethodSource("samplerProvider")
-    public void testRoundTripWithCopy(String description, CompactSampler sampler) {
-        mapper.setCopy(true);
-        CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
-        assertValidMapping(sampler, mapped);
-    }
-
-    @ParameterizedTest
-    @MethodSource("samplerProvider")
-    public void testRoundTripWithoutCopy(String description, CompactSampler sampler) {
-        mapper.setCopy(false);
-        CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
-        assertValidMapping(sampler, mapped);
-    }
-
-    @ParameterizedTest
     @MethodSource("nonemptySamplerProvider")
     public void testRoundTripInvalidHeap(String description, CompactSampler sampler) {
-        mapper.setCopy(true);
-        mapper.setValidateHeap(true);
+        mapper.setValidateHeapEnabled(true);
         CompactSamplerState state = mapper.toState(sampler);
 
         // swap to weights in the weight array in order to violate the heap property
@@ -132,7 +115,7 @@ public class CompactSamplerMapperTest {
 
         assertThrows(IllegalStateException.class, () -> mapper.toModel(state));
 
-        mapper.setValidateHeap(false);
+        mapper.setValidateHeapEnabled(false);
         CompactSampler sampler2 = mapper.toModel(state);
         assertArrayEquals(sampler.getWeightArray(), sampler2.getWeightArray());
     }

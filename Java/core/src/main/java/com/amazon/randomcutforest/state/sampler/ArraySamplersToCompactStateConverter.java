@@ -35,13 +35,13 @@ public class ArraySamplersToCompactStateConverter {
     private final Map<double[], Integer> pointMap;
     private final PointStoreDouble pointStoreDouble;
     private final List<CompactSamplerState> compactSamplerStates;
-    boolean storeSequences;
+    boolean storeSequenceIndexesEnabled;
 
-    public ArraySamplersToCompactStateConverter(boolean storeSequences, int dimensions, int capacity) {
+    public ArraySamplersToCompactStateConverter(boolean storeSequenceIndexesEnabled, int dimensions, int capacity) {
         pointMap = new HashMap<>();
         pointStoreDouble = new PointStoreDouble(dimensions, capacity);
         compactSamplerStates = new ArrayList<>();
-        this.storeSequences = storeSequences;
+        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
     }
 
     public PointStoreState getPointStoreDoubleState() {
@@ -55,7 +55,7 @@ public class ArraySamplersToCompactStateConverter {
     public void addSampler(SimpleStreamSampler<double[]> sampler) {
         int[] pointIndex = new int[sampler.size()];
         float[] weight = new float[sampler.size()];
-        long[] sequenceIndex = storeSequences ? new long[sampler.size()] : null;
+        long[] sequenceIndex = storeSequenceIndexesEnabled ? new long[sampler.size()] : null;
 
         int i = 0;
         for (Weighted<double[]> sample : sampler.getWeightedSample()) {

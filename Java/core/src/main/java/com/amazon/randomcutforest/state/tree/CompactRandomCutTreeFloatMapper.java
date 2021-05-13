@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.state.tree;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.store.INodeStore;
@@ -30,8 +31,8 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 public class CompactRandomCutTreeFloatMapper implements
         IContextualStateMapper<CompactRandomCutTreeFloat, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean partialTreeInUse = false;
-    private boolean compress = true;
+    private boolean partialTreeStateEnabled = false;
+    private boolean compressed = true;
 
     @Override
     public CompactRandomCutTreeFloat toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
@@ -40,14 +41,14 @@ public class CompactRandomCutTreeFloatMapper implements
         INodeStore nodeStore;
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
+        nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
         CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
                 .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).maxSize(state.getMaxSize())
                 .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreFloat) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass())
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
                 .outputAfter(state.getOutputAfter()).build();
         return tree;
     }
@@ -58,16 +59,16 @@ public class CompactRandomCutTreeFloatMapper implements
         model.reorderNodesInBreadthFirstOrder();
         state.setRoot(model.getRoot());
         state.setMaxSize(model.getMaxSize());
-        state.setPartialTreeInUse(model.storeSequenceIndexesEnabled || partialTreeInUse);
-        state.setStoreSequenceIndices(model.storeSequenceIndexesEnabled);
-        state.setEnableCenterOfMass(model.centerOfMassEnabled);
+        state.setPartialTreeState(model.storeSequenceIndexesEnabled || partialTreeStateEnabled);
+        state.setStoreSequenceIndexesEnabled(model.storeSequenceIndexesEnabled);
+        state.setCenterOfMassEnabled(model.centerOfMassEnabled);
         state.setBoundingBoxCacheFraction(model.getBoundingBoxCacheFraction());
         state.setOutputAfter(model.getOutputAfter());
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        nodeStoreMapper.setCompress(compress);
-        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
-        nodeStoreMapper.setSinglePrecisionSet(true);
+        nodeStoreMapper.setCompressionEnabled(compressed);
+        nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
+        nodeStoreMapper.setPrecision(Precision.FLOAT_32);
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
 
         return state;

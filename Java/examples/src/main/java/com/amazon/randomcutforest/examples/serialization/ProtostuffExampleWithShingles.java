@@ -69,8 +69,8 @@ public class ProtostuffExampleWithShingles implements Example {
         // Convert to an array of bytes and print the size
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
-        mapper.setSaveTreeState(false);
+        mapper.setSaveExecutorContextEnabled(true);
+        mapper.setSaveTreeStateEnabled(false);
 
         Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
         LinkedBuffer buffer = LinkedBuffer.allocate(512);

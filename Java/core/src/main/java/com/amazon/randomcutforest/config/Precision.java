@@ -26,5 +26,5 @@ public enum Precision {
     /**
      * Double-precision (64 bit) floating point numbers.
      */
-    FLOAT_64
+    FLOAT_64;
 }

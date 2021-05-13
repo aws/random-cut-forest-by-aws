@@ -67,7 +67,7 @@ public class ProtostuffExample implements Example {
         // Convert to an array of bytes and print the size
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
-        mapper.setSaveExecutorContext(true);
+        mapper.setSaveExecutorContextEnabled(true);
 
         Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
         LinkedBuffer buffer = LinkedBuffer.allocate(512);

@@ -30,7 +30,7 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 public class CompactRandomCutTreeDoubleMapper implements
         IContextualStateMapper<CompactRandomCutTreeDouble, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
-    private boolean partialTreeInUse = false;
+    private boolean partialTreeStateEnabled = false;
     private boolean compress = true;
 
     @Override
@@ -44,9 +44,9 @@ public class CompactRandomCutTreeDoubleMapper implements
 
         CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder()
                 .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
-                .storeSequenceIndexesEnabled(state.isStoreSequenceIndices()).maxSize(state.getMaxSize())
+                .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).maxSize(state.getMaxSize())
                 .root(state.getRoot()).randomSeed(seed).pointStore((PointStoreDouble) context.getPointStore())
-                .nodeStore(nodeStore).centerOfMassEnabled(state.isEnableCenterOfMass())
+                .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
                 .outputAfter(state.getOutputAfter()).build();
         return tree;
 
@@ -58,14 +58,14 @@ public class CompactRandomCutTreeDoubleMapper implements
         model.reorderNodesInBreadthFirstOrder();
         state.setMaxSize(model.getMaxSize());
         state.setRoot(model.getRootIndex());
-        state.setPartialTreeInUse(model.storeSequenceIndexesEnabled || partialTreeInUse);
-        state.setStoreSequenceIndices(model.storeSequenceIndexesEnabled);
-        state.setEnableCenterOfMass(model.centerOfMassEnabled);
+        state.setPartialTreeState(model.storeSequenceIndexesEnabled || partialTreeStateEnabled);
+        state.setStoreSequenceIndexesEnabled(model.storeSequenceIndexesEnabled);
+        state.setCenterOfMassEnabled(model.centerOfMassEnabled);
         state.setOutputAfter(model.getOutputAfter());
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        nodeStoreMapper.setCompress(compress);
-        nodeStoreMapper.setUsePartialTrees(state.isPartialTreeInUse());
+        nodeStoreMapper.setCompressionEnabled(compress);
+        nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
         return state;
     }
