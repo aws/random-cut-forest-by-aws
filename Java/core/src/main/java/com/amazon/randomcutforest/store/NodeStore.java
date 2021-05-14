@@ -41,16 +41,17 @@ import java.util.Arrays;
  */
 public class NodeStore implements INodeStore {
 
-    public final int capacity;
-    public final int[] parentIndex;
-    public final int[] leftIndex;
-    public final int[] rightIndex;
-    public final int[] cutDimension;
-    public final double[] cutValue;
-    public final int[] mass;
-    public final int[] leafPointIndex;
-    public IndexManager freeNodeManager;
-    public IndexManager freeLeafManager;
+    private final int capacity;
+    private final int[] parentIndex;
+    private final int[] leftIndex;
+    private final int[] rightIndex;
+    private final int[] cutDimension;
+    private final double[] cutValue;
+    private final int[] mass;
+    private final int[] leafPointIndex;
+
+    protected IndexManager freeNodeManager;
+    protected IndexManager freeLeafManager;
 
     /**
      * Create a new NodeStore with the given capacity.
@@ -81,7 +82,7 @@ public class NodeStore implements INodeStore {
         this.capacity = capacity;
         this.freeNodeManager = new IndexManager(capacity, freeNodeIndexes, freeNodeIndexPointer);
         this.freeLeafManager = new IndexManager(capacity + 1, freeLeafIndexes, freeLeafIndexPointer);
-        this.parentIndex = getParentIndex(leftIndex, rightIndex);
+        this.parentIndex = deriveParentIndex(leftIndex, rightIndex);
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
         this.cutDimension = cutDimension;
@@ -144,12 +145,12 @@ public class NodeStore implements INodeStore {
     }
 
     @Override
-    public void setParent(int index, int parent) {
+    public void setParentIndex(int index, int parent) {
         parentIndex[index] = parent;
     }
 
     @Override
-    public int getParent(int index) {
+    public int getParentIndex(int index) {
         return parentIndex[index];
     }
 
@@ -183,6 +184,10 @@ public class NodeStore implements INodeStore {
         return rightIndex[index];
     }
 
+    public int[] getRightIndex() {
+        return rightIndex;
+    }
+
     @Override
     public void setRightIndex(int index, int child) {
         rightIndex[index] = child;
@@ -191,6 +196,10 @@ public class NodeStore implements INodeStore {
     @Override
     public int getLeftIndex(int index) {
         return leftIndex[index];
+    }
+
+    public int[] getLeftIndex() {
+        return leftIndex;
     }
 
     @Override
@@ -213,9 +222,17 @@ public class NodeStore implements INodeStore {
         return cutDimension[index];
     }
 
+    public int[] getCutDimension() {
+        return cutDimension;
+    }
+
     @Override
     public double getCutValue(int index) {
         return cutValue[index];
+    }
+
+    public double[] getCutValue() {
+        return cutValue;
     }
 
     @Override
@@ -248,7 +265,7 @@ public class NodeStore implements INodeStore {
         return leftIndex[parent] == node ? rightIndex[parent] : leftIndex[parent];
     }
 
-    int[] getParentIndex(int[] leftIndex, int[] rightIndex) {
+    int[] deriveParentIndex(int[] leftIndex, int[] rightIndex) {
         int capacity = leftIndex.length;
         checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
         int[] parentIndex = new int[2 * capacity + 1];

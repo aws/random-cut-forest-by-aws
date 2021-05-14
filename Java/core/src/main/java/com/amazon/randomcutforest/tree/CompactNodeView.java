@@ -99,7 +99,7 @@ public class CompactNodeView<Point> implements INode<Integer> {
 
     @Override
     public INode<Integer> getParent() {
-        return new CompactNodeView<>(tree, nodeStore.getParent(currentNodeOffset));
+        return new CompactNodeView<>(tree, nodeStore.getParentIndex(currentNodeOffset));
     }
 
 }

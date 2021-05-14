@@ -404,12 +404,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     }
 
     protected int getParent(int node) {
-        return nodeStore.getParent(node);
+        return nodeStore.getParentIndex(node);
     }
 
     @Override
     protected void setParent(Integer child, Integer parent) {
-        nodeStore.setParent(intValue(child), intValue(parent));
+        nodeStore.setParentIndex(intValue(child), intValue(parent));
     }
 
     /**

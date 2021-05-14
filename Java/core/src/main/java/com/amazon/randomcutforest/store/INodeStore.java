@@ -70,7 +70,7 @@ public interface INodeStore {
      * @param index  node
      * @param parent parent of the node (can be NULL)
      */
-    void setParent(int index, int parent);
+    void setParentIndex(int index, int parent);
 
     /**
      * gets the parent of a node
@@ -78,7 +78,7 @@ public interface INodeStore {
      * @param index node
      * @return indef of parent
      */
-    int getParent(int index);
+    int getParentIndex(int index);
 
     /**
      * deletes a node

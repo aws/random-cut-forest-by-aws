@@ -92,8 +92,8 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         state.setPartialTreeStateEnabled(partialTreeStateEnabled);
         state.setPrecision(precision.name());
 
-        int[] leftIndex = Arrays.copyOf(model.leftIndex, model.leftIndex.length);
-        int[] rightIndex = Arrays.copyOf(model.rightIndex, model.rightIndex.length);
+        int[] leftIndex = Arrays.copyOf(model.getLeftIndex(), model.getLeftIndex().length);
+        int[] rightIndex = Arrays.copyOf(model.getRightIndex(), model.getRightIndex().length);
         boolean check = state.isCompressed() && model.isCanonicalAndNotALeaf();
         state.setCanonicalAndNotALeaf(check);
         if (check) { // can have a canonical representation saving a lot of space
@@ -102,15 +102,15 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
             state.setRightIndex(ArrayPacking.pack(rightIndex, state.isCompressed()));
             state.setSize(model.size());
         } else { // the temporary array leftIndex and rightIndex may be corrupt in reduceToBits()
-            state.setLeftIndex(ArrayPacking.pack(model.leftIndex, state.isCompressed()));
-            state.setRightIndex(ArrayPacking.pack(model.rightIndex, state.isCompressed()));
+            state.setLeftIndex(ArrayPacking.pack(model.getLeftIndex(), state.isCompressed()));
+            state.setRightIndex(ArrayPacking.pack(model.getRightIndex(), state.isCompressed()));
         }
 
-        state.setCutDimension(ArrayPacking.pack(model.cutDimension, state.isCompressed()));
+        state.setCutDimension(ArrayPacking.pack(model.getCutDimension(), state.isCompressed()));
         if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
-            state.setCutValueData(ArrayPacking.pack(CommonUtils.toFloatArray(model.cutValue)));
+            state.setCutValueData(ArrayPacking.pack(CommonUtils.toFloatArray(model.getCutValue())));
         } else {
-            state.setCutValueData(ArrayPacking.pack(model.cutValue, model.cutValue.length));
+            state.setCutValueData(ArrayPacking.pack(model.getCutValue(), model.getCutValue().length));
         }
         state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
         state.setNodeFreeIndexPointer(model.getNodeFreeIndexPointer());

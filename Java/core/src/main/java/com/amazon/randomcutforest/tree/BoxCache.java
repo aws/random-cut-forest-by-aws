@@ -21,13 +21,13 @@ import java.util.Random;
 
 public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
-    double cacheFraction;
-    Random cacheRandom;
-    long randomSeed;
-    AbstractBoundingBox<Point>[] cachedBoxes;
-    HashMap<Integer, Integer> cacheMap;
-    BitSet bitSet;
-    int maxSize;
+    protected double cacheFraction;
+    protected Random rng;
+    protected long randomSeed;
+    protected AbstractBoundingBox<Point>[] cachedBoxes;
+    protected HashMap<Integer, Integer> cacheMap;
+    protected BitSet bitSet;
+    protected int maxSize;
 
     protected BoxCache(long seed, double cacheFraction, int maxSize) {
         randomSeed = seed;

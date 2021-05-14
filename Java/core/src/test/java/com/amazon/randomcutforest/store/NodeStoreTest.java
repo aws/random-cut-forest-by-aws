@@ -49,12 +49,12 @@ public class NodeStoreTest {
 
         int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
         assertEquals(1, store.size());
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
+        assertEquals(mass1, store.getMass(index1));
+        assertEquals(parentIndex1, store.getParentIndex(index1));
+        assertEquals(leftIndex1, store.getLeftIndex(index1));
+        assertEquals(rightIndex1, store.getRightIndex(index1));
+        assertEquals(cutDimension1, store.getCutDimension(index1));
+        assertEquals(cutValue1, store.getCutValue(index1));
 
         int mass2 = 11;
         short parentIndex2 = 11;
@@ -65,20 +65,20 @@ public class NodeStoreTest {
 
         int index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
         assertEquals(2, store.size());
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
+        assertEquals(mass2, store.getMass(index2));
+        assertEquals(parentIndex2, store.getParentIndex(index2));
+        assertEquals(leftIndex2, store.getLeftIndex(index2));
+        assertEquals(rightIndex2, store.getRightIndex(index2));
+        assertEquals(cutDimension2, store.getCutDimension(index2));
+        assertEquals(cutValue2, store.getCutValue(index2));
 
         // validate that previous values did not change
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
+        assertEquals(mass1, store.getMass(index1));
+        assertEquals(parentIndex1, store.getParentIndex(index1));
+        assertEquals(leftIndex1, store.getLeftIndex(index1));
+        assertEquals(rightIndex1, store.getRightIndex(index1));
+        assertEquals(cutDimension1, store.getCutDimension(index1));
+        assertEquals(cutValue1, store.getCutValue(index1));
     }
 
     @Test
@@ -122,12 +122,12 @@ public class NodeStoreTest {
         assertEquals(1, store.size());
 
         // validate that the values at index2 did not change
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
+        assertEquals(mass2, store.getMass(index2));
+        assertEquals(parentIndex2, store.getParentIndex(index2));
+        assertEquals(leftIndex2, store.getLeftIndex(index2));
+        assertEquals(rightIndex2, store.getRightIndex(index2));
+        assertEquals(cutDimension2, store.getCutDimension(index2));
+        assertEquals(cutValue2, store.getCutValue(index2));
     }
 
     @Test
