@@ -28,14 +28,14 @@ public class BoxCacheFloat extends BoxCache<float[]> {
     }
 
     void initialize() {
-        cacheRandom = new Random(randomSeed);
+        rng = new Random(randomSeed);
         if (cacheFraction < 1.0 && cacheFraction > 0.0) {
             if (isDirectMap()) {
                 bitSet = new BitSet(maxSize);
                 cachedBoxes = new BoundingBoxFloat[maxSize];
                 int exclude = (int) Math.floor((1.0 - cacheFraction) * maxSize);
                 for (int i = 0; i < exclude; i++) {
-                    bitSet.set(cacheRandom.nextInt(maxSize));
+                    bitSet.set(rng.nextInt(maxSize));
                 }
             } else {
                 cacheMap = new HashMap<>();
@@ -43,7 +43,7 @@ public class BoxCacheFloat extends BoxCache<float[]> {
                 cachedBoxes = new BoundingBoxFloat[include];
                 int count = 0;
                 for (int i = 0; i < include; i++) {
-                    cacheMap.put(cacheRandom.nextInt(maxSize), count++);
+                    cacheMap.put(rng.nextInt(maxSize), count++);
                 }
             }
         } else if (cacheFraction == 1.0) {
