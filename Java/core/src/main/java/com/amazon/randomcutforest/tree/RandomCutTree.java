@@ -117,6 +117,11 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
     }
 
     @Override
+    protected boolean referenceEquals(double[] oldPointRef, double[] pointRef) {
+        return equals(oldPointRef, pointRef);
+    }
+
+    @Override
     protected String toString(double[] doubles) {
         return Arrays.toString(doubles);
     }

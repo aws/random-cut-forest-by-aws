@@ -166,6 +166,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     // checks equality based on precision
     protected abstract boolean equals(Point oldPoint, Point point);
 
+    // checks equality based on reference
+    protected abstract boolean referenceEquals(PointReference oldPointRef, PointReference pointRef);
+
     // prints a point based on precision
     protected abstract String toString(Point point);
 
@@ -281,7 +284,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     abstract AbstractBoundingBox<Point> recomputeBox(NodeReference node);
 
     // manages the bounding boxes and center of mass
-    void updateAncestorNodesAfterDelete(NodeReference nodeReference, Point point) {
+    void updateAncestorNodesAfterDelete(NodeReference nodeReference, PointReference pointReference) {
+        Point point = getPointFromPointReference(pointReference);
         NodeReference tempNode = nodeReference;
         boolean boxNeedsUpdate = boundingBoxCacheFraction > 0;
         while (boxNeedsUpdate && tempNode != null) {
@@ -309,8 +313,14 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return nodeReference;
     }
 
-    NodeReference findLeafAndVerify(Point point) {
+    NodeReference findLeafAndVerify(PointReference pointReference) {
+        Point point = getPointFromPointReference(pointReference);
         NodeReference nodeReference = findLeaf(point);
+        // the following should suffice for compact in most cases
+        // unless the deletion is for an equivalent point
+        if (referenceEquals(pointReference, getPointReference(nodeReference))) {
+            return nodeReference;
+        }
         Point oldPoint = getPointFromLeafNode(nodeReference);
         if (!equals(oldPoint, point)) {
             throw new IllegalStateException(toString(point) + " " + toString(getPointFromLeafNode(nodeReference)) + " "
@@ -338,7 +348,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
     protected void switchLeafReference(PointReference newRef) {
         checkNotNull(newRef, " cannot be null ");
-        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(newRef));
+        NodeReference nodeReference = findLeafAndVerify(newRef);
         setLeafPointReference(nodeReference, newRef);
     }
 
@@ -374,7 +384,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     protected int getCopiesOfReference(PointReference reference) {
         checkNotNull(reference, " reference cannot be null ");
-        NodeReference nodeReference = findLeafAndVerify(getPointFromPointReference(reference));
+        NodeReference nodeReference = findLeafAndVerify(reference);
         return (reference == getPointReference(nodeReference)) ? getMass(nodeReference) : 0;
     }
 
@@ -391,8 +401,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public PointReference deletePoint(PointReference pointReference, long sequenceNumber) {
         checkState(root != null, "root must not be null");
 
-        Point point = getPointFromPointReference(pointReference);
-        NodeReference nodeReference = findLeafAndVerify(point);
+        // Point point = getPointFromPointReference(pointReference);
+        NodeReference nodeReference = findLeafAndVerify(pointReference);
         if (storeSequenceIndexesEnabled) {
             deleteSequenceIndex(nodeReference, sequenceNumber);
         }
@@ -423,7 +433,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             setParent(root, null);
         } else {
             replaceNodeBySibling(grandParent, parent, nodeReference);
-            updateAncestorNodesAfterDelete(grandParent, point);
+            updateAncestorNodesAfterDelete(grandParent, pointReference);
         }
         delete(nodeReference);
         delete(parent);
