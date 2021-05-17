@@ -71,7 +71,7 @@ public class RandomCutForestState {
 
     private List<CompactRandomCutTreeState> compactRandomCutTreeStates;
 
-    private ExecutorContext executorContext;
+    private ExecutionContext executionContext;
 
     // Mapper options
 

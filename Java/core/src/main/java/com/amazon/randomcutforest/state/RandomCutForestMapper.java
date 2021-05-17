@@ -62,7 +62,7 @@ import com.amazon.randomcutforest.tree.RandomCutTree;
 @Getter
 @Setter
 public class RandomCutForestMapper
-        implements IContextualStateMapper<RandomCutForest, RandomCutForestState, ExecutorContext> {
+        implements IContextualStateMapper<RandomCutForest, RandomCutForestState, ExecutionContext> {
 
     /**
      * A flag indicating whether the structure of the trees in the forest should be
@@ -149,10 +149,10 @@ public class RandomCutForestMapper
         state.setPartialTreeState(partialTreeStateEnabled);
 
         if (saveExecutorContextEnabled) {
-            ExecutorContext executorContext = new ExecutorContext();
-            executorContext.setParallelExecutionEnabled(forest.isParallelExecutionEnabled());
-            executorContext.setThreadPoolSize(forest.getThreadPoolSize());
-            state.setExecutorContext(executorContext);
+            ExecutionContext executionContext = new ExecutionContext();
+            executionContext.setParallelExecutionEnabled(forest.isParallelExecutionEnabled());
+            executionContext.setThreadPoolSize(forest.getThreadPoolSize());
+            state.setExecutionContext(executionContext);
         }
 
         if (forest.isCompact()) {
@@ -240,26 +240,26 @@ public class RandomCutForestMapper
      * created and populated from the sampler data. The resulting forest should be
      * equal in distribution to the forest that the state object was created from.
      *
-     * @param state           A Random Cut Forest state object.
-     * @param executorContext An executor context that will be used to initialize
-     *                        new executors in the Random Cut Forest. If this
-     *                        argument is null, then the mapper will look for an
-     *                        executor context in the state object.
-     * @param seed            A random seed.
+     * @param state            A Random Cut Forest state object.
+     * @param executionContext An executor context that will be used to initialize
+     *                         new executors in the Random Cut Forest. If this
+     *                         argument is null, then the mapper will look for an
+     *                         executor context in the state object.
+     * @param seed             A random seed.
      * @return A Random Cut Forest corresponding to the state object.
      * @throws NullPointerException if both the {@code executorContext} method
      *                              argument and the executor context field in the
      *                              state object are null.
      */
-    public RandomCutForest toModel(RandomCutForestState state, ExecutorContext executorContext, long seed) {
+    public RandomCutForest toModel(RandomCutForestState state, ExecutionContext executionContext, long seed) {
 
-        ExecutorContext ec;
-        if (executorContext != null) {
-            ec = executorContext;
+        ExecutionContext ec;
+        if (executionContext != null) {
+            ec = executionContext;
         } else {
-            checkNotNull(state.getExecutorContext(),
+            checkNotNull(state.getExecutionContext(),
                     "The executor context in the state object is null, an executor context must be passed explicitly to toModel()");
-            ec = state.getExecutorContext();
+            ec = state.getExecutionContext();
         }
 
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().numberOfTrees(state.getNumberOfTrees())
@@ -310,7 +310,7 @@ public class RandomCutForestMapper
     /**
      * Create a {@link RandomCutForest} instance from a {@link RandomCutForestState}
      * using the executor context in the state object. See
-     * {@link #toModel(RandomCutForestState, ExecutorContext, long)}.
+     * {@link #toModel(RandomCutForestState, ExecutionContext, long)}.
      *
      * @param state A Random Cut Forest state object.
      * @param seed  A random seed.
@@ -325,7 +325,7 @@ public class RandomCutForestMapper
     /**
      * Create a {@link RandomCutForest} instance from a {@link RandomCutForestState}
      * using the executor context in the state object. See
-     * {@link #toModel(RandomCutForestState, ExecutorContext, long)}.
+     * {@link #toModel(RandomCutForestState, ExecutionContext, long)}.
      *
      * @param state A Random Cut Forest state object.
      * @return A Random Cut Forest corresponding to the state object.
