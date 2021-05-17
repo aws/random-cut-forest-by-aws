@@ -173,7 +173,7 @@ public class RandomCutForest {
     /**
      * Random number generator used by the forest.
      */
-    protected Random rng;
+    protected Random random;
     /**
      * The number of dimensions in the input data.
      */
@@ -258,22 +258,22 @@ public class RandomCutForest {
     protected AbstractForestUpdateExecutor<?, ?> updateExecutor;
 
     public <P, Q> RandomCutForest(Builder<?> builder, IStateCoordinator<P, Q> stateCoordinator,
-            ComponentList<P, Q> components, Random rng) {
+            ComponentList<P, Q> components, Random random) {
         this(builder, false);
 
         checkNotNull(stateCoordinator, "updateCoordinator must not be null");
         checkNotNull(components, "componentModels must not be null");
-        checkNotNull(rng, "rng must not be null");
+        checkNotNull(random, "random must not be null");
 
         this.stateCoordinator = stateCoordinator;
         this.components = components;
-        this.rng = rng;
+        this.random = random;
         initExecutors(stateCoordinator, components);
     }
 
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
-        rng = builder.getRandom();
+        random = builder.getRandom();
         if (precision == Precision.FLOAT_32) {
             initCompactFloat(builder);
         } else if (compact) {
@@ -296,11 +296,11 @@ public class RandomCutForest {
         ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
-                    .randomSeed(rng.nextLong()).pointStore(tempStore).boundingBoxCacheFraction(boundingBoxCacheFraction)
-                    .centerOfMassEnabled(centerOfMassEnabled).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .outputAfter(outputAfter).build();
+                    .randomSeed(random.nextLong()).pointStore(tempStore)
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, random.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
@@ -322,10 +322,10 @@ public class RandomCutForest {
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat.Builder().maxSize(sampleSize)
-                    .randomSeed(rng.nextLong()).pointStore(tempStore).boundingBoxCacheFraction(boundingBoxCacheFraction)
-                    .centerOfMassEnabled(centerOfMassEnabled).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .outputAfter(outputAfter).build();
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, rng.nextLong(),
+                    .randomSeed(random.nextLong()).pointStore(tempStore)
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, random.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
@@ -338,11 +338,11 @@ public class RandomCutForest {
         IStateCoordinator<double[], double[]> stateCoordinator = new PassThroughCoordinator();
         ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[], double[]> tree = RandomCutTree.builder().randomSeed(rng.nextLong())
+            ITree<double[], double[]> tree = RandomCutTree.builder().randomSeed(random.nextLong())
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, rng.nextLong(),
+            IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, random.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }

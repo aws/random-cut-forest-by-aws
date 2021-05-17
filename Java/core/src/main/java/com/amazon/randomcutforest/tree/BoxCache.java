@@ -22,7 +22,7 @@ import java.util.Random;
 public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
     protected double cacheFraction;
-    protected Random rng;
+    protected Random random;
     protected long randomSeed;
     protected AbstractBoundingBox<Point>[] cachedBoxes;
     protected HashMap<Integer, Integer> cacheMap;
