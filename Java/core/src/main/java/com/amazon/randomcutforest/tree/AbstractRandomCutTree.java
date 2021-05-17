@@ -52,7 +52,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * and a root node is created, the root node's parent will be NULL, and so on.
      */
 
-    private final Random rng;
+    private final Random random;
     protected NodeReference root;
     public final boolean centerOfMassEnabled;
     public final boolean storeSequenceIndexesEnabled;
@@ -60,17 +60,17 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     Random cacheRandom = new Random(0);
     protected int outputAfter;
 
-    public AbstractRandomCutTree(Random rng, double boundingBoxCacheFraction, boolean centerOfMassEnabled,
+    public AbstractRandomCutTree(Random random, double boundingBoxCacheFraction, boolean centerOfMassEnabled,
             boolean storeSequenceIndexesEnabled) {
-        this.rng = rng;
+        this.random = random;
         this.boundingBoxCacheFraction = boundingBoxCacheFraction;
         this.centerOfMassEnabled = centerOfMassEnabled;
         this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
     }
 
-    public AbstractRandomCutTree(Random rng, boolean boundingBoxCacheEnabled, boolean centerOfMassEnabled,
+    public AbstractRandomCutTree(Random random, boolean boundingBoxCacheEnabled, boolean centerOfMassEnabled,
             boolean storeSequenceIndexesEnabled) {
-        this.rng = rng;
+        this.random = random;
         if (boundingBoxCacheEnabled) {
             this.boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         } else {
@@ -82,9 +82,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     public AbstractRandomCutTree(AbstractRandomCutTree.Builder<?> builder) {
         if (builder.random != null) {
-            this.rng = builder.random;
+            this.random = builder.random;
         } else {
-            this.rng = new Random(builder.randomSeed);
+            this.random = new Random(builder.randomSeed);
         }
         this.centerOfMassEnabled = builder.centerOfMassEnabled;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
@@ -493,7 +493,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             } else {
                 // construct a potential cut
                 savedBox = getInternalTwoPointBox(point, oldPoint);
-                savedCut = randomCut(rng, savedBox);
+                savedCut = randomCut(random, savedBox);
                 currentUnmergedBox = getMutableLeafBoxFromLeafNode(followReference);
                 savedSiblingNode = followReference;
             }
@@ -526,7 +526,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                     // a cut is feasible at this level
                     // generate a new cut and see if it separates the new point
                     AbstractBoundingBox<Point> mergedBox = existingBox.copy().addPoint(point);
-                    Cut cut = randomCut(rng, mergedBox);
+                    Cut cut = randomCut(random, mergedBox);
                     // avoid generation of mergedBox?
                     int splitDimension = cut.getDimension();
                     double splitValue = cut.getValue();

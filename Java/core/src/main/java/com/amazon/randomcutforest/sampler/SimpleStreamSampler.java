@@ -95,7 +95,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         super();
         this.sampleSize = sampleSize;
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
-        this.rng = random;
+        this.random = random;
         this.timeDecay = lambda;
         this.initialAcceptFraction = initialAcceptFraction;
     }
@@ -128,7 +128,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if ((sample.size() < sampleSize && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
+        if ((sample.size() < sampleSize && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
                 || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();

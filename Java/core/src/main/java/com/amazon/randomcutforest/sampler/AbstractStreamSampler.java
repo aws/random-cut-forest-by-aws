@@ -48,7 +48,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
      * The random number generator used in sampling.
      */
-    protected Random rng;
+    protected Random random;
 
     /**
      * The point evicted by the last call to {@link #update}, or null if the new
@@ -87,7 +87,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     protected float computeWeight(long sequenceIndex) {
         double randomNumber = 0d;
         while (randomNumber == 0d) {
-            randomNumber = rng.nextDouble();
+            randomNumber = random.nextDouble();
         }
         maxSequenceIndex = (maxSequenceIndex < sequenceIndex) ? sequenceIndex : maxSequenceIndex;
         return (float) (-(sequenceIndex - mostRecentTimeDecayUpdate) * timeDecay - accumuluatedTimeDecay

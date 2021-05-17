@@ -187,7 +187,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         } else {
             this.sequenceIndex = null;
         }
-        this.rng = random;
+        this.random = random;
         this.timeDecay = lambda;
         this.initialAcceptFraction = initialAcceptFraction;
     }
@@ -221,7 +221,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
-        if ((size < capacity && rng.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
+        if ((size < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size / capacity)
                 || (weight < this.weight[0])) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
             if (size == capacity) {
@@ -514,7 +514,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         this.capacity = builder.capacity;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.initialAcceptFraction = builder.initialAcceptFraction;
-        this.rng = builder.random;
+        this.random = builder.random;
         this.timeDecay = builder.lambda;
         this.maxSequenceIndex = builder.maxSequenceIndex;
         this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
