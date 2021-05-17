@@ -18,7 +18,11 @@ package com.amazon.randomcutforest.state;
 import lombok.Data;
 
 @Data
-public class ExecutorContext {
+public class ExecutionContext {
     private boolean parallelExecutionEnabled;
     private int threadPoolSize;
+
+    // A placeholder field representing an execution mode that can be used to group
+    // together runtime configuration options.
+    private String mode;
 }
