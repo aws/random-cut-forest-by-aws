@@ -173,7 +173,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     protected abstract String toString(Point point);
 
     // creates a bounding box based on two points, it is a very common occurrence
-    protected abstract AbstractBoundingBox<Point> getInternalTwoPointBox(Point first, Point second);
+    protected abstract AbstractBoundingBox<Point> getInternalTwoPointBox(PointReference first, PointReference second);
 
     /**
      * Takes a node reference and produces a bounding box; cannot return null If
@@ -502,7 +502,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 // at a leaf and found a previous copy
             } else {
                 // construct a potential cut
-                savedBox = getInternalTwoPointBox(point, oldPoint);
+                savedBox = getInternalTwoPointBox(pointReference, leafPointReference);
                 savedCut = randomCut(random, savedBox);
                 currentUnmergedBox = getMutableLeafBoxFromLeafNode(followReference);
                 savedSiblingNode = followReference;

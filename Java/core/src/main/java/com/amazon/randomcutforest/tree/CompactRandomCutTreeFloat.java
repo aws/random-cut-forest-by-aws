@@ -54,7 +54,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     @Override
-    protected AbstractBoundingBox<float[]> getInternalTwoPointBox(float[] first, float[] second) {
+    protected AbstractBoundingBox<float[]> getInternalTwoPointBox(Integer firstRef, Integer secondRef) {
+        float[] first = getPointFromPointReference(firstRef);
+        float[] second = getPointFromPointReference(secondRef);
         return new BoundingBoxFloat(first, second);
     }
 
