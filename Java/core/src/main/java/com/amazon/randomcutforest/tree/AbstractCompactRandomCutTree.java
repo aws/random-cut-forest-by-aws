@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
+
+import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.NodeStore;
-
-import java.util.HashMap;
-import java.util.concurrent.ArrayBlockingQueue;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent

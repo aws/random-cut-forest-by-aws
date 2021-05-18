@@ -39,7 +39,9 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     @Override
-    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(double[] first, double[] second) {
+    protected AbstractBoundingBox<double[]> getInternalTwoPointBox(Integer firstRef, Integer secondRef) {
+        double[] first = getPointFromPointReference(firstRef);
+        double[] second = getPointFromPointReference(secondRef);
         return new BoundingBox(first, second);
     }
 
