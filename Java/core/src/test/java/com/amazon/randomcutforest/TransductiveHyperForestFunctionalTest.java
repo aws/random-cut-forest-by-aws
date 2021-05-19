@@ -32,7 +32,6 @@ import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisito
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.HyperTree;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
-import com.amazon.randomcutforest.tree.ITree;
 
 @Tag("functional")
 public class TransductiveHyperForestFunctionalTest {
@@ -160,8 +159,9 @@ public class TransductiveHyperForestFunctionalTest {
 
             checkArgument(dimensions == point.length, "incorrect dimensions");
 
-            Function<ITree<?, ?>, Visitor<Double>> visitorFactory = tree -> new TransductiveScalarScoreVisitor(point,
-                    tree.getMass(), seen, unseen, newDamp, ((HyperTree) tree).getgVec());
+            VisitorFactory<Double> visitorFactory = new VisitorFactory<>(
+                    (tree, y) -> new TransductiveScalarScoreVisitor(tree.projectToTree(y), tree.getMass(), seen, unseen,
+                            newDamp, ((HyperTree) tree).getgVec()));
             BinaryOperator<Double> accumulator = Double::sum;
 
             Function<Double, Double> finisher = sum -> sum / numberOfTrees;
