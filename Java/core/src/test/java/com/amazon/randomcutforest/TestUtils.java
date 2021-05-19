@@ -30,30 +30,17 @@ public class TestUtils {
     /**
      * Return a visitor that does nothing.
      */
-    public static final Function<RandomCutTree, Visitor<Double>> DUMMY_VISITOR_FACTORY = tree -> new Visitor<Double>() {
-        @Override
-        public void accept(INodeView node, int depthOfNode) {
-        }
+    public static final VisitorFactory<Double> DUMMY_GENERIC_VISITOR_FACTORY = new VisitorFactory<Double>(
+            (tree, x) -> new Visitor<Double>() {
+                @Override
+                public void accept(INodeView node, int depthOfNode) {
+                }
 
-        @Override
-        public Double getResult() {
-            return Double.NaN;
-        }
-    };
-
-    /**
-     * Return a visitor that does nothing.
-     */
-    public static final VisitorFactory<Double> DUMMY_GENERIC_VISITOR_FACTORY = tree -> new Visitor<Double>() {
-        @Override
-        public void accept(INodeView node, int depthOfNode) {
-        }
-
-        @Override
-        public Double getResult() {
-            return Double.NaN;
-        }
-    };
+                @Override
+                public Double getResult() {
+                    return Double.NaN;
+                }
+            });
 
     /**
      * Return a multi-visitor that does nothing.
@@ -135,28 +122,29 @@ public class TestUtils {
     /**
      * Return a multi-visitor that does nothing.
      */
-    public static final MultiVisitorFactory<Double> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = tree -> new MultiVisitor<Double>() {
-        @Override
-        public void accept(INodeView node, int depthOfNode) {
-        }
+    public static final MultiVisitorFactory<Double> DUMMY_GENERIC_MULTI_VISITOR_FACTORY = new MultiVisitorFactory<>(
+            (tree, y) -> new MultiVisitor<Double>() {
+                @Override
+                public void accept(INodeView node, int depthOfNode) {
+                }
 
-        @Override
-        public Double getResult() {
-            return Double.NaN;
-        }
+                @Override
+                public Double getResult() {
+                    return Double.NaN;
+                }
 
-        @Override
-        public boolean trigger(INodeView node) {
-            return false;
-        }
+                @Override
+                public boolean trigger(INodeView node) {
+                    return false;
+                }
 
-        @Override
-        public MultiVisitor<Double> newCopy() {
-            return null;
-        }
+                @Override
+                public MultiVisitor<Double> newCopy() {
+                    return null;
+                }
 
-        @Override
-        public void combine(MultiVisitor<Double> other) {
-        }
-    };
+                @Override
+                public void combine(MultiVisitor<Double> other) {
+                }
+            });
 }

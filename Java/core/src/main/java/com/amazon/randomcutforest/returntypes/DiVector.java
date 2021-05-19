@@ -57,6 +57,20 @@ public class DiVector {
     }
 
     /**
+     * Construct a new DiVector with the given number of spatial dimensions. In the
+     * result, {@link #high} and {@link #low} will each contain this many variates.
+     *
+     * @param high the high vector
+     * @param low  the low vector.
+     */
+    public DiVector(double[] high, double[] low) {
+        checkArgument(high.length == low.length, "dimensions must be equal");
+        this.dimensions = high.length;
+        this.high = Arrays.copyOf(high, high.length);
+        this.low = Arrays.copyOf(low, low.length);
+    }
+
+    /**
      * Create a deep copy of the base DiVector.
      *
      * @param base The DiVector to copy.
@@ -168,5 +182,9 @@ public class DiVector {
             score += high[i] + low[i];
         }
         return score;
+    }
+
+    public DiVector lift(Function<double[], double[]> projection) {
+        return new DiVector(projection.apply(high), projection.apply(low));
     }
 }

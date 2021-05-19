@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.tree.ITree;
 
@@ -27,6 +27,19 @@ import com.amazon.randomcutforest.tree.ITree;
  * The results from both visitors are combined before returning back up the
  * tree.
  */
-@FunctionalInterface
-public interface MultiVisitorFactory<R> extends Function<ITree<?, ?>, MultiVisitor<R>> {
+
+public class MultiVisitorFactory<R> {
+    public BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create;
+    public BiFunction<ITree<?, ?>, R, R> liftResult;
+
+    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create,
+            BiFunction<ITree<?, ?>, R, R> liftResult) {
+        this.create = create;
+        this.liftResult = liftResult;
+    }
+
+    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create) {
+        this.create = create;
+        this.liftResult = (tree, x) -> x;
+    }
 }

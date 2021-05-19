@@ -77,6 +77,11 @@ public class CompactNodeView<Point> implements INode<Integer> {
         return tree.getPoint(currentNodeOffset);
     }
 
+    @Override
+    public double[] getLiftedLeafPoint() {
+        return tree.liftFromTree(tree.getPoint(currentNodeOffset));
+    }
+
     public Set<Long> getSequenceIndexes() {
         checkArgument(nodeStore.isLeaf(currentNodeOffset), " not a leaf node");
         return tree.sequenceIndexes[nodeStore.computeLeafIndex(currentNodeOffset)].keySet();

@@ -28,6 +28,12 @@ import com.amazon.randomcutforest.executor.ITraversable;
 public interface ITree<PointReference, Point> extends ITraversable, IDynamicConfig {
     int getMass();
 
+    double[] projectToTree(double[] point);
+
+    double[] liftFromTree(double[] result);
+
+    public int[] projectMissingIndices(int[] list);
+
     PointReference addPoint(PointReference point, long sequenceIndex);
 
     PointReference deletePoint(PointReference point, long sequenceIndex);

@@ -19,13 +19,15 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.MultiVisitorFactory;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.config.Config;
 
 /**
@@ -629,11 +631,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
-    public <R> R traverse(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory) {
+    public <R> R traverse(double[] point, VisitorFactory<R> visitorFactory) {
         checkState(root != null, "this tree doesn't contain any nodes");
-        Visitor<R> visitor = visitorFactory.apply(this);
-        traversePathToLeafAndVisitNodes(point, visitor, root, 0);
-        return visitor.getResult();
+        Visitor<R> visitor = visitorFactory.create.apply(this, point);
+        traversePathToLeafAndVisitNodes(projectToTree(point), visitor, root, 0);
+        return visitorFactory.liftResult.apply(this, visitor.getResult());
     }
 
     private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference node,
@@ -649,7 +651,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     /**
      * This is a traversal method which follows the standard traversal path (defined
-     * in {@link #traverse(double[], Function)}) but at Node in checks to see
+     * in {@link #traverse(double[], VisitorFactory)}) but at Node in checks to see
      * whether the visitor should split. If a split is triggered, then independent
      * copies of the visitor are sent down each branch of the tree and then merged
      * before propagating the result.
@@ -663,13 +665,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
 
     @Override
-    public <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory) {
+    public <R> R traverseMulti(double[] point, MultiVisitorFactory<R> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");
-        MultiVisitor<R> visitor = visitorFactory.apply(this);
-        traverseTreeMulti(point, visitor, root, 0);
-        return visitor.getResult();
+        MultiVisitor<R> visitor = visitorFactory.create.apply(this, point);
+        traverseTreeMulti(projectToTree(point), visitor, root, 0);
+        return visitorFactory.liftResult.apply(this, visitor.getResult());
     }
 
     private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {
@@ -720,7 +722,18 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         return getMass() >= outputAfter;
     }
 
-    // TODO: decide on ownership of builder constants, across the major classes
+    public double[] projectToTree(double[] point) {
+        return Arrays.copyOf(point, point.length);
+    }
+
+    public double[] liftFromTree(double[] result) {
+        return Arrays.copyOf(result, result.length);
+    }
+
+    public int[] projectMissingIndices(int[] list) {
+        return Arrays.copyOf(list, list.length);
+    }
+
     public static class Builder<T> {
         protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
