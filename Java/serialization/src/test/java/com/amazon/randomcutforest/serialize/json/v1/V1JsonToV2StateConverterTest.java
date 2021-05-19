@@ -13,9 +13,10 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.serialize.v1;
+package com.amazon.randomcutforest.serialize.json.v1;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
@@ -66,9 +67,25 @@ public class V1JsonToV2StateConverterTest {
             assertEquals(jsonResource.getDimensions(), forest.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), forest.getSampleSize());
+
+            // perform a simple validation of the deserialized forest by update and scoring with a few points
+
+            for (int i = 0; i < 10; i++) {
+                double[] point = getPoint(jsonResource.getDimensions());
+                double score = forest.getAnomalyScore(point);
+                assertTrue(score > 0);
+                forest.update(point);
+            }
         } catch (IOException e) {
             fail("Unable to load JSON resource");
         }
     }
 
+    private double[] getPoint(int dimensions) {
+        double[] point = new double[dimensions];
+        for (int i = 0; i < point.length; i++) {
+            point[i] = Math.random();
+        }
+        return point;
+    }
 }

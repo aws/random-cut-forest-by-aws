@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.serialize.v1;
+package com.amazon.randomcutforest.serialize.json.v1;
 
 import lombok.Getter;
 

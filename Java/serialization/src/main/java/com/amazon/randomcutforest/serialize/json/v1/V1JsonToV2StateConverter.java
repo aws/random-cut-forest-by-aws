@@ -13,9 +13,11 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.serialize.v1;
+package com.amazon.randomcutforest.serialize.json.v1;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,17 +39,30 @@ public class V1JsonToV2StateConverter {
 
     public RandomCutForestState convert(String json) throws IOException {
         V1SerializedRandomCutForest forest = mapper.readValue(json, V1SerializedRandomCutForest.class);
+        return convert(forest);
+    }
 
+    public RandomCutForestState convert(Reader reader) throws IOException {
+        V1SerializedRandomCutForest forest = mapper.readValue(reader, V1SerializedRandomCutForest.class);
+        return convert(forest);
+    }
+
+    public RandomCutForestState convert(URL url) throws IOException {
+        V1SerializedRandomCutForest forest = mapper.readValue(url, V1SerializedRandomCutForest.class);
+        return convert(forest);
+    }
+
+    public RandomCutForestState convert(V1SerializedRandomCutForest serializedForest) {
         RandomCutForestState state = new RandomCutForestState();
-        state.setNumberOfTrees(forest.getNumberOfTrees());
-        state.setDimensions(forest.getDimensions());
-        state.setTimeDecay(forest.getLambda());
-        state.setSampleSize(forest.getSampleSize());
+        state.setNumberOfTrees(serializedForest.getNumberOfTrees());
+        state.setDimensions(serializedForest.getDimensions());
+        state.setTimeDecay(serializedForest.getLambda());
+        state.setSampleSize(serializedForest.getSampleSize());
         state.setShingleSize(1);
-        state.setCenterOfMassEnabled(forest.isCenterOfMassEnabled());
-        state.setOutputAfter(forest.getOutputAfter());
-        state.setStoreSequenceIndexesEnabled(forest.isStoreSequenceIndexesEnabled());
-        state.setTotalUpdates(forest.getExecutor().getExecutor().getTotalUpdates());
+        state.setCenterOfMassEnabled(serializedForest.isCenterOfMassEnabled());
+        state.setOutputAfter(serializedForest.getOutputAfter());
+        state.setStoreSequenceIndexesEnabled(serializedForest.isStoreSequenceIndexesEnabled());
+        state.setTotalUpdates(serializedForest.getExecutor().getExecutor().getTotalUpdates());
         state.setCompact(true);
         state.setInternalShinglingEnabled(false);
         state.setBoundingBoxCacheFraction(1.0);
@@ -59,14 +74,14 @@ public class V1JsonToV2StateConverter {
         state.setPartialTreeState(false);
 
         ExecutionContext executionContext = new ExecutionContext();
-        executionContext.setParallelExecutionEnabled(forest.isParallelExecutionEnabled());
-        executionContext.setThreadPoolSize(forest.getThreadPoolSize());
+        executionContext.setParallelExecutionEnabled(serializedForest.isParallelExecutionEnabled());
+        executionContext.setThreadPoolSize(serializedForest.getThreadPoolSize());
         state.setExecutionContext(executionContext);
 
         SamplerConverter samplerConverter = new SamplerConverter(state.getDimensions(),
-                state.getNumberOfTrees() * state.getSampleSize());
+                state.getNumberOfTrees() * state.getSampleSize() + 1);
 
-        Arrays.stream(forest.getExecutor().getExecutor().getTreeUpdaters())
+        Arrays.stream(serializedForest.getExecutor().getExecutor().getTreeUpdaters())
                 .map(V1SerializedRandomCutForest.TreeUpdater::getSampler).forEach(samplerConverter::addSampler);
 
         state.setPointStoreState(samplerConverter.getPointStoreState());
@@ -103,7 +118,7 @@ public class V1JsonToV2StateConverter {
                     pointIndex[i] = pointMap.get(point);
                     pointStore.incrementRefCount(pointIndex[i]);
                 } else {
-                    pointIndex[i] = pointStore.add(point, i);
+                    pointIndex[i] = pointStore.add(point, sample.getSequenceIndex());
                     pointMap.put(point, pointIndex[i]);
                 }
                 weight[i] = (float) sample.getWeight();

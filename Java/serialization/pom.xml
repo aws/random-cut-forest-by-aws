@@ -10,7 +10,7 @@
         <version>1.0-alpha</version>
     </parent>
 
-    <artifactId>randomcutforest-serialization-json</artifactId>
+    <artifactId>randomcutforest-serialization</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
