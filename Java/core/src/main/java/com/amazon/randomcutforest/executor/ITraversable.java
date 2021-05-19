@@ -15,10 +15,10 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.MultiVisitorFactory;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.tree.ITree;
 
 /**
@@ -42,7 +42,7 @@ public interface ITraversable {
      * @return the value of {@link Visitor#getResult()} after visiting each node in
      *         the path.
      */
-    <R> R traverse(double[] point, Function<ITree<?, ?>, Visitor<R>> visitorFactory);
+    <R> R traverse(double[] point, VisitorFactory<R> visitorFactory);
 
     /**
      * Traverse the paths defined by {@code point} and the multi-visitor, and invoke
@@ -65,7 +65,7 @@ public interface ITraversable {
      * @return the value of {@link MultiVisitor#getResult()} after traversing all
      *         paths.
      */
-    <R> R traverseMulti(double[] point, Function<ITree<?, ?>, MultiVisitor<R>> visitorFactory);
+    <R> R traverseMulti(double[] point, MultiVisitorFactory<R> visitorFactory);
 
     /**
      * After a new traversable model is initialized, it will not be able to return

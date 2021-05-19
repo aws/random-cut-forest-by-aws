@@ -32,6 +32,10 @@ public interface INodeView {
 
     double[] getLeafPoint();
 
+    default double[] getLiftedLeafPoint() {
+        return getLeafPoint();
+    };
+
     Set<Long> getSequenceIndexes();
 
 }

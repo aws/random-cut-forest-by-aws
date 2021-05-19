@@ -33,8 +33,8 @@ import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 2)
+@Measurement(iterations = 5)
 @Fork(value = 1)
 @State(Scope.Thread)
 public class RandomCutForestBenchmark {
@@ -43,14 +43,14 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "10", "20" })
+        @Param({ "10" })
         int dimensions;
 
-        @Param({ "100" })
+        @Param({ "50" })
         int numberOfTrees;
 
-        @Param({ "false" })
-        boolean parallelExecutionEnabled;
+        @Param({ "false", "true" })
+        boolean compact;
 
         double[][] data;
         RandomCutForest forest;
@@ -64,7 +64,7 @@ public class RandomCutForestBenchmark {
         @Setup(Level.Invocation)
         public void setUpForest() {
             forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).dimensions(dimensions)
-                    .parallelExecutionEnabled(parallelExecutionEnabled).compact(true).randomSeed(99).build();
+                    .parallelExecutionEnabled(false).compact(compact).randomSeed(99).build();
         }
     }
 

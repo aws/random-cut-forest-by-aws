@@ -18,7 +18,10 @@ package com.amazon.randomcutforest.imputation;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -169,7 +172,7 @@ public class ImputeVisitorTest {
     @Test
     public void testMerge() {
         double[] otherPoint = new double[] { 99, 100, 101 };
-        ImputeVisitor other = new ImputeVisitor(otherPoint, 0, null);
+        ImputeVisitor other = new ImputeVisitor(otherPoint, 0, new int[0]);
 
         // set other.rank to a small value
         Node node = new Node(new double[] { 0, 0, 0 });

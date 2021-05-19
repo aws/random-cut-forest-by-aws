@@ -23,7 +23,6 @@ import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.MultiVisitorFactory;
 import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.tree.RandomCutTree;
 
 public abstract class AbstractForestTraversalExecutor {
 
@@ -60,10 +59,9 @@ public abstract class AbstractForestTraversalExecutor {
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
-     * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], Function)}. The results from
-     * individual trees are collected using the {@link java.util.stream.Collector}
-     * and returned. Trees are visited in parallel using
+     * factory, and then submitted to each tree. The results from individual trees
+     * are collected using the {@link java.util.stream.Collector} and returned.
+     * Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
@@ -84,11 +82,10 @@ public abstract class AbstractForestTraversalExecutor {
     /**
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
-     * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], Function)}. The results from all the
-     * trees are combined using the {@link ConvergingAccumulator}, and the method
-     * stops visiting trees after convergence is reached. The result is transformed
-     * using the finisher before being returned.
+     * using the visitor factory, and then submitted to each tree. The results from
+     * all the trees are combined using the {@link ConvergingAccumulator}, and the
+     * method stops visiting trees after convergence is reached. The result is
+     * transformed using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
