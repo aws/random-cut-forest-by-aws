@@ -15,23 +15,23 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import org.junit.jupiter.api.BeforeEach;
-
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class V1JsonToV2StateConverterTest {
 
@@ -61,17 +61,18 @@ public class V1JsonToV2StateConverterTest {
             assertEquals(jsonResource.getDimensions(), state.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), state.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), state.getSampleSize());
-
-            RandomCutForest forest = new RandomCutForestMapper().toModel(state);
+            state.setNumberOfTrees(1);
+            RandomCutForest forest = new RandomCutForestMapper().toModel(state,0);
 
             assertEquals(jsonResource.getDimensions(), forest.getDimensions());
-            assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
+           // assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), forest.getSampleSize());
 
             // perform a simple validation of the deserialized forest by update and scoring with a few points
 
+            Random random = new Random(0);
             for (int i = 0; i < 10; i++) {
-                double[] point = getPoint(jsonResource.getDimensions());
+                double[] point = getPoint(jsonResource.getDimensions(),random);
                 double score = forest.getAnomalyScore(point);
                 assertTrue(score > 0);
                 forest.update(point);
@@ -81,10 +82,10 @@ public class V1JsonToV2StateConverterTest {
         }
     }
 
-    private double[] getPoint(int dimensions) {
+    private double[] getPoint(int dimensions, Random random) {
         double[] point = new double[dimensions];
         for (int i = 0; i < point.length; i++) {
-            point[i] = Math.random();
+            point[i] = random.nextDouble();
         }
         return point;
     }

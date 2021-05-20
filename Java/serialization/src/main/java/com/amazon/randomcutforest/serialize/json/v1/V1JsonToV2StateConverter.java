@@ -15,15 +15,6 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.ExecutionContext;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -31,7 +22,15 @@ import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class V1JsonToV2StateConverter {
 
@@ -91,12 +90,11 @@ public class V1JsonToV2StateConverter {
     }
 
     static class SamplerConverter {
-        private final Map<double[], Integer> pointMap;
         private final PointStoreDouble pointStore;
         private final List<CompactSamplerState> compactSamplerStates;
 
+
         public SamplerConverter(int dimensions, int capacity) {
-            pointMap = new HashMap<>();
             pointStore = new PointStoreDouble(dimensions, capacity);
             compactSamplerStates = new ArrayList<>();
         }
@@ -107,6 +105,8 @@ public class V1JsonToV2StateConverter {
 
         public void addSampler(V1SerializedRandomCutForest.Sampler sampler) {
             V1SerializedRandomCutForest.WeightedSamples[] samples = sampler.getWeightedSamples();
+            CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder().pointStore(pointStore)
+                    .storeSequenceIndexesEnabled(false).centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
             int[] pointIndex = new int[samples.length];
             float[] weight = new float[samples.length];
             long[] sequenceIndex = new long[samples.length];
@@ -114,12 +114,11 @@ public class V1JsonToV2StateConverter {
             for (int i = 0; i < samples.length; i++) {
                 V1SerializedRandomCutForest.WeightedSamples sample = samples[i];
                 double[] point = sample.getPoint();
-                if (pointMap.containsKey(point)) {
-                    pointIndex[i] = pointMap.get(point);
+                int index = pointStore.add(point, sample.getSequenceIndex());
+                pointIndex[i] = tree.addPoint(index,0L);
+                if (pointIndex[i] != index){
                     pointStore.incrementRefCount(pointIndex[i]);
-                } else {
-                    pointIndex[i] = pointStore.add(point, sample.getSequenceIndex());
-                    pointMap.put(point, pointIndex[i]);
+                    pointStore.decrementRefCount(index);
                 }
                 weight[i] = (float) sample.getWeight();
                 sequenceIndex[i] = sample.getSequenceIndex();
