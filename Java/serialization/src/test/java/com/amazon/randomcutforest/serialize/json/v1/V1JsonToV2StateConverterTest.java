@@ -61,11 +61,10 @@ public class V1JsonToV2StateConverterTest {
             assertEquals(jsonResource.getDimensions(), state.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), state.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), state.getSampleSize());
-            state.setNumberOfTrees(1);
             RandomCutForest forest = new RandomCutForestMapper().toModel(state,0);
 
             assertEquals(jsonResource.getDimensions(), forest.getDimensions());
-           // assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
+            assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), forest.getSampleSize());
 
             // perform a simple validation of the deserialized forest by update and scoring with a few points
