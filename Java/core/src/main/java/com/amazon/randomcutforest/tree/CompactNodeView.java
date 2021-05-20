@@ -17,7 +17,6 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
-import java.util.Arrays;
 import java.util.Set;
 
 import com.amazon.randomcutforest.store.INodeStore;
@@ -60,10 +59,6 @@ public class CompactNodeView<Point> implements INode<Integer> {
         }
     }
 
-    public boolean leafPointEquals(double[] point) {
-        return Arrays.equals(getLeafPoint(), point);
-    }
-
     public int getCutDimension() {
         return nodeStore.getCutDimension(currentNodeOffset);
     }
@@ -74,12 +69,12 @@ public class CompactNodeView<Point> implements INode<Integer> {
     }
 
     public double[] getLeafPoint() {
-        return tree.getPoint(currentNodeOffset);
+        return tree.projectToTree(tree.getPoint(currentNodeOffset));
     }
 
     @Override
     public double[] getLiftedLeafPoint() {
-        return tree.liftFromTree(tree.getPoint(currentNodeOffset));
+        return tree.getPoint(currentNodeOffset);
     }
 
     public Set<Long> getSequenceIndexes() {

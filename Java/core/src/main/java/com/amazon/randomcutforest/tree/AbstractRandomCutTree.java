@@ -403,7 +403,6 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     public PointReference deletePoint(PointReference pointReference, long sequenceNumber) {
         checkState(root != null, "root must not be null");
 
-        // Point point = getPointFromPointReference(pointReference);
         NodeReference nodeReference = findLeafAndVerify(pointReference);
         if (storeSequenceIndexesEnabled) {
             deleteSequenceIndex(nodeReference, sequenceNumber);
@@ -741,6 +740,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
         protected long randomSeed = new Random().nextLong();
         protected Random random = null;
         protected Optional<Integer> outputAfter = Optional.empty();
+        protected int inputDimension;
+        protected int dimension;
 
         public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
             this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
@@ -769,6 +770,16 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         public T outputAfter(int outputAfter) {
             this.outputAfter = Optional.of(outputAfter);
+            return (T) this;
+        }
+
+        public T inputDimension(int inputDimension) {
+            this.inputDimension = inputDimension;
+            return (T) this;
+        }
+
+        public T dimension(int dimension) {
+            this.dimension = dimension;
             return (T) this;
         }
     }
