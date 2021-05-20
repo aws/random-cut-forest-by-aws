@@ -175,7 +175,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      */
     @Override
     public void acceptLeaf(INodeView leafNode, int depthOfNode) {
-        if (leafNode.leafPointEquals(pointToScore)
+        if (Arrays.equals(leafNode.getLeafPoint(), pointToScore)
                 && (!ignoreLeafEquals || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             pointInsideBox = true;
             score = damp(leafNode.getMass(), treeMass) * scoreSeen(depthOfNode, leafNode.getMass());

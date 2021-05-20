@@ -24,8 +24,6 @@ public interface INodeView {
 
     IBoundingBoxView getSiblingBoundingBox(double[] point);
 
-    boolean leafPointEquals(double[] point);
-
     int getCutDimension();
 
     double getCutValue();

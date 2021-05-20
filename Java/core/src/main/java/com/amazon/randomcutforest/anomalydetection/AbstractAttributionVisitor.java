@@ -170,17 +170,18 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
 
         updateRangesForScoring(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
-        if (leafNode.leafPointEquals(pointToScore)) {
+        if (Arrays.equals(leafNode.getLeafPoint(), pointToScore)) {
             hitDuplicates = true;
         }
 
-        if (hitDuplicates && ((!ignoreLeaf) || (leafNode.getMass() > ignoreLeafMassThreshold))) {
+        if ((hitDuplicates) && ((!ignoreLeaf) || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             savedScore = damp(leafNode.getMass(), treeMass) * scoreSeen(depthOfNode, leafNode.getMass());
         } else {
             savedScore = scoreUnseen(depthOfNode, leafNode.getMass());
         }
 
-        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))) {
+        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))
+                || sumOfNewRange <= 0) {
 
             Arrays.fill(directionalAttribution.high, savedScore / (2 * pointToScore.length));
             Arrays.fill(directionalAttribution.low, savedScore / (2 * pointToScore.length));

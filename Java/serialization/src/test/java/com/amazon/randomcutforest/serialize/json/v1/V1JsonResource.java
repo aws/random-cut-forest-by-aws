@@ -13,4 +13,24 @@
  * permissions and limitations under the License.
  */
 
+package com.amazon.randomcutforest.serialize.json.v1;
 
+import lombok.Getter;
+
+@Getter
+public enum V1JsonResource {
+
+    FOREST_1("forest_1.json", 1, 25, 128), FOREST_2("forest_2.json", 4, 40, 256);
+
+    private final String resource;
+    private final int dimensions;
+    private final int numberOfTrees;
+    private final int sampleSize;
+
+    V1JsonResource(String resource, int dimensions, int numberOfTrees, int sampleSize) {
+        this.resource = resource;
+        this.dimensions = dimensions;
+        this.numberOfTrees = numberOfTrees;
+        this.sampleSize = sampleSize;
+    }
+}
