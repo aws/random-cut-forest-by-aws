@@ -415,7 +415,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
         // decrease mass for the delete
         if (decrementMass(nodeReference) > 0) {
-            updateAncestorPointSum(nodeReference);
+            updateAncestorPointSum(getParent(nodeReference));
             return returnVal;
         }
 
@@ -498,7 +498,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 if (storeSequenceIndexesEnabled) {
                     addSequenceIndex(followReference, sequenceNumber);
                 }
-                updateAncestorPointSum(followReference);
+                updateAncestorPointSum(getParent(followReference));
                 return getPointReference(followReference);
                 // at a leaf and found a previous copy
             } else {
