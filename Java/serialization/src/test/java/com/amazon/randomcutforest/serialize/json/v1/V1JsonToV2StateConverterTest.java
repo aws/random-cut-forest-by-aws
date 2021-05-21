@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -15,12 +15,9 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,9 +26,13 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 
 public class V1JsonToV2StateConverterTest {
 
@@ -61,17 +62,18 @@ public class V1JsonToV2StateConverterTest {
             assertEquals(jsonResource.getDimensions(), state.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), state.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), state.getSampleSize());
-            RandomCutForest forest = new RandomCutForestMapper().toModel(state,0);
+            RandomCutForest forest = new RandomCutForestMapper().toModel(state, 0);
 
             assertEquals(jsonResource.getDimensions(), forest.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), forest.getNumberOfTrees());
             assertEquals(jsonResource.getSampleSize(), forest.getSampleSize());
 
-            // perform a simple validation of the deserialized forest by update and scoring with a few points
+            // perform a simple validation of the deserialized forest by update and scoring
+            // with a few points
 
             Random random = new Random(0);
             for (int i = 0; i < 10; i++) {
-                double[] point = getPoint(jsonResource.getDimensions(),random);
+                double[] point = getPoint(jsonResource.getDimensions(), random);
                 double score = forest.getAnomalyScore(point);
                 assertTrue(score > 0);
                 forest.update(point);

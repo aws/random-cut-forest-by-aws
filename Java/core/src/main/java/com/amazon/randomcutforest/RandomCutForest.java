@@ -110,7 +110,7 @@ public class RandomCutForest {
     /**
      * By default, trees will not create indexed references.
      */
-    public static final boolean DEFAULT_COMPACT = false;
+    public static final boolean DEFAULT_COMPACT = true;
 
     /**
      * By default, trees will accept every point until full.
@@ -237,6 +237,11 @@ public class RandomCutForest {
      * Number of threads to use in the thread pool if parallel execution is enabled.
      */
     protected final int threadPoolSize;
+    /**
+     * A string to define an "execution mode" that can be used to set multiple
+     * configuration options. This field is not currently in use.
+     */
+    protected String mode;
 
     protected IStateCoordinator<?, ?> stateCoordinator;
     protected ComponentList<?, ?> components;
