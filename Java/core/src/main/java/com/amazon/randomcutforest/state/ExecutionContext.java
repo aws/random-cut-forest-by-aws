@@ -22,7 +22,9 @@ public class ExecutionContext {
     private boolean parallelExecutionEnabled;
     private int threadPoolSize;
 
-    // A placeholder field representing an execution mode that can be used to group
-    // together runtime configuration options.
+    /**
+     * A string to define an "execution mode" that can be used to set multiple
+     * configuration options. This field is not currently in use.
+     */
     private String mode;
 }
