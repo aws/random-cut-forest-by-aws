@@ -22,8 +22,8 @@ import java.util.Optional;
 import lombok.Getter;
 
 import com.amazon.randomcutforest.IComponentModel;
-import com.amazon.randomcutforest.MultiVisitorFactory;
-import com.amazon.randomcutforest.VisitorFactory;
+import com.amazon.randomcutforest.IMultiVisitorFactory;
+import com.amazon.randomcutforest.IVisitorFactory;
 import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
@@ -98,12 +98,12 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     }
 
     @Override
-    public <R> R traverse(double[] point, VisitorFactory<R> visitorFactory) {
+    public <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory) {
         return tree.traverse(point, visitorFactory);
     }
 
     @Override
-    public <R> R traverseMulti(double[] point, MultiVisitorFactory<R> visitorFactory) {
+    public <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory) {
         return tree.traverseMulti(point, visitorFactory);
     }
 

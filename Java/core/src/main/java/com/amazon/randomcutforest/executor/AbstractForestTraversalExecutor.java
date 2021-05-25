@@ -20,8 +20,8 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.ComponentList;
-import com.amazon.randomcutforest.MultiVisitorFactory;
-import com.amazon.randomcutforest.VisitorFactory;
+import com.amazon.randomcutforest.IMultiVisitorFactory;
+import com.amazon.randomcutforest.IVisitorFactory;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 
 public abstract class AbstractForestTraversalExecutor {
@@ -53,7 +53,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -76,7 +76,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector);
 
     /**
@@ -103,7 +103,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -127,7 +127,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -150,7 +150,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector);
 
 }

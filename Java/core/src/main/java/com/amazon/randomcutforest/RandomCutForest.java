@@ -700,7 +700,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], VisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
      * all the trees are combined using the accumulator and then transformed using
      * the finisher before being returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -719,7 +719,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -735,7 +735,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], VisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
      * individual trees are collected using the {@link java.util.stream.Collector}
      * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -752,7 +752,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -766,7 +766,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
      * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], VisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
      * all the trees are combined using the {@link ConvergingAccumulator}, and the
      * method stops visiting trees after convergence is reached. The result is
      * transformed using the finisher before being returned.
@@ -787,7 +787,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -803,7 +803,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], MultiVisitorFactory)}. The
+     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
      * results from all the trees are combined using the accumulator and then
      * transformed using the finisher before being returned.
      *
@@ -821,7 +821,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -837,7 +837,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], MultiVisitorFactory)}. The
+     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
      * results from individual trees are collected using the
      * {@link java.util.stream.Collector} and returned. Trees are visited in
      * parallel using {@link java.util.Collection#parallelStream()}.
@@ -854,7 +854,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -883,8 +883,8 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        VisitorFactory<Double> visitorFactory = new VisitorFactory<>(
-                (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x), tree.getMass()));
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
@@ -910,8 +910,8 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        VisitorFactory<Double> visitorFactory = new VisitorFactory<>(
-                (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x), tree.getMass()));
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -941,7 +941,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+        IVisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
                 (tree, y) -> new AnomalyAttributionVisitor(tree.projectToTree(y), tree.getMass()),
                 (tree, x) -> x.lift(tree::liftFromTree));
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
@@ -963,7 +963,7 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+        IVisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
                 (tree, y) -> new AnomalyAttributionVisitor(tree.projectToTree(y), tree.getMass()),
                 (tree, x) -> x.lift(tree::liftFromTree));
 
@@ -994,7 +994,7 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        VisitorFactory<InterpolationMeasure> visitorFactory = new VisitorFactory<>((tree,
+        IVisitorFactory<InterpolationMeasure> visitorFactory = new VisitorFactory<>((tree,
                 y) -> new SimpleInterpolationVisitor(tree.projectToTree(y), sampleSize, 1.0, centerOfMassEnabled),
                 (tree, x) -> x.lift(tree::liftFromTree));
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
@@ -1031,8 +1031,8 @@ public class RandomCutForest {
             return new ArrayList<>();
         }
 
-        MultiVisitorFactory<double[]> visitorFactory = new MultiVisitorFactory<>((tree, y) -> new ImputeVisitor(y,
-                numberOfMissingValues, tree.projectMissingIndices(transformIndices(missingIndexes, point.length))));
+        IMultiVisitorFactory<double[]> visitorFactory = (tree, y) -> new ImputeVisitor(y, numberOfMissingValues,
+                tree.projectMissingIndices(transformIndices(missingIndexes, point.length)));
 
         Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
                 ArrayList::add, (left, right) -> {
@@ -1227,8 +1227,7 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        VisitorFactory<Optional<Neighbor>> visitorFactory = new VisitorFactory<>(
-                (tree, x) -> new NearNeighborVisitor(x, distanceThreshold));
+        IVisitorFactory<Optional<Neighbor>> visitorFactory = (tree, x) -> new NearNeighborVisitor(x, distanceThreshold);
 
         return traverseForest(transformToShingledPoint(point), visitorFactory, Neighbor.collector());
     }

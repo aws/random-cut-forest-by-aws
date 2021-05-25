@@ -310,7 +310,7 @@ public class RandomCutForestTest {
             SamplerPlusTree<double[], double[]> component = (SamplerPlusTree<double[], double[]>) components.get(i);
             ITree<double[], double[]> tree = component.getTree();
             double treeResult = Math.random();
-            when(tree.traverse(aryEq(point), any(VisitorFactory.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(IVisitorFactory.class))).thenReturn(treeResult);
 
             when(tree.getMass()).thenReturn(256);
 
@@ -339,7 +339,7 @@ public class RandomCutForestTest {
             SamplerPlusTree<double[], double[]> component = (SamplerPlusTree<double[], double[]>) components.get(i);
             ITree<double[], double[]> tree = component.getTree();
             double treeResult = Math.random();
-            when(tree.traverse(aryEq(point), any(VisitorFactory.class))).thenReturn(treeResult);
+            when(tree.traverse(aryEq(point), any(IVisitorFactory.class))).thenReturn(treeResult);
 
             when(tree.getMass()).thenReturn(256);
 
@@ -520,7 +520,7 @@ public class RandomCutForestTest {
             ITree<double[], double[]> tree = component.getTree();
             double[] treeResult = Arrays.copyOf(point, point.length);
             treeResult[missingIndexes[0]] = returnValues.get(i);
-            when(tree.traverseMulti(aryEq(point), any(MultiVisitorFactory.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
         }
 
         doReturn(true).when(forest).isOutputReady();
@@ -555,7 +555,7 @@ public class RandomCutForestTest {
             SamplerPlusTree<double[], double[]> component = (SamplerPlusTree<double[], double[]>) components.get(i);
             ITree<double[], double[]> tree = component.getTree();
             double[] treeResult = { Math.random(), Math.random() };
-            when(tree.traverseMulti(aryEq(point), any(MultiVisitorFactory.class))).thenReturn(treeResult);
+            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
 
             double anomalyScore = anomalyScores.get(i);
             doReturn(anomalyScore).when(forest).getAnomalyScore(aryEq(treeResult));
@@ -704,26 +704,26 @@ public class RandomCutForestTest {
 
         Neighbor neighbor1 = new Neighbor(new double[] { 1, 2 }, 5, indexes1);
         when(((SamplerPlusTree<?, ?>) components.get(0)).getTree().traverse(any(double[].class),
-                any(VisitorFactory.class))).thenReturn(Optional.of(neighbor1));
+                any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor1));
 
         Neighbor neighbor2 = new Neighbor(new double[] { 1, 2 }, 5, indexes2);
         when(((SamplerPlusTree<?, ?>) components.get(1)).getTree().traverse(any(double[].class),
-                any(VisitorFactory.class))).thenReturn(Optional.of(neighbor2));
+                any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor2));
 
         when(((SamplerPlusTree<?, ?>) components.get(2)).getTree().traverse(any(double[].class),
-                any(VisitorFactory.class))).thenReturn(Optional.empty());
+                any(IVisitorFactory.class))).thenReturn(Optional.empty());
 
         Neighbor neighbor4 = new Neighbor(new double[] { 2, 3 }, 4, indexes4);
         when(((SamplerPlusTree<?, ?>) components.get(3)).getTree().traverse(any(double[].class),
-                any(VisitorFactory.class))).thenReturn(Optional.of(neighbor4));
+                any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor4));
 
         Neighbor neighbor5 = new Neighbor(new double[] { 2, 3 }, 4, indexes5);
         when(((SamplerPlusTree<?, ?>) components.get(4)).getTree().traverse(any(double[].class),
-                any(VisitorFactory.class))).thenReturn(Optional.of(neighbor5));
+                any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor5));
 
         for (int i = 5; i < components.size(); i++) {
             when(((SamplerPlusTree<?, ?>) components.get(i)).getTree().traverse(any(double[].class),
-                    any(VisitorFactory.class))).thenReturn(Optional.empty());
+                    any(IVisitorFactory.class))).thenReturn(Optional.empty());
         }
 
         Whitebox.setInternalState(forest, "storeSequenceIndexesEnabled", true);

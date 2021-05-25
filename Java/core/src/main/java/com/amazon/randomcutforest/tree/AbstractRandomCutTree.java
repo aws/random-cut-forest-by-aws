@@ -23,11 +23,11 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 
+import com.amazon.randomcutforest.IMultiVisitorFactory;
+import com.amazon.randomcutforest.IVisitorFactory;
 import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.MultiVisitorFactory;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.config.Config;
 
 /**
@@ -630,11 +630,11 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
-    public <R> R traverse(double[] point, VisitorFactory<R> visitorFactory) {
+    public <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory) {
         checkState(root != null, "this tree doesn't contain any nodes");
-        Visitor<R> visitor = visitorFactory.create.apply(this, point);
+        Visitor<R> visitor = visitorFactory.newVisitor(this, point);
         traversePathToLeafAndVisitNodes(projectToTree(point), visitor, root, 0);
-        return visitorFactory.liftResult.apply(this, visitor.getResult());
+        return visitorFactory.liftResult(this, visitor.getResult());
     }
 
     private <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeReference node,
@@ -650,7 +650,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
 
     /**
      * This is a traversal method which follows the standard traversal path (defined
-     * in {@link #traverse(double[], VisitorFactory)}) but at Node in checks to see
+     * in {@link #traverse(double[], IVisitorFactory)}) but at Node in checks to see
      * whether the visitor should split. If a split is triggered, then independent
      * copies of the visitor are sent down each branch of the tree and then merged
      * before propagating the result.
@@ -664,13 +664,13 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      */
 
     @Override
-    public <R> R traverseMulti(double[] point, MultiVisitorFactory<R> visitorFactory) {
+    public <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(root != null, "this tree doesn't contain any nodes");
-        MultiVisitor<R> visitor = visitorFactory.create.apply(this, point);
+        MultiVisitor<R> visitor = visitorFactory.newVisitor(this, point);
         traverseTreeMulti(projectToTree(point), visitor, root, 0);
-        return visitorFactory.liftResult.apply(this, visitor.getResult());
+        return visitorFactory.liftResult(this, visitor.getResult());
     }
 
     private <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeReference node, int depthOfNode) {

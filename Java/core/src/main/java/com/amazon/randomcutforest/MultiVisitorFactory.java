@@ -28,18 +28,27 @@ import com.amazon.randomcutforest.tree.ITree;
  * tree.
  */
 
-public class MultiVisitorFactory<R> {
-    public BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create;
-    public BiFunction<ITree<?, ?>, R, R> liftResult;
+public class MultiVisitorFactory<R> implements IMultiVisitorFactory<R> {
+    private final BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> newVisitor;
+    private final BiFunction<ITree<?, ?>, R, R> liftResult;
 
-    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create,
+    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> newVisitor,
             BiFunction<ITree<?, ?>, R, R> liftResult) {
-        this.create = create;
+        this.newVisitor = newVisitor;
         this.liftResult = liftResult;
     }
 
-    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> create) {
-        this.create = create;
-        this.liftResult = (tree, x) -> x;
+    public MultiVisitorFactory(BiFunction<ITree<?, ?>, double[], MultiVisitor<R>> newVisitor) {
+        this(newVisitor, (tree, x) -> x);
+    }
+
+    @Override
+    public MultiVisitor<R> newVisitor(ITree<?, ?> tree, double[] point) {
+        return newVisitor.apply(tree, point);
+    }
+
+    @Override
+    public R liftResult(ITree<?, ?> tree, R result) {
+        return liftResult.apply(tree, result);
     }
 }

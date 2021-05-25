@@ -24,8 +24,8 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.amazon.randomcutforest.ComponentList;
-import com.amazon.randomcutforest.MultiVisitorFactory;
-import com.amazon.randomcutforest.VisitorFactory;
+import com.amazon.randomcutforest.IMultiVisitorFactory;
+import com.amazon.randomcutforest.IVisitorFactory;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 
 /**
@@ -44,7 +44,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
         return submitAndJoin(() -> components.parallelStream().map(c -> c.traverse(point, visitorFactory))
@@ -53,14 +53,14 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         return submitAndJoin(
                 () -> components.parallelStream().map(c -> c.traverse(point, visitorFactory)).collect(collector));
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, VisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         for (int i = 0; i < components.size(); i += threadPoolSize) {
@@ -80,7 +80,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         return submitAndJoin(() -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory))
@@ -89,7 +89,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, MultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         return submitAndJoin(
