@@ -231,10 +231,11 @@ impl<T> Tree<T>
     /// use random_cut_forest::algorithm::AnomalyScoreVisitor;
     /// ```
     ///
-    pub fn traverse<'a, U>(
+    pub fn traverse<'a, U, V>(
         &'a self, point: &'a Vec<T>,
-        visitor: &'a mut dyn Visitor<T, Output=U>,
-    ) -> U {
+        visitor: &mut V,
+    ) -> U where V: Visitor<T, Output=U>
+    {
         let nodes: Vec<&Node<T>> = self.iter(point).collect();
         for (depth, node) in nodes.iter().enumerate().rev() {
             let depth: T = T::from(depth).unwrap();

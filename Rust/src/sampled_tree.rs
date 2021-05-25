@@ -190,10 +190,11 @@ impl<T> SampledTree<T>
         self.tree.iter(point)
     }
 
-    pub fn traverse<'a, U>(
+    pub fn traverse<'a, U, V>(
         &'a self, point: &'a Vec<T>,
-        visitor: &'a mut dyn Visitor<T, Output=U>,
-    ) -> U {
+        visitor: &mut V,
+    ) -> U where V: Visitor<T, Output=U>
+    {
         self.tree.traverse(point, visitor)
     }
 
