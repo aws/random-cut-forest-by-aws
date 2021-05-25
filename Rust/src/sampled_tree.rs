@@ -6,6 +6,7 @@ use std::iter::Sum;
 use std::rc::Rc;
 
 use crate::{PointStore, SamplerResult, StreamSampler};
+use crate::algorithm::Visitor;
 use crate::tree::{AddResult, NodeTraverser, Tree};
 
 /// Combination of a tree and a reservoir sampler.
@@ -38,7 +39,7 @@ use crate::tree::{AddResult, NodeTraverser, Tree};
 ///
 /// // given a query point, we can traverse the tree by following random cuts
 /// let query = vec![0.5, 1.5];
-/// let traversal_nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
+/// let traversal_nodes: Vec<&Node<f32>> = tree.iter(&query).collect();
 /// ```
 pub struct SampledTree<T> {
     point_store: Rc<RefCell<PointStore<T>>>,
@@ -154,7 +155,7 @@ impl<T> SampledTree<T>
         }
     }
 
-    /// Traverse the tree with a given query point as input.
+    /// Get a [`NodeTraverser`] on the tree with a given query point as input.
     ///
     /// Returns an iterator on the nodes of the tree. The iterator begins at the
     /// tree's root node and follows the branch to the leaf node containing the
@@ -171,7 +172,7 @@ impl<T> SampledTree<T>
     /// // provide a query point that will always be to the left of any cut
     /// // on the two points inserted above, no matter the cut location
     /// let query = vec![-2.0, -2.0];
-    /// let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
+    /// let nodes: Vec<&Node<f32>> = tree.iter(&query).collect();
     /// assert_eq!(nodes.len(), 2);
     ///
     /// // verify the last point of the tree is equal to the left-most point
@@ -185,8 +186,15 @@ impl<T> SampledTree<T>
     /// }
     /// ```
     ///
-    pub fn traverse<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
-        self.tree.traverse(point)
+    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
+        self.tree.iter(point)
+    }
+
+    pub fn traverse<'a, U>(
+        &'a self, point: &'a Vec<T>,
+        visitor: &'a mut dyn Visitor<T, Output=U>,
+    ) -> U {
+        self.tree.traverse(point, visitor)
     }
 
     /// Returns the sample size of the sampled tree.

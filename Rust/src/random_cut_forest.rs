@@ -1,9 +1,8 @@
 extern crate num_traits;
-use num_traits::Float;
+use num_traits::{Float, Zero};
 
-use crate::AnomalyScoreVisitor;
 use crate::SampledTree;
-use crate::tree::{Tree, Node};
+use crate::algorithm::AnomalyScoreVisitor;
 
 use std::marker::PhantomData;
 use std::iter::Sum;
@@ -50,7 +49,7 @@ pub struct RandomCutForest<T> {
 }
 
 impl<T> RandomCutForest<T>
-    where T: Float + Sum
+    where T: Float + Sum + Zero
 {
 
     /// Update a random cut forest with a new data point.
@@ -121,29 +120,12 @@ impl<T> RandomCutForest<T>
     /// let scores: Vec<f32> = data.iter().map(|p| rcf.anomaly_score(p)).collect();
     /// ```
     pub fn anomaly_score(&self, point: &Vec<T>) -> T {
-        let anomaly_score: T = self.trees.iter()
-            .map(|t| self.tree_anomaly_score(point, t.tree()))
-            .sum();
-        anomaly_score / T::from(self.num_trees()).unwrap()
-    }
-
-    /// Compute the anomaly score from a particular tree. Used by
-    /// ['Self::anomaly_score'].
-    fn tree_anomaly_score(&self, point: &Vec<T>, tree: &Tree<T>) -> T {
-        // traverse nodes from the root to the leaf closest to the input point
-        let nodes: Vec<&Node<T>> = tree.traverse(point).collect();
-        let mut visitor = AnomalyScoreVisitor::new(tree, point);
-
-        // the nodes begin at depth zero (the root node). each subsequent node
-        // is at a lower depth. we reverse iterate starting at the leaf
-        for (depth, node) in nodes.iter().enumerate().rev() {
-            let depth: T = T::from(depth).unwrap();
-            match node {
-                Node::Leaf(leaf) => visitor.accept_leaf(leaf, depth),
-                Node::Internal(node) => visitor.accept(node, depth),
-            }
+        let mut anomaly_score: T = Zero::zero();
+        for sampled_tree in self.trees.iter() {
+            let mut visitor = AnomalyScoreVisitor::new(sampled_tree.tree(), point);
+            anomaly_score = anomaly_score + sampled_tree.traverse(point, &mut visitor);
         }
-        visitor.get_result()
+        anomaly_score / T::from(self.num_trees()).unwrap()
     }
 
     /// Return the dimension of the data accepted by this random cut forest.

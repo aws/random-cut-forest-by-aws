@@ -11,6 +11,7 @@ use std::cell::{Ref, RefMut, RefCell};
 use std::iter::Sum;
 use std::rc::Rc;
 
+use crate::algorithm::Visitor;
 use crate::store::{PointStore, NodeStore};
 use crate::tree::{Cut, Node};
 
@@ -179,7 +180,7 @@ impl<T> Tree<T>
 
     /// Returns an iterator on nodes and depths.
     ///
-    /// Given a query point, a random cut tree traversal begins at the root node
+    /// Given a query point, a random cut tree iteration begins at the root node
     /// of the tree and returns a branch to the leaf node which is approximately
     /// closest to a query point in the L1-norm. (Relative to the random cuts
     /// chosen in the tree.)
@@ -198,22 +199,51 @@ impl<T> Tree<T>
     ///
     /// // check that we recover the only node in the tree
     /// let query = vec![0.1, 0.9];
-    /// let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
+    /// let nodes: Vec<&Node<f32>> = tree.iter(&query).collect();
     /// assert_eq!(nodes.len(), 1);
     ///
     /// // after adding a second point the traversal should contain the
     /// // point closest to the query in the L1 norm
     /// tree.add_point(vec![-1.0, -2.0]);
-    /// let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
+    /// let nodes: Vec<&Node<f32>> = tree.iter(&query).collect();
     /// assert_eq!(nodes.len(), 2);
     ///
     /// // a traversal implements iter, so we can use it in a loop
-    /// for node in tree.traverse(&query) {
+    /// for node in tree.iter(&query) {
     ///     println!("mass = {}", node.mass());
     /// }
     /// ```
-    pub fn traverse<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
+    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
         NodeTraverser::new(self, point)
+    }
+
+    /// Apply a visitor to a tree traversal with a query point.
+    ///
+    /// Given a query point and a visitor, we apply the visitor to the nodes
+    /// of the query point iteration as given by [`iter()`](Self::iter).
+    ///
+    /// See the [`Visitor`] trait for more information.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use random_cut_forest::Tree;
+    /// use random_cut_forest::algorithm::AnomalyScoreVisitor;
+    /// ```
+    ///
+    pub fn traverse<'a, U>(
+        &'a self, point: &'a Vec<T>,
+        visitor: &'a mut dyn Visitor<T, Output=U>,
+    ) -> U {
+        let nodes: Vec<&Node<T>> = self.iter(point).collect();
+        for (depth, node) in nodes.iter().enumerate().rev() {
+            let depth: T = T::from(depth).unwrap();
+            match node {
+                Node::Leaf(leaf) => visitor.accept_leaf(leaf, depth),
+                Node::Internal(node) => visitor.accept(node, depth),
+            }
+        }
+        visitor.get_result()
     }
 
     // =========================================================================
@@ -357,7 +387,7 @@ mod tests {
     fn test_traversal() {
         let mut tree: Tree<f32> = Tree::new();
         let query = vec![10.0, 10.0, 10.0, 10.0];
-        let nodes: Vec<&Node<f32>> = tree.traverse(&query).collect();
+        let nodes: Vec<&Node<f32>> = tree.iter(&query).collect();
         assert_eq!(nodes.len(), 0);
 
         // add a bunch of N(0,1) points to the tree including the query point
@@ -367,7 +397,7 @@ mod tests {
         tree.add_point(query.clone());
 
         // traverse the tree. the leaf node should contain the query point
-        for node in tree.traverse(&query) {
+        for node in tree.iter(&query) {
             match node {
                 Node::Internal(_) => (),
                 Node::Leaf(n) => {

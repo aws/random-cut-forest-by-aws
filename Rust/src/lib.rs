@@ -27,6 +27,12 @@
 //!     .map(|p| rcf.anomaly_score(p))
 //!     .collect();
 //! ```
+//! 
+//! ## Scoring Algorithms
+//! 
+//! The [`algorithm`] module contains tools and components for creating new
+//! scoring algorithms on random cut forests. See the module contents and 
+//! documentation for instructions and examples.
 //!
 //! ### References
 //!
@@ -35,8 +41,7 @@
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
 //! 
 
-mod anomaly_score_visitor;
-pub use crate::anomaly_score_visitor::AnomalyScoreVisitor;
+pub mod algorithm;
 
 mod random_cut_forest;
 pub use crate::random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
