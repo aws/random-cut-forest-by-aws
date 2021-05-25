@@ -5,6 +5,7 @@ use std::iter::Sum;
 
 use crate::visitor::Visitor;
 use crate::tree::{BoundingBox, Internal, Leaf, Tree};
+use super::utils::{score_seen, score_unseen, damp, normalize_score};
 
 
 /// A visitor on nodes used to compute an anomaly score.
@@ -170,38 +171,4 @@ impl<'a, T> Visitor<T> for AnomalyScoreVisitor<'a, T> where
     fn get_result(&self) -> T {
         normalize_score(self.anomaly_score, self.tree.mass())
     }
-}
-
-#[inline(always)]
-fn score_seen<T>(depth: T, mass: u32) -> T
-    where T: Float + One
-{
-    let one: T = One::one();
-    one / (
-        depth + (T::from(mass).unwrap() + one).ln()/T::from(2.0).unwrap().ln())
-}
-
-#[inline(always)]
-fn score_unseen<T>(depth: T) -> T
-    where T: Float + One
-{
-    let one: T = One::one();
-    one/(depth + one)
-}
-
-#[inline(always)]
-fn damp<T>(leaf_mass: u32, tree_mass: u32) -> T
-    where T: Float + One
-{
-    let one: T = One::one();
-    one - T::from(leaf_mass).unwrap()/(
-        T::from(2.0).unwrap() * T::from(tree_mass).unwrap())
-}
-
-#[inline(always)]
-fn normalize_score<T>(score: T, mass: u32) -> T
-    where T: Float + One
-{
-    let one: T = One::one();
-    score * (T::from(mass).unwrap() + one).ln()/T::from(2.0).unwrap().ln()
 }

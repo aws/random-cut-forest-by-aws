@@ -2,7 +2,7 @@ extern crate num_traits;
 use num_traits::{Float, Zero};
 
 use crate::SampledTree;
-use crate::visitor::AnomalyScoreVisitor;
+use crate::visitor::{AnomalyScoreVisitor, AttributionVisitor, DiVec};
 
 use std::marker::PhantomData;
 use std::iter::Sum;
@@ -126,7 +126,6 @@ impl<T> RandomCutForest<T>
     /// ```
     pub fn anomaly_score(&self, point: &Vec<T>) -> T {
         let mut anomaly_score: T = Zero::zero();
-
         if self.num_observations <= self.output_after {
             return anomaly_score;
         }
@@ -136,6 +135,66 @@ impl<T> RandomCutForest<T>
             anomaly_score = anomaly_score + sampled_tree.traverse(point, &mut visitor);
         }
         anomaly_score / T::from(self.num_trees()).unwrap()
+    }
+
+    /// Returns the anomaly attribution of the input point.
+    ///
+    /// The anomaly attribution encodes information about how much each
+    /// dimension or feature of the input contributes to the anomaly score.
+    /// Additionally, the output tells you whether this is due to an abnormally
+    /// large or small value in each dimension.
+    ///
+    /// The total high-low sum of the attribution is equal to the query point's
+    /// anomaly score. Therefore, the high-low sum in each dimension is a
+    /// measure of that dimension's contribution to the anomaly score. For more
+    /// information, see [`AttributionVisitor`] and [`DiVec`].
+    ///
+    /// If the number of observations in the random cut forest is less than
+    /// [`ouput_after()`](RandomCutForest::output_after) then a zero-valued
+    /// `DiVec` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
+    ///
+    /// // create a default RCF on two-dimensional data
+    /// let mut rcf: RandomCutForest<f32> = RandomCutForestBuilder::new(2).build();
+    ///
+    /// // train the forest on a "square" of data
+    /// let data = vec![vec![0.0, 0.0], vec![1.0, 1.0], vec![1.0, 0.0], vec![0.0, 1.0]];
+    /// for point in data.iter() {
+    ///     rcf.update(point.clone());
+    /// }
+    ///
+    /// // compute the attribution vector for a query point. this query is
+    /// // anomalous primarily due to having too large of a value in the
+    /// // first dimension
+    /// let query = vec![12.3, 0.5];
+    /// let attribution = rcf.anomaly_attribution(&query);
+    /// assert!(attribution.hi[0] > attribution.hi[1]);
+    /// assert!(attribution.hi[0] > attribution.lo[0]);
+    /// assert!(attribution.hi_lo_sum(0) > attribution.hi_lo_sum(1));
+    ///
+    /// // the total high-low sum of the attribution di-vector is equal to
+    /// // the anomaly score of the point (up to floating point error)
+    /// let score = rcf.anomaly_score(&query);
+    /// let rel_error = (attribution.total_hi_lo_sum() - score).abs() / score;
+    /// assert!(rel_error < 1e-4);
+    /// ```
+    pub fn anomaly_attribution(&self, point: &Vec<T>) -> DiVec<T> {
+        let mut attribution = DiVec::with_capacity(point.len());
+        if self.num_observations <= self.output_after {
+            return attribution;
+        }
+
+        for sampled_tree in self.trees.iter() {
+            let mut visitor = AttributionVisitor::new(sampled_tree.tree(), point);
+            attribution += sampled_tree.traverse(point, &mut visitor);
+        }
+        let scale = T::from(self.num_trees()).unwrap().recip();
+        attribution.scale_mut(scale);
+        attribution
     }
 
     /// Return the dimension of the data accepted by this random cut forest.
@@ -331,29 +390,83 @@ mod tests {
     }
 
     #[test]
+    fn test_attribution() {
+        let mut forest = RandomCutForestBuilder::<f32>::new(2)
+            .num_trees(20)
+            .sample_size(4)
+            .time_decay(0.0)
+            .build();
+
+        println!("training...");
+        for _ in 0..4 {
+            forest.update(vec![0.0, 0.0]);
+        }
+    }
+
+    #[test]
     fn gaussian_blob() {
         let num_points = 1000;
-        let dimension = 3;
-        let mut forest: RandomCutForest<f32> = RandomCutForestBuilder::new(dimension).build();
+        let dimensions = 3;
+        let mut forest: RandomCutForest<f32> = RandomCutForestBuilder::new(dimensions).build();
 
-        let points = randn(num_points, dimension);
+        let points = randn(num_points, dimensions);
         for point in points.iter() {
             forest.update(point.clone());
         }
+        let mut anomaly = vec![0.0; dimensions];
+        anomaly[0] = 5.0;
 
+        //
+        // test anomaly score
+        //
         let scores: Vec<f32> = points.iter().map(|p| forest.anomaly_score(&p)).collect();
         let scores_mean: f32 = scores.iter().sum::<f32>() / num_points as f32;
         let scores_max: f32 = scores.iter().fold(0.0, |max_s, s| f32::max(max_s, *s));
+        let anomaly_score = forest.anomaly_score(&anomaly);
 
-        let anomaly = vec![5.0; dimension];
-        let anomalous_score = forest.anomaly_score(&anomaly);
+        println!("[gaussian_blob] scores mean     = {}", scores_mean);
+        println!("[gaussian_blob] scores max      = {}", scores_max);
+        println!("[gaussian_blob] anomalous score = {}", anomaly_score);
+        assert!(anomaly_score > scores_mean);
+        assert!(anomaly_score > scores_max);
 
-        println!("[gaussian_blob] scores mean      = {}", scores_mean);
-        println!("[gaussian_blob] scores max       = {}", scores_max);
-        println!("[gaussian_blob] anomalous score  = {}", anomalous_score);
+        //
+        // test attrribution score
+        //
+        let mut attribution_one_mean: f32 = 0.0;
+        let anomaly_attribution = forest.anomaly_attribution(&anomaly);
+        let anomaly_sum = anomaly_attribution.total_hi_lo_sum();
+        for i in 0..num_points {
+            let attribution = forest.anomaly_attribution(&points[i]);
+            let relative_error = (attribution.total_hi_lo_sum() - scores[i]).abs() / scores[i];
 
-        assert!(anomalous_score > scores_mean);
-        assert!(anomalous_score > scores_max);
+            attribution_one_mean += attribution.hi_lo_sum(0);
+            assert!(relative_error < 0.01);
+            assert!(anomaly_attribution.hi_lo_sum(0) > attribution.hi_lo_sum(0));
+        }
+        attribution_one_mean /= num_points as f32;
+
+        println!("[gaussian_blob] attr. sum score = {}", anomaly_sum);
+        println!("[gaussian_blob] normal dim0 attribution = {}", attribution_one_mean);
+        println!("[gaussian_blob] anomal dim0 attribution = {}", anomaly_attribution.hi_lo_sum(0));
+
+        for i in 1..dimensions {
+            assert!(anomaly_attribution.hi_lo_sum(0) > anomaly_attribution.hi_lo_sum(i));
+        }
+
+        let relative_error = (anomaly_sum - anomaly_score).abs() / anomaly_score;
+        assert!(relative_error < 0.01);
+
+        // another example with the anomaly in dimension 1 instead of dimension 0
+        let mut anomaly = vec![0.0; dimensions];
+        anomaly[1] = 5.0;
+
+        let anomaly_attribution = forest.anomaly_attribution(&anomaly);
+        for i in 0..dimensions {
+            if i != 1 {
+                assert!(anomaly_attribution.hi_lo_sum(1) > anomaly_attribution.hi_lo_sum(i));
+            }
+        }
     }
 
     #[test]
