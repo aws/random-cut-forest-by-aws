@@ -21,11 +21,9 @@ use std::process;
 /// Streaming random cut forest anomaly scoring.
 ///
 /// Comma-delimited data is accepted via stdin. Anomaly score are output to
-/// stdout. To read from file use the standard redirects.
-///
-/// Headers are automatically ignored. Many data contains a timestamp column
-/// in the first column. The --ignore-first-column flag is useful in this
-/// situation.
+/// stdout. To read from file use the standard redirects. CSV headers are
+/// automatically ignored. Many data contains a timestamp column in the first
+/// column. The --ignore-first-column flag is useful in this situation.
 ///
 #[derive(Clap)]
 #[clap(setting=AppSettings::ColoredHelp)]
@@ -64,7 +62,7 @@ fn run(rcf: &mut RandomCutForest<f32>, ignore_first_column: bool) -> Result<(), 
 
         let mut point: Vec<f32> = Vec::with_capacity(dimension);
         for i in start_index..(dimension + start_index) {
-            let value: f32 = record.get(i)?.parse::<f32>()?;
+            let value: f32 = record.get(i).unwrap().parse::<f32>().unwrap();
             point.push(value);
         }
 

@@ -15,8 +15,8 @@ To use this library, add the following to your `Cargo.toml`:
 random-cut-forest = "0.1.0"
 ```
 
-The two main types provided by this package are `RandomCutForest` and 
-`RandomCutForestBuilder`. The latter creates a `RandomCutForest` using a 
+The two main types provided by this package are `RandomCutForest` and
+`RandomCutForestBuilder`. The latter creates a `RandomCutForest` using a
 combination of required and optional construction parameters.
 
 Below is an example showing RCF construction, training, and anomaly scoring.
@@ -41,10 +41,24 @@ let anomaly_scores: Vec<f32> = data.iter()
   .collect();
 ```
 
+## Examples and CLI Programs
+
+See the `examples/` directory for example usage of this package. Some examples
+can be run as command-line programs. Try running,
+
+```sh
+$ cargo run --release --example [EXAMPLE_NAME] -- --help
+```
+
+to see example-specific usage instructions. The `--release` build significantly
+improves performance of these example CLI tools, especially if you are running
+these scripts on larger data sets. Note that these example scripts are ***not
+intended for production use***.
+
 ## References
 
-* Guha, Sudipto, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random 
-  cut forest based anomaly detection on streams."* In International conference 
+* Guha, Sudipto, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random
+  cut forest based anomaly detection on streams."* In International conference
   on machine learning, pp. 2712-2721. PMLR, 2016. ([pdf][rcf-paper])
 
 [rcf-paper]: http://proceedings.mlr.press/v48/guha16.pdf
