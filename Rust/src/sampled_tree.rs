@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use crate::{PointStore, SamplerResult, StreamSampler};
 use crate::algorithm::Visitor;
-use crate::tree::{AddResult, NodeTraverser, Tree};
+use crate::tree::{AddResult, NodeIterator, Tree};
 
 /// Combination of a tree and a reservoir sampler.
 ///
@@ -186,7 +186,7 @@ impl<T> SampledTree<T>
     /// }
     /// ```
     ///
-    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
+    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeIterator<'a, T> {
         self.tree.iter(point)
     }
 

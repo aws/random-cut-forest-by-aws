@@ -1,5 +1,5 @@
 extern crate num_traits;
-use num_traits::Float;
+use num_traits::{Float, One, Zero};
 
 extern crate rand;
 use rand::SeedableRng;
@@ -178,15 +178,18 @@ impl<T> Tree<T>
         }
     }
 
-    /// Returns an iterator on nodes and depths.
+    /// Returns an iterator on nodes.
     ///
     /// Given a query point, a random cut tree iteration begins at the root node
     /// of the tree and returns a branch to the leaf node which is approximately
     /// closest to a query point in the L1-norm. (Relative to the random cuts
     /// chosen in the tree.)
     ///
-    /// See [`NodeTraverser`] for more information.
+    /// Note that this is not the path used by scoring [`Visitor`] types. The
+    /// function [`Tree::traverse`] correctly applies a `Visitor` starting
+    /// at the nearest leaf node and traverses up the tree to the root node.
     ///
+    /// See [`NodeIterator`] for more information.
     ///
     /// # Examples
     ///
@@ -213,35 +216,46 @@ impl<T> Tree<T>
     ///     println!("mass = {}", node.mass());
     /// }
     /// ```
-    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeTraverser<'a, T> {
-        NodeTraverser::new(self, point)
+    pub fn iter<'a>(&'a self, point: &'a Vec<T>) -> NodeIterator<'a, T> {
+        NodeIterator::new(self, point)
     }
 
     /// Apply a visitor to a tree traversal with a query point.
     ///
     /// Given a query point and a visitor, we apply the visitor to the nodes
-    /// of the query point iteration as given by [`iter()`](Self::iter).
+    /// of the tree starting at the leaf nearest to the query and traversing up
+    /// the tree to the root node.
     ///
     /// See the [`Visitor`] trait for more information.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use random_cut_forest::Tree;
-    /// use random_cut_forest::algorithm::AnomalyScoreVisitor;
-    /// ```
-    ///
     pub fn traverse<'a, U, V>(
-        &'a self, point: &'a Vec<T>,
+        &'a self,
+        point: &'a Vec<T>,
         visitor: &mut V,
-    ) -> U where V: Visitor<T, Output=U>
-    {
-        let nodes: Vec<&Node<T>> = self.iter(point).collect();
-        for (depth, node) in nodes.iter().enumerate().rev() {
-            let depth: T = T::from(depth).unwrap();
-            match node {
-                Node::Leaf(leaf) => visitor.accept_leaf(leaf, depth),
-                Node::Internal(node) => visitor.accept(node, depth),
+    ) -> U where V: Visitor<T, Output=U> {
+        match self.root_node() {
+            Some(node_key) => return self.traverse_helper(point, visitor, node_key, Zero::zero()),
+            None => panic!("Attempting to score on an empty tree")
+        }
+    }
+
+    #[inline(always)]
+    fn traverse_helper<'a, U, V>(
+        &'a self,
+        point: &'a Vec<T>,
+        visitor: &mut V,
+        node_key: usize,
+        depth: T,
+    ) -> U where V: Visitor<T, Output=U> {
+        match self.get_node(node_key) {
+            Node::Leaf(leaf) => visitor.accept_leaf(&leaf, depth),
+            Node::Internal(node) => {
+                let next_node_key = if Cut::is_left_of(point, node.cut()) {
+                    node.left()
+                } else {
+                    node.right()
+                };
+                self.traverse_helper(point, visitor, next_node_key, depth + One::one());
+                visitor.accept(&node, depth);
             }
         }
         visitor.get_result()
@@ -291,20 +305,22 @@ impl<T> Tree<T>
     }
 }
 
-
 /// A type for traversing nodes from root to the nearest leaf.
 ///
 /// Given an input data point/vector, this type traces the path from the root
 /// node of a tree to the leaf node nearest to the input. Returned by
 /// [`Tree::traverse`].
 ///
-pub struct NodeTraverser<'a, T> {
+/// Note that this is not the path used by scoring [`Visitor`] types. The
+/// function [`Tree::traverse`] correctly applies a `Visitor` starting
+/// at the nearest leaf node and traverses up the tree to the root node.
+pub struct NodeIterator<'a, T> {
     tree: &'a Tree<T>,
     point: &'a Vec<T>,
     current_node_key: Option<usize>,
 }
 
-impl<'a, T> NodeTraverser<'a, T>
+impl<'a, T> NodeIterator<'a, T>
     where T: Float + Sum
 {
 
@@ -314,16 +330,16 @@ impl<'a, T> NodeTraverser<'a, T>
     ///
     /// ```
     /// use random_cut_forest::Tree;
-    /// use random_cut_forest::tree::NodeTraverser;
+    /// use random_cut_forest::tree::NodeIterator;
     ///
     /// let mut tree = Tree::new();
     /// let point = vec![0.0, 0.0];
     ///
     /// // create a new node traverser from a tree and a query point
-    /// let mut node_traverser = NodeTraverser::new(&tree, &point);
+    /// let mut node_traverser = NodeIterator::new(&tree, &point);
     /// ```
     pub fn new(tree: &'a Tree<T>, point: &'a Vec<T>) -> Self {
-        NodeTraverser {
+        NodeIterator {
             tree: tree,
             point: point,
             current_node_key: tree.root_node(),
@@ -345,7 +361,7 @@ impl<'a, T> NodeTraverser<'a, T>
     }
 }
 
-impl<'a, T> Iterator for NodeTraverser<'a, T>
+impl<'a, T> Iterator for NodeIterator<'a, T>
     where T: Float + Sum
 {
     type Item = &'a Node<T>;
@@ -385,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn test_traversal() {
+    fn test_node_iteration() {
         let mut tree: Tree<f32> = Tree::new();
         let query = vec![10.0, 10.0, 10.0, 10.0];
         let nodes: Vec<&Node<f32>> = tree.iter(&query).collect();

@@ -27,11 +27,11 @@
 //!     .map(|p| rcf.anomaly_score(p))
 //!     .collect();
 //! ```
-//! 
+//!
 //! ## Scoring Algorithms
-//! 
+//!
 //! The [`algorithm`] module contains tools and components for creating new
-//! scoring algorithms on random cut forests. See the module contents and 
+//! scoring algorithms on random cut forests. See the module contents and
 //! documentation for instructions and examples.
 //!
 //! ### References
@@ -39,7 +39,7 @@
 //! Sudipto Guha, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random
 //! cut forest based anomaly detection on streams."* International Conference
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
-//! 
+//!
 
 pub mod algorithm;
 
@@ -56,4 +56,4 @@ mod store;
 pub use store::{NodeStore, PointStore};
 
 pub mod tree;
-pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, NodeTraverser, Tree};
+pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, Tree};
