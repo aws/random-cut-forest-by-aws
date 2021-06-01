@@ -23,18 +23,27 @@ import com.amazon.randomcutforest.tree.ITree;
  * This is the interface for a visitor factory the factory corresponds to
  * mapping a (tree,point) pair to a visitor and a mapping for the inverse result
  */
-public class VisitorFactory<R> {
-    public BiFunction<ITree<?, ?>, double[], Visitor<R>> create;
-    public BiFunction<ITree<?, ?>, R, R> liftResult;
+public class VisitorFactory<R> implements IVisitorFactory<R> {
+    private final BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor;
+    private final BiFunction<ITree<?, ?>, R, R> liftResult;
 
-    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> create,
+    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor,
             BiFunction<ITree<?, ?>, R, R> liftResult) {
-        this.create = create;
+        this.newVisitor = newVisitor;
         this.liftResult = liftResult;
     }
 
-    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> create) {
-        this.create = create;
-        this.liftResult = (tree, x) -> x;
+    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor) {
+        this(newVisitor, (tree, x) -> x);
+    }
+
+    @Override
+    public Visitor<R> newVisitor(ITree<?, ?> tree, double[] point) {
+        return newVisitor.apply(tree, point);
+    }
+
+    @Override
+    public R liftResult(ITree<?, ?> tree, R result) {
+        return liftResult.apply(tree, result);
     }
 }
