@@ -28,11 +28,11 @@
 //!     .collect();
 //! ```
 //!
-//! ## Scoring Algorithms
+//! ## Algorithm Visitors
 //!
-//! The [`algorithm`] module contains tools and components for creating new
-//! scoring algorithms on random cut forests. See the module contents and
-//! documentation for instructions and examples.
+//! The [`visitor`] module contains the node visitor components of various
+//! algorithms on random cut forests. See the module documentation for more
+//! information.
 //!
 //! ### References
 //!

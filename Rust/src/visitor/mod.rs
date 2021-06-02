@@ -1,4 +1,4 @@
-//! Module containing components for scoring algorithms on random cut forests.
+//! Module containing algorithm visitors on random cut forests.
 //!
 
 mod visitor;
