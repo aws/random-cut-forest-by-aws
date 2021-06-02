@@ -11,7 +11,7 @@ use std::cell::{Ref, RefMut, RefCell};
 use std::iter::Sum;
 use std::rc::Rc;
 
-use crate::algorithm::Visitor;
+use crate::visitor::Visitor;
 use crate::store::{PointStore, NodeStore};
 use crate::tree::{Cut, Node};
 

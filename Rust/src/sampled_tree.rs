@@ -6,7 +6,7 @@ use std::iter::Sum;
 use std::rc::Rc;
 
 use crate::{PointStore, SamplerResult, StreamSampler};
-use crate::algorithm::Visitor;
+use crate::visitor::Visitor;
 use crate::tree::{AddResult, NodeIterator, Tree};
 
 /// Combination of a tree and a reservoir sampler.

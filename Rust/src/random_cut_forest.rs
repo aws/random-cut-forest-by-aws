@@ -2,7 +2,7 @@ extern crate num_traits;
 use num_traits::{Float, Zero};
 
 use crate::SampledTree;
-use crate::algorithm::AnomalyScoreVisitor;
+use crate::visitor::AnomalyScoreVisitor;
 
 use std::marker::PhantomData;
 use std::iter::Sum;

@@ -3,7 +3,7 @@ use num_traits::{Float, One, Zero};
 
 use std::iter::Sum;
 
-use crate::algorithm::Visitor;
+use crate::visitor::Visitor;
 use crate::tree::{BoundingBox, Internal, Leaf, Tree};
 
 

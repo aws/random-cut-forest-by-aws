@@ -12,11 +12,11 @@ pub trait Visitor<T> {
     /// The output type of the visitor.
     type Output;
 
-    /// Initialize visitor calculation at the leaf node nearest a query point.
+    /// Update on a leaf node in the node traversal.
     ///
     /// This function is called on the leaf node nearest to an input query
-    /// point. The leaf node is typically the first time the visitor is called.
-    /// Therefore, any initialization of visitor fields can occur here.
+    /// point. The leaf node is typically the first time the visitor is called
+    /// but this is dependent on the algorithm using the visitor.
     ///
     /// The depth of the leaf is also provided as an input argument.
     fn accept_leaf(&mut self, node: &Leaf, depth: T);

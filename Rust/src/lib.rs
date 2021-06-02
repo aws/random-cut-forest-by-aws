@@ -41,7 +41,7 @@
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
 //!
 
-pub mod algorithm;
+pub mod visitor;
 
 mod random_cut_forest;
 pub use crate::random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
