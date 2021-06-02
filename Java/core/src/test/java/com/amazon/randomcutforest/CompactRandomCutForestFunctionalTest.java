@@ -632,12 +632,12 @@ public class CompactRandomCutForestFunctionalTest {
     @Test
     public void testUpdateAfterRoundTrip() {
         int dimensions = 10;
-        for (int trials = 0; trials < 1000; trials++) {
+        for (int trials = 0; trials < 100; trials++) {
             RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(64)
                     .precision(Precision.FLOAT_32).build();
 
             Random r = new Random();
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < new Random().nextInt(300); i++) {
                 forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
@@ -650,7 +650,9 @@ public class CompactRandomCutForestFunctionalTest {
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
+                forest.update(point);
             }
         }
     }

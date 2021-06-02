@@ -15,12 +15,14 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import com.amazon.randomcutforest.config.Config;
 
 import java.util.Random;
 
-import com.amazon.randomcutforest.config.Config;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 
 public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
@@ -48,13 +50,26 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
      * The random number generator used in sampling.
      */
-    protected Random random;
+    protected ReplayableRandom random;
 
     /**
      * The point evicted by the last call to {@link #update}, or null if the new
      * point was not accepted by the sampler.
      */
-    protected transient ISampled<Integer> evictedPoint;
+    protected transient ISampled<P> evictedPoint;
+
+    /**
+     * the fraction of points admitted to the sampler even when the sampler can
+     * accept (not full) this helps control the initial behavior of the points and
+     * ensure robustness by ensuring that the samplers do not all sample the initial
+     * set of points.
+     */
+    protected final double initialAcceptFraction;
+
+    /**
+     * The number of points in the sample when full.
+     */
+    protected final int capacity;
 
     /**
      * This field is used to temporarily store the result from a call to
@@ -68,6 +83,17 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
 
     @Override
     public abstract void addPoint(P pointIndex);
+
+    AbstractStreamSampler(Builder<?> builder) {
+        this.capacity = builder.capacity;
+        this.initialAcceptFraction = builder.initialAcceptFraction;
+        this.timeDecay = builder.timeDecay;
+        if (builder.random != null) {
+            this.random = new ReplayableRandom(builder.random);
+        } else {
+            this.random = new ReplayableRandom(builder.randomSeed);
+        }
+    }
 
     /**
      * Weight is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
@@ -156,6 +182,93 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             return clazz.cast(getTimeDecay());
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
+        }
+    }
+
+    /**
+     * @return the number of points contained by the sampler when full.
+     */
+    @Override
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public double getInitialAcceptFraction() {
+        return initialAcceptFraction;
+    }
+
+    public long getRandomSeed() {
+        return random.randomSeed;
+    }
+
+    protected class ReplayableRandom {
+        long randomSeed;
+        Random testRandom;
+
+        ReplayableRandom(long randomSeed) {
+            this.randomSeed = randomSeed;
+        }
+
+        ReplayableRandom(Random random) {
+            this.testRandom = random;
+        }
+
+        double nextDouble() {
+            if (testRandom != null) {
+                return testRandom.nextDouble();
+            }
+            Random newRandom = new Random(randomSeed);
+            randomSeed = newRandom.nextLong();
+            return newRandom.nextDouble();
+        }
+    }
+
+    public static class Builder<T extends Builder<T>> {
+
+        // We use Optional types for optional primitive fields when it doesn't make
+        // sense to use a constant default.
+
+        protected int capacity = DEFAULT_SAMPLE_SIZE;
+        protected double timeDecay = 0;
+        protected Random random = null;
+        protected long randomSeed;
+        protected long maxSequenceIndex = 0;
+        protected long sequenceIndexOfMostRecentLambdaUpdate = 0;
+        protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
+
+        public T capacity(int capacity) {
+            this.capacity = capacity;
+            return (T) this;
+        }
+
+        public T randomSeed(long seed) {
+            this.randomSeed = seed;
+            return (T) this;
+        }
+
+        public T random(Random random) {
+            this.random = random;
+            return (T) this;
+        }
+
+        public T maxSequenceIndex(long maxSequenceIndex) {
+            this.maxSequenceIndex = maxSequenceIndex;
+            return (T) this;
+        }
+
+        public T mostRecentLambdaUpdate(long sequenceIndexOfMostRecentLambdaUpdate) {
+            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentLambdaUpdate;
+            return (T) this;
+        }
+
+        public T initialAcceptFraction(double initialAcceptFraction) {
+            this.initialAcceptFraction = initialAcceptFraction;
+            return (T) this;
+        }
+
+        public T timeDecay(double lambda) {
+            this.timeDecay = lambda;
+            return (T) this;
         }
     }
 }

@@ -75,4 +75,8 @@ public class CompactSamplerState {
      * boolean indicating if the compression is enabled
      */
     private boolean compressed;
+    /**
+     * saving the random state, if desired
+     */
+    private long randomSeed;
 }

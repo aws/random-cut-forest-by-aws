@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -67,49 +66,22 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
      */
     private final Queue<Weighted<P>> sample;
 
-    /**
-     * The number of points in the sample when full.
-     */
-    private final int sampleSize;
-
-    /**
-     * initial behavior
-     */
-    private final double initialAcceptFraction;
-
-    /**
-     * The point evicted by the last call to {@link #update}, or if the new point
-     * was not accepted by the sampler.
-     */
-    private transient ISampled<P> evictedPoint;
-    /**
-     * This field is used to temporarily store the result from a call to
-     * {@link #acceptPoint} for use in the subsequent call to {@link #addPoint}.
-     *
-     * Visible for testing.
-     */
-    protected AcceptPointState acceptPointState;
-
-    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices,
-            double initialAcceptFraction) {
-        super();
-        this.sampleSize = sampleSize;
+    public SimpleStreamSampler(Builder<?> builder) {
+        super(builder);
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
-        this.random = random;
-        this.timeDecay = lambda;
-        this.initialAcceptFraction = initialAcceptFraction;
+        this.timeDecay = builder.timeDecay;
     }
 
-    public SimpleStreamSampler(final int sampleSize, final double lambda, Random random, boolean storeSequenceIndices) {
-        this(sampleSize, lambda, random, false, DEFAULT_INITIAL_ACCEPT_FRACTION);
+    public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled) {
+        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).randomSeed(seed));
     }
 
-    public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndices) {
-        this(sampleSize, lambda, new Random(seed), storeSequenceIndices);
+    public SimpleStreamSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
+        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).random(random));
     }
 
     public SimpleStreamSampler(int sampleSize, double lambda, long seed) {
-        this(sampleSize, lambda, new Random(seed), false);
+        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).randomSeed(seed));
     }
 
     /**
@@ -128,7 +100,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
 
-        if ((sample.size() < sampleSize && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / sampleSize)
+        if ((sample.size() < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / capacity)
                 || weight < sample.element().getWeight()) {
             if (isFull()) {
                 evictedPoint = sample.poll();
@@ -152,7 +124,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
                 "this method should only be called after a successful call to acceptSample(long)");
         sample.add(new Weighted<>(point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
         acceptPointState = null;
-        checkState(sample.size() <= sampleSize, "The number of points in the sampler is greater than the sample size");
+        checkState(sample.size() <= capacity, "The number of points in the sampler is greater than the sample size");
     }
 
     /**
@@ -190,14 +162,6 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     }
 
     /**
-     * @return the number of points contained by the sampler when full.
-     */
-    @Override
-    public int getCapacity() {
-        return sampleSize;
-    }
-
-    /**
      * @return the number of points currently contained by the sampler.
      */
     @Override
@@ -205,7 +169,4 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         return sample.size();
     }
 
-    public double getInitialAcceptFraction() {
-        return initialAcceptFraction;
-    }
 }

@@ -99,6 +99,8 @@ public abstract class BoxCache<Point> implements IBoxCache<Point> {
                 }
             }
             bitSet = newBitSet;
+        } else if (cachedBoxes != null) {
+            remap(map);
         }
     }
 
