@@ -47,6 +47,8 @@ pub use sampler::{SamplerResult, StreamSampler, WeightedSample};
 mod sampled_tree;
 pub use sampled_tree::SampledTree;
 
+mod shared_point_store;
+
 mod store;
 pub use store::{NodeStore, PointStore};
 
