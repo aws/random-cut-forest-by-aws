@@ -50,7 +50,7 @@ public class SimpleStreamSamplerTest {
         lambda = 0.01;
         seed = 42L;
         random = spy(new Random(seed));
-        sampler = new SimpleStreamSampler<>(sampleSize, lambda, random, false);
+        sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize).timeDecay(lambda).random(random).build();
     }
 
     @Test
@@ -59,7 +59,8 @@ public class SimpleStreamSamplerTest {
         // IStreamSampler interface
         assertEquals(lambda, sampler.getTimeDecay());
 
-        SimpleStreamSampler<double[]> uniformSampler = new SimpleStreamSampler<>(11, 0, 14, false);
+        SimpleStreamSampler<double[]> uniformSampler = SimpleStreamSampler.<double[]>builder().capacity(11).timeDecay(0)
+                .randomSeed(14).build();
         assertFalse(uniformSampler.getEvictedPoint().isPresent());
         assertFalse(uniformSampler.isReady());
         assertFalse(uniformSampler.isFull());

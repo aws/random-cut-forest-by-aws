@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
 
 /**
  * <p>
@@ -66,22 +65,14 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
      */
     private final Queue<Weighted<P>> sample;
 
-    public SimpleStreamSampler(Builder<?> builder) {
+    public static <Q> Builder<Q> builder() {
+        return new Builder<>();
+    }
+
+    protected SimpleStreamSampler(Builder<P> builder) {
         super(builder);
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
         this.timeDecay = builder.timeDecay;
-    }
-
-    public SimpleStreamSampler(int sampleSize, double timeDecay, long seed, boolean storeSequenceIndexesEnabled) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).randomSeed(seed));
-    }
-
-    public SimpleStreamSampler(int sampleSize, double timeDecay, Random random, boolean storeSequenceIndexesEnabled) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).random(random));
-    }
-
-    public SimpleStreamSampler(int sampleSize, double timeDecay, long seed) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).randomSeed(seed));
     }
 
     /**
@@ -169,4 +160,9 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         return sample.size();
     }
 
+    public static class Builder<Q> extends AbstractStreamSampler.Builder<Builder<Q>> {
+        public SimpleStreamSampler<Q> build() {
+            return new SimpleStreamSampler<>(this);
+        }
+    }
 }

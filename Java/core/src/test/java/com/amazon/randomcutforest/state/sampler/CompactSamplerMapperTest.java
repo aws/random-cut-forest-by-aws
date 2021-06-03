@@ -39,8 +39,10 @@ public class CompactSamplerMapperTest {
     private static long seed = 4444;
 
     public static Stream<Arguments> nonemptySamplerProvider() {
-        CompactSampler fullSampler1 = new CompactSampler(sampleSize, lambda, seed, false);
-        CompactSampler fullSampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+        CompactSampler fullSampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).randomSeed(seed)
+                .storeSequenceIndexesEnabled(false).build();
+        CompactSampler fullSampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).randomSeed(seed)
+                .storeSequenceIndexesEnabled(true).build();
 
         Random random = new Random();
         long baseIndex = 10_000;
@@ -50,8 +52,10 @@ public class CompactSamplerMapperTest {
             fullSampler2.update(pointReference, baseIndex + i);
         }
 
-        CompactSampler partiallyFullSampler1 = new CompactSampler(sampleSize, lambda, seed, false);
-        CompactSampler partiallyFullSampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+        CompactSampler partiallyFullSampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda)
+                .randomSeed(seed).storeSequenceIndexesEnabled(false).build();
+        CompactSampler partiallyFullSampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda)
+                .randomSeed(seed).storeSequenceIndexesEnabled(true).build();
 
         for (int i = 0; i < sampleSize / 2; i++) {
             int pointReference = random.nextInt();
@@ -66,8 +70,10 @@ public class CompactSamplerMapperTest {
     }
 
     public static Stream<Arguments> samplerProvider() {
-        CompactSampler emptySampler1 = new CompactSampler(sampleSize, lambda, seed, false);
-        CompactSampler emptySampler2 = new CompactSampler(sampleSize, lambda, seed, true);
+        CompactSampler emptySampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).randomSeed(seed)
+                .storeSequenceIndexesEnabled(false).build();
+        CompactSampler emptySampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).randomSeed(seed)
+                .storeSequenceIndexesEnabled(true).build();
 
         return Stream.concat(nonemptySamplerProvider(),
                 Stream.of(Arguments.of("empty sampler without sequence indexes", emptySampler1),

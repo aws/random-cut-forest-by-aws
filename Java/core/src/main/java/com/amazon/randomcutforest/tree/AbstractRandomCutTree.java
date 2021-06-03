@@ -63,27 +63,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
     Random cacheRandom = new Random(0);
     protected int outputAfter;
 
-    public AbstractRandomCutTree(Random random, double boundingBoxCacheFraction, boolean centerOfMassEnabled,
-            boolean storeSequenceIndexesEnabled) {
-        this.testRandom = random;
-        this.boundingBoxCacheFraction = boundingBoxCacheFraction;
-        this.centerOfMassEnabled = centerOfMassEnabled;
-        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
-    }
-
-    public AbstractRandomCutTree(Random random, boolean boundingBoxCacheEnabled, boolean centerOfMassEnabled,
-            boolean storeSequenceIndexesEnabled) {
-        this.testRandom = random;
-        if (boundingBoxCacheEnabled) {
-            this.boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
-        } else {
-            this.boundingBoxCacheFraction = 0;
-        }
-        this.centerOfMassEnabled = centerOfMassEnabled;
-        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
-    }
-
-    public AbstractRandomCutTree(AbstractRandomCutTree.Builder<?> builder) {
+    protected AbstractRandomCutTree(AbstractRandomCutTree.Builder<?> builder) {
         if (builder.random != null) {
             this.testRandom = builder.random;
         } else {

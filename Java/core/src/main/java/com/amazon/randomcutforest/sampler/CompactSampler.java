@@ -21,7 +21,6 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -99,6 +98,50 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * points.
      */
     private final boolean storeSequenceIndexesEnabled;
+
+    public static Builder<?> builder() {
+        return new Builder<>();
+    }
+
+    public static CompactSampler uniformSampler(int sampleSize, long randomSeed, boolean storeSequences) {
+        return new Builder<>().capacity(sampleSize).timeDecay(0).randomSeed(randomSeed)
+                .storeSequenceIndexesEnabled(storeSequences).build();
+    }
+
+    protected CompactSampler(Builder<?> builder) {
+        super(builder);
+        checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
+        checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
+
+        this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
+        this.timeDecay = builder.timeDecay;
+        this.maxSequenceIndex = builder.maxSequenceIndex;
+        this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentTimeDecayUpdate;
+
+        if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
+                || builder.validateHeap) {
+            checkArgument(builder.weight != null && builder.weight.length == builder.capacity, " incorrect state");
+            checkArgument(builder.pointIndex != null && builder.pointIndex.length == builder.capacity,
+                    " incorrect state");
+            checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
+                    " incorrect state");
+            this.weight = builder.weight;
+            this.pointIndex = builder.pointIndex;
+            this.sequenceIndex = builder.sequenceIndex;
+            size = builder.size;
+            reheap(builder.validateHeap);
+        } else {
+            checkArgument(builder.size == 0, "incorrect state");
+            size = 0;
+            weight = new float[builder.capacity];
+            pointIndex = new int[builder.capacity];
+            if (storeSequenceIndexesEnabled) {
+                this.sequenceIndex = new long[builder.capacity];
+            } else {
+                this.sequenceIndex = null;
+            }
+        }
+    }
 
     @Override
     public boolean acceptPoint(long sequenceIndex) {
@@ -336,59 +379,4 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             return new CompactSampler(this);
         }
     }
-
-    public CompactSampler(Builder<?> builder) {
-        super(builder);
-        checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
-        checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
-
-        this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
-        this.timeDecay = builder.timeDecay;
-        this.maxSequenceIndex = builder.maxSequenceIndex;
-        this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentTimeDecayUpdate;
-
-        if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
-                || builder.validateHeap) {
-            checkArgument(builder.weight != null && builder.weight.length == builder.capacity, " incorrect state");
-            checkArgument(builder.pointIndex != null && builder.pointIndex.length == builder.capacity,
-                    " incorrect state");
-            checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
-                    " incorrect state");
-            this.weight = builder.weight;
-            this.pointIndex = builder.pointIndex;
-            this.sequenceIndex = builder.sequenceIndex;
-            size = builder.size;
-            reheap(builder.validateHeap);
-        } else {
-            checkArgument(builder.size == 0, "incorrect state");
-            size = 0;
-            weight = new float[builder.capacity];
-            pointIndex = new int[builder.capacity];
-            if (storeSequenceIndexesEnabled) {
-                this.sequenceIndex = new long[builder.capacity];
-            } else {
-                this.sequenceIndex = null;
-            }
-        }
-    }
-
-    public CompactSampler(int sampleSize, double timeDecay, Random random, boolean storeSequences) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
-                .random(random));
-    };
-
-    public CompactSampler(int sampleSize, double timeDecay, long randomSeed, boolean storeSequences) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
-                .randomSeed(randomSeed));
-    };
-
-    public CompactSampler(int sampleSize, double timeDecay, long randomSeed, boolean storeSequences, double fraction) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
-                .randomSeed(randomSeed).initialAcceptFraction(fraction));
-    };
-
-    public static CompactSampler uniformSampler(int sampleSize, long randomSeed, boolean storeSequences) {
-        return new CompactSampler(sampleSize, 0, randomSeed, storeSequences);
-    }
-
 }

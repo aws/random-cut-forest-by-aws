@@ -61,8 +61,8 @@ public class SamplingTreeBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpTree() {
-            SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler(RandomCutForest.DEFAULT_SAMPLE_SIZE, lambda,
-                    99, storeSequenceIndexesEnabled);
+            SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder()
+                    .capacity(RandomCutForest.DEFAULT_SAMPLE_SIZE).timeDecay(lambda).randomSeed(99).build();
             RandomCutTree tree = RandomCutTree.builder().randomSeed(101)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).build();
             samplingTree = new SamplerPlusTree<>(sampler, tree);

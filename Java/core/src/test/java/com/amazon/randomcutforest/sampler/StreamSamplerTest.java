@@ -43,19 +43,19 @@ public class StreamSamplerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             Random random1 = spy(new Random(seed));
-            CompactSampler sampler1 = new CompactSampler(sampleSize, lambda, random1, false);
+            CompactSampler sampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random1)
+                    .storeSequenceIndexesEnabled(false).build();
 
             Random random2 = spy(new Random(seed));
-            CompactSampler sampler2 = new CompactSampler(sampleSize, lambda, random2, true);
+            CompactSampler sampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random2)
+                    .storeSequenceIndexesEnabled(true).build();
 
             Random random3 = spy(new Random(seed));
-            SimpleStreamSampler<Integer> sampler3 = new SimpleStreamSampler<>(sampleSize, lambda, random3, false);
-
-            Random random4 = spy(new Random(seed));
-            SimpleStreamSampler<Integer> sampler4 = new SimpleStreamSampler<>(sampleSize, lambda, random4, true);
+            SimpleStreamSampler<Integer> sampler3 = SimpleStreamSampler.<Integer>builder().capacity(sampleSize)
+                    .timeDecay(lambda).random(random3).build();
 
             return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2),
-                    Arguments.of(random3, sampler3), Arguments.of(random4, sampler4));
+                    Arguments.of(random3, sampler3));
         }
     }
 
@@ -114,8 +114,10 @@ public class StreamSamplerTest {
      */
     @Test
     public void testCompareSampling() {
-        CompactSampler compact = new CompactSampler(10, 0.001, 10, false);
-        SimpleStreamSampler<double[]> simple = new SimpleStreamSampler<>(10, 0.001, 10, false);
+        CompactSampler compact = CompactSampler.builder().capacity(10).timeDecay(0.001).randomSeed(10)
+                .storeSequenceIndexesEnabled(false).build();
+        SimpleStreamSampler<double[]> simple = SimpleStreamSampler.<double[]>builder().capacity(10).timeDecay(0.001)
+                .randomSeed(10).build();
 
         for (int i = 0; i < 100000; i++) {
             boolean accepted1 = compact.acceptPoint(i);
