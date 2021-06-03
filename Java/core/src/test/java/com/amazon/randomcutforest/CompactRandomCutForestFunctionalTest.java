@@ -503,7 +503,7 @@ public class CompactRandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).compact(true).lambda(1e-5).build();
+                .dimensions(dimensions).randomSeed(randomSeed).compact(true).timeDecay(1e-5).build();
 
         dataSize = 10_000;
 

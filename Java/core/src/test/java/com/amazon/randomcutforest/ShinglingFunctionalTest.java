@@ -295,10 +295,10 @@ public class ShinglingFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).timeDecay(1.0 / 300).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).lambda(1.0 / 300).build();
+                .dimensions(shinglesize).randomSeed(randomSeed).compact(true).timeDecay(1.0 / 300).build();
 
         double amplitude = 50.0;
         double noise = 2.0;

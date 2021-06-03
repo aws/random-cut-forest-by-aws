@@ -51,7 +51,7 @@ import java.util.stream.Stream;
  * </ol>
  * <p>
  * The coefficient function used by CompactSampler is:
- * <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * <code>c(i) = exp(timeDecay * sequenceIndex(i))</code>.
  * </p>
  * <p>
  * Note that the sampling algorithm used is the same as for
@@ -228,8 +228,8 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     }
 
     /**
-     * removes the adjustments to weight in accumulated lambda and resets the
-     * updates to lambda
+     * removes the adjustments to weight in accumulated timeDecay and resets the
+     * updates to timeDecay
      */
     private void reset_weights() {
         if (accumuluatedTimeDecay == 0)
@@ -345,7 +345,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.timeDecay = builder.timeDecay;
         this.maxSequenceIndex = builder.maxSequenceIndex;
-        this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
+        this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentTimeDecayUpdate;
 
         if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
                 || builder.validateHeap) {
@@ -372,18 +372,18 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
     }
 
-    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequences) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+    public CompactSampler(int sampleSize, double timeDecay, Random random, boolean storeSequences) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
                 .random(random));
     };
 
-    public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+    public CompactSampler(int sampleSize, double timeDecay, long randomSeed, boolean storeSequences) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
                 .randomSeed(randomSeed));
     };
 
-    public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences, double fraction) {
-        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+    public CompactSampler(int sampleSize, double timeDecay, long randomSeed, boolean storeSequences, double fraction) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(timeDecay)
                 .randomSeed(randomSeed).initialAcceptFraction(fraction));
     };
 

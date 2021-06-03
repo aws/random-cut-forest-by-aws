@@ -770,7 +770,7 @@ public class RandomCutForestTest {
     public void testUpdateOnSmallBoundingBox() {
         // verifies on small bounding boxes random cuts and tree updates are functional
         RandomCutForest.Builder forestBuilder = RandomCutForest.builder().dimensions(1).numberOfTrees(1).sampleSize(3)
-                .lambda(0.5).randomSeed(0).parallelExecutionEnabled(false);
+                .timeDecay(0.5).randomSeed(0).parallelExecutionEnabled(false);
 
         RandomCutForest forest = forestBuilder.build();
         double[][] data = new double[][] { { 48.08 }, { 48.08000000000001 } };

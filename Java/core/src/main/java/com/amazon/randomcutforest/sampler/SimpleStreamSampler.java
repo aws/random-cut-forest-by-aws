@@ -50,7 +50,7 @@ import java.util.Random;
  * </ol>
  * <p>
  * The coefficient function used by SimpleStreamSampler is:
- * <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * <code>c(i) = exp(timeDecay * sequenceIndex(i))</code>.
  * </p>
  * <p>
  * For a specialized version of this algorithm that uses less runtime memory,
@@ -72,16 +72,16 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
         this.timeDecay = builder.timeDecay;
     }
 
-    public SimpleStreamSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).randomSeed(seed));
+    public SimpleStreamSampler(int sampleSize, double timeDecay, long seed, boolean storeSequenceIndexesEnabled) {
+        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).randomSeed(seed));
     }
 
-    public SimpleStreamSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).random(random));
+    public SimpleStreamSampler(int sampleSize, double timeDecay, Random random, boolean storeSequenceIndexesEnabled) {
+        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).random(random));
     }
 
-    public SimpleStreamSampler(int sampleSize, double lambda, long seed) {
-        this(new Builder<>().capacity(sampleSize).timeDecay(lambda).randomSeed(seed));
+    public SimpleStreamSampler(int sampleSize, double timeDecay, long seed) {
+        this(new Builder<>().capacity(sampleSize).timeDecay(timeDecay).randomSeed(seed));
     }
 
     /**

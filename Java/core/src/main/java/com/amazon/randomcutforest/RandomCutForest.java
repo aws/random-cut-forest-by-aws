@@ -92,10 +92,10 @@ public class RandomCutForest {
     public static final double DEFAULT_OUTPUT_AFTER_FRACTION = 0.25;
 
     /**
-     * If the user doesn't specify an explicit lambda value, then we set it to the
-     * inverse of this coefficient times sample size.
+     * If the user doesn't specify an explicit time decay value, then we set it to
+     * the inverse of this coefficient times sample size.
      */
-    public static final double DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA = 10.0;
+    public static final double DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY = 10.0;
 
     /**
      * Default number of trees to use in the forest.
@@ -199,9 +199,9 @@ public class RandomCutForest {
      */
     protected final int numberOfTrees;
     /**
-     * The decay factor (lambda value) used by stream samplers in this forest.
+     * The decay factor used by stream samplers in this forest.
      */
-    protected double lambda;
+    protected double timeDecay;
     /**
      * Store the time information
      */
@@ -305,7 +305,7 @@ public class RandomCutForest {
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, random.nextLong(),
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, timeDecay, random.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
@@ -330,7 +330,7 @@ public class RandomCutForest {
                     .randomSeed(random.nextLong()).pointStore(tempStore)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, lambda, random.nextLong(),
+            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, timeDecay, random.nextLong(),
                     storeSequenceIndexesEnabled, builder.initialAcceptFraction);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
@@ -347,7 +347,7 @@ public class RandomCutForest {
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda, random.nextLong(),
+            IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, timeDecay, random.nextLong(),
                     storeSequenceIndexesEnabled);
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
@@ -386,8 +386,8 @@ public class RandomCutForest {
             checkArgument(n <= builder.sampleSize, "outputAfter must be smaller or equal to sampleSize");
         });
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
-        builder.lambda.ifPresent(lambda -> {
-            checkArgument(lambda >= 0, "lambda must be greater than or equal to 0");
+        builder.timeDecay.ifPresent(timeDecay -> {
+            checkArgument(timeDecay >= 0, "timeDecay must be greater than or equal to 0");
         });
         builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
@@ -415,7 +415,7 @@ public class RandomCutForest {
         internalShinglingEnabled = builder.internalShinglingEnabled;
         shingleSize = builder.shingleSize;
         dimensions = builder.dimensions;
-        lambda = builder.lambda.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA * sampleSize));
+        timeDecay = builder.timeDecay.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * sampleSize));
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
@@ -501,11 +501,10 @@ public class RandomCutForest {
     }
 
     /**
-     * @return return the decay factor (lambda value) used by stream samplers in
-     *         this forest.
+     * @return return the decay factor used by stream samplers in this forest.
      */
-    public double getLambda() {
-        return lambda;
+    public double getTimeDecay() {
+        return timeDecay;
     }
 
     /**
@@ -688,12 +687,12 @@ public class RandomCutForest {
     /**
      * changes the setting of time dependent sampling on the fly
      * 
-     * @param lambda new value of sampling rate
+     * @param timeDecay new value of sampling rate
      */
-    public void setLambda(double lambda) {
-        checkArgument(0 <= lambda, "lambda must be greater than or equal to 0");
-        this.lambda = lambda;
-        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.TIME_DECAY, lambda));
+    public void setTimeDecay(double timeDecay) {
+        checkArgument(0 <= timeDecay, "timeDecay must be greater than or equal to 0");
+        this.timeDecay = timeDecay;
+        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.TIME_DECAY, timeDecay));
     }
 
     /**
@@ -1283,7 +1282,7 @@ public class RandomCutForest {
         private int sampleSize = DEFAULT_SAMPLE_SIZE;
         private Optional<Integer> outputAfter = Optional.empty();
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
-        private Optional<Double> lambda = Optional.empty();
+        private Optional<Double> timeDecay = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
         private boolean compact = DEFAULT_COMPACT;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
@@ -1325,8 +1324,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T lambda(double lambda) {
-            this.lambda = Optional.of(lambda);
+        public T timeDecay(double timeDecay) {
+            this.timeDecay = Optional.of(timeDecay);
             return (T) this;
         }
 

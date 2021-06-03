@@ -45,7 +45,7 @@ public class RandomCutForestBuilderTest {
         threadPoolSize = 9;
 
         forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize).outputAfter(outputAfter)
-                .dimensions(dimensions).lambda(lambda).randomSeed(randomSeed).storeSequenceIndexesEnabled(true)
+                .dimensions(dimensions).timeDecay(lambda).randomSeed(randomSeed).storeSequenceIndexesEnabled(true)
                 .centerOfMassEnabled(true).parallelExecutionEnabled(true).threadPoolSize(threadPoolSize).build();
     }
 
@@ -55,7 +55,7 @@ public class RandomCutForestBuilderTest {
         assertEquals(sampleSize, forest.getSampleSize());
         assertEquals(outputAfter, forest.getOutputAfter());
         assertEquals(dimensions, forest.getDimensions());
-        assertEquals(lambda, forest.getLambda());
+        assertEquals(lambda, forest.getTimeDecay());
         assertTrue(forest.isStoreSequenceIndexesEnabled());
         assertTrue(forest.isCenterOfMassEnabled());
         assertTrue(forest.isParallelExecutionEnabled());
@@ -101,13 +101,13 @@ public class RandomCutForestBuilderTest {
     @Test
     public void testForestBuilderWithDefaultParallelExecutionThreadPoolSize() {
         RandomCutForest forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .outputAfter(outputAfter).dimensions(dimensions).lambda(lambda).randomSeed(randomSeed)
+                .outputAfter(outputAfter).dimensions(dimensions).timeDecay(lambda).randomSeed(randomSeed)
                 .storeSequenceIndexesEnabled(true).centerOfMassEnabled(true).parallelExecutionEnabled(true).build();
         assertEquals(numberOfTrees, forest.getNumberOfTrees());
         assertEquals(sampleSize, forest.getSampleSize());
         assertEquals(outputAfter, forest.getOutputAfter());
         assertEquals(dimensions, forest.getDimensions());
-        assertEquals(lambda, forest.getLambda());
+        assertEquals(lambda, forest.getTimeDecay());
         assertTrue(forest.isStoreSequenceIndexesEnabled());
         assertTrue(forest.isCenterOfMassEnabled());
         assertTrue(forest.isParallelExecutionEnabled());
@@ -117,44 +117,44 @@ public class RandomCutForestBuilderTest {
     @Test
     public void testForestBuilderWithDefaultLambdaValue() {
         RandomCutForest forest = RandomCutForest.builder().dimensions(4).sampleSize(sampleSize).build();
-        assertEquals(1.0 / (RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA * sampleSize),
-                forest.getLambda());
+        assertEquals(1.0 / (RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * sampleSize),
+                forest.getTimeDecay());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenNumberOfTreesIsZero() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(0)
-                .sampleSize(sampleSize).dimensions(dimensions).lambda(lambda).build());
+                .sampleSize(sampleSize).dimensions(dimensions).timeDecay(lambda).build());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenSampleSizeIsZero() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(0).dimensions(dimensions).lambda(lambda).build());
+                .sampleSize(0).dimensions(dimensions).timeDecay(lambda).build());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenOutputAfterIsNegative() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).outputAfter(-10).dimensions(dimensions).lambda(lambda).build());
+                .sampleSize(sampleSize).outputAfter(-10).dimensions(dimensions).timeDecay(lambda).build());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenOutputAfterIsGreaterThanSample() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).outputAfter(sampleSize + 1).dimensions(dimensions).lambda(lambda).build());
+                .sampleSize(sampleSize).outputAfter(sampleSize + 1).dimensions(dimensions).timeDecay(lambda).build());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenDimensionIsNotProvided() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).lambda(lambda).build());
+                .sampleSize(sampleSize).timeDecay(lambda).build());
     }
 
     @Test
     public void testIllegalExceptionIsThrownWhenLambdaIsNegative() {
         assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).dimensions(dimensions).lambda(-0.1).build());
+                .sampleSize(sampleSize).dimensions(dimensions).timeDecay(-0.1).build());
     }
 
     @Test

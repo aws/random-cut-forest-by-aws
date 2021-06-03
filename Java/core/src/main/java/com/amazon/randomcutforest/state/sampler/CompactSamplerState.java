@@ -64,7 +64,7 @@ public class CompactSamplerState {
      */
     private double timeDecay;
     /**
-     * Last update of lambda
+     * Last update of timeDecay
      */
     private long sequenceIndexOfMostRecentTimeDecayUpdate;
     /**

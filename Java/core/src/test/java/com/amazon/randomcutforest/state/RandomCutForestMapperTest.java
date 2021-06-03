@@ -65,7 +65,7 @@ public class RandomCutForestMapperTest {
         assertEquals(forest.getSampleSize(), forest2.getSampleSize());
         assertEquals(forest.getOutputAfter(), forest2.getOutputAfter());
         assertEquals(forest.getNumberOfTrees(), forest2.getNumberOfTrees());
-        assertEquals(forest.getLambda(), forest2.getLambda());
+        assertEquals(forest.getTimeDecay(), forest2.getTimeDecay());
         assertEquals(forest.isStoreSequenceIndexesEnabled(), forest2.isStoreSequenceIndexesEnabled());
         assertEquals(forest.isCompact(), forest2.isCompact());
         assertEquals(forest.getPrecision(), forest2.getPrecision());

@@ -27,7 +27,7 @@ import com.amazon.randomcutforest.config.Config;
 public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
      * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
+     * values of timeDecay we become more biased in favor of recent points.
      */
     protected double timeDecay;
 
@@ -38,12 +38,12 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     protected long mostRecentTimeDecayUpdate = 0;
 
     /**
-     * most recent timestamp, used to determine lastUpdateOfLambda
+     * most recent timestamp, used to determine lastUpdateOfTimeDecay
      */
     protected long maxSequenceIndex = 0;
 
     /**
-     * The accumulated sum of lambda before the last update
+     * The accumulated sum of timeDecay before the last update
      */
     protected double accumuluatedTimeDecay = 0;
 
@@ -99,7 +99,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * Weight is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
      *
      * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
+     * <li><code>w(i) = exp(timeDecay * sequenceIndex)</code></li>
      * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
      * </ul>
      * <p>
@@ -121,26 +121,26 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     }
 
     /**
-     * sets the lambda on the fly. Note that the assumption is that the times stamps
-     * corresponding to changes to lambda and sequenceIndexes are non-decreasing --
-     * the sequenceIndexes can be out of order among themselves within two different
-     * times when lambda was changed.
+     * Sets the timeDecay on the fly. Note that the assumption is that the times
+     * stamps corresponding to changes to timeDecay and sequenceIndexes are
+     * non-decreasing -- the sequenceIndexes can be out of order among themselves
+     * within two different times when timeDecay was changed.
      * 
-     * @param newLambda the new sampling rate
+     * @param newTimeDecay the new sampling rate
      */
-    public void setTimeDecay(double newLambda) {
-        // accumulatedLambda keeps track of adjustments and is zeroed out when the
-        // arrays are
-        // exported for some reason
+    public void setTimeDecay(double newTimeDecay) {
+        // accumulatedTimeDecay keeps track of adjustments and is zeroed out when the
+        // arrays are exported for some reason
         accumuluatedTimeDecay += (maxSequenceIndex - mostRecentTimeDecayUpdate) * timeDecay;
-        timeDecay = newLambda;
+        timeDecay = newTimeDecay;
         mostRecentTimeDecayUpdate = maxSequenceIndex;
     }
 
     /**
-     * @return the lambda value that determines the rate of decay of previously seen
-     *         points. Larger values of lambda indicate a greater bias toward recent
-     *         points. A value of 0 corresponds to a uniform sample over the stream.
+     * @return the time decay value that determines the rate of decay of previously
+     *         seen points. Larger values of time decay indicate a greater bias
+     *         toward recent points. A value of 0 corresponds to a uniform sample
+     *         over the stream.
      */
     public double getTimeDecay() {
         return timeDecay;
@@ -233,7 +233,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         protected Random random = null;
         protected long randomSeed = new Random().nextLong();
         protected long maxSequenceIndex = 0;
-        protected long sequenceIndexOfMostRecentLambdaUpdate = 0;
+        protected long sequenceIndexOfMostRecentTimeDecayUpdate = 0;
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
 
         public T capacity(int capacity) {
@@ -257,7 +257,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         }
 
         public T mostRecentTimeDecayUpdate(long sequenceIndexOfMostRecentTimeDecayUpdate) {
-            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentTimeDecayUpdate;
+            this.sequenceIndexOfMostRecentTimeDecayUpdate = sequenceIndexOfMostRecentTimeDecayUpdate;
             return (T) this;
         }
 
