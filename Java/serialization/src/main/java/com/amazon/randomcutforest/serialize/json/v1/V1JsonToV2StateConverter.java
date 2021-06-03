@@ -127,11 +127,11 @@ public class V1JsonToV2StateConverter {
             CompactSamplerState samplerState = new CompactSamplerState();
             samplerState.setSize(samples.length);
             samplerState.setCapacity(sampler.getSampleSize());
-            samplerState.setLambda(sampler.getLambda());
+            samplerState.setTimeDecay(sampler.getLambda());
             samplerState.setPointIndex(pointIndex);
             samplerState.setWeight(weight);
             samplerState.setSequenceIndex(sequenceIndex);
-            samplerState.setSequenceIndexOfMostRecentLambdaUpdate(0L);
+            samplerState.setSequenceIndexOfMostRecentTimeDecayUpdate(0L);
             samplerState.setMaxSequenceIndex(sampler.getEntriesSeen());
             samplerState.setInitialAcceptFraction(1.0);
 

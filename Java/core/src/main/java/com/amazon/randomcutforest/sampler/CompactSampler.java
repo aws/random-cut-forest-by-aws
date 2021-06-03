@@ -290,7 +290,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
     }
 
-    public static class Builder extends AbstractStreamSampler.Builder<Builder> {
+    public static class Builder<T extends Builder<T>> extends AbstractStreamSampler.Builder<T> {
 
         // We use Optional types for optional primitive fields when it doesn't make
         // sense to use a constant default.
@@ -302,34 +302,34 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         private boolean validateHeap = false;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
-        public CompactSampler.Builder size(int size) {
+        public T size(int size) {
             this.size = size;
-            return this;
+            return (T) this;
         }
 
-        public CompactSampler.Builder weight(float[] weight) {
+        public T weight(float[] weight) {
             this.weight = weight;
-            return this;
+            return (T) this;
         }
 
-        public CompactSampler.Builder pointIndex(int[] pointIndex) {
+        public T pointIndex(int[] pointIndex) {
             this.pointIndex = pointIndex;
-            return this;
+            return (T) this;
         }
 
-        public CompactSampler.Builder sequenceIndex(long[] sequenceIndex) {
+        public T sequenceIndex(long[] sequenceIndex) {
             this.sequenceIndex = sequenceIndex;
-            return this;
+            return (T) this;
         }
 
-        public CompactSampler.Builder storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
             this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
-            return this;
+            return (T) this;
         }
 
-        public CompactSampler.Builder validateHeap(boolean validateHeap) {
+        public T validateHeap(boolean validateHeap) {
             this.validateHeap = validateHeap;
-            return this;
+            return (T) this;
         }
 
         public CompactSampler build() {
@@ -337,7 +337,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
     }
 
-    public CompactSampler(Builder builder) {
+    public CompactSampler(Builder<?> builder) {
         super(builder);
         checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
         checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
@@ -347,10 +347,11 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         this.maxSequenceIndex = builder.maxSequenceIndex;
         this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
 
-        if (builder.weight != null || builder.pointIndex != null || builder.weight != null
-                || builder.sequenceIndex != null || builder.validateHeap) {
-            checkArgument(builder.weight.length == builder.capacity, " incorrect state");
-            checkArgument(builder.pointIndex.length == builder.capacity, " incorrect state");
+        if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
+                || builder.validateHeap) {
+            checkArgument(builder.weight != null && builder.weight.length == builder.capacity, " incorrect state");
+            checkArgument(builder.pointIndex != null && builder.pointIndex.length == builder.capacity,
+                    " incorrect state");
             checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
                     " incorrect state");
             this.weight = builder.weight;
@@ -372,17 +373,17 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     }
 
     public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequences) {
-        this(new Builder().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
                 .random(random));
     };
 
     public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences) {
-        this(new Builder().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
                 .randomSeed(randomSeed));
     };
 
     public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences, double fraction) {
-        this(new Builder().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
                 .randomSeed(randomSeed).initialAcceptFraction(fraction));
     };
 

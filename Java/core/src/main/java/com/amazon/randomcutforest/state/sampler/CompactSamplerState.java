@@ -60,13 +60,13 @@ public class CompactSamplerState {
      */
     private double initialAcceptFraction;
     /**
-     * The lambda time-decay parameter for this sampler
+     * The time-decay parameter for this sampler
      */
-    private double lambda;
+    private double timeDecay;
     /**
      * Last update of lambda
      */
-    private long sequenceIndexOfMostRecentLambdaUpdate;
+    private long sequenceIndexOfMostRecentTimeDecayUpdate;
     /**
      * maximum timestamp seen in update/computeWeight
      */

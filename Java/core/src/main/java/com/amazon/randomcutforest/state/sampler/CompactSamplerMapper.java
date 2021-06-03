@@ -57,11 +57,11 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
             sequenceIndex = null;
         }
 
-        return new CompactSampler.Builder().capacity(state.getCapacity()).timeDecay(state.getLambda())
+        return new CompactSampler.Builder<>().capacity(state.getCapacity()).timeDecay(state.getTimeDecay())
                 .randomSeed(state.getRandomSeed()).storeSequenceIndexesEnabled(state.isStoreSequenceIndicesEnabled())
                 .weight(weight).pointIndex(pointIndex).sequenceIndex(sequenceIndex).validateHeap(validateHeapEnabled)
                 .initialAcceptFraction(state.getInitialAcceptFraction())
-                .mostRecentLambdaUpdate(state.getSequenceIndexOfMostRecentLambdaUpdate())
+                .mostRecentTimeDecayUpdate(state.getSequenceIndexOfMostRecentTimeDecayUpdate())
                 .maxSequenceIndex(state.getMaxSequenceIndex()).size(state.getSize()).build();
     }
 
@@ -71,8 +71,8 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setSize(model.size());
         state.setCompressed(compressionEnabled);
         state.setCapacity(model.getCapacity());
-        state.setLambda(model.getTimeDecay());
-        state.setSequenceIndexOfMostRecentLambdaUpdate(model.getMostRecentTimeDecayUpdate());
+        state.setTimeDecay(model.getTimeDecay());
+        state.setSequenceIndexOfMostRecentTimeDecayUpdate(model.getMostRecentTimeDecayUpdate());
         state.setMaxSequenceIndex(model.getMaxSequenceIndex());
         state.setInitialAcceptFraction(model.getInitialAcceptFraction());
         state.setStoreSequenceIndicesEnabled(model.isStoreSequenceIndexesEnabled());

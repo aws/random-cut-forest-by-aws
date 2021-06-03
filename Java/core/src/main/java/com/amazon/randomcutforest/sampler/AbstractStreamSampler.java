@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.sampler;
 
-import com.amazon.randomcutforest.config.Config;
-
-import java.util.Random;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+
+import java.util.Random;
+
+import com.amazon.randomcutforest.config.Config;
 
 public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     /**
@@ -231,7 +231,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         protected int capacity = DEFAULT_SAMPLE_SIZE;
         protected double timeDecay = 0;
         protected Random random = null;
-        protected long randomSeed;
+        protected long randomSeed = new Random().nextLong();
         protected long maxSequenceIndex = 0;
         protected long sequenceIndexOfMostRecentLambdaUpdate = 0;
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
@@ -256,8 +256,8 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             return (T) this;
         }
 
-        public T mostRecentLambdaUpdate(long sequenceIndexOfMostRecentLambdaUpdate) {
-            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentLambdaUpdate;
+        public T mostRecentTimeDecayUpdate(long sequenceIndexOfMostRecentTimeDecayUpdate) {
+            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentTimeDecayUpdate;
             return (T) this;
         }
 
@@ -266,8 +266,8 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             return (T) this;
         }
 
-        public T timeDecay(double lambda) {
-            this.timeDecay = lambda;
+        public T timeDecay(double timeDecay) {
+            this.timeDecay = timeDecay;
             return (T) this;
         }
     }
