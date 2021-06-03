@@ -291,8 +291,9 @@ public class RandomCutForestMapper
             RandomCutTree tree = RandomCutTree.builder()
                     .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
                     .centerOfMassEnabled(state.isCenterOfMassEnabled()).randomSeed(random.nextLong()).build();
-            SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(state.getSampleSize(),
-                    state.getTimeDecay(), random.nextLong());
+            SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder()
+                    .capacity(state.getSampleSize()).timeDecay(state.getTimeDecay()).randomSeed(random.nextLong())
+                    .build();
             sampler.setMaxSequenceIndex(compactData.getMaxSequenceIndex());
             sampler.setMostRecentTimeDecayUpdate(compactData.getMostRecentTimeDecayUpdate());
 

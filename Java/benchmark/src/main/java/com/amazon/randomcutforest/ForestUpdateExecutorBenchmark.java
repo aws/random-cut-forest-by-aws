@@ -86,8 +86,8 @@ public class ForestUpdateExecutorBenchmark {
                 ComponentList<double[], double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     RandomCutTree tree = RandomCutTree.builder().build();
-                    SimpleStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, lambda,
-                            random.nextLong(), false);
+                    SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize)
+                            .timeDecay(lambda).randomSeed(random.nextLong()).build();
                     SamplerPlusTree<double[], double[]> samplingTree = new SamplerPlusTree<>(sampler, tree);
                     components.add(samplingTree);
                 }
@@ -105,8 +105,8 @@ public class ForestUpdateExecutorBenchmark {
                     CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
                             .randomSeed(random.nextLong()).pointStore(store).boundingBoxCacheFraction(1.0)
                             .centerOfMassEnabled(false).storeSequenceIndexesEnabled(false).build();
-                    SimpleStreamSampler<Integer> sampler = new SimpleStreamSampler<>(sampleSize, lambda,
-                            random.nextLong(), false);
+                    SimpleStreamSampler<Integer> sampler = SimpleStreamSampler.<Integer>builder().capacity(sampleSize)
+                            .timeDecay(lambda).randomSeed(random.nextLong()).build();
                     SamplerPlusTree<Integer, double[]> samplerTree = new SamplerPlusTree<>(sampler, tree);
                     components.add(samplerTree);
                 }

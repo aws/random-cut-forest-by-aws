@@ -20,7 +20,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
 
 /**
@@ -81,23 +80,6 @@ public class RandomCutTree extends AbstractRandomCutTree<double[], Node, double[
      */
     public boolean storeSequenceIndexesEnabled() {
         return super.storeSequenceIndexesEnabled;
-    }
-
-    public RandomCutTree(Random random, double cacheFraction, boolean enableCenterOfMass,
-            boolean enableSequenceIndices) {
-        super(random, cacheFraction, enableCenterOfMass, enableSequenceIndices);
-        root = null;
-    }
-
-    public RandomCutTree(long seed, boolean enableCache, boolean enableCenterOfMass, boolean enableSequenceIndices) {
-        this(new Random(seed), enableCache, enableCenterOfMass, enableSequenceIndices);
-    }
-
-    public RandomCutTree(Random random, boolean enableCache, boolean enableCenterOfMass,
-            boolean enableSequenceIndices) {
-        super(random, enableCache, enableCenterOfMass, enableSequenceIndices);
-        root = null;
-        setBoundingBoxCacheFraction(RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION);
     }
 
     protected RandomCutTree(Builder<?> builder) {

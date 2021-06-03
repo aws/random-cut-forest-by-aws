@@ -305,8 +305,10 @@ public class RandomCutForest {
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, timeDecay, random.nextLong(),
-                    storeSequenceIndexesEnabled, builder.initialAcceptFraction);
+            IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
+                    .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .initialAcceptFraction(builder.initialAcceptFraction).build();
+
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.stateCoordinator = stateCoordinator;
@@ -330,8 +332,11 @@ public class RandomCutForest {
                     .randomSeed(random.nextLong()).pointStore(tempStore)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
-            IStreamSampler<Integer> sampler = new CompactSampler(sampleSize, timeDecay, random.nextLong(),
-                    storeSequenceIndexesEnabled, builder.initialAcceptFraction);
+
+            IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
+                    .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .initialAcceptFraction(builder.initialAcceptFraction).build();
+
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.stateCoordinator = stateCoordinator;
@@ -347,8 +352,9 @@ public class RandomCutForest {
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
-            IStreamSampler<double[]> sampler = new SimpleStreamSampler<>(sampleSize, timeDecay, random.nextLong(),
-                    storeSequenceIndexesEnabled);
+            IStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize)
+                    .timeDecay(timeDecay).randomSeed(random.nextLong()).build();
+
             components.add(new SamplerPlusTree<>(sampler, tree));
         }
         this.stateCoordinator = stateCoordinator;

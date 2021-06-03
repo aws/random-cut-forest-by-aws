@@ -52,10 +52,12 @@ public class CompactSamplerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             Random random1 = spy(new Random(seed));
-            CompactSampler sampler1 = new CompactSampler(sampleSize, lambda, random1, false);
+            CompactSampler sampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random1)
+                    .storeSequenceIndexesEnabled(false).build();
 
             Random random2 = spy(new Random(seed));
-            CompactSampler sampler2 = new CompactSampler(sampleSize, lambda, random2, true);
+            CompactSampler sampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random2)
+                    .storeSequenceIndexesEnabled(true).build();
             return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2));
         }
     }

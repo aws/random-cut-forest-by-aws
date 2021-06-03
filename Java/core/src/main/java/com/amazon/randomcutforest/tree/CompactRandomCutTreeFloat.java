@@ -26,7 +26,11 @@ import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
 
-    public CompactRandomCutTreeFloat(CompactRandomCutTreeFloat.Builder builder) {
+    public static CompactRandomCutTreeFloat.Builder builder() {
+        return new Builder();
+    }
+
+    protected CompactRandomCutTreeFloat(CompactRandomCutTreeFloat.Builder builder) {
         super(builder);
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
