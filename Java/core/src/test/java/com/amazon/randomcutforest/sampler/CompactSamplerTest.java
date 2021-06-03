@@ -83,9 +83,9 @@ public class CompactSamplerTest {
         // weight array is valid heap
         float[] weight = { 0.4f, 0.3f, 0.2f };
         int[] pointIndex = { 1, 2, 3 };
-        CompactSampler sampler = new CompactSampler.Builder().capacity(sampleSize).size(weight.length).lambda(lambda)
-                .random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null).validateHeap(true)
-                .build();
+        CompactSampler sampler = new CompactSampler.Builder<>().capacity(sampleSize).size(weight.length)
+                .timeDecay(lambda).random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null)
+                .validateHeap(true).build();
 
         assertFalse(sampler.getEvictedPoint().isPresent());
         assertFalse(sampler.isStoreSequenceIndexesEnabled());
@@ -236,8 +236,8 @@ public class CompactSamplerTest {
         weightArray[2 * i + 1] = f;
 
         assertThrows(IllegalStateException.class,
-                () -> new CompactSampler.Builder().capacity(sampleSize).size(sampleSize).lambda(lambda).random(random)
-                        .weight(weightArray).pointIndex(sampler.getPointIndexArray())
+                () -> new CompactSampler.Builder<>().capacity(sampleSize).size(sampleSize).timeDecay(lambda)
+                        .random(random).weight(weightArray).pointIndex(sampler.getPointIndexArray())
                         .sequenceIndex(sampler.getSequenceIndexArray()).validateHeap(true).build());
     }
 }

@@ -79,11 +79,11 @@ public class ArraySamplersToCompactStateConverter {
         CompactSamplerState samplerState = new CompactSamplerState();
         samplerState.setSize(sampler.size());
         samplerState.setCapacity(sampler.getCapacity());
-        samplerState.setLambda(sampler.getTimeDecay());
+        samplerState.setTimeDecay(sampler.getTimeDecay());
         samplerState.setPointIndex(pointIndex);
         samplerState.setWeight(weight);
         samplerState.setSequenceIndex(sequenceIndex);
-        samplerState.setSequenceIndexOfMostRecentLambdaUpdate(sampler.getMostRecentTimeDecayUpdate());
+        samplerState.setSequenceIndexOfMostRecentTimeDecayUpdate(sampler.getMostRecentTimeDecayUpdate());
         samplerState.setMaxSequenceIndex(sampler.getMaxSequenceIndex());
         samplerState.setInitialAcceptFraction(sampler.getInitialAcceptFraction());
 

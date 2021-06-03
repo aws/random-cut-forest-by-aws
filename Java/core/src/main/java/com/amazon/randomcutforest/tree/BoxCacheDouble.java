@@ -54,8 +54,8 @@ public class BoxCacheDouble extends BoxCache<double[]> {
     void remap(int[] map) {
         checkArgument(isDirectMap(), "incorrect invocation of remap");
         BoundingBox[] newArray = new BoundingBox[maxSize];
-        for (int i = 0; i < map.length; i++) {
-            newArray[i] = (BoundingBox) cachedBoxes[map[i]];
+        for (int i = 0; i < maxSize; i++) {
+            newArray[map[i]] = (BoundingBox) cachedBoxes[i];
         }
         cachedBoxes = newArray;
     }

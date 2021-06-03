@@ -33,9 +33,9 @@ public class CompactRandomCutTreeState {
     private double boundingBoxCacheFraction;
 
     private boolean partialTreeState;
+    private long seed;
 
     // to be used later
-    private long seed;
     private int id;
     private int dimensions;
     private byte[] auxiliaryData;

@@ -54,8 +54,8 @@ public class BoxCacheFloat extends BoxCache<float[]> {
     void remap(int[] map) {
         checkArgument(isDirectMap(), "incorrect invocation of remap");
         BoundingBoxFloat[] newArray = new BoundingBoxFloat[maxSize];
-        for (int i = 0; i < map.length; i++) {
-            newArray[i] = (BoundingBoxFloat) cachedBoxes[map[i]];
+        for (int i = 0; i < maxSize; i++) {
+            newArray[map[i]] = (BoundingBoxFloat) cachedBoxes[i];
         }
         cachedBoxes = newArray;
     }

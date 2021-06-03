@@ -17,8 +17,6 @@ package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
 import java.util.List;
@@ -92,11 +90,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     protected final long[] sequenceIndex;
 
     /**
-     * The number of points in the sample when full.
-     */
-    protected final int capacity;
-
-    /**
      * The number of points currently in the sample.
      */
     protected int size;
@@ -106,115 +99,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
      * points.
      */
     private final boolean storeSequenceIndexesEnabled;
-
-    /**
-     * the fraction of points admitted to the sampler even when the sampler can
-     * accept (not full) this helps control the initial behavior of the points and
-     * ensure robustness by ensuring that the samplers do not all sample the initial
-     * set of points.
-     */
-    private final double initialAcceptFraction;
-
-    /**
-     * Construct a new CompactSampler.
-     *
-     * @param sampleSize                  The number of points in the sampler when
-     *                                    full.
-     * @param lambda                      The decay factor used for generating the
-     *                                    weight of the point. For greater values of
-     *                                    lambda we become more biased in favor of
-     *                                    recent points.
-     * @param seed                        The seed value used to create a random
-     *                                    number generator.
-     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
-     *                                    sampled points will be stored in the
-     *                                    sampler.
-     */
-    public CompactSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled) {
-        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled, DEFAULT_INITIAL_ACCEPT_FRACTION);
-    }
-
-    /**
-     * Construct a new CompactSampler.
-     *
-     * @param sampleSize                  The number of points in the sampler when
-     *                                    full.
-     * @param lambda                      The decay factor used for generating the
-     *                                    weight of the point. For greater values of
-     *                                    lambda we become more biased in favor of
-     *                                    recent points.
-     * @param seed                        The seed value used to create a random
-     *                                    number generator.
-     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
-     *                                    sampled points will be stored in the
-     *                                    sampler.
-     * @param initialAcceptFraction       the fraction of points admitted even when
-     *                                    the sampler can accept a point
-     */
-    public CompactSampler(int sampleSize, double lambda, long seed, boolean storeSequenceIndexesEnabled,
-            double initialAcceptFraction) {
-        this(sampleSize, lambda, new Random(seed), storeSequenceIndexesEnabled, initialAcceptFraction);
-    }
-
-    /**
-     * Construct a new CompactSampler.
-     *
-     * @param sampleSize                  The number of points in the sampler when
-     *                                    full.
-     * @param lambda                      The decay factor used for generating the
-     *                                    weight of the point. For greater values of
-     *                                    lambda we become more biased in favor of
-     *                                    recent points.
-     * @param random                      A random number generator that will be
-     *                                    used in sampling.
-     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
-     *                                    sampled points will be stored in the
-     *                                    sampler.
-     * @param initialAcceptFraction       the fraction of points admitted to the
-     *                                    sampler even when the sampler can accept
-     */
-    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled,
-            double initialAcceptFraction) {
-        super();
-        checkArgument(initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
-        this.capacity = sampleSize;
-        size = 0;
-        weight = new float[sampleSize];
-        pointIndex = new int[sampleSize];
-        this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
-        if (storeSequenceIndexesEnabled) {
-            this.sequenceIndex = new long[sampleSize];
-        } else {
-            this.sequenceIndex = null;
-        }
-        this.random = random;
-        this.timeDecay = lambda;
-        this.initialAcceptFraction = initialAcceptFraction;
-    }
-
-    /**
-     * same as above with default accept fraction
-     */
-    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequenceIndexesEnabled) {
-        this(sampleSize, lambda, random, storeSequenceIndexesEnabled, DEFAULT_INITIAL_ACCEPT_FRACTION);
-    }
-
-    /**
-     * This convenience constructor creates a SimpleStreamSampler with lambda equal
-     * to 0, which is equivalent to uniform sampling on the stream.
-     *
-     * @param sampleSize                  The number of points in the sampler when
-     *                                    full.
-     * @param seed                        The seed value used to create a random
-     *                                    number generator.
-     * @param storeSequenceIndexesEnabled If true, then the sequence indexes of
-     *                                    sampled points will be stored in the
-     *                                    sampler.
-     * @return a new SimpleStreamSampler which samples uniformly from its input.
-     */
-    public static CompactSampler uniformSampler(int sampleSize, long seed, boolean storeSequenceIndexesEnabled) {
-        return new CompactSampler(sampleSize, 0.0, seed, storeSequenceIndexesEnabled);
-    }
 
     @Override
     public boolean acceptPoint(long sequenceIndex) {
@@ -367,14 +251,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     }
 
     /**
-     * @return the number of points contained by the sampler when full.
-     */
-    @Override
-    public int getCapacity() {
-        return capacity;
-    }
-
-    /**
      * @return the number of points currently contained by the sampler.
      */
     @Override
@@ -398,10 +274,6 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         return storeSequenceIndexesEnabled;
     }
 
-    public double getInitialAcceptFraction() {
-        return initialAcceptFraction;
-    }
-
     private void swapWeights(int a, int b) {
         int tmp = pointIndex[a];
         pointIndex[a] = pointIndex[b];
@@ -418,28 +290,17 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
     }
 
-    public static class Builder<T extends CompactSampler.Builder<T>> {
+    public static class Builder<T extends Builder<T>> extends AbstractStreamSampler.Builder<T> {
 
         // We use Optional types for optional primitive fields when it doesn't make
         // sense to use a constant default.
 
-        private int capacity = DEFAULT_SAMPLE_SIZE;
-        private int size = DEFAULT_SAMPLE_SIZE;
+        private int size = 0;
         private float[] weight = null;
         private int[] pointIndex = null;
         private long[] sequenceIndex = null;
-        private double lambda = 0;
         private boolean validateHeap = false;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
-        private Random random = new Random();
-        private long maxSequenceIndex = 0;
-        private long sequenceIndexOfMostRecentLambdaUpdate = 0;
-        private double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
-
-        public T capacity(int capacity) {
-            this.capacity = capacity;
-            return (T) this;
-        }
 
         public T size(int size) {
             this.size = size;
@@ -471,58 +332,26 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             return (T) this;
         }
 
-        public T seed(long seed) {
-            this.random = new Random(seed);
-            return (T) this;
-        }
-
-        public T random(Random random) {
-            this.random = random;
-            return (T) this;
-        }
-
-        public T maxSequenceIndex(long maxSequenceIndex) {
-            this.maxSequenceIndex = maxSequenceIndex;
-            return (T) this;
-        }
-
-        public T mostRecentLambdaUpdate(long sequenceIndexOfMostRecentLambdaUpdate) {
-            this.sequenceIndexOfMostRecentLambdaUpdate = sequenceIndexOfMostRecentLambdaUpdate;
-            return (T) this;
-        }
-
-        public T initialAcceptFraction(double initialAcceptFraction) {
-            this.initialAcceptFraction = initialAcceptFraction;
-            return (T) this;
-        }
-
-        public T lambda(double lambda) {
-            this.lambda = lambda;
-            return (T) this;
-        }
-
         public CompactSampler build() {
             return new CompactSampler(this);
         }
     }
 
     public CompactSampler(Builder<?> builder) {
-        super();
+        super(builder);
         checkArgument(builder.initialAcceptFraction > 0, " the admittance fraction cannot be <= 0");
         checkArgument(builder.capacity > 0, " sampler capacity cannot be <=0 ");
 
-        this.capacity = builder.capacity;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
-        this.initialAcceptFraction = builder.initialAcceptFraction;
-        this.random = builder.random;
-        this.timeDecay = builder.lambda;
+        this.timeDecay = builder.timeDecay;
         this.maxSequenceIndex = builder.maxSequenceIndex;
         this.mostRecentTimeDecayUpdate = builder.sequenceIndexOfMostRecentLambdaUpdate;
 
-        if (builder.weight != null || builder.pointIndex != null || builder.weight != null
-                || builder.sequenceIndex != null || builder.validateHeap) {
-            checkArgument(builder.weight.length == builder.capacity, " incorrect state");
-            checkArgument(builder.pointIndex.length == builder.capacity, " incorrect state");
+        if (builder.weight != null || builder.pointIndex != null || builder.sequenceIndex != null
+                || builder.validateHeap) {
+            checkArgument(builder.weight != null && builder.weight.length == builder.capacity, " incorrect state");
+            checkArgument(builder.pointIndex != null && builder.pointIndex.length == builder.capacity,
+                    " incorrect state");
             checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
                     " incorrect state");
             this.weight = builder.weight;
@@ -542,4 +371,24 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             }
         }
     }
+
+    public CompactSampler(int sampleSize, double lambda, Random random, boolean storeSequences) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+                .random(random));
+    };
+
+    public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+                .randomSeed(randomSeed));
+    };
+
+    public CompactSampler(int sampleSize, double lambda, long randomSeed, boolean storeSequences, double fraction) {
+        this(new Builder<>().capacity(sampleSize).storeSequenceIndexesEnabled(storeSequences).timeDecay(lambda)
+                .randomSeed(randomSeed).initialAcceptFraction(fraction));
+    };
+
+    public static CompactSampler uniformSampler(int sampleSize, long randomSeed, boolean storeSequences) {
+        return new CompactSampler(sampleSize, 0, randomSeed, storeSequences);
+    }
+
 }
