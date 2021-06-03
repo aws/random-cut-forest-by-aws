@@ -92,9 +92,9 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
         ProtostuffIOUtil.mergeFrom(bytes, state2, schema);
         RandomCutForest forest2 = mapper.toModel(state2);
 
-        double saveLambda = forest.getLambda();
-        forest.setLambda(10 * forest.getLambda());
-        forest2.setLambda(10 * forest2.getLambda());
+        double saveLambda = forest.getTimeDecay();
+        forest.setTimeDecay(10 * forest.getTimeDecay());
+        forest2.setTimeDecay(10 * forest2.getTimeDecay());
 
         for (int i = 0; i < numberOfTrees; i++) {
             CompactSampler sampler = (CompactSampler) ((SamplerPlusTree) forest.getComponents().get(i)).getSampler();

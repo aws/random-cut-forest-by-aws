@@ -162,7 +162,7 @@ public class AttributionExamplesFunctionalTest {
         sampleSize = 256;
         DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().numberOfTrees(100)
                 .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).compact(true)
-                .boundingBoxCacheFraction(1.0).lambda(1e-5).build();
+                .boundingBoxCacheFraction(1.0).timeDecay(1e-5).build();
 
         dataSize = 2000 + 5;
 

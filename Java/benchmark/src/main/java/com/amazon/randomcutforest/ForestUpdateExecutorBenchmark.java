@@ -77,7 +77,7 @@ public class ForestUpdateExecutorBenchmark {
         public void setUpExecutor() {
 
             int sampleSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
-            double lambda = 1.0 / (sampleSize * RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA);
+            double lambda = 1.0 / (sampleSize * RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY);
             int threadPoolSize = 4;
             Random random = new Random();
 

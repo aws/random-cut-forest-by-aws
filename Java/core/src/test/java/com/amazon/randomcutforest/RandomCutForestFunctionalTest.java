@@ -452,7 +452,7 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1e-5)
+                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1e-5)
                 .storeSequenceIndexesEnabled(true).build();
 
         dataSize = 10_000;
@@ -682,11 +682,11 @@ public class RandomCutForestFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
+                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1.0 / 300)
                 .storeSequenceIndexesEnabled(true).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
+                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1.0 / 300)
                 .storeSequenceIndexesEnabled(true).build();
 
         double amplitude = 50.0;

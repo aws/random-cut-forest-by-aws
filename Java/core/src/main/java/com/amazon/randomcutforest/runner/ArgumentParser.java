@@ -215,9 +215,9 @@ public class ArgumentParser {
     }
 
     /**
-     * @return the user-specified value of the lambda parameter
+     * @return the user-specified value of the time-decay parameter
      */
-    public double getLambda() {
+    public double getTimeDecay() {
         if (getWindowSize() > 0) {
             return 1.0 / getWindowSize();
         } else {

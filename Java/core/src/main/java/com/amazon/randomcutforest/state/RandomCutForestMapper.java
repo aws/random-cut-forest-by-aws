@@ -131,7 +131,7 @@ public class RandomCutForestMapper
 
         state.setNumberOfTrees(forest.getNumberOfTrees());
         state.setDimensions(forest.getDimensions());
-        state.setTimeDecay(forest.getLambda());
+        state.setTimeDecay(forest.getTimeDecay());
         state.setSampleSize(forest.getSampleSize());
         state.setShingleSize(forest.getShingleSize());
         state.setCenterOfMassEnabled(forest.isCenterOfMassEnabled());
@@ -263,7 +263,7 @@ public class RandomCutForestMapper
         }
 
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().numberOfTrees(state.getNumberOfTrees())
-                .dimensions(state.getDimensions()).lambda(state.getTimeDecay()).sampleSize(state.getSampleSize())
+                .dimensions(state.getDimensions()).timeDecay(state.getTimeDecay()).sampleSize(state.getSampleSize())
                 .centerOfMassEnabled(state.isCenterOfMassEnabled()).outputAfter(state.getOutputAfter())
                 .parallelExecutionEnabled(ec.isParallelExecutionEnabled()).threadPoolSize(ec.getThreadPoolSize())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).shingleSize(state.getShingleSize())
