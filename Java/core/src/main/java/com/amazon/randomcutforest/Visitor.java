@@ -15,17 +15,17 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
- * This is the interface for a visitor which can be used to query a
- * {@link ITraversable} to produce a result. A visitor is submitted to
- * {@link ITraversable#traverse(double[], Visitor)}, and during the traversal
- * the {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes
- * in the traversal path.
+ * This is the interface for a visitor which can be used to query a ITraversable
+ * to produce a result. A visitor is submitted to
+ * ITraversable#traverse(double[], Visitor), and during the traversal the
+ * {@link #acceptLeaf} and {@link #accept} methods are invoked on the nodes in
+ * the traversal path.
  * <p>
- * See {@link ITraversable#traverse(double[], Visitor)} for details about the
- * traversal path.
+ * See ITraversable#traverse(double[], Visitor) for details about the traversal
+ * path.
  */
 public interface Visitor<R> {
     /**
@@ -34,16 +34,16 @@ public interface Visitor<R> {
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
      */
-    void accept(Node node, int depthOfNode);
+    void accept(INodeView node, int depthOfNode);
 
     /**
      * Visit the leaf node in the traversal path. By default this method proxies to
-     * {@link #accept(Node, int)}.
+     * {@link #accept(INodeView, int)}.
      *
      * @param leafNode    the leaf node being visited
      * @param depthOfNode the depth of the leaf node
      */
-    default void acceptLeaf(Node leafNode, final int depthOfNode) {
+    default void acceptLeaf(INodeView leafNode, final int depthOfNode) {
         accept(leafNode, depthOfNode);
     }
 

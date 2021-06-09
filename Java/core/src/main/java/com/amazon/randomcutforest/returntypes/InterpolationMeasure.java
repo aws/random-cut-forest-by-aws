@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.returntypes;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
+import java.util.function.Function;
 import java.util.stream.Collector;
 
 /**
@@ -144,5 +145,10 @@ public class InterpolationMeasure {
      */
     public InterpolationMeasure scale(double z) {
         return new InterpolationMeasure(sampleSize, measure.scale(z), distances.scale(z), probMass.scale(z));
+    }
+
+    public InterpolationMeasure lift(Function<double[], double[]> projection) {
+        return new InterpolationMeasure(sampleSize, measure.lift(projection), distances.lift(projection),
+                probMass.lift(projection));
     }
 }

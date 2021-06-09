@@ -47,14 +47,14 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
         assertEquals(1, store.size());
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
+        assertEquals(mass1, store.getMass(index1));
+        assertEquals(parentIndex1, store.getParentIndex(index1));
+        assertEquals(leftIndex1, store.getLeftIndex(index1));
+        assertEquals(rightIndex1, store.getRightIndex(index1));
+        assertEquals(cutDimension1, store.getCutDimension(index1));
+        assertEquals(cutValue1, store.getCutValue(index1));
 
         int mass2 = 11;
         short parentIndex2 = 11;
@@ -63,69 +63,22 @@ public class NodeStoreTest {
         int cutDimension2 = 14;
         float cutValue2 = 15.5f;
 
-        short index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
+        int index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
         assertEquals(2, store.size());
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
+        assertEquals(mass2, store.getMass(index2));
+        assertEquals(parentIndex2, store.getParentIndex(index2));
+        assertEquals(leftIndex2, store.getLeftIndex(index2));
+        assertEquals(rightIndex2, store.getRightIndex(index2));
+        assertEquals(cutDimension2, store.getCutDimension(index2));
+        assertEquals(cutValue2, store.getCutValue(index2));
 
         // validate that previous values did not change
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
-    }
-
-    @Test
-    public void testStageNode() {
-        int mass1 = 1;
-        short parentIndex1 = 1;
-        short leftIndex1 = 2;
-        short rightIndex1 = 3;
-        int cutDimension1 = 4;
-        float cutValue1 = 5.5f;
-
-        short index1 = store.stageNode().parentIndex(parentIndex1).leftIndex(leftIndex1).rightIndex(rightIndex1)
-                .cutDimension(cutDimension1).cutValue(cutValue1).mass(mass1).add();
-
-        assertEquals(1, store.size());
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
-
-        int mass2 = 11;
-        short parentIndex2 = 11;
-        short leftIndex2 = 12;
-        short rightIndex2 = 13;
-        int cutDimension2 = 14;
-        float cutValue2 = 15.5f;
-
-        short index2 = store.stageNode().parentIndex(parentIndex2).leftIndex(leftIndex2).rightIndex(rightIndex2)
-                .cutDimension(cutDimension2).cutValue(cutValue2).mass(mass2).add();
-
-        assertEquals(2, store.size());
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
-
-        // validate that previous values did not change
-        assertEquals(mass1, store.mass[index1]);
-        assertEquals(parentIndex1, store.parentIndex[index1]);
-        assertEquals(leftIndex1, store.leftIndex[index1]);
-        assertEquals(rightIndex1, store.rightIndex[index1]);
-        assertEquals(cutDimension1, store.cutDimension[index1]);
-        assertEquals(cutValue1, store.cutValue[index1]);
+        assertEquals(mass1, store.getMass(index1));
+        assertEquals(parentIndex1, store.getParentIndex(index1));
+        assertEquals(leftIndex1, store.getLeftIndex(index1));
+        assertEquals(rightIndex1, store.getRightIndex(index1));
+        assertEquals(cutDimension1, store.getCutDimension(index1));
+        assertEquals(cutValue1, store.getCutValue(index1));
     }
 
     @Test
@@ -154,7 +107,7 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
         int mass2 = 11;
         short parentIndex2 = 11;
@@ -163,18 +116,18 @@ public class NodeStoreTest {
         int cutDimension2 = 14;
         float cutValue2 = 15.5f;
 
-        short index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
+        int index2 = store.addNode(parentIndex2, leftIndex2, rightIndex2, cutDimension2, cutValue2, mass2);
 
-        store.releaseIndex(index1);
+        store.freeNodeManager.releaseIndex(index1);
         assertEquals(1, store.size());
 
         // validate that the values at index2 did not change
-        assertEquals(mass2, store.mass[index2]);
-        assertEquals(parentIndex2, store.parentIndex[index2]);
-        assertEquals(leftIndex2, store.leftIndex[index2]);
-        assertEquals(rightIndex2, store.rightIndex[index2]);
-        assertEquals(cutDimension2, store.cutDimension[index2]);
-        assertEquals(cutValue2, store.cutValue[index2]);
+        assertEquals(mass2, store.getMass(index2));
+        assertEquals(parentIndex2, store.getParentIndex(index2));
+        assertEquals(leftIndex2, store.getLeftIndex(index2));
+        assertEquals(rightIndex2, store.getRightIndex(index2));
+        assertEquals(cutDimension2, store.getCutDimension(index2));
+        assertEquals(cutValue2, store.getCutValue(index2));
     }
 
     @Test
@@ -186,15 +139,15 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
-        store.releaseIndex(index1);
+        int index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        store.freeNodeManager.releaseIndex(index1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex(index1));
+        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex(index1));
     }
 
     @Test
     public void testRemoveFromEmptyStore() {
-        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) 0));
+        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex((short) 0));
     }
 
     @Test
@@ -206,8 +159,8 @@ public class NodeStoreTest {
         int cutDimension1 = 4;
         float cutValue1 = 5.5f;
 
-        short index1 = store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
+        store.addNode(parentIndex1, leftIndex1, rightIndex1, cutDimension1, cutValue1, mass1);
 
-        assertThrows(IllegalArgumentException.class, () -> store.releaseIndex((short) -1));
+        assertThrows(IllegalArgumentException.class, () -> store.freeNodeManager.releaseIndex((short) -1));
     }
 }

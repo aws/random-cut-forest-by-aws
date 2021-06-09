@@ -26,10 +26,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import com.amazon.randomcutforest.sampler.SimpleStreamSamplerV2;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplingTree;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
@@ -51,7 +51,7 @@ public class SamplingTreeBenchmark {
         boolean storeSequenceIndexesEnabled;
 
         double[][] data;
-        SamplingTree<double[]> samplingTree;
+        SamplerPlusTree<double[], double[]> samplingTree;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -61,28 +61,29 @@ public class SamplingTreeBenchmark {
 
         @Setup(Level.Invocation)
         public void setUpTree() {
-            SimpleStreamSamplerV2<double[]> sampler = new SimpleStreamSamplerV2<>(double[].class,
-                    RandomCutForest.DEFAULT_SAMPLE_SIZE, lambda, 99);
+            SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder()
+                    .capacity(RandomCutForest.DEFAULT_SAMPLE_SIZE).timeDecay(lambda).randomSeed(99).build();
             RandomCutTree tree = RandomCutTree.builder().randomSeed(101)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).build();
-            samplingTree = new SamplingTree<>(sampler, tree);
+            samplingTree = new SamplerPlusTree<>(sampler, tree);
         }
     }
 
-    private SamplingTree<double[]> tree;
+    private SamplerPlusTree<double[], double[]> samplerPlusTree;
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public SamplingTree<double[]> update(BenchmarkState state) {
+    public SamplerPlusTree<double[], double[]> update(BenchmarkState state) {
         double[][] data = state.data;
-        tree = state.samplingTree;
+        samplerPlusTree = state.samplingTree;
         long entriesSeen = 0;
 
         for (int i = 0; i < data.length; i++) {
-            Sequential<double[]> sequential = new Sequential<>(data[i], ++entriesSeen);
-            tree.update(sequential);
+            // Sequential<double[]> sequential = new Sequential(data[i], 0.0,
+            // ++entriesSeen);
+            samplerPlusTree.update(data[i], ++entriesSeen);
         }
 
-        return tree;
+        return samplerPlusTree;
     }
 }

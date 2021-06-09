@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest;
 
-import java.util.ArrayList;
 import java.util.Random;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -30,12 +29,18 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.sampler.SimpleStreamSamplerV2;
-import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.IStateCoordinator;
+import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.PassThroughCoordinator;
+import com.amazon.randomcutforest.executor.PointStoreCoordinator;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
+import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.tree.CompactRandomCutTree;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.tree.SamplingTree;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
@@ -60,7 +65,7 @@ public class ForestUpdateExecutorBenchmark {
         boolean compactEnabled;
 
         double[][] data;
-        AbstractForestUpdateExecutor<?> executor;
+        AbstractForestUpdateExecutor<?, ?> executor;
 
         @Setup(Level.Trial)
         public void setUpData() {
@@ -72,52 +77,54 @@ public class ForestUpdateExecutorBenchmark {
         public void setUpExecutor() {
 
             int sampleSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
-            double lambda = 1.0 / (sampleSize * RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA);
+            double lambda = 1.0 / (sampleSize * RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY);
             int threadPoolSize = 4;
             Random random = new Random();
 
             if (!compactEnabled) {
-                IUpdateCoordinator<Sequential<double[]>> updateCoordinator = new PointSequencer();
-                ArrayList<IUpdatable<Sequential<double[]>>> trees = new ArrayList<>();
+                IStateCoordinator<double[], double[]> updateCoordinator = new PassThroughCoordinator();
+                ComponentList<double[], double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
                     RandomCutTree tree = RandomCutTree.builder().build();
-                    SimpleStreamSamplerV2<double[]> sampler = new SimpleStreamSamplerV2<>(double[].class, sampleSize,
-                            lambda, random.nextLong());
-                    SamplingTree<double[]> samplingTree = new SamplingTree<>(sampler, tree);
-                    trees.add(samplingTree);
+                    SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize)
+                            .timeDecay(lambda).randomSeed(random.nextLong()).build();
+                    SamplerPlusTree<double[], double[]> samplingTree = new SamplerPlusTree<>(sampler, tree);
+                    components.add(samplingTree);
                 }
 
                 if (parallelExecutionEnabled) {
-                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
                 } else {
-                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
+                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, components);
                 }
             } else {
-                PointStore store = new PointStore(dimensions, numberOfTrees * sampleSize);
-                IUpdateCoordinator<Sequential<Integer>> updateCoordinator = new PointStoreCoordinator(store);
-                ArrayList<IUpdatable<Sequential<Integer>>> trees = new ArrayList<>();
+                PointStoreDouble store = new PointStoreDouble(dimensions, numberOfTrees * sampleSize);
+                IStateCoordinator<Integer, double[]> updateCoordinator = new PointStoreCoordinator(store);
+                ComponentList<Integer, double[]> components = new ComponentList<>();
                 for (int i = 0; i < numberOfTrees; i++) {
-                    CompactRandomCutTree tree = new CompactRandomCutTree(sampleSize, random.nextLong(), store);
-                    SimpleStreamSamplerV2<Integer> sampler = new SimpleStreamSamplerV2<>(Integer.class, sampleSize,
-                            lambda, random.nextLong());
-                    SamplingTree<Integer> samplingTree = new SamplingTree<>(sampler, tree);
-                    trees.add(samplingTree);
+                    CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
+                            .randomSeed(random.nextLong()).pointStore(store).boundingBoxCacheFraction(1.0)
+                            .centerOfMassEnabled(false).storeSequenceIndexesEnabled(false).build();
+                    SimpleStreamSampler<Integer> sampler = SimpleStreamSampler.<Integer>builder().capacity(sampleSize)
+                            .timeDecay(lambda).randomSeed(random.nextLong()).build();
+                    SamplerPlusTree<Integer, double[]> samplerTree = new SamplerPlusTree<>(sampler, tree);
+                    components.add(samplerTree);
                 }
 
                 if (parallelExecutionEnabled) {
-                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, trees, threadPoolSize);
+                    executor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
                 } else {
-                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, trees);
+                    executor = new SequentialForestUpdateExecutor<>(updateCoordinator, components);
                 }
             }
         }
     }
 
-    private AbstractForestUpdateExecutor<?> executor;
+    private AbstractForestUpdateExecutor<?, ?> executor;
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public AbstractForestUpdateExecutor<?> updateOnly(BenchmarkState state) {
+    public AbstractForestUpdateExecutor<?, ?> updateOnly(BenchmarkState state) {
         double[][] data = state.data;
         executor = state.executor;
 
@@ -130,7 +137,7 @@ public class ForestUpdateExecutorBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public AbstractForestUpdateExecutor<?> updateAndGetAnomalyScore(BenchmarkState state, Blackhole blackhole) {
+    public AbstractForestUpdateExecutor<?, ?> updateAndGetAnomalyScore(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         executor = state.executor;
         double score = 0.0;

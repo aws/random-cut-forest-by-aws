@@ -20,8 +20,8 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * Attribution exposes the attribution of scores produced by ScalarScoreVisitor
@@ -65,7 +65,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
      * score. Assumes nodes are accepted in leaf-to-root order.
      */
     protected boolean[] coordInsideBox;
-    protected BoundingBox shadowBox;
+    protected IBoundingBoxView shadowBox;
 
     public AbstractAttributionVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
 
@@ -110,27 +110,27 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
 
-        BoundingBox smallBox;
+        IBoundingBoxView smallBox;
 
         if (hitDuplicates || ignoreLeaf) {
             // use the sibling bounding box to represent counterfactual "what if point & the
             // candidate near neighbor
             // had not been inserted in the tree"
-            Node sibling = Node.isLeftOf(pointToScore, node) ? node.getRightChild() : node.getLeftChild();
 
-            shadowBox = shadowBox == null ? sibling.getBoundingBox() : shadowBox.getMergedBox(sibling.getBoundingBox());
+            shadowBox = shadowBox == null ? node.getSiblingBoundingBox(pointToScore)
+                    : shadowBox.getMergedBox(node.getSiblingBoundingBox(pointToScore));
 
             smallBox = shadowBox;
         } else {
             smallBox = node.getBoundingBox();
         }
 
-        BoundingBox largeBox = smallBox.getMergedBox(pointToScore);
+        IBoundingBoxView largeBox = smallBox.getMergedBox(pointToScore);
         updateRangesForScoring(smallBox, largeBox);
 
         double probOfCut = sumOfDifferenceInRange / sumOfNewRange;
@@ -166,21 +166,22 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     }
 
     @Override
-    public void acceptLeaf(Node leafNode, int depthOfNode) {
+    public void acceptLeaf(INodeView leafNode, int depthOfNode) {
 
         updateRangesForScoring(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
-        if (leafNode.leafPointEquals(pointToScore)) {
+        if (Arrays.equals(leafNode.getLeafPoint(), pointToScore)) {
             hitDuplicates = true;
         }
 
-        if (hitDuplicates && ((!ignoreLeaf) || (leafNode.getMass() > ignoreLeafMassThreshold))) {
+        if ((hitDuplicates) && ((!ignoreLeaf) || (leafNode.getMass() > ignoreLeafMassThreshold))) {
             savedScore = damp(leafNode.getMass(), treeMass) * scoreSeen(depthOfNode, leafNode.getMass());
         } else {
             savedScore = scoreUnseen(depthOfNode, leafNode.getMass());
         }
 
-        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))) {
+        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))
+                || sumOfNewRange <= 0) {
 
             Arrays.fill(directionalAttribution.high, savedScore / (2 * pointToScore.length));
             Arrays.fill(directionalAttribution.low, savedScore / (2 * pointToScore.length));
@@ -237,7 +238,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
      * @param largeBox The merged bounding box containing smallBox and the point
      *                 being scored.
      */
-    protected void updateRangesForScoring(BoundingBox smallBox, BoundingBox largeBox) {
+    protected void updateRangesForScoring(IBoundingBoxView smallBox, IBoundingBoxView largeBox) {
         sumOfDifferenceInRange = 0.0;
         sumOfNewRange = 0.0;
         Arrays.fill(differenceInRangeVector, 0.0);

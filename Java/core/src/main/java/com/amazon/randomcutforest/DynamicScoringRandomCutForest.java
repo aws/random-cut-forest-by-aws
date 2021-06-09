@@ -28,8 +28,7 @@ import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 
 /**
  * DynamicRandomCutForest extends {@link RandomCutForest} to add methods for
@@ -92,8 +91,8 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point,
-                tree.getRoot().getMass(), ignoreLeafMassThreshold, seen, unseen, damp);
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicScoreVisitor(
+                tree.projectToTree(y), tree.getMass(), ignoreLeafMassThreshold, seen, unseen, damp));
         BinaryOperator<Double> accumulator = Double::sum;
 
         Function<Double, Double> finisher = sum -> sum / numberOfTrees;
@@ -125,14 +124,15 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
 
     public double getDynamicSimulatedScore(double[] point, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp,
-            Function<BoundingBox, double[]> vecSep) {
+            Function<IBoundingBoxView, double[]> vecSep) {
 
         if (!isOutputReady()) {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new SimulatedTransductiveScalarScoreVisitor(
-                point, tree.getRoot().getMass(), seen, unseen, damp, CommonUtils::defaultRCFgVecFunction, vecSep);
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new SimulatedTransductiveScalarScoreVisitor(tree.projectToTree(y), tree.getMass(), seen,
+                        unseen, damp, CommonUtils::defaultRCFgVecFunction, vecSep));
         BinaryOperator<Double> accumulator = Double::sum;
 
         Function<Double, Double> finisher = sum -> sum / numberOfTrees;
@@ -171,8 +171,8 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new DynamicScoreVisitor(point,
-                tree.getRoot().getMass(), ignoreLeafMassThreshold, seen, unseen, damp);
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicScoreVisitor(
+                tree.projectToTree(y), tree.getMass(), ignoreLeafMassThreshold, seen, unseen, damp));
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(highIsCritical, precision,
                 DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
@@ -202,8 +202,10 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
-                tree.getRoot().getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp);
+        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new DynamicAttributionVisitor(tree.projectToTree(y), tree.getMass(),
+                        ignoreLeafMassThreshold, seen, unseen, newDamp),
+                (tree, x) -> x.lift(tree::liftFromTree));
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
@@ -235,8 +237,9 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new DynamicAttributionVisitor(point,
-                tree.getRoot().getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp);
+        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicAttributionVisitor(y,
+                tree.getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp),
+                (tree, x) -> x.lift(tree::liftFromTree));
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
                 highIsCritical, precision, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);

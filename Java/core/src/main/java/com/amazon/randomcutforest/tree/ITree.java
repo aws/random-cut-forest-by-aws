@@ -15,12 +15,26 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.ITraversable;
+import com.amazon.randomcutforest.config.IDynamicConfig;
+import com.amazon.randomcutforest.executor.ITraversable;
 
-public interface ITree<P> extends ITraversable {
+/**
+ * A tree that can potentially interact with a coordinator
+ *
+ * @param <PointReference> The internal point representation expected by the
+ *                         component models in this list.
+ * @param <Point>          The explicit data type of points being passed
+ */
+public interface ITree<PointReference, Point> extends ITraversable, IDynamicConfig {
     int getMass();
 
-    void addPoint(P point);
+    double[] projectToTree(double[] point);
 
-    void deletePoint(P point);
+    double[] liftFromTree(double[] result);
+
+    public int[] projectMissingIndices(int[] list);
+
+    PointReference addPoint(PointReference point, long sequenceIndex);
+
+    PointReference deletePoint(PointReference point, long sequenceIndex);
 }

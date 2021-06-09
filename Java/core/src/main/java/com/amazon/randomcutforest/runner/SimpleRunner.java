@@ -122,7 +122,7 @@ public class SimpleRunner {
 
         RandomCutForest forest = RandomCutForest.builder().numberOfTrees(argumentParser.getNumberOfTrees())
                 .sampleSize(argumentParser.getSampleSize()).dimensions(shingleBuilder.getShingledPointSize())
-                .lambda(argumentParser.getLambda()).randomSeed(argumentParser.getRandomSeed()).build();
+                .timeDecay(argumentParser.getTimeDecay()).randomSeed(argumentParser.getRandomSeed()).build();
 
         algorithm = algorithmInitializer.apply(forest);
     }

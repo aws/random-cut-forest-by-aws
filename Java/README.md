@@ -158,13 +158,13 @@ Test dependencies will be downloaded automatically when invoking `mvn test` or `
 
 ## Benchmarks
 
-The benchmark modules defines microbenchmarks using the [JMH](https://openjdk.java.net/projects/code-tools/jmh/) 
+The benchmark module defines microbenchmarks using the [JMH](https://openjdk.java.net/projects/code-tools/jmh/) 
 framework. Build an executable jar containing the benchmark code by running
 
 ```text
 % # (Optional) To benchmark the code in your local repository, build and install to your local Maven repository
 % # Otherwise, benchmark dependencies will be pulled from Maven central
-% mvn package install -DexcludedGroups=functional
+% mvn package install -DexcludedGroups=functional -Dgpg.skip
 % 
 % mvn -pl benchmark package assembly:single
 ```
@@ -180,4 +180,47 @@ benchmark methods will be executed.
 
 ```text
 % java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
+```
+
+### Custom Profilers
+
+This library defines two custom JMH profilers for use in benchmarks:
+
+| Name | Benchmarks | Description | Command-line Example |
+| ---- | ---------- | ----------- | ------------ |
+| OutputSizeProfiler | StateMapperBenchmark | Measures the length of a String or byte array | `java -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.OutputSizeProfiler` |
+| ObjectGraphSizeProfiler | StateMapperBenchmark | Wraps the `MemoryMeter::measureDeep` method in the [JAMM](https://github.com/jbellis/jamm) library to measure the amount of memory allocated in an object graph. When using this profiler, you need to set the `javaagent` flag to point to the location of the JAMM JAR file. | `java -javaagent:$HOME/.m2/repository/com/github/jbellis/jamm/0.3.3/jamm-0.3.3.jar -jar benchmark/target/randomcutforest-benchmark-1.0-jar-with-dependencies.jar StateMapperBenchmark -prof com.amazon.randomcutforest.profilers.ObjectGraphSizeProfiler` 
+
+Note that you can enable OutputSizeProfiler and ObjectGraphSizeProfiler at the same time by adding their respective `-prof` flags to the command-line.
+
+## Examples
+
+The examples module provides runnable code examples using the library. Build an executable jar containing the
+examples by running:
+
+```text
+% # (Optional) To run examples using code in your local repository, build and install to your local Maven repository
+% # Otherwise, dependencies will be pulled from Maven central
+% mvn package install -DexcludedGroups=functional -Dgpg.skip
+% 
+% mvn -pl examples package assembly:single
+```
+
+To see a list of examples:
+
+```text
+% java -jar examples/target/randomcutforest-examples-1.0-jar-with-dependencies.jar
+Usage: java -cp randomcutforest-examples-1.0.jar [example]
+Examples:
+               json - serialize a Random Cut Forest as a JSON string
+         protostuff - serialize a Random Cut Forest with the protostuff library
+```
+
+To run an example, provide the example name:
+
+```text
+% java -jar examples/target/randomcutforest-examples-1.0-alpha-jar-with-dependencies.jar json
+dimensions = 4, numberOfTrees = 50, sampleSize = 256, precision = DOUBLE
+JSON size = 550295 bytes
+Looks good!
 ```

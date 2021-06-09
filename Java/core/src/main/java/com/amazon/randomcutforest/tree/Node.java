@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
-
-import com.amazon.randomcutforest.Visitor;
 
 /**
  * A Node in a {@link RandomCutTree}. All nodes contain references to the parent
@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.Visitor;
  * BoundingBox that contains all points that are descendents of the given node.
  * Leaf nodes additionally contain a point value.
  */
-public class Node {
+public class Node implements INode<Node> {
 
     /**
      * For a leaf node this contains the leaf point, for a non-leaf node this value
@@ -43,7 +43,7 @@ public class Node {
      * enabled in RandomCutTree, this array will store the sum of all descendent
      * points.
      */
-    private final double[] pointSum;
+    private double[] pointSum;
     /**
      * Parent of this node.
      */
@@ -61,7 +61,6 @@ public class Node {
      * box into two sections. This cut also determines the canonical root-to-leaf
      * traversal path for a given point.
      *
-     * @see RandomCutTree#traverseTree(double[], Visitor)
      */
     private Cut cut;
     /**
@@ -78,7 +77,7 @@ public class Node {
      * RandomCutTree, this set stores the indexes corresponding to times when the
      * given leaf point was added to the tree.
      */
-    private Set<Long> sequenceIndexes;
+    private Map<Long, Integer> sequenceIndexes;
 
     /**
      * Create a new non-leaf Node.
@@ -101,7 +100,9 @@ public class Node {
         if (!enableCenterOfMass) {
             this.pointSum = null;
         } else {
-            this.pointSum = new double[boundingBox.getDimensions()];
+            int dimensions = (getLeftChild().isLeaf()) ? getLeftChild().leafPoint.length
+                    : getLeftChild().pointSum.length;
+            this.pointSum = new double[dimensions];
         }
         leafPoint = null;
     }
@@ -127,7 +128,8 @@ public class Node {
         this.leafPoint = leafPoint;
         this.sequenceIndexes = null;
         this.pointSum = null;
-        boundingBox = new BoundingBox(leafPoint);
+        boundingBox = null;
+        leftChild = rightChild = null;
     }
 
     /**
@@ -203,7 +205,13 @@ public class Node {
      * @return this node's bounding box.
      */
     public BoundingBox getBoundingBox() {
-        return boundingBox;
+        if (isLeaf()) {
+            return new BoundingBox(getLeafPoint());
+        }
+        if (boundingBox != null) { // cache is enabled
+            return boundingBox;
+        }
+        return constructBoxInPlace();
     }
 
     /**
@@ -244,7 +252,7 @@ public class Node {
      * For a leaf node, return the value of the leaf point at the ith coordinate.
      * 
      * @param i A coordinate value.
-     * @return the value of the leaf point at the ith coordinage.
+     * @return the value of the leaf point at the ith coordinate.
      * @throws IllegalStateException if this is not a leaf node.
      */
     public double getLeafPoint(int i) {
@@ -284,15 +292,17 @@ public class Node {
     /**
      * Increment this node's mass by 1.
      */
-    protected void incrementMass() {
+    protected int incrementMass() {
         addMass(1);
+        return getMass();
     }
 
     /**
      * Decrement this node's mass by 1.
      */
-    protected void decrementMass() {
+    protected int decrementMass() {
         addMass(-1);
+        return getMass();
     }
 
     /**
@@ -343,15 +353,18 @@ public class Node {
      * @return the value of this node's point sum.
      */
     public double[] getPointSum() {
-        double[] result = new double[boundingBox.getDimensions()];
+        // if pointsum is set, then a point is either a leafnode or has the pointsum set
+        int dimensions = isLeaf() ? leafPoint.length
+                : (pointSum != null) ? pointSum.length : boundingBox.getDimensions();
+        double[] result = new double[dimensions];
         // makes a new copy to avoid altering the sum
         if (leafPoint != null) {
-            for (int i = 0; i < boundingBox.getDimensions(); i++) {
+            for (int i = 0; i < dimensions; i++) {
                 result[i] = mass * leafPoint[i];
             }
         } else {
             if (pointSum != null) {
-                if (boundingBox.getDimensions() >= 0) {
+                if (pointSum.length > 0) {
                     System.arraycopy(pointSum, 0, result, 0, pointSum.length);
                 }
             }
@@ -369,19 +382,18 @@ public class Node {
      *         disabled.
      */
     public double[] getCenterOfMass() {
-        // this will be 0 if the corresponding flag is not set in the forest
-        double[] result = new double[boundingBox.getDimensions()];
-        // makes a new copy to avoid altering the sum
         if (leafPoint != null) {
-            System.arraycopy(leafPoint, 0, result, 0, boundingBox.getDimensions());
+            return Arrays.copyOf(leafPoint, leafPoint.length);
         } else {
-            if (pointSum != null) {
-                for (int i = 0; i < boundingBox.getDimensions(); i++) {
-                    result[i] = pointSum[i] / mass;
-                }
+            if (pointSum == null) {
+                recomputePointSum();
             }
+            double[] result = new double[pointSum.length];
+            for (int i = 0; i < pointSum.length; i++) {
+                result[i] = pointSum[i] / mass;
+            }
+            return result;
         }
-        return result;
     }
 
     /**
@@ -394,7 +406,7 @@ public class Node {
      */
     public Set<Long> getSequenceIndexes() {
         if (sequenceIndexes != null) {
-            return Collections.unmodifiableSet(sequenceIndexes);
+            return sequenceIndexes.keySet();
         } else {
             return Collections.emptySet();
         }
@@ -407,9 +419,13 @@ public class Node {
      */
     protected void addSequenceIndex(long sequenceIndex) {
         if (sequenceIndexes == null) {
-            sequenceIndexes = new HashSet<>();
+            sequenceIndexes = new HashMap<>();
         }
-        sequenceIndexes.add(sequenceIndex);
+        int num = 0;
+        if (sequenceIndexes.containsKey(sequenceIndex)) {
+            num = sequenceIndexes.get(sequenceIndex);
+        }
+        sequenceIndexes.put(sequenceIndex, num + 1);
     }
 
     /**
@@ -419,7 +435,84 @@ public class Node {
      */
     protected void deleteSequenceIndex(long sequenceIndex) {
         if (sequenceIndexes != null) {
-            sequenceIndexes.remove(sequenceIndex);
+            int num = sequenceIndexes.get(sequenceIndex);
+            if (num == 1) {
+                sequenceIndexes.remove(sequenceIndex);
+            } else {
+                sequenceIndexes.put(sequenceIndex, num - 1);
+            }
         }
     }
+
+    /**
+     * The following function returns the bounding box corresponding to the child
+     * that is not the path from the node to leaf traversed by a point. If such a
+     * box cannot be defined then the function returns null.
+     * 
+     * @param point the point as above
+     * @return the bounding box of the node
+     */
+
+    public BoundingBox getSiblingBoundingBox(double[] point) {
+        Node siblingOfPath = Node.isLeftOf(point, this) ? this.getRightChild() : this.getLeftChild();
+        return (siblingOfPath == null) ? null : siblingOfPath.getBoundingBox();
+    }
+
+    @Override
+    public int getCutDimension() {
+        return getCut().getDimension();
+    }
+
+    @Override
+    public double getCutValue() {
+        return getCut().getValue();
+    }
+
+    public BoundingBox constructBoxInPlace() {
+        if (isLeaf()) {
+            return new BoundingBox(Arrays.copyOf(leafPoint, leafPoint.length),
+                    Arrays.copyOf(leafPoint, leafPoint.length), 0);
+        } else {
+            BoundingBox currentBox = getLeftChild().constructBoxInPlace();
+            return getRightChild().constructBoxInPlace(currentBox);
+        }
+    }
+
+    BoundingBox constructBoxInPlace(BoundingBox currentBox) {
+        if (isLeaf()) {
+            return currentBox.addPoint(getLeafPoint());
+        } else if (boundingBox != null) {
+            return currentBox.addBox(boundingBox);
+        } else {
+            return getRightChild().constructBoxInPlace(getLeftChild().constructBoxInPlace(currentBox));
+        }
+    }
+
+    BoundingBox recomputeBox() {
+        if (boundingBox != null) {
+            boundingBox = constructBoxInPlace();
+        }
+        return boundingBox;
+    }
+
+    void recomputePointSum() {
+        if (!isLeaf()) {
+            double[] leftSum = getLeftChild().getPointSum();
+            double[] rightSum = getRightChild().getPointSum();
+            checkArgument(leftSum.length == rightSum.length, "incorrect state");
+            if (pointSum == null) {
+                pointSum = new double[leftSum.length];
+            }
+            for (int i = 0; i < leftSum.length; i++) {
+                pointSum[i] = leftSum[i] + rightSum[i];
+            }
+        }
+    }
+
+    void addToBox(double[] point) {
+        if (boundingBox != null) {
+            boundingBox.addPoint(point);
+        }
+    }
+
 }

@@ -17,7 +17,7 @@ package com.amazon.randomcutforest;
 
 import java.util.Objects;
 
-import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 
 /**
  * A collection of common utility functions.
@@ -31,9 +31,11 @@ public class CommonUtils {
      * Throws an {@link IllegalArgumentException} with the specified message if the
      * specified input is false.
      *
-     * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not
-     *                  met
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalArgumentException} if {@code condition} is
+     *                  false.
+     * @throws IllegalArgumentException if {@code condition} is false.
      */
     public static void checkArgument(boolean condition, String message) {
         if (!condition) {
@@ -45,11 +47,27 @@ public class CommonUtils {
      * Throws an {@link IllegalStateException} with the specified message if the
      * specified input is false.
      *
-     * @param condition a condition to test
-     * @param message   the error message that will be used if the condition is not
-     *                  met
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @throws IllegalStateException if {@code condition} is false.
      */
     public static void checkState(boolean condition, String message) {
+        if (!condition) {
+            throw new IllegalStateException(message);
+        }
+    }
+
+    /**
+     * Throws an {@link IllegalStateException} with the specified message if the
+     * specified input is false. This would eventually become asserts.
+     *
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalStateException} if {@code condition} is false.
+     * @throws IllegalStateException if {@code condition} is false.
+     */
+    public static void validateInternalState(boolean condition, String message) {
         if (!condition) {
             throw new IllegalStateException(message);
         }
@@ -59,12 +77,16 @@ public class CommonUtils {
      * Throws a {@link NullPointerException} with the specified message if the
      * specified input is null.
      *
-     * @param object  a condition to test
-     * @param message the error message that will be used if the condition is not
-     *                met
+     * @param <T>     An arbitrary type.
+     * @param object  An object reference to test for nullity.
+     * @param message The error message to include in the
+     *                {@code NullPointerException} if {@code object} is null.
+     * @return {@code object} if not null.
+     * @throws NullPointerException if the supplied object is null.
      */
-    public static void checkNotNull(Object object, String message) {
+    public static <T> T checkNotNull(T object, String message) {
         Objects.requireNonNull(object, message);
+        return object;
     }
 
     /**
@@ -78,7 +100,7 @@ public class CommonUtils {
      * @return the probability of separation choosing a random cut
      */
 
-    public static double getProbabilityOfSeparation(final BoundingBox boundingBox, double[] queryPoint) {
+    public static double getProbabilityOfSeparation(final IBoundingBoxView boundingBox, double[] queryPoint) {
         double sumOfNewRange = 0d;
         double sumOfDifferenceInRange = 0d;
 
@@ -161,7 +183,7 @@ public class CommonUtils {
      * @return array of probabilities of cutting in that specific dimension
      */
 
-    public static double[] defaultRCFgVecFunction(BoundingBox boundingBox) {
+    public static double[] defaultRCFgVecFunction(IBoundingBoxView boundingBox) {
         double[] answer = new double[boundingBox.getDimensions()];
 
         for (int i = 0; i < boundingBox.getDimensions(); ++i) {

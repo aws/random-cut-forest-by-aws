@@ -23,13 +23,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.sampler.WeightedPoint;
-
 public class HyperTree extends RandomCutTree {
 
-    private final Function<BoundingBox, double[]> gVecBuild;
+    private final Function<IBoundingBoxView, double[]> gVecBuild;
 
-    public Function<BoundingBox, double[]> getgVec() {
+    public Function<IBoundingBoxView, double[]> getgVec() {
         return gVecBuild;
     }
 
@@ -52,7 +50,8 @@ public class HyperTree extends RandomCutTree {
         }
     }
 
-    private Node makeTreeInt(List<double[]> pointList, int seed, int level, Function<BoundingBox, double[]> vecBuild) {
+    private Node makeTreeInt(List<double[]> pointList, int seed, int level,
+            Function<IBoundingBoxView, double[]> vecBuild) {
 
         if (pointList.size() == 0)
             return null;
@@ -92,7 +91,7 @@ public class HyperTree extends RandomCutTree {
         return thisNode;
     }
 
-    private Cut getCut(BoundingBox bb, Random ring, Function<BoundingBox, double[]> vecSeparation) {
+    private Cut getCut(IBoundingBoxView bb, Random ring, Function<IBoundingBoxView, double[]> vecSeparation) {
         Random rng = new Random(ring.nextInt());
         double cutf = rng.nextDouble();
         double dimf = rng.nextDouble();
@@ -118,20 +117,19 @@ public class HyperTree extends RandomCutTree {
         return new Cut(td, bb.getMinValue(td) + bb.getRange(td) * cutf);
     }
 
-    @Override
-    public void addPoint(WeightedPoint point) {
-        // () -> /dev/null
+    public double[] addPoint(double[] point, long sequenceIndex) {
+        return point;
     }
 
     @Override
-    public void deletePoint(WeightedPoint point) {
-        // () -> /dev/null
+    public double[] deletePoint(double[] point, long sequenceIndex) {
+        return point;
     }
 
     public static class Builder extends RandomCutTree.Builder<Builder> {
-        private Function<BoundingBox, double[]> gVec;
+        private Function<IBoundingBoxView, double[]> gVec;
 
-        public Builder buildGVec(Function<BoundingBox, double[]> gVec) {
+        public Builder buildGVec(Function<IBoundingBoxView, double[]> gVec) {
             this.gVec = gVec;
             return this;
         }
