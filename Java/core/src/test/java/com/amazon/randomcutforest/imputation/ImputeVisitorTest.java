@@ -56,7 +56,7 @@ public class ImputeVisitorTest {
     public void testNew() {
         assertArrayEquals(queryPoint, visitor.getResult());
         assertNotSame(queryPoint, visitor.getResult());
-        assertEquals(10.0, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
     }
 
     @Test
@@ -64,7 +64,7 @@ public class ImputeVisitorTest {
         ImputeVisitor copy = new ImputeVisitor(visitor);
         assertArrayEquals(queryPoint, copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
-        assertEquals(10.0, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
     }
 
     @Test
@@ -166,7 +166,7 @@ public class ImputeVisitorTest {
         ImputeVisitor copy = (ImputeVisitor) visitor.newCopy();
         assertArrayEquals(queryPoint, copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
-        assertEquals(10.0, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
     }
 
     @Test
