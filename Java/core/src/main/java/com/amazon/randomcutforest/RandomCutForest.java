@@ -241,7 +241,7 @@ public class RandomCutForest {
      * A string to define an "execution mode" that can be used to set multiple
      * configuration options. This field is not currently in use.
      */
-    protected String mode;
+    protected String executionMode;
 
     protected IStateCoordinator<?, ?> stateCoordinator;
     protected ComponentList<?, ?> components;
