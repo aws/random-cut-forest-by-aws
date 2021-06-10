@@ -364,11 +364,11 @@ mod tests {
 
     #[test]
     fn test_weighted_sample() {
-        let x1 = WeightedSample { value: "Without education we", weight: 0.0 };
-        let x2 = WeightedSample { value: "are in a horrible and", weight: 1.0 };
-        let x3 = WeightedSample { value: "deadly danger of taking", weight: -2.0 };
-        let x4 = WeightedSample { value: "educated people seriously.", weight: 3.0 };
-        let x5 = WeightedSample { value: "-- G. K. Chesterton", weight: 0.0 };
+        let x1 = WeightedSample { value: "string one", weight: 0.0 };
+        let x2 = WeightedSample { value: "string two", weight: 1.0 };
+        let x3 = WeightedSample { value: "string three", weight: -2.0 };
+        let x4 = WeightedSample { value: "string four", weight: 3.0 };
+        let x5 = WeightedSample { value: "double plus good", weight: 0.0 };
 
         assert!(x3 < x1 && x1 < x2 && x2 < x4);
         assert!(x1 == x5);
@@ -383,7 +383,7 @@ mod tests {
         assert_eq!(sampler.size(), 0);
         assert_eq!(sampler.is_full(), false);
 
-        match sampler.sample("Without education we", 0) {
+        match sampler.sample("string one", 0) {
             SamplerResult::Accepted(evicted) => {
                 assert!(evicted.is_none());
                 assert_eq!(sampler.size(), 1);
@@ -392,7 +392,7 @@ mod tests {
             SamplerResult::Ignored => panic!("Expected data accepted")
         }
 
-        match sampler.sample("are in a horrible and", 10) {
+        match sampler.sample("string two", 10) {
             SamplerResult::Accepted(evicted) => {
                 assert!(evicted.is_none());
                 assert_eq!(sampler.size(), 2);
@@ -401,10 +401,10 @@ mod tests {
             SamplerResult::Ignored => panic!("Expected data accepted")
         }
 
-        match sampler.sample("deadly danger of taking", 100) {
+        match sampler.sample("string three", 100) {
             SamplerResult::Accepted(evicted) => match evicted {
                     Some(evicted) => {
-                        assert_eq!(evicted.value(), &"Without education we");
+                        assert_eq!(evicted.value(), &"string one");
                         assert_eq!(sampler.size(), 2);
                         assert_eq!(sampler.is_full(), true);
                     }
@@ -413,10 +413,10 @@ mod tests {
             SamplerResult::Ignored => panic!("Expected data accepted")
         }
 
-        match sampler.sample("educated people seriously.", 1000) {
+        match sampler.sample("string four", 1000) {
             SamplerResult::Accepted(evicted) => match evicted {
                 Some(evicted) => {
-                    assert_eq!(evicted.value(), &"are in a horrible and");
+                    assert_eq!(evicted.value(), &"string two");
                     assert_eq!(sampler.size(), 2);
                     assert_eq!(sampler.is_full(), true);
                 }
@@ -425,10 +425,10 @@ mod tests {
             SamplerResult::Ignored => panic!("Expected data accepted")
         }
 
-        match sampler.sample("-- G. K. Chesterton", 10000) {
+        match sampler.sample("double plus good", 10000) {
             SamplerResult::Accepted(evicted) => match evicted {
                 Some(evicted) => {
-                    assert_eq!(evicted.value(), &"deadly danger of taking");
+                    assert_eq!(evicted.value(), &"string three");
                     assert_eq!(sampler.size(), 2);
                     assert_eq!(sampler.is_full(), true);
                 }
