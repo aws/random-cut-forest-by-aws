@@ -115,7 +115,6 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
                 "this method should only be called after a successful call to acceptSample(long)");
         sample.add(new Weighted<>(point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
         acceptPointState = null;
-        checkState(sample.size() <= capacity, "The number of points in the sampler is greater than the sample size");
     }
 
     /**
