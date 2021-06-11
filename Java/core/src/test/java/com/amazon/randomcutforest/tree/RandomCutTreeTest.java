@@ -38,6 +38,11 @@ import java.util.Random;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.amazon.randomcutforest.IMultiVisitorFactory;
+import com.amazon.randomcutforest.IVisitorFactory;
+import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.config.Config;
+import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.sampler.Weighted;
 
 public class RandomCutTreeTest {
@@ -80,6 +85,16 @@ public class RandomCutTreeTest {
         // divides its parent in half.
         // The random values are used to set the cut dimensions and values.
 
+        assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
+        assertThrows(IllegalStateException.class, () -> tree.traverse(new double[] { 0, 1 }, visitorFactory));
+        int[] missingIndices = new int[] { 0 };
+        IMultiVisitorFactory<double[]> multiVisitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
+                missingIndices, tree.projectMissingIndices(missingIndices), 1.0);
+        assertThrows(IllegalStateException.class,
+                () -> tree.traverseMulti(new double[] { Double.NaN, 1 }, multiVisitorFactory));
+
         tree.addPoint(new double[] { -1, -1 }, 1);
 
         when(rng.nextDouble()).thenReturn(0.625);
@@ -118,6 +133,8 @@ public class RandomCutTreeTest {
         Node node = tree.getRoot();
         BoundingBox expectedBox = new BoundingBox(new double[] { -1, -1 }).getMergedBox(new double[] { 1, 1 });
         assertThat(node.getBoundingBox(), is(expectedBox));
+        assertEquals(node.getCut().toString(), "Cut(1, -0.500000)");
+        assertTrue(tree.leftOf(new double[] { -100, -1 }, node));
         assertThat(node.getCut().getDimension(), is(1));
         assertThat(node.getCut().getValue(), closeTo(-0.5, EPSILON));
         assertThat(node.getMass(), is(5));
@@ -154,6 +171,15 @@ public class RandomCutTreeTest {
         assertThat(node.getRightChild().getLeafPoint(), is(new double[] { 0, 1 }));
         assertThat(node.getRightChild().getMass(), is(2));
         assertThat(node.getRightChild().getSequenceIndexes(), containsInAnyOrder(4L, 5L));
+
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
+        assertEquals(tree.traverse(new double[] { 0, 1 }, visitorFactory), 0.451, 0.001);
+        int[] missingIndices = new int[] { 0 };
+        IMultiVisitorFactory<double[]> multiVisitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
+                missingIndices, tree.projectMissingIndices(missingIndices), 1.0);
+        assertArrayEquals(tree.traverseMulti(new double[] { Double.NaN, 1 }, multiVisitorFactory),
+                new double[] { 0, 1 }, EPSILON);
     }
 
     @Test

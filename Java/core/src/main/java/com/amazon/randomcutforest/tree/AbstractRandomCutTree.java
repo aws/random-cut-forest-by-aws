@@ -287,6 +287,9 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
      * @return reference of the leaf node
      */
     NodeReference findLeaf(Point point) {
+        if (root == null) {
+            return null;
+        }
         NodeReference nodeReference = root;
         while (!isLeaf(nodeReference)) {
             nodeReference = (leftOf(point, getCutDimension(nodeReference), getCutValue(nodeReference)))
@@ -494,8 +497,8 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             savedSiblingNode = followReference;
 
             // now iterative proceed up the tree and try to construct a cut
+            // currentUnmergedBox != null
 
-            checkArgument(currentUnmergedBox != null, "error");
             followReference = getParent(followReference);
 
             boolean resolved = false;
