@@ -15,6 +15,12 @@
 
 package com.amazon.randomcutforest.imputation;
 
+import com.amazon.randomcutforest.CommonUtils;
+import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.Node;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -24,13 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.CommonUtils;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
 
 public class ImputeVisitorTest {
 
@@ -56,7 +55,7 @@ public class ImputeVisitorTest {
     public void testNew() {
         assertArrayEquals(queryPoint, visitor.getResult());
         assertNotSame(queryPoint, visitor.getResult());
-        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
 
     @Test
@@ -64,7 +63,7 @@ public class ImputeVisitorTest {
         ImputeVisitor copy = new ImputeVisitor(visitor);
         assertArrayEquals(queryPoint, copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
-        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
 
     @Test
@@ -81,7 +80,7 @@ public class ImputeVisitorTest {
         double[] expected = new double[] { -1.0, 2.0, 3.0 };
         assertArrayEquals(expected, visitor.getResult());
 
-        assertEquals(defaultScoreSeenFunction(leafDepth, leafMass), visitor.getRank());
+        assertEquals(defaultScoreSeenFunction(leafDepth, leafMass), visitor.getAnomalyRank());
     }
 
     @Test
@@ -98,7 +97,7 @@ public class ImputeVisitorTest {
         double[] expected = new double[] { -1.0, 2.0, 3.0 };
         assertArrayEquals(expected, visitor.getResult());
 
-        assertEquals(0.0, visitor.getRank());
+        assertEquals(0.0, visitor.getAnomalyRank());
     }
 
     @Test
@@ -115,7 +114,7 @@ public class ImputeVisitorTest {
         double[] expected = new double[] { -1.0, 2.0, 3.0 };
         assertArrayEquals(expected, visitor.getResult());
 
-        assertEquals(defaultScoreUnseenFunction(leafDepth, leafMass), visitor.getRank());
+        assertEquals(defaultScoreUnseenFunction(leafDepth, leafMass), visitor.getAnomalyRank());
     }
 
     @Test
@@ -133,40 +132,29 @@ public class ImputeVisitorTest {
         double[] expected = new double[] { -1.0, 2.0, 3.0 };
         assertArrayEquals(expected, visitor.getResult());
 
-        assertEquals(defaultScoreUnseenFunction(depth, leafMass), visitor.getRank());
+        assertEquals(defaultScoreUnseenFunction(depth, leafMass), visitor.getAnomalyRank());
 
         depth--;
         BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] { 99.0, 4.0, -19.0 });
         node = spy(new Node(null, null, null, boundingBox));
         when(node.getMass()).thenReturn(leafMass + 2);
 
-        double oldRank = visitor.getRank();
+        double oldRank = visitor.getAnomalyRank();
         visitor.accept(node, depth);
         assertArrayEquals(expected, visitor.getResult());
 
         double p = CommonUtils.getProbabilityOfSeparation(boundingBox, expected);
         double expectedRank = p * defaultScoreUnseenFunction(depth, node.getMass()) + (1 - p) * oldRank;
-        assertEquals(expectedRank, visitor.getRank(), EPSILON);
+        assertEquals(expectedRank, visitor.getAnomalyRank(), EPSILON);
     }
 
-    /**
-     * TODO: fix the mocks
-     * 
-     * @Test public void testTrigger() { Cut cut = mock(Cut.class);
-     *       when(cut.getDimension()).thenReturn(1).thenReturn(0);
-     * 
-     *       Node node = mock(Node.class); when(node.getCut()).thenReturn(cut);
-     * 
-     *       assertTrue(visitor.trigger(node)); assertFalse(visitor.trigger(node));
-     *       }
-     */
 
     @Test
     public void testNewCopy() {
         ImputeVisitor copy = (ImputeVisitor) visitor.newCopy();
         assertArrayEquals(queryPoint, copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
-        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
 
     @Test
@@ -178,7 +166,7 @@ public class ImputeVisitorTest {
         Node node = new Node(new double[] { 0, 0, 0 });
         other.acceptLeaf(node, 99);
 
-        assertTrue(other.getRank() < visitor.getRank());
+        assertTrue(other.getAnomalyRank() < visitor.getAnomalyRank());
 
         other.combine(visitor);
         assertArrayEquals(otherPoint, other.getResult());

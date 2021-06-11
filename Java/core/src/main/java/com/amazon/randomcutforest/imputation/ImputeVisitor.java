@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.imputation;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values
@@ -131,10 +131,9 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         this.missing = Arrays.copyOf(original.missing, length);
         this.liftedPoint = Arrays.copyOf(original.liftedPoint, original.liftedPoint.length);
         this.liftedMissing = Arrays.copyOf(original.liftedMissing, original.liftedPoint.length);
-        anomalyRank = Double.MAX_VALUE / 2;
-        distance = Double.MAX_VALUE / 2;
+        anomalyRank = DEFAULT_INIT_VALUE;
+        distance = DEFAULT_INIT_VALUE;
     }
-
     /**
      * Update the rank value using the probability that the imputed query point is
      * separated from this bounding box in a random cut. This step is conceptually
@@ -215,11 +214,11 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         return missing[node.getCutDimension()];
     }
 
-    public double getRank() {
+    protected double getAnomalyRank() {
         return anomalyRank;
     }
 
-    public double getDistance() {
+    protected double getDistance() {
         return distance;
     }
 
