@@ -16,8 +16,10 @@
 package com.amazon.randomcutforest.sampler;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,6 +44,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.amazon.randomcutforest.config.Config;
+
 public class CompactSamplerTest {
 
     private static int sampleSize = 101;
@@ -53,11 +57,11 @@ public class CompactSamplerTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             Random random1 = spy(new Random(seed));
             CompactSampler sampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random1)
-                    .storeSequenceIndexesEnabled(false).build();
+                    .initialAcceptFraction(0.01).storeSequenceIndexesEnabled(false).build();
 
             Random random2 = spy(new Random(seed));
             CompactSampler sampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random2)
-                    .storeSequenceIndexesEnabled(true).build();
+                    .initialAcceptFraction(0.01).storeSequenceIndexesEnabled(true).build();
             return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2));
         }
     }
@@ -69,12 +73,41 @@ public class CompactSamplerTest {
         assertEquals(lambda, sampler.getTimeDecay());
         assertNotNull(sampler.getWeightArray());
         assertNotNull(sampler.getPointIndexArray());
+        long seq = new Random().nextLong();
+        sampler.setMaxSequenceIndex(seq);
+        assertEquals(sampler.getMaxSequenceIndex(), seq);
 
+        double newLambda = new Random().nextDouble();
+        sampler.setTimeDecay(newLambda);
+        assertEquals(sampler.getConfig(Config.TIME_DECAY), newLambda);
+        sampler.setConfig(Config.TIME_DECAY, lambda + newLambda);
+        assertEquals(sampler.getTimeDecay(), lambda + newLambda, 1e-10);
+        assertEquals(sampler.getMostRecentTimeDecayUpdate(), seq);
+        sampler.setMostRecentTimeDecayUpdate(0L);
+        assertEquals(sampler.getMostRecentTimeDecayUpdate(), 0L);
+        assertThrows(IllegalArgumentException.class, () -> sampler.getConfig("foo"));
+        assertThrows(IllegalArgumentException.class, () -> sampler.setConfig("bar", 0L));
         if (sampler.isStoreSequenceIndexesEnabled()) {
             assertNotNull(sampler.getSequenceIndexArray());
         } else {
             assertNull(sampler.getSequenceIndexArray());
         }
+        assertThrows(IllegalStateException.class, () -> sampler.addPoint(1));
+        assertDoesNotThrow(() -> sampler.addPoint(null));
+    }
+
+    @Test
+    public void testNewFromExistingWeightsParameters() {
+        int sampleSize = 3;
+        double lambda = 0.1;
+
+        // weight array is valid heap
+        float[] weight = { 0.4f, 0.3f, 0.2f };
+        int[] pointIndex = { 1, 2, 3 };
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(sampleSize).size(weight.length).timeDecay(lambda)
+                        .random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null)
+                        .storeSequenceIndexesEnabled(true).validateHeap(true).build());
     }
 
     @Test
@@ -85,6 +118,7 @@ public class CompactSamplerTest {
         // weight array is valid heap
         float[] weight = { 0.4f, 0.3f, 0.2f };
         int[] pointIndex = { 1, 2, 3 };
+
         CompactSampler sampler = new CompactSampler.Builder<>().capacity(sampleSize).size(weight.length)
                 .timeDecay(lambda).random(new Random()).weight(weight).pointIndex(pointIndex).sequenceIndex(null)
                 .validateHeap(true).build();
@@ -98,6 +132,11 @@ public class CompactSamplerTest {
             assertEquals(weight[i], sampler.weight[i]);
             assertEquals(pointIndex[i], sampler.pointIndex[i]);
         }
+        sampler.setMaxSequenceIndex(10L);
+        sampler.setTimeDecay(lambda * 2);
+        assertNotEquals(sampler.accumuluatedTimeDecay, 0);
+        sampler.getWeightedSample();
+        assertEquals(sampler.accumuluatedTimeDecay, 0);
     }
 
     @Test
@@ -109,6 +148,35 @@ public class CompactSamplerTest {
         assertEquals(sampleSize, uniformSampler.getCapacity());
         assertEquals(0, uniformSampler.size());
         assertEquals(0.0, uniformSampler.getTimeDecay());
+    }
+
+    @Test
+    public void testBuilderClass() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(0).initialAcceptFraction(0.5).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(1).initialAcceptFraction(0).build());
+        assertThrows(IllegalArgumentException.class, () -> new CompactSampler.Builder<>().capacity(1).size(1).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(1).validateHeap(true).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(1).weight(new float[] { 0 }).build());
+        assertThrows(IllegalArgumentException.class, () -> new CompactSampler.Builder<>().capacity(1)
+                .sequenceIndex(new long[] { 0 }).storeSequenceIndexesEnabled(true).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(1).pointIndex(new int[] { 0 }).build());
+        assertThrows(IllegalArgumentException.class, () -> new CompactSampler.Builder<>().capacity(1)
+                .weight(new float[0]).pointIndex(new int[] { 0 }).build());
+        assertThrows(IllegalArgumentException.class, () -> new CompactSampler.Builder<>().capacity(1)
+                .weight(new float[] { 0 }).pointIndex(new int[0]).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompactSampler.Builder<>().capacity(1).weight(new float[] { 0 }).pointIndex(new int[] { 0 })
+                        .sequenceIndex(new long[0]).storeSequenceIndexesEnabled(true).build());
+        assertDoesNotThrow(() -> new CompactSampler.Builder<>().capacity(1).weight(new float[] { 0 })
+                .pointIndex(new int[] { 0 }).sequenceIndex(new long[] { 0 }).storeSequenceIndexesEnabled(true).build());
+        assertDoesNotThrow(() -> new CompactSampler.Builder<>().capacity(1).weight(new float[] { 0 })
+                .pointIndex(new int[] { 0 }).build());
+
     }
 
     @ParameterizedTest
@@ -154,6 +222,10 @@ public class CompactSamplerTest {
             sampler.addPoint(i);
         }
 
+        assertThrows(IllegalStateException.class, () -> sampler.addPoint(sampleSize));
+        sampler.setTimeDecay(0);
+        // we should only accept sequences of value samplesize - 1 or higher
+        assertThrows(IllegalStateException.class, () -> sampler.acceptPoint(sampleSize - 2));
         // In subsequent calls to sample, either the result is empty or else
         // the new weight is smaller than the evicted weight
 
@@ -201,7 +273,7 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testGetScore(Random random, CompactSampler sampler) {
         when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
-                .thenReturn(0.50);
+                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.0);
 
         sampler.update(1, 101);
         sampler.update(2, 102);
@@ -213,6 +285,7 @@ public class CompactSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
+        assertFalse(sampler.acceptPoint(104));
         List<Weighted<Integer>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<Integer>::getWeight));
 

@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
@@ -50,7 +51,8 @@ public class SimpleStreamSamplerTest {
         lambda = 0.01;
         seed = 42L;
         random = spy(new Random(seed));
-        sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize).timeDecay(lambda).random(random).build();
+        sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize).timeDecay(lambda).random(random)
+                .initialAcceptFraction(0.01).build();
     }
 
     @Test
@@ -102,6 +104,9 @@ public class SimpleStreamSamplerTest {
 
         assertArrayEquals(new double[] { -2.2 }, samples.get(2).getValue());
         assertEquals(weight2, samples.get(2).getWeight());
+
+        sampler.setTimeDecay(2 * sampler.getTimeDecay());
+        assertThrows(IllegalStateException.class, () -> sampler.acceptPoint(1));
     }
 
     @Test
@@ -112,6 +117,8 @@ public class SimpleStreamSamplerTest {
             assertNotNull(sampler.acceptPointState);
             sampler.addPoint(new double[] { Math.random() });
         }
+
+        assertEquals(sampler.getSample().size(), sampleSize);
 
         // In subsequent calls to sample, either the result is empty or else
         // the new weight is smaller than the evicted weight
@@ -128,6 +135,10 @@ public class SimpleStreamSamplerTest {
             }
         }
         assertTrue(numAccepted > 0, "the sampler did not accept any points");
+
+        sampler.addSample(new Weighted<>(null, 0, 10000));
+        assertEquals(sampler.size(), sampleSize + 1);
+        assertThrows(IllegalStateException.class, () -> sampler.addPoint(null));
     }
 
     @Test
@@ -158,7 +169,7 @@ public class SimpleStreamSamplerTest {
     @Test
     public void testGetScore() {
         when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
-                .thenReturn(0.50);
+                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.0);
 
         sampler.update(new double[] { 1.0 }, 101);
         sampler.update(new double[] { 2.0 }, 102);
@@ -170,6 +181,7 @@ public class SimpleStreamSamplerTest {
         expectedScores[2] = -lambda * 103L + Math.log(-Math.log(0.50));
         Arrays.sort(expectedScores);
 
+        assertFalse(sampler.acceptPoint(104));
         List<Weighted<double[]>> samples = sampler.getWeightedSample();
         samples.sort(Comparator.comparing(Weighted<double[]>::getWeight));
 
@@ -177,4 +189,5 @@ public class SimpleStreamSamplerTest {
             assertEquals(expectedScores[i], samples.get(i).getWeight(), EPSILON);
         }
     }
+
 }

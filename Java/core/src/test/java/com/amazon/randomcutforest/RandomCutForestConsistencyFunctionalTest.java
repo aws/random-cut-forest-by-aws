@@ -18,6 +18,8 @@ package com.amazon.randomcutforest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Random;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -46,14 +48,26 @@ public class RandomCutForestConsistencyFunctionalTest {
                 .parallelExecutionEnabled(false).build();
         RandomCutForest pointerCachedParallel = builder.compact(false).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(true).build();
+        RandomCutForest pointerCachedRandomSequential = builder.compact(false)
+                .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(false).build();
+        RandomCutForest pointerCachedRandomParallel = builder.compact(false)
+                .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(true).build();
         RandomCutForest pointerUncachedSequential = builder.compact(false).boundingBoxCacheFraction(0.0)
                 .parallelExecutionEnabled(false).build();
+        RandomCutForest pointerUncachedParallel = builder.compact(false).boundingBoxCacheFraction(0.0)
+                .parallelExecutionEnabled(true).build();
         RandomCutForest compactCachedSequential = builder.compact(true).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(false).build();
         RandomCutForest compactCachedParallel = builder.compact(true).boundingBoxCacheFraction(1.0)
                 .parallelExecutionEnabled(true).build();
         RandomCutForest compactUncachedSequential = builder.compact(true).boundingBoxCacheFraction(0.0)
                 .parallelExecutionEnabled(false).build();
+        RandomCutForest compactUncachedParallel = builder.compact(true).boundingBoxCacheFraction(0.0)
+                .parallelExecutionEnabled(true).build();
+        RandomCutForest compactCachedRandomSequential = builder.compact(true)
+                .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(false).build();
+        RandomCutForest compactCachedRandomParallel = builder.compact(true)
+                .boundingBoxCacheFraction(new Random().nextDouble()).parallelExecutionEnabled(true).build();
 
         NormalMixtureTestData testData = new NormalMixtureTestData();
         double delta = 1e-10;
@@ -68,16 +82,28 @@ public class RandomCutForestConsistencyFunctionalTest {
 
             assertEquals(score, pointerCachedParallel.getAnomalyScore(point), delta);
             assertEquals(score, pointerUncachedSequential.getAnomalyScore(point), delta);
+            assertEquals(score, pointerUncachedParallel.getAnomalyScore(point), delta);
             assertEquals(score, compactCachedSequential.getAnomalyScore(point), delta);
             assertEquals(score, compactCachedParallel.getAnomalyScore(point), delta);
             assertEquals(score, compactUncachedSequential.getAnomalyScore(point), delta);
+            assertEquals(score, compactUncachedParallel.getAnomalyScore(point), delta);
+            assertEquals(score, pointerCachedRandomSequential.getAnomalyScore(point), delta);
+            assertEquals(score, pointerCachedRandomParallel.getAnomalyScore(point), delta);
+            assertEquals(score, compactCachedRandomSequential.getAnomalyScore(point), delta);
+            assertEquals(score, compactCachedRandomParallel.getAnomalyScore(point), delta);
 
             pointerCachedSequential.update(point);
             pointerCachedParallel.update(point);
             pointerUncachedSequential.update(point);
+            pointerUncachedParallel.update(point);
+            pointerCachedRandomSequential.update(point);
+            pointerCachedRandomParallel.update(point);
             compactCachedSequential.update(point);
             compactCachedParallel.update(point);
             compactUncachedSequential.update(point);
+            compactUncachedParallel.update(point);
+            compactCachedRandomSequential.update(point);
+            compactCachedRandomParallel.update(point);
         }
 
         // verify that the test is nontrivial
@@ -91,8 +117,16 @@ public class RandomCutForestConsistencyFunctionalTest {
 
         RandomCutForest compactFloatCached = builder.boundingBoxCacheFraction(1.0).precision(Precision.FLOAT_32)
                 .build();
+        RandomCutForest compactFloatCachedParallel = builder.boundingBoxCacheFraction(1.0).precision(Precision.FLOAT_32)
+                .parallelExecutionEnabled(true).build();
         RandomCutForest compactFloatUncached = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_32)
                 .build();
+        RandomCutForest compactFloatCachedRandom = builder.boundingBoxCacheFraction(new Random().nextDouble())
+                .precision(Precision.FLOAT_32).build();
+        RandomCutForest compactFloatCachedRandomParallel = builder.boundingBoxCacheFraction(new Random().nextDouble())
+                .precision(Precision.FLOAT_32).parallelExecutionEnabled(true).build();
+        RandomCutForest compactFloatUncachedParallel = builder.boundingBoxCacheFraction(0.0)
+                .precision(Precision.FLOAT_32).parallelExecutionEnabled(true).build();
         RandomCutForest compactDoubleCached = builder.boundingBoxCacheFraction(1.0).precision(Precision.FLOAT_64)
                 .build();
 
@@ -107,13 +141,20 @@ public class RandomCutForestConsistencyFunctionalTest {
             }
 
             assertEquals(score, compactFloatUncached.getAnomalyScore(point), 1e-10);
+            assertEquals(score, compactFloatUncachedParallel.getAnomalyScore(point), 1e-10);
+            assertEquals(score, compactFloatCachedRandom.getAnomalyScore(point), 1e-10);
+            assertEquals(score, compactFloatCachedRandomParallel.getAnomalyScore(point), 1e-10);
 
             // we expect some loss of precision when comparing to the score computed as a
             // double
             assertEquals(score, compactDoubleCached.getAnomalyScore(point), 1e-2);
 
             compactFloatCached.update(point);
+            compactFloatCachedParallel.update(point);
             compactFloatUncached.update(point);
+            compactFloatUncachedParallel.update(point);
+            compactFloatCachedRandom.update(point);
+            compactFloatCachedRandomParallel.update(point);
             compactDoubleCached.update(point);
         }
 

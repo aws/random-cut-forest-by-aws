@@ -123,7 +123,9 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
             checkArgument(builder.weight != null && builder.weight.length == builder.capacity, " incorrect state");
             checkArgument(builder.pointIndex != null && builder.pointIndex.length == builder.capacity,
                     " incorrect state");
-            checkArgument(!builder.storeSequenceIndexesEnabled || builder.sequenceIndex.length == builder.capacity,
+            checkArgument(
+                    !builder.storeSequenceIndexesEnabled
+                            || builder.sequenceIndex != null && builder.sequenceIndex.length == builder.capacity,
                     " incorrect state");
             this.weight = builder.weight;
             this.pointIndex = builder.pointIndex;
