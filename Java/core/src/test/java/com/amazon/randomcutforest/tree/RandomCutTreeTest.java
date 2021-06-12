@@ -86,14 +86,15 @@ public class RandomCutTreeTest {
         // The random values are used to set the cut dimensions and values.
 
         assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
+        tree.setBoundingBoxCacheFraction(0.4);
         IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
                 tree.getMass());
         assertThrows(IllegalStateException.class, () -> tree.traverse(new double[] { 0, 1 }, visitorFactory));
-        int[] missingIndices = new int[] { 0 };
+        int[] missingIndices = new int[] { 1 };
         IMultiVisitorFactory<double[]> multiVisitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
                 missingIndices, tree.projectMissingIndices(missingIndices), 1.0);
         assertThrows(IllegalStateException.class,
-                () -> tree.traverseMulti(new double[] { Double.NaN, 1 }, multiVisitorFactory));
+                () -> tree.traverseMulti(new double[] { 1, Double.NaN }, multiVisitorFactory));
 
         tree.addPoint(new double[] { -1, -1 }, 1);
 
@@ -108,6 +109,9 @@ public class RandomCutTreeTest {
 
         // add mass to 0,1
         tree.addPoint(new double[] { 0, 1 }, 5);
+
+        tree.traverseMulti(new double[] { 1, Double.NaN }, multiVisitorFactory);
+        tree.traverseMulti(new double[] { 0, Double.NaN }, multiVisitorFactory);
     }
 
     @Test
@@ -153,6 +157,8 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { 0.0, 0.75 }, node.getCenterOfMass(), EPSILON);
         assertThat(node.getRightChild().isLeaf(), is(true));
         assertThat(node.getRightChild().getLeafPoint(), is(new double[] { 1, 1 }));
+        assertThat(tree.getLeafBoxFromLeafNode(node.getRightChild()),
+                is(new BoundingBox(tree.getPoint(node.getRightChild()), new double[] { 1, 1 })));
         assertThat(node.getRightChild().getMass(), is(1));
         assertThat(node.getRightChild().getSequenceIndexes(), contains(2L));
 
@@ -175,11 +181,16 @@ public class RandomCutTreeTest {
         IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
                 tree.getMass());
         assertEquals(tree.traverse(new double[] { 0, 1 }, visitorFactory), 0.451, 0.001);
-        int[] missingIndices = new int[] { 0 };
+        int[] missingIndices = new int[] { 1 };
         IMultiVisitorFactory<double[]> multiVisitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
                 missingIndices, tree.projectMissingIndices(missingIndices), 1.0);
-        assertArrayEquals(tree.traverseMulti(new double[] { Double.NaN, 1 }, multiVisitorFactory),
+        assertArrayEquals(tree.traverseMulti(new double[] { 0, Double.NaN }, multiVisitorFactory),
                 new double[] { 0, 1 }, EPSILON);
+
+        tree.addPoint(new double[] { 0, 0.75 }, 6);
+
+        assertArrayEquals(tree.traverseMulti(new double[] { 1, Double.NaN }, multiVisitorFactory),
+                new double[] { 1, 1 }, EPSILON);
     }
 
     @Test
@@ -279,6 +290,7 @@ public class RandomCutTreeTest {
         assertThat(node.getMass(), is(3));
         assertArrayEquals(new double[] { 0.0, 2.0 / 3 }, node.getCenterOfMass(), EPSILON);
         assertThat(node.getRightChild().isLeaf(), is(true));
+        tree.setLeafPointReference(node.getRightChild(), null); // should do nothing
         assertThat(node.getRightChild().getLeafPoint(), is(new double[] { 1, 1 }));
         assertThat(node.getRightChild().getMass(), is(1));
         assertThat(node.getRightChild().getSequenceIndexes(), contains(2L));
@@ -298,6 +310,9 @@ public class RandomCutTreeTest {
         assertThat(node.getRightChild().getLeafPoint(), is(new double[] { 0, 1 }));
         assertThat(node.getRightChild().getMass(), is(1));
         assertThat(node.getRightChild().getSequenceIndexes(), contains(5L));
+
+        tree.addToBox(node, node.getRightChild().getLeafPoint());
+        assertThat(node.getBoundingBox(), is(expectedBox));
     }
 
     @Test
@@ -415,6 +430,8 @@ public class RandomCutTreeTest {
         assertThat(parent.getRightChild(), sameInstance(node3));
         assertThat(node1.getParent(), sameInstance(parent));
         assertThat(node3.getParent(), sameInstance(parent));
+
+        assertThrows(IllegalStateException.class, () -> tree.replaceChild(node2, node3, null));
     }
 
     @Test
@@ -453,13 +470,14 @@ public class RandomCutTreeTest {
     }
 
     @Test
-    public void testRandomSeed() {
+    public void testRandomSeedAndBoundingBoxes() {
         // two trees created with the same random number generator should exhibit
         // identical behavior
         long randomSeed = 1234567890L;
         RandomCutTree tree1 = RandomCutTree.defaultTree(randomSeed);
         RandomCutTree tree2 = RandomCutTree.defaultTree(randomSeed);
         RandomCutTree tree3 = RandomCutTree.defaultTree(randomSeed * 2);
+        tree2.setBoundingBoxCacheFraction(0);
 
         double[] point1 = new double[] { 0.1, 108.4, -42.2 };
         double[] point2 = new double[] { -0.1, 90.6, -30.7 };
@@ -480,8 +498,18 @@ public class RandomCutTreeTest {
         assertEquals(cut1.getDimension(), cut2.getDimension());
         assertEquals(cut1.getValue(), cut2.getValue());
 
+        assertEquals(tree1.getRoot().getBoundingBox(), tree2.getRoot().getBoundingBox());
+
         assertNotEquals(cut1.getDimension(), cut3.getDimension());
         assertNotEquals(cut1.getDimension(), cut3.getDimension());
+
+        // should succeed since sequence numbers are stored
+        // should not delete the point
+        tree3.deleteSequenceIndex(tree3.getRoot().getLeftChild(), 0L);
+        assertThrows(IllegalArgumentException.class, () -> tree3
+                .constructBoxInPlace(tree3.getRoot().getRightChild().getBoundingBox(), tree3.getRoot().getLeftChild()));
+        assertEquals(tree3.constructBoxInPlace(tree3.getMutableLeafBoxFromLeafNode(tree3.getRoot().getRightChild()),
+                tree3.getRoot().getLeftChild()), tree1.getBoundingBox(tree1.root));
     }
 
     @Test

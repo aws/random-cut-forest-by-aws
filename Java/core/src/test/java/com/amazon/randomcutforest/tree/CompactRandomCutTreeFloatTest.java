@@ -23,17 +23,21 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.config.Config;
+import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 
 public class CompactRandomCutTreeFloatTest {
@@ -83,14 +87,16 @@ public class CompactRandomCutTreeFloatTest {
         assertThrows(IllegalArgumentException.class, () -> tree.setConfig("foo", 0));
         assertThrows(IllegalArgumentException.class, () -> tree.getConfig("bar"));
         assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
-        tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, 0.0);
+        tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, 0.2);
 
         assertEquals(pointStoreFloat.add(new double[] { -1, -1 }, 1), 0);
         assertEquals(pointStoreFloat.add(new double[] { 1, 1 }, 2), 1);
         assertEquals(pointStoreFloat.add(new double[] { -1, 0 }, 3), 2);
         assertEquals(pointStoreFloat.add(new double[] { 0, 1 }, 4), 3);
         assertEquals(pointStoreFloat.add(new double[] { 0, 1 }, 5), 4);
+        assertEquals(pointStoreFloat.add(new double[] { 0, 0 }, 6), 5);
 
+        assertThrows(IllegalStateException.class, () -> tree.deletePoint(0, 1));
         tree.addPoint(0, 1);
 
         when(rng.nextDouble()).thenReturn(0.625);
@@ -171,6 +177,7 @@ public class CompactRandomCutTreeFloatTest {
         assertThat(tree.getMass(tree.getRightChild(node)), is(2));
         assertEquals(tree.sequenceIndexes[tree.nodeStore.computeLeafIndex(tree.getRightChild(node))].get(4L), 1);
         assertEquals(tree.sequenceIndexes[tree.nodeStore.computeLeafIndex(tree.getRightChild(node))].get(5L), 1);
+        assertThrows(IllegalStateException.class, () -> tree.deletePoint(5, 6));
     }
 
     @Test
@@ -295,6 +302,7 @@ public class CompactRandomCutTreeFloatTest {
         node = tree.getLeftChild(node);
         expectedBox = new BoundingBoxFloat(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
         assertThat(tree.getBoundingBox(node), is(expectedBox));
+        assertEquals(expectedBox.toString(), tree.getBoundingBox(node).toString());
         assertThat(tree.nodeStore.getCutDimension(node), is(0));
         assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(4));
@@ -310,6 +318,17 @@ public class CompactRandomCutTreeFloatTest {
         assertThat(tree.getPoint(tree.getRightChild(node)), is(new double[] { 0, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.sequenceIndexes[tree.nodeStore.computeLeafIndex(tree.getRightChild(node))].get(5L), 1);
+    }
+
+    @Test
+    public void testRemap() {
+        tree.deletePoint(0, 1);
+
+        assertNotEquals(tree.getRoot(), 0);
+        tree.reorderNodesInBreadthFirstOrder();
+        assertEquals(tree.getRoot(), 0);
+        int node = tree.getRoot();
+        assertThat(tree.getMass(node), is(4));
     }
 
     @Test
@@ -343,5 +362,30 @@ public class CompactRandomCutTreeFloatTest {
 
         // point does not exist in tree
         assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(7, 3));
+    }
+
+    @Test
+    public void testUpdatesOnSmallBoundingBox() {
+        // verifies on small bounding boxes random cuts and tree updates are functional
+        PointStoreFloat pointStoreFloat = new PointStoreFloat.Builder().indexCapacity(10).capacity(10)
+                .currentStoreCapacity(10).dimensions(1).build();
+        CompactRandomCutTreeFloat tree = CompactRandomCutTreeFloat.builder().random(rng).pointStore(pointStoreFloat)
+                .build();
+
+        List<Weighted<double[]>> points = new ArrayList<>();
+        points.add(new Weighted<>(new double[] { 48.08 }, 0, 1L));
+        points.add(new Weighted<>(new double[] { 48.08001 }, 0, 2L));
+
+        pointStoreFloat.add(points.get(0).getValue(), 0);
+        pointStoreFloat.add(points.get(1).getValue(), 1);
+        tree.addPoint(0, points.get(0).getSequenceIndex());
+        tree.addPoint(1, points.get(1).getSequenceIndex());
+        assertNotEquals(pointStoreFloat.get(0)[0], pointStoreFloat.get(1)[0]);
+
+        for (int i = 0; i < 10000; i++) {
+            Weighted<double[]> point = points.get(i % points.size());
+            tree.deletePoint(i % points.size(), point.getSequenceIndex());
+            tree.addPoint(i % points.size(), point.getSequenceIndex());
+        }
     }
 }
