@@ -179,8 +179,4 @@ public class BoundingBoxFloat extends AbstractBoundingBox<float[]> {
         return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(minValues) + 31 * Arrays.hashCode(maxValues);
-    }
 }

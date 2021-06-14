@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.IStateCoordinator;
@@ -65,6 +67,7 @@ import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
@@ -828,5 +831,124 @@ public class RandomCutForestTest {
             IComponentModel<?, ?> component = components.get(i);
             verify(component, never()).isOutputReady();
         }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTrip() {
+        int dimensions = 10;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compact(false).dimensions(dimensions).sampleSize(64)
+                    .build();
+
+            Random r = new Random();
+            for (int i = 0; i < new Random(trials).nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            assertThrows(IllegalArgumentException.class, () -> mapper.toState(forest));
+            mapper.setSaveTreeStateEnabled(false);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                // this will not be an exact replica and the scores can vary
+                // it is possible that the test fails with low probability
+                // in that case rerun the test. Reduce number of trials or fix the seed
+                // for deterministic tests
+                double score = forest.getAnomalyScore(point);
+                if (score > 1.5) {
+                    assertEquals(score, forest2.getAnomalyScore(point), 0.1);
+                } else if (score < 1) {
+                    assert (forest2.getAnomalyScore(point) < 1.25);
+                }
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTripDouble() {
+        int dimensions = 10;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64).build();
+
+            Random r = new Random();
+            for (int i = 0; i < new Random().nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                // this will not be an exact replica and the scores can vary
+                // it is possible that the test fails with low probability
+                // in that case rerun the test. Reduce number of trials or fix the seed
+                // for deterministic tests
+                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTripFloat() {
+        int dimensions = 10;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64)
+                    .precision(Precision.FLOAT_32).build();
+
+            Random r = new Random();
+            for (int i = 0; i < new Random().nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            mapper.setPartialTreeStateEnabled(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                // this will not be an exact replica and the scores can vary
+                // it is possible that the test fails with low probability
+                // in that case rerun the test. Reduce number of trials or fix the seed
+                // for deterministic tests
+                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testOutOfOrderUpdate() {
+        RandomCutForest forest = new RandomCutForest.Builder<>().dimensions(2).sampleSize(10).numberOfTrees(2).build();
+        forest.setTimeDecay(100); // will act almost like a sliding window buffer
+        forest.update(new double[] { 20.0, -20.0 }, 20);
+        forest.update(new double[] { 0.0, -0.0 }, 0);
+        assertEquals(forest.getNearNeighborsInSample(new double[] { 0.0, -0.0 }, 1).size(), 1);
+        for (int i = 1; i < 19; i++) {
+            forest.update(new double[] { i, -i }, i);
+        }
+        // the {0,0} point should be flushed out
+        assertEquals(forest.getNearNeighborsInSample(new double[] { 0.0, -0.0 }, 1).size(), 0);
+        // the {20,-20} point is present still
+        assertEquals(forest.getNearNeighborsInSample(new double[] { 20.0, -20.0 }, 1).size(), 1);
     }
 }

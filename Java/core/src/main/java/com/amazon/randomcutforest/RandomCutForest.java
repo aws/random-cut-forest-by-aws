@@ -1343,11 +1343,6 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T directLocationMapEnabled(boolean directLocationMapEnabled) {
-            this.directLocationMapEnabled = directLocationMapEnabled;
-            return (T) this;
-        }
-
         public T centerOfMassEnabled(boolean centerOfMassEnabled) {
             this.centerOfMassEnabled = centerOfMassEnabled;
             return (T) this;

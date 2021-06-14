@@ -118,6 +118,14 @@ public class RandomCutForestMapperTest {
         testRoundTripForCompactForest(forest);
     }
 
+    @ParameterizedTest
+    @MethodSource("compactForestProvider")
+    public void testRoundTripForCompactForestSaveTreeStatePartial(RandomCutForest forest) {
+        mapper.setSaveTreeStateEnabled(true);
+        mapper.setPartialTreeStateEnabled(true);
+        testRoundTripForCompactForest(forest);
+    }
+
     @Test
     public void testRoundTripForEmptyForest() {
         Precision precision = Precision.FLOAT_64;

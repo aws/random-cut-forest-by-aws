@@ -132,17 +132,6 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
      * @param point with which we're performing the comparison
      * @return whether the point is contained by the bounding box
      */
-    public boolean contains(double[] point) {
-        checkArgument(point.length == getDimensions(), " incorrect lengths");
-        for (int i = 0; i < point.length; i++) {
-            if (!contains(i, point[i])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     public abstract boolean contains(Point point);
 
     /**
@@ -197,6 +186,4 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     @Override
     public abstract boolean equals(Object other);
 
-    @Override
-    public abstract int hashCode();
 }

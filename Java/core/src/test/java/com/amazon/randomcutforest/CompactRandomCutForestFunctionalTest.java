@@ -64,7 +64,7 @@ public class CompactRandomCutForestFunctionalTest {
 
     @BeforeAll
     public static void oneTimeSetUp() { // this is a stochastic dataset and will have different values for different
-                                        // runs
+        // runs
         numberOfTrees = 100;
         sampleSize = 256;
         dimensions = 3;
