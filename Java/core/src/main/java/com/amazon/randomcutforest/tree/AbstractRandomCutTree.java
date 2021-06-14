@@ -497,7 +497,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
             savedSiblingNode = followReference;
 
             // now iterative proceed up the tree and try to construct a cut
-            // currentUnmergedBox != null
+            assert currentUnmergedBox != null : "incorrect state";
 
             followReference = getParent(followReference);
 
