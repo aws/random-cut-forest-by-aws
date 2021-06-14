@@ -46,6 +46,7 @@ pub struct RandomCutForest<T> {
     sample_size: usize,
     time_decay: f32,
     trees: Vec<SampledTree<T>>,
+    output_after: usize,
 }
 
 impl<T> RandomCutForest<T>
@@ -98,6 +99,10 @@ impl<T> RandomCutForest<T>
     /// random sample of observed data. The forest anomaly score is the mean
     /// of these per-tree scores.
     ///
+    /// If the number of observations is less than or equal to the output after
+    /// threshold, this function will return 0, meaning that there is not yet
+    /// enough data to determine if this point is truly an anomaly.
+    ///
     /// # Examples
     ///
     /// ```
@@ -121,6 +126,11 @@ impl<T> RandomCutForest<T>
     /// ```
     pub fn anomaly_score(&self, point: &Vec<T>) -> T {
         let mut anomaly_score: T = Zero::zero();
+
+        if self.num_observations <= self.output_after {
+            return anomaly_score;
+        }
+
         for sampled_tree in self.trees.iter() {
             let mut visitor = AnomalyScoreVisitor::new(sampled_tree.tree(), point);
             anomaly_score = anomaly_score + sampled_tree.traverse(point, &mut visitor);
@@ -145,6 +155,9 @@ impl<T> RandomCutForest<T>
 
     /// Return a vector of references to the trees of the forest.
     pub fn trees(&self) -> &Vec<SampledTree<T>> { &self.trees }
+
+    /// Return the output after threshold for this forest.
+    pub fn output_after(&self) -> usize { self.output_after }
 }
 
 
@@ -163,6 +176,7 @@ impl<T> RandomCutForest<T>
 /// * `num_trees = 50`
 /// * `sample_size = 256`
 /// * `time_decay = 0.0`
+/// * `output_after = 0`
 ///
 /// # Examples
 ///
@@ -176,6 +190,7 @@ impl<T> RandomCutForest<T>
 /// assert_eq!(forest.num_trees(), 50);
 /// assert_eq!(forest.sample_size(), 256);
 /// assert_eq!(forest.time_decay(), 0.0);
+/// assert_eq!(forest.output_after(), 0);
 ///
 /// // create a forest with specified parameters. you can also specify the base
 /// // type by annotating the target variable
@@ -183,11 +198,13 @@ impl<T> RandomCutForest<T>
 ///     .num_trees(20)
 ///     .sample_size(128)
 ///     .time_decay(0.01)
+///     .output_after(100)
 ///     .build();
 /// assert_eq!(forest.dimension(), 3);
 /// assert_eq!(forest.num_trees(), 20);
 /// assert_eq!(forest.sample_size(), 128);
 /// assert_eq!(forest.time_decay(), 0.01);
+/// assert_eq!(forest.output_after(), 100);
 /// ```
 ///
 pub struct RandomCutForestBuilder<T> {
@@ -196,6 +213,7 @@ pub struct RandomCutForestBuilder<T> {
     sample_size: usize,
     time_decay: f32,
     _point_type: PhantomData<T>,
+    output_after: usize,
 }
 
 impl<T> RandomCutForestBuilder<T>
@@ -213,6 +231,7 @@ impl<T> RandomCutForestBuilder<T>
             num_trees: 50,
             sample_size: 256,
             _point_type: PhantomData::<T>,
+            output_after: 0,
         }
     }
 
@@ -240,6 +259,12 @@ impl<T> RandomCutForestBuilder<T>
         self
     }
 
+    /// Set the output_after threshold of the random cut forest.
+    pub fn output_after(mut self, output_after: usize) -> RandomCutForestBuilder<T> {
+        self.output_after = output_after;
+        self
+    }
+
     /// Build a random cut forest using the parameters set by the builder.
     pub fn build(self) -> RandomCutForest<T> {
         let mut trees: Vec<SampledTree<T>> = Vec::with_capacity(self.num_trees);
@@ -253,6 +278,7 @@ impl<T> RandomCutForestBuilder<T>
             time_decay: self.time_decay,
             trees: trees,
             num_observations: 0,
+            output_after: self.output_after
         }
     }
 }
