@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
+import java.util.Collections;
 import java.util.Set;
 
 import com.amazon.randomcutforest.store.INodeStore;
@@ -79,7 +80,9 @@ public class CompactNodeView<Point> implements INode<Integer> {
 
     public Set<Long> getSequenceIndexes() {
         checkArgument(nodeStore.isLeaf(currentNodeOffset), " not a leaf node");
-        return tree.sequenceIndexes[nodeStore.computeLeafIndex(currentNodeOffset)].keySet();
+        return tree.storeSequenceIndexesEnabled
+                ? tree.sequenceIndexes[nodeStore.computeLeafIndex(currentNodeOffset)].keySet()
+                : Collections.emptySet();
     }
 
     @Override

@@ -20,13 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
-@Tag("functional")
 public class AttributionExamplesFunctionalTest {
 
     private static int numberOfTrees;
@@ -162,7 +160,7 @@ public class AttributionExamplesFunctionalTest {
         sampleSize = 256;
         DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().numberOfTrees(100)
                 .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).compact(true)
-                .boundingBoxCacheFraction(1.0).timeDecay(1e-5).build();
+                .boundingBoxCacheFraction(new Random().nextDouble()).timeDecay(1e-5).build();
 
         dataSize = 2000 + 5;
 
@@ -205,6 +203,16 @@ public class AttributionExamplesFunctionalTest {
         assertTrue(originalAttrTwo.low[0] > 0.75); // due to +5 cluster
         assertTrue(originalAttrTwo.high[1] > 1); // due to +1 in query
         assertTrue(originalAttrTwo.getHighLowSum(0) > originalAttrTwo.getHighLowSum(1));
+
+        double apx = newForest.getApproximateDynamicScore(queryTwo, 0.1, true, 0, CommonUtils::defaultScoreSeenFunction,
+                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+        assertEquals(originalScoreTwo, CommonUtils.defaultScalarNormalizerFunction(apx, sampleSize), 0.2);
+        assertEquals(apx,
+                newForest
+                        .getApproximateDynamicAttribution(queryTwo, 0.1, true, 0, CommonUtils::defaultScoreSeenFunction,
+                                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction)
+                        .getHighLowSum(),
+                1e-10);
 
         // we insert queryOne a few times to make sure it is sampled
         for (int i = 2000; i < 2000 + 5; i++) {

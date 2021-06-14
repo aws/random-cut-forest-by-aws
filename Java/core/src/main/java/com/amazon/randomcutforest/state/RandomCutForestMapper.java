@@ -290,7 +290,8 @@ public class RandomCutForestMapper
             CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i));
             RandomCutTree tree = RandomCutTree.builder()
                     .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                    .centerOfMassEnabled(state.isCenterOfMassEnabled()).randomSeed(random.nextLong()).build();
+                    .outputAfter(state.getOutputAfter()).centerOfMassEnabled(state.isCenterOfMassEnabled())
+                    .randomSeed(random.nextLong()).build();
             SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder()
                     .capacity(state.getSampleSize()).timeDecay(state.getTimeDecay()).randomSeed(random.nextLong())
                     .build();

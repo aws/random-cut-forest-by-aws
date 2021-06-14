@@ -220,9 +220,8 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
      * @param precision               parameter to stop early stopping
      * @param highIsCritical          are high values anomalous (otherwise low
      *                                values are anomalous)
-     * @param ignoreLeafEquals        should we ignore leaves with mass equal/below
+     * @param ignoreLeafMassThreshold we ignore leaves with mass equal/below *
      *                                threshold
-     * @param ignoreLeafMassThreshold said threshold
      * @param seen                    function for scoring points that have been
      *                                seen before
      * @param unseen                  function for scoring points not seen in tree
@@ -230,7 +229,7 @@ public class DynamicScoringRandomCutForest extends RandomCutForest {
      * @return attribution DiVector of the score
      */
     public DiVector getApproximateDynamicAttribution(double[] point, double precision, boolean highIsCritical,
-            boolean ignoreLeafEquals, int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
+            int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> newDamp) {
 
         if (!isOutputReady()) {

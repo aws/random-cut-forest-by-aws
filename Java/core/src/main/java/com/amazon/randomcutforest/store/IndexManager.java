@@ -21,8 +21,6 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -119,22 +117,6 @@ public class IndexManager {
 
     public boolean isFull() {
         return (freeIndexPointer == -1);
-    }
-
-    private static void checkFreeIndexes(int[] freeIndexes, int freeIndexPointer) {
-        checkArgument(-1 <= freeIndexPointer && freeIndexPointer < freeIndexes.length,
-                "freeIndexPointer must be between -1 (inclusive) and freeIndexes.length (exclusive)");
-
-        int capacity = freeIndexes.length;
-        Set<Integer> freeIndexSet = new HashSet<>();
-
-        for (int i = 0; i <= freeIndexPointer; i++) {
-            int index = freeIndexes[i];
-            checkArgument(!freeIndexSet.contains(index), "free index values must not be repeated");
-            checkArgument(0 <= freeIndexes[i] && freeIndexes[i] < capacity,
-                    "entries in freeIndexes must be between 0 (inclusive) and freeIndexes.length (exclusive)");
-            freeIndexSet.add(index);
-        }
     }
 
     /**
