@@ -937,23 +937,6 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testInternalShinglingRotated() {
-        RandomCutForest forest = new RandomCutForest.Builder<>().internalShinglingEnabled(true)
-                .internalRotationEnabled(true).shingleSize(2).dimensions(4).build();
-        assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0 }));
-        forest.update(new double[] { 0.0, -0.0 });
-        assertArrayEquals(forest.lastShingledPoint(), new double[] { 0, 0, 0, 0 });
-        forest.update(new double[] { 1.0, -1.0 });
-        assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 0, 1 });
-        forest.update(new double[] { 2.0, -2.0 });
-        assertEquals(forest.nextSequenceIndex(), 3);
-        assertArrayEquals(forest.lastShingledPoint(), new double[] { 2, -2, 1, -1 });
-        assertArrayEquals(forest.transformToShingledPoint(new double[] { 7, 8 }), new double[] { 2, -2, 7, 8 });
-        assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 2, 3 });
-        assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0, 0, 0, 0 }));
-    }
-
-    @Test
     public void testOutOfOrderUpdate() {
         RandomCutForest forest = new RandomCutForest.Builder<>().dimensions(2).sampleSize(10).numberOfTrees(2).build();
         forest.setTimeDecay(100); // will act almost like a sliding window buffer
