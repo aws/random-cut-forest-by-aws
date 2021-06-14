@@ -17,8 +17,8 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -162,6 +162,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                 int currentNode = 0;
                 int leafcounter = maxSize - 1;
                 int[] map = new int[2 * maxSize - 1];
+                Arrays.fill(map, NULL);
                 ArrayBlockingQueue<Integer> nodeQueue = new ArrayBlockingQueue<>(maxSize - 1);
                 nodeQueue.add(root);
                 while (!nodeQueue.isEmpty()) {
@@ -171,7 +172,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     if (isLeaf(leftChild)) {
                         // the parent is the current node and the indices, mass are being copied over
                         map[leftChild] = result.addLeaf(currentNode, getPointReference(leftChild), getMass(leftChild));
-                        validateInternalState(map[leftChild] == leafcounter, "incorrect state");
+                        assert map[leftChild] == leafcounter : "incorrect state";
                         newLeft = leafcounter++;
                     } else { // leftchild is an internal node
                         newLeft = ++nodeCounter;
@@ -183,7 +184,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                         // the parent is the current node and the indices, mass are being copied over
                         map[rightChild] = result.addLeaf(currentNode, getPointReference(rightChild),
                                 getMass(rightChild));
-                        validateInternalState(map[rightChild] == leafcounter, "incorrect state");
+                        assert map[rightChild] == leafcounter : "incorrect state";
                         newRight = leafcounter++;
                     } else {
                         newRight = ++nodeCounter;
@@ -193,10 +194,10 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     int parent = (head == root) ? -1 : map[getParent(head)];
                     map[head] = result.addNode(parent, newLeft, newRight, getCutDimension(head), getCutValue(head),
                             getMass(head));
-                    validateInternalState(map[head] == currentNode, "incorrect state");
+                    assert map[head] == currentNode : "incorrect state";
                     currentNode++;
                 }
-                validateInternalState(currentNode == nodeStore.size(), "incorrect state");
+                assert currentNode == nodeStore.size() : "incorrect state";
 
                 boxCache.swapCaches(map);
 
@@ -204,21 +205,23 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
                     HashMap<Long, Integer>[] newSequence = new HashMap[maxSize];
                     for (int i = 0; i < maxSize; i++) { // iterate over leaves
                         if (map[i + maxSize - 1] != NULL) { // leaf is in use
-                            validateInternalState(isLeaf(map[i + maxSize - 1]), "error in map");
+                            assert isLeaf(map[i + maxSize - 1]) : "error in map";
                             newSequence[map[i + maxSize - 1] - maxSize + 1] = sequenceIndexes[i];
                         }
                     }
                     sequenceIndexes = newSequence;
                 }
                 root = 0;
-                if (centerOfMassEnabled) {
-                    recomputePointSum(root);
-                }
             } else {
                 root = result.addLeaf(NULL, getPointReference(root), getMass(root));
             }
         }
         nodeStore = result;
+        if (centerOfMassEnabled) {
+            if (!isLeaf(root)) {
+                recomputePointSum(root);
+            }
+        }
     }
 
     /**

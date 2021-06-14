@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 import java.util.BitSet;
 import java.util.HashMap;
@@ -55,7 +56,9 @@ public class BoxCacheFloat extends BoxCache<float[]> {
         checkArgument(isDirectMap(), "incorrect invocation of remap");
         BoundingBoxFloat[] newArray = new BoundingBoxFloat[maxSize];
         for (int i = 0; i < maxSize; i++) {
-            newArray[map[i]] = (BoundingBoxFloat) cachedBoxes[i];
+            if (map[i] != NULL) {
+                newArray[map[i]] = (BoundingBoxFloat) cachedBoxes[i];
+            }
         }
         cachedBoxes = newArray;
     }

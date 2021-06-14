@@ -15,12 +15,6 @@
 
 package com.amazon.randomcutforest.imputation;
 
-import com.amazon.randomcutforest.CommonUtils;
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
@@ -30,6 +24,13 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.CommonUtils;
+import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.Node;
 
 public class ImputeVisitorTest {
 
@@ -147,7 +148,6 @@ public class ImputeVisitorTest {
         double expectedRank = p * defaultScoreUnseenFunction(depth, node.getMass()) + (1 - p) * oldRank;
         assertEquals(expectedRank, visitor.getAnomalyRank(), EPSILON);
     }
-
 
     @Test
     public void testNewCopy() {
