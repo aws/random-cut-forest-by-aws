@@ -119,7 +119,7 @@ public class RandomCutForest {
 
     /**
      * By default, the collection of points stored in the forest will increase from
-     * a small size, as needed to maximum capccity
+     * a small size, as needed to maximum capacity
      */
     public static final boolean DEFAULT_DYNAMIC_RESIZING_ENABLED = true;
 
@@ -187,7 +187,7 @@ public class RandomCutForest {
      */
     protected final int shingleSize;
     /**
-     * The input dimensions for known shinglesize and internal shingling
+     * The input dimensions for known shingle size and internal shingling
      */
     protected final int inputDimensions;
     /**
@@ -253,6 +253,12 @@ public class RandomCutForest {
     private boolean outputReady;
 
     /**
+     * used for initializing the compact forests
+     */
+    private final int initialPointStoreSize;
+    private final int pointStoreCapacity;
+
+    /**
      * An implementation of forest traversal algorithms.
      */
     protected AbstractForestTraversalExecutor traversalExecutor;
@@ -290,7 +296,7 @@ public class RandomCutForest {
 
     private void initCompactDouble(Builder<?> builder) {
         PointStoreDouble tempStore = PointStoreDouble.builder().internalRotationEnabled(builder.internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).initialSize(builder.initialPointStoreSize.get())
+                .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
                 .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
@@ -317,7 +323,7 @@ public class RandomCutForest {
 
     private void initCompactFloat(Builder<?> builder) {
         PointStoreFloat tempStore = PointStoreFloat.builder().internalRotationEnabled(builder.internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).initialSize(builder.initialPointStoreSize.get())
+                .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
                 .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
@@ -403,8 +409,8 @@ public class RandomCutForest {
         // " need shingle size > 1 for internal shingling");
         if (builder.internalRotationEnabled) {
             checkArgument(builder.internalShinglingEnabled, " enable internal shingling");
+            checkArgument(builder.compact, " option not supported, enable compact trees");
         }
-        checkArgument(!builder.compact || builder.compact, " option not supported, enable compact trees");
         builder.initialPointStoreSize.ifPresent(n -> {
             checkArgument(n > 0, "initial point store must be greater than 0");
             checkArgument(n > builder.sampleSize * builder.numberOfTrees || builder.dynamicResizingEnabled,
@@ -428,9 +434,8 @@ public class RandomCutForest {
         boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
-        if (!builder.initialPointStoreSize.isPresent() && compact) {
-            builder.initialPointStoreSize = Optional.of(2 * sampleSize);
-        }
+        pointStoreCapacity = sampleSize * numberOfTrees + 1;
+        initialPointStoreSize = builder.initialPointStoreSize.orElse(Math.min(2 * sampleSize, pointStoreCapacity));
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -626,7 +631,7 @@ public class RandomCutForest {
 
     /**
      *
-     * @return the lask known shingled point seen
+     * @return the last known shingled point seen
      */
     public double[] lastShingledPoint() {
         checkArgument(internalShinglingEnabled, "incorrect use");

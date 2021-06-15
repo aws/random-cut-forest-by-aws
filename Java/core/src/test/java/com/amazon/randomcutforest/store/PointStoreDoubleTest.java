@@ -217,18 +217,6 @@ public class PointStoreDoubleTest {
     }
 
     @Test
-    public void checkDynamicResizing() {
-        int shinglesize = 2;
-        PointStoreDouble store = new PointStoreDouble.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
-                .shingleSize(shinglesize).initialSize(2).dynamicResizingEnabled(false).build();
-        store.add(new double[] { 0, 0 }, 0);
-        store.add(new double[] { 1, 0 }, 0);
-        assertThrows(IllegalStateException.class, () -> store.add(new double[] { 0, -1 }, 1));
-        store.decrementRefCount(0);
-        store.add(new double[] { 0, -1 }, 1);
-    }
-
-    @Test
     public void checkRotationAndCompact() {
         int shinglesize = 4;
         PointStoreDouble store = new PointStoreDouble.Builder().capacity(2 * shinglesize).dimensions(shinglesize)

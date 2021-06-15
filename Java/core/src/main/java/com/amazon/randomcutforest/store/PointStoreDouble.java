@@ -120,7 +120,6 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     public double[] get(int index) {
         indexManager.checkValidIndex(index);
         int address = locationList[index];
-        checkArgument(address != PointStore.INFEASIBLE_POINTSTORE_LOCATION, "Huh");
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);
         } else {

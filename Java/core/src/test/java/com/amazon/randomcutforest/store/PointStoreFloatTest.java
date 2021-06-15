@@ -220,16 +220,6 @@ public class PointStoreFloatTest {
     }
 
     @Test
-    public void checkDynamicResizing() {
-        int shinglesize = 2;
-        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
-                .shingleSize(shinglesize).indexCapacity(shinglesize).dynamicResizingEnabled(false)
-                .currentStoreCapacity(1).build();
-        store.add(new double[] { 0, 0 }, 0);
-        assertThrows(IllegalStateException.class, () -> store.add(new double[] { 0, 0 }, 1));
-    }
-
-    @Test
     public void checkRotationAndCompact() {
         int shinglesize = 4;
         PointStoreFloat store = new PointStoreFloat.Builder().capacity(2 * shinglesize).dimensions(shinglesize)

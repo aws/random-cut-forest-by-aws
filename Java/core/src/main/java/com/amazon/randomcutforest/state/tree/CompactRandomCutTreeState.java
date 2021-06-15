@@ -15,10 +15,11 @@
 
 package com.amazon.randomcutforest.state.tree;
 
-import com.amazon.randomcutforest.state.store.NodeStoreState;
+import static com.amazon.randomcutforest.state.Version.V2_0;
+
 import lombok.Data;
 
-import static com.amazon.randomcutforest.state.Version.V2_0;
+import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
 public class CompactRandomCutTreeState {
@@ -30,11 +31,8 @@ public class CompactRandomCutTreeState {
     private boolean centerOfMassEnabled;
     private NodeStoreState nodeStoreState;
     private double boundingBoxCacheFraction;
-
     private boolean partialTreeState;
     private long seed;
-
-    // to be used later
     private int id;
     private int dimensions;
     private long staticSeed;
