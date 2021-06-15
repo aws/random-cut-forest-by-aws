@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Arrays;
+import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +52,7 @@ public class PointStoreFloatTest {
         assertEquals(capacity, pointStore.getCapacity());
         assertEquals(0, pointStore.size());
 
-        for (int i = 0; i < capacity; i++) {
+        for (int i = 0; i < pointStore.getIndexCapacity(); i++) {
             assertEquals(0, pointStore.getRefCount(i));
         }
     }
@@ -62,7 +67,7 @@ public class PointStoreFloatTest {
 
         float[] retrievedPoint1 = pointStore.get(offset1);
         assertNotSame(point1, retrievedPoint1);
-        assertArrayEquals(point1, CommonUtils.toDoubleArray(retrievedPoint1));
+        assertArrayEquals(point1, toDoubleArray(retrievedPoint1));
         assertArrayEquals(CommonUtils.toFloatArray(point1), retrievedPoint1);
 
         double[] point2 = { 111.2f, -333.4f };
@@ -74,30 +79,27 @@ public class PointStoreFloatTest {
 
         float[] retrievedPoint2 = pointStore.get(offset2);
         assertNotSame(point2, retrievedPoint2);
-        assertArrayEquals(point2, CommonUtils.toDoubleArray(retrievedPoint2));
+        assertArrayEquals(point2, toDoubleArray(retrievedPoint2));
         assertArrayEquals(CommonUtils.toFloatArray(point2), retrievedPoint2);
 
         // check that adding a second point didn't change the first stored point's value
         retrievedPoint1 = pointStore.get(offset1);
         assertNotSame(point1, retrievedPoint1);
-        assertArrayEquals(point1, CommonUtils.toDoubleArray(retrievedPoint1));
+        assertArrayEquals(point1, toDoubleArray(retrievedPoint1));
         assertArrayEquals(CommonUtils.toFloatArray(point1), retrievedPoint1);
     }
 
     @Test
     public void testAddInvalid() {
-        // invalid dimensions in point
-        assertThrows(IllegalArgumentException.class, () -> pointStore.add(new double[] { 1.1f, -2.2f, 3.3f }, 3));
-
+        assertThrows(IllegalArgumentException.class, () -> pointStore.add(new double[] { 1.1, -2.2, 3.0 }, 0));
         for (int i = 0; i < capacity; i++) {
             double[] point = new double[dimensions];
             point[0] = Math.random();
             point[1] = Math.random();
             pointStore.add(point, i + 2);
         }
-
         // point store is full
-        assertThrows(IllegalStateException.class, () -> pointStore.add(new double[] { 1.1f, -2.2f }, 0));
+        assertThrows(IllegalStateException.class, () -> pointStore.add(new double[] { 1.1, -2.2 }, 0));
     }
 
     @Test
@@ -162,4 +164,112 @@ public class PointStoreFloatTest {
         int offset = pointStore.add(point, 0);
         assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(offset, new float[] { 99.9f }));
     }
+
+    @Test
+    public void internalshinglingTestNoRotation() {
+        int shinglesize = 10;
+        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
+                .currentStoreCapacity(1).build();
+        assertTrue(store.isDynamicResizingEnabled());
+        assertFalse(store.isInternalRotationEnabled());
+        Random random = new Random(0);
+        double[] shingle = new double[shinglesize];
+        for (int i = 0; i < 10 * shinglesize - 3; i++) {
+            shingle[(i + 3) % shinglesize] = random.nextDouble();
+            store.add(new double[] { shingle[(i + 3) % shinglesize] }, i);
+        }
+        assertArrayEquals(toDoubleArray(store.get(9 * shinglesize - 3)), shingle, 1e-6);
+        assertArrayEquals(store.getInternalShingle(), shingle, 1e-6);
+        assertArrayEquals(store.transformIndices(new int[] { 0 }), new int[] { shinglesize - 1 });
+        assertThrows(IllegalArgumentException.class, () -> store.transformIndices(new int[] { 1 }));
+        assertThrows(IllegalArgumentException.class, () -> store.transformIndices(new int[] { 0, 0 }));
+        assertArrayEquals(store.transformToShingledPoint(new double[] { 0.0 }),
+                store.transformToShingledPoint(new double[] { -0.0 }), 1e-6);
+        assertThrows(IllegalArgumentException.class, () -> store.add(new double[] { 0, 0 }, 0));
+    }
+
+    @Test
+    public void internalshinglingTestWithRotation() {
+        int shinglesize = 10;
+        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
+                .internalRotationEnabled(true).currentStoreCapacity(1).build();
+        assertTrue(store.isDynamicResizingEnabled());
+        assertTrue(store.isInternalRotationEnabled());
+        Random random = new Random(0);
+        double[] shingle = new double[shinglesize];
+        double[] temp = null;
+        for (int i = 0; i < 10 * shinglesize + 5; i++) {
+            shingle[i % shinglesize] = random.nextDouble();
+            temp = store.transformToShingledPoint(new double[] { shingle[i % shinglesize] });
+            store.add(new double[] { shingle[i % shinglesize] }, i);
+        }
+        assertEquals(store.getNextSequenceIndex(), 10 * shinglesize + 5);
+        assertArrayEquals(temp, shingle, 1e-6);
+        assertArrayEquals(toDoubleArray(store.get(9 * shinglesize + 5)), shingle, 1e-6);
+        assertNotEquals(store.internalShingle, store.getInternalShingle());
+        assertTrue(store.pointEquals(9 * shinglesize + 5, toFloatArray(shingle)));
+        assertFalse(store.pointEquals(9 * shinglesize + 4, toFloatArray(shingle)));
+        assertArrayEquals(store.getInternalShingle(), shingle, 1e-6);
+        assertArrayEquals(store.transformIndices(new int[] { 0 }), new int[] { 5 });
+        assertThrows(IllegalArgumentException.class, () -> store.transformIndices(new int[] { 1 }));
+        assertThrows(IllegalArgumentException.class, () -> store.transformToShingledPoint(new double[] { 1, 2 }));
+        assertArrayEquals(store.transformToShingledPoint(new double[] { 0.0 }),
+                store.transformToShingledPoint(new double[] { -0.0 }), 1e-6);
+    }
+
+    @Test
+    public void checkDynamicResizing() {
+        int shinglesize = 2;
+        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(shinglesize).dynamicResizingEnabled(false)
+                .currentStoreCapacity(1).build();
+        store.add(new double[] { 0, 0 }, 0);
+        assertThrows(IllegalStateException.class, () -> store.add(new double[] { 0, 0 }, 1));
+    }
+
+    @Test
+    public void checkRotationAndCompact() {
+        int shinglesize = 4;
+        PointStoreFloat store = new PointStoreFloat.Builder().capacity(2 * shinglesize).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
+                .internalRotationEnabled(true).currentStoreCapacity(1).build();
+        for (int i = 0; i < 2 * shinglesize; i++) {
+            store.add(new double[] { -i - 1 }, i);
+        }
+        for (int i = 0; i < 2 * shinglesize - shinglesize + 1; i++) {
+            if (i != shinglesize - 1) {
+                store.decrementRefCount(i);
+            }
+        }
+        assertThrows(IllegalArgumentException.class, () -> store.get(0));
+        float[] test = new float[shinglesize];
+        for (int i = 0; i < shinglesize; i++) {
+            test[i] = -(i + shinglesize + 1);
+        }
+        test[shinglesize - 1] = -shinglesize;
+        assertArrayEquals(store.get(shinglesize - 1), test, 1e-6f);
+        store.compact();
+        for (int i = 2 * shinglesize; i < 4 * shinglesize - 1; i++) {
+            store.add(new double[] { -i - 1 }, i);
+        }
+        assertThrows(IllegalStateException.class, () -> store.add(new double[] { -4 * shinglesize }, 0));
+        for (int i = 0; i < 2 * shinglesize; i++) {
+            if (i != shinglesize - 1) {
+                store.decrementRefCount(i);
+            }
+        }
+        assertEquals(store.toString(shinglesize - 1), Arrays.toString(test));
+        for (int i = 4 * shinglesize; i < 6 * shinglesize - 1; i++) {
+            store.add(new double[] { -i - 1 }, i);
+        }
+        assertThrows(IllegalStateException.class,
+                () -> store.add(new double[] { -6 * shinglesize }, 6 * shinglesize - 1));
+        store.decrementRefCount(shinglesize - 1);
+        store.add(new double[] { -6 * shinglesize }, 6 * shinglesize - 1);
+        store.decrementRefCount(shinglesize);
+        store.compact();
+    }
+
 }

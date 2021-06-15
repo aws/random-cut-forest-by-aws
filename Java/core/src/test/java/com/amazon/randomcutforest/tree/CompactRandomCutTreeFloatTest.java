@@ -51,7 +51,7 @@ public class CompactRandomCutTreeFloatTest {
     public void setUp() {
         rng = mock(Random.class);
         PointStoreFloat pointStoreFloat = new PointStoreFloat.Builder().indexCapacity(100).capacity(100)
-                .currentStoreCapacity(100).currentStoreCapacity(100).dimensions(2).build();
+                .initialSize(100).dimensions(2).build();
         tree = CompactRandomCutTreeFloat.builder().random(rng).centerOfMassEnabled(true).pointStore(pointStoreFloat)
                 .storeSequenceIndexesEnabled(true).dimension(2).inputDimension(2).build();
 

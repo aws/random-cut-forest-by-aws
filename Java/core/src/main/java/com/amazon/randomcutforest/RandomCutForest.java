@@ -290,8 +290,7 @@ public class RandomCutForest {
 
     private void initCompactDouble(Builder<?> builder) {
         PointStoreDouble tempStore = PointStoreDouble.builder().internalRotationEnabled(builder.internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).indexCapacity(builder.initialPointStoreSize.get())
-                .currentStoreCapacity(builder.initialPointStoreSize.get())
+                .capacity(numberOfTrees * sampleSize + 1).initialSize(builder.initialPointStoreSize.get())
                 .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
@@ -318,8 +317,7 @@ public class RandomCutForest {
 
     private void initCompactFloat(Builder<?> builder) {
         PointStoreFloat tempStore = PointStoreFloat.builder().internalRotationEnabled(builder.internalRotationEnabled)
-                .capacity(numberOfTrees * sampleSize + 1).indexCapacity(builder.initialPointStoreSize.get())
-                .currentStoreCapacity(builder.initialPointStoreSize.get())
+                .capacity(numberOfTrees * sampleSize + 1).initialSize(builder.initialPointStoreSize.get())
                 .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)
                 .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)

@@ -89,13 +89,20 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     public boolean pointEquals(int index, double[] point) {
         indexManager.checkValidIndex(index);
         checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
-
-        for (int j = 0; j < dimensions; j++) {
-            if (point[j] != store[j + index * dimensions]) {
-                return false;
+        int address = locationList[index];
+        if (!rotationEnabled) {
+            for (int j = 0; j < dimensions; j++) {
+                if (point[j] != store[j + address]) {
+                    return false;
+                }
+            }
+        } else {
+            for (int j = 0; j < dimensions; j++) {
+                if (point[(j + address) % dimensions] != store[j + address]) {
+                    return false;
+                }
             }
         }
-
         return true;
     }
 
@@ -113,6 +120,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
     public double[] get(int index) {
         indexManager.checkValidIndex(index);
         int address = locationList[index];
+        checkArgument(address != PointStore.INFEASIBLE_POINTSTORE_LOCATION, "Huh");
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);
         } else {
@@ -140,7 +148,7 @@ public class PointStoreDouble extends PointStore<double[], double[]> {
 
     @Override
     void copyTo(int dest, int source, int length) {
-        checkArgument(dest <= source, "error");
+        // validateInternalState(dest <= source, "error");
         if (dest < source) {
             for (int i = 0; i < length; i++) {
                 store[dest + i] = store[source + i];
