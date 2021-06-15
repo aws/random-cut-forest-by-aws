@@ -10,3 +10,7 @@ rand = "0.8.3"
 rand_chacha = "0.3.0"
 rand_distr = "0.4.0"
 slab = "0.4.2"
+
+[dev-dependencies]
+clap = "3.0.0-beta.2"
+csv = "1.1"
