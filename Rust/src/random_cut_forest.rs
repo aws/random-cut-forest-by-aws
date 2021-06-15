@@ -390,4 +390,27 @@ mod tests {
         assert!(anomalous_score > scores_mean);
         assert!(anomalous_score > scores_max);
     }
+
+    #[test]
+    fn output_after() {
+        let num_points = 20;
+        let output_after = 10;
+        let dimension = 3;
+        let mut forest: RandomCutForest<f32> = RandomCutForestBuilder::new(dimension)
+            .output_after(output_after).build();
+
+        let points = randn(num_points, dimension);
+        let anomaly = vec![0.0; dimension];
+        for (i, point) in points.iter().enumerate() {
+            forest.update(point.clone());
+
+            if i < output_after {
+                let anomalous_score = forest.anomaly_score(&anomaly);
+                assert!(anomalous_score == 0.0);
+            }
+        }
+
+        let anomalous_score = forest.anomaly_score(&anomaly);
+        assert!(anomalous_score != 0.0);
+    }
 }
