@@ -16,4 +16,4 @@ mod tree_point_deletion;
 pub use tree_point_deletion::DeleteResult;
 
 mod tree;
-pub use tree::{NodeTraverser, Tree};
+pub use tree::{NodeIterator, Tree};

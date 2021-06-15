@@ -28,15 +28,20 @@
 //!     .collect();
 //! ```
 //!
+//! ## Algorithm Visitors
+//!
+//! The [`visitor`] module contains the node visitor components of various
+//! algorithms on random cut forests. See the module documentation for more
+//! information.
+//!
 //! ### References
 //!
 //! Sudipto Guha, Nina Mishra, Gourav Roy, and Okke Schrijvers. *"Robust random
 //! cut forest based anomaly detection on streams."* International Conference
 //! on Machine Learning, pp. 2712-2721. PMLR, 2016. ()
-//! 
+//!
 
-mod anomaly_score_visitor;
-pub use crate::anomaly_score_visitor::AnomalyScoreVisitor;
+pub mod visitor;
 
 mod random_cut_forest;
 pub use crate::random_cut_forest::{RandomCutForest, RandomCutForestBuilder};
@@ -51,4 +56,4 @@ mod store;
 pub use store::{NodeStore, PointStore};
 
 pub mod tree;
-pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, NodeTraverser, Tree};
+pub use tree::{BoundingBox, Cut, Internal, Leaf, Node, Tree};
