@@ -51,6 +51,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
 
+import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
@@ -908,7 +909,9 @@ public class RandomCutForestTest {
         int dimensions = 10;
         for (int trials = 0; trials < 10; trials++) {
             RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64)
-                    .precision(Precision.FLOAT_32).build();
+                    .precision(Precision.FLOAT_32).internalShinglingEnabled(true).shingleSize(1).build();
+            // internal shingling enabled with shinglesize 1 should not affect anything, but
+            // tests input path
 
             Random r = new Random();
             for (int i = 0; i < new Random().nextInt(300); i++) {
@@ -937,9 +940,40 @@ public class RandomCutForestTest {
     }
 
     @Test
+    public void testInternalShinglingRotated() {
+        RandomCutForest forest = new RandomCutForest.Builder<>().internalShinglingEnabled(true)
+                .internalRotationEnabled(true).shingleSize(2).dimensions(4).numberOfTrees(1).build();
+        assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0 }));
+        forest.update(new double[] { 0.0, -0.0 });
+        assertArrayEquals(forest.lastShingledPoint(), new double[] { 0, 0, 0, 0 });
+        forest.update(new double[] { 1.0, -1.0 });
+        assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 0, 1 });
+        forest.update(new double[] { 2.0, -2.0 });
+        assertEquals(forest.nextSequenceIndex(), 3);
+        assertArrayEquals(forest.lastShingledPoint(), new double[] { 2, -2, 1, -1 });
+        assertArrayEquals(forest.transformToShingledPoint(new double[] { 7, 8 }), new double[] { 2, -2, 7, 8 });
+        assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 2, 3 });
+        assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0, 0, 0, 0 }));
+    }
+
+    @Test
+    public void testComponents() {
+        RandomCutForest forest = new RandomCutForest.Builder<>().dimensions(2).sampleSize(10).numberOfTrees(2).build();
+
+        for (IComponentModel model : forest.getComponents()) {
+            assertEquals(model.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
+            model.getConfig(Config.TIME_DECAY);
+            assertEquals(model.getConfig(Config.TIME_DECAY), 1.0 / 100);
+            assertThrows(IllegalArgumentException.class, () -> model.getConfig("foo"));
+            assertThrows(IllegalArgumentException.class, () -> model.setConfig("bar", 0));
+        }
+    }
+
+    @Test
     public void testOutOfOrderUpdate() {
         RandomCutForest forest = new RandomCutForest.Builder<>().dimensions(2).sampleSize(10).numberOfTrees(2).build();
         forest.setTimeDecay(100); // will act almost like a sliding window buffer
+        forest.setBoundingBoxCacheFraction(0.2);
         forest.update(new double[] { 20.0, -20.0 }, 20);
         forest.update(new double[] { 0.0, -0.0 }, 0);
         assertEquals(forest.getNearNeighborsInSample(new double[] { 0.0, -0.0 }, 1).size(), 1);

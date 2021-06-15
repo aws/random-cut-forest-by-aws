@@ -174,16 +174,4 @@ public abstract class AbstractBoundingBox<Point> implements IBoundingBoxView {
     @Override
     public abstract String toString();
 
-    /**
-     * Two bounding boxes are considered equal if they have the same dimensions and
-     * all their min values and max values are the same. Min and max values are
-     * compared as primitive doubles using ==, so two bounding boxes are not equal
-     * if their min and max values are merely very close.
-     *
-     * @param other An object to test for equality
-     * @return true if other is a bounding box with the same min and max values
-     */
-    @Override
-    public abstract boolean equals(Object other);
-
 }

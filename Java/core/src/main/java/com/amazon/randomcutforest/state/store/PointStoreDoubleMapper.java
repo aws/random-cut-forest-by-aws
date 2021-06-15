@@ -71,13 +71,17 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
         state.setDirectLocationMap(model.isDirectLocationMap());
-        state.setInternalShingle(model.getInternalShingle());
-        state.setLastTimeStamp(model.getNextSequenceIndex());
-        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
-        state.setRotationEnabled(model.isInternalRotationEnabled());
-        state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
-        state.setIndexCapacity(model.getIndexCapacity());
+        if (model.isInternalShinglingEnabled()) {
+            state.setInternalShingle(model.getInternalShingle());
+            state.setLastTimeStamp(model.getNextSequenceIndex());
+            state.setRotationEnabled(model.isInternalRotationEnabled());
+        }
+        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
+        if (model.isDynamicResizingEnabled()) {
+            state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
+            state.setIndexCapacity(model.getIndexCapacity());
+        }
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setPrecision(Precision.FLOAT_64.name());
         int prefix = model.getValidPrefix();

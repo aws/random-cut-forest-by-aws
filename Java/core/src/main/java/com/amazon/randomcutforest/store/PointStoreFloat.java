@@ -32,8 +32,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
     }
 
     public PointStoreFloat(int dimensions, int capacity) {
-        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).indexCapacity(capacity)
-                .currentStoreCapacity(capacity));
+        this(new Builder().dimensions(dimensions).shingleSize(1).capacity(capacity).initialSize(capacity));
     }
 
     @Override
@@ -92,7 +91,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
             }
         } else {
             for (int j = 0; j < dimensions; j++) {
-                if (point[j] != store[(j + address) % dimensions]) {
+                if (point[(j + address) % dimensions] != store[j + address]) {
                     return false;
                 }
             }
@@ -141,7 +140,7 @@ public class PointStoreFloat extends PointStore<float[], float[]> {
 
     @Override
     void copyTo(int dest, int source, int length) {
-        checkArgument(dest <= source, "error");
+        // validateInternalState(dest <= source, "error");
         for (int i = 0; i < length; i++) {
             store[dest + i] = store[source + i];
         }

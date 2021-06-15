@@ -17,11 +17,11 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float
@@ -124,11 +124,10 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
     @Override
     public int decrementRefCount(int index) {
         indexManager.checkValidIndex(index);
-        checkState(refCount[index] >= 0, " incorrect state ");
         if (refCount[index] == 1) {
             indexManager.releaseIndex(index);
+            locationList[index] = PointStore.INFEASIBLE_POINTSTORE_LOCATION;
         }
-
         return --refCount[index];
     }
 
@@ -164,9 +163,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                 int oldCapacity = indexManager.getCapacity();
                 int newCapacity = Math.min(capacity, 2 * oldCapacity);
                 indexManager = new IndexManager(indexManager, newCapacity);
-                validateInternalState(refCount.length == oldCapacity, " incorrect state ");
                 refCount = Arrays.copyOf(refCount, newCapacity);
-                validateInternalState(locationList.length == oldCapacity, " incorrect state ");
                 locationList = Arrays.copyOf(locationList, newCapacity);
                 for (int i = oldCapacity; i < newCapacity; i++) {
                     locationList[i] = INFEASIBLE_POINTSTORE_LOCATION;
@@ -176,19 +173,17 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
             }
         }
         int location = indexManager.takeIndex();
-        validateInternalState(refCount[location] == 0, " error");
         return location;
     }
 
     void verifyAndMakeSpace(int amount) {
-        validateInternalState(amount <= dimensions, "incorrect parameter");
         if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
             // try compaction and then resizing
             compact();
             if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
                 checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
                 resizeStore();
-                validateInternalState(startOfFreeSegment + amount <= currentStoreCapacity * dimensions, "out of space");
+                checkState(startOfFreeSegment + amount <= currentStoreCapacity * dimensions, "out of space");
             }
         }
     }
@@ -211,7 +206,8 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
         double[] tempPoint = point;
         if (internalShinglingEnabled) {
-            tempPoint = changeShingleInPlace(internalShingle, point);
+            // rotation is supported via the output and input is unchanged
+            tempPoint = constructShingleInPlace(internalShingle, point, false);
             nextSequenceIndex++;
             if (nextSequenceIndex < shingleSize) {
                 return INFEASIBLE_POINTSTORE_INDEX;
@@ -225,13 +221,13 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
             verifyAndMakeSpace(amountToWrite);
             nextIndex = takeIndex();
+
             locationList[nextIndex] = startOfFreeSegment - dimensions + amountToWrite;
             copyPoint(tempPoint, dimensions - amountToWrite, startOfFreeSegment, amountToWrite);
             startOfFreeSegment += amountToWrite;
         } else {
             nextIndex = takeIndex();
             int address = locationList[nextIndex];
-            validateInternalState(refCount[nextIndex] == 0, "incorrect state");
             if (address == INFEASIBLE_POINTSTORE_LOCATION) {
                 if (startOfFreeSegment + dimensions > currentStoreCapacity * dimensions) {
                     checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
@@ -433,25 +429,8 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
      * @return for internal shingling, returns the last seen shingle
      */
     public double[] getInternalShingle() {
-        return (internalShinglingEnabled) ? Arrays.copyOf(internalShingle, dimensions) : null;
-    }
-
-    /**
-     * used for serialization
-     * 
-     * @return the free indices as a stack 9can be implicitly defined)
-     */
-    public int[] getFreeIndexes() {
-        return indexManager.getFreeIndexes();
-    }
-
-    /**
-     * used for serialization
-     * 
-     * @return the pointer to the stack of free indices
-     */
-    public int getFreeIndexPointer() {
-        return indexManager.getFreeIndexPointer();
+        checkState(internalShinglingEnabled, "internal shingling is not enabled");
+        return copyShingle();
     }
 
     /**
@@ -493,12 +472,8 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
         for (int i = 0; i < indexManager.capacity; i++) {
             if (indexManager.occupied.get(i)) {
-                validateInternalState(refCount[i] > 0, " bits out of sync when count = 0 ");
-                validateInternalState(locationList[i] != PointStore.INFEASIBLE_POINTSTORE_INDEX,
-                        " incorrect location info");
                 result.set(locationList[i] / baseDimension);
             } else {
-                validateInternalState(refCount[i] == 0, "bits out of sync with count > 0 ");
                 locationList[i] = INFEASIBLE_POINTSTORE_LOCATION;
             }
         }
@@ -563,8 +538,6 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                 while (runningLocation < currentStoreCapacity * dimensions
                         && (remainsToBeCopied > 0 || rotationEnabled && runningLocation % dimensions != 0)) {
                     if (baseDimension == 1 || runningLocation % baseDimension == 0) {
-                        checkArgument(baseDimension == 1 || shadowLocation % baseDimension == 0, "error");
-
                         if (inUse.get(runningLocation / baseDimension)) { // need to copy dimension more bits
                             remainsToBeCopied = dimensions;
                             if (shadowLocation < runningLocation) { // actual move is necessary
@@ -611,7 +584,20 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
     public double[] transformToShingledPoint(double[] point) {
         checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
         checkArgument(point.length == baseDimension, " incorrect length");
-        return changeShingleInPlace(Arrays.copyOf(internalShingle, dimensions), point);
+        return constructShingleInPlace(copyShingle(), point, rotationEnabled);
+    }
+
+    private double[] copyShingle() {
+        if (!rotationEnabled) {
+            return Arrays.copyOf(internalShingle, dimensions);
+        } else {
+            double[] answer = new double[dimensions];
+            int offset = (int) (nextSequenceIndex * baseDimension);
+            for (int i = 0; i < dimensions; i++) {
+                answer[(offset + i) % dimensions] = internalShingle[i];
+            }
+            return answer;
+        }
     }
 
     /**
@@ -622,7 +608,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
      * @param point  the new values
      * @return the array which now contains the updated shingle
      */
-    private double[] changeShingleInPlace(double[] target, double[] point) {
+    private double[] constructShingleInPlace(double[] target, double[] point, boolean rotationEnabled) {
         if (!rotationEnabled) {
             for (int i = 0; i < dimensions - baseDimension; i++) {
                 target[i] = target[i + baseDimension];
@@ -631,8 +617,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                 target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0 : point[i];
             }
         } else {
-            int offset = ((int) nextSequenceIndex % dimensions);
-            checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
+            int offset = ((int) (nextSequenceIndex * baseDimension) % dimensions);
             for (int i = 0; i < baseDimension; i++) {
                 target[offset + i] = (point[i] == 0.0) ? 0.0 : point[i];
             }
@@ -655,23 +640,17 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         int[] results = Arrays.copyOf(indexList, indexList.length);
         if (!rotationEnabled) {
             for (int i = 0; i < indexList.length; i++) {
+                checkArgument(results[i] < baseDimension, "incorrect index");
                 results[i] += dimensions - baseDimension;
             }
         } else {
-            int offset = ((int) nextSequenceIndex % dimensions);
-            checkArgument(baseDimension == 1 || offset % baseDimension == 0, "incorrect state");
+            int offset = ((int) (nextSequenceIndex * baseDimension) % dimensions);
             for (int i = 0; i < indexList.length; i++) {
+                checkArgument(results[i] < baseDimension, "incorrect index");
                 results[i] = (results[i] + offset) % dimensions;
             }
         }
         return results;
-    }
-
-    /**
-     * @return a new builder.
-     */
-    public static PointStore.Builder<?> builder() {
-        return new PointStore.Builder<>();
     }
 
     /**
@@ -690,88 +669,111 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         private boolean internalRotationEnabled = false;
         private boolean directLocationEnabled = false;
         private int capacity;
-        private int currentStoreCapacity;
-        private int indexCapacity;
+        private Optional<Integer> initialPointStoreSize = Optional.empty();
+        private int currentStoreCapacity = 0;
+        private int indexCapacity = 0;
         private double[] knownShingle = null;
-        private int[] freeIndexes = null;
-        private int freeIndexPointer = INFEASIBLE_POINTSTORE_INDEX;
         private int[] locationList = null;
         private int[] refCount = null;
         private long nextTimeStamp = 0;
         private int startOfFreeSegment = 0;
 
+        // dimension of the points being stored
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
             return (T) this;
         }
 
+        // maximum number of points in the store
         public T capacity(int capacity) {
             this.capacity = capacity;
             return (T) this;
         }
 
-        public T currentStoreCapacity(int currentStoreCapacity) {
-            this.currentStoreCapacity = currentStoreCapacity;
-            return (T) this;
-        }
-
-        public T indexCapacity(int indexCapacity) {
-            this.indexCapacity = indexCapacity;
-            return (T) this;
-        }
-
-        public T shingleSize(int shingleSize) {
-            this.shingleSize = shingleSize;
-            return (T) this;
-        }
-
-        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
-            this.internalShinglingEnabled = internalShinglingEnabled;
-            return (T) this;
-        }
-
-        public T directLocationEnabled(boolean directLocationEnabled) {
-            this.directLocationEnabled = directLocationEnabled;
-            return (T) this;
-        }
-
-        public T internalRotationEnabled(boolean internalRotationEnabled) {
-            this.internalRotationEnabled = internalRotationEnabled;
-            return (T) this;
-        }
-
+        // can the pointstore allocate a smaller data structure and grow,
+        // may save space
         public T dynamicResizingEnabled(boolean dynamicResizingEnabled) {
             this.dynamicResizingEnabled = dynamicResizingEnabled;
             return (T) this;
         }
 
+        // initial size of the pointstore, dynamicResizing must be on
+        // and value cannot exceed capacity
+        public T initialSize(int initialPointStoreSize) {
+            this.initialPointStoreSize = Optional.of(initialPointStoreSize);
+            return (T) this;
+        }
+
+        // shingleSize for opportunistic compression
+        public T shingleSize(int shingleSize) {
+            this.shingleSize = shingleSize;
+            return (T) this;
+        }
+
+        // is direct location enabled, without the location[]
+        // may be faster and save some space
+        public T directLocationEnabled(boolean directLocationEnabled) {
+            this.directLocationEnabled = directLocationEnabled;
+            return (T) this;
+        }
+
+        // is internal shingling enabled
+        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
+            this.internalShinglingEnabled = internalShinglingEnabled;
+            return (T) this;
+        }
+
+        // are shingles rotated
+        public T internalRotationEnabled(boolean internalRotationEnabled) {
+            this.internalRotationEnabled = internalRotationEnabled;
+            return (T) this;
+        }
+
+        // the size of the array storing the specific points
+        // this is used for serialization
+        public T currentStoreCapacity(int currentStoreCapacity) {
+            this.currentStoreCapacity = currentStoreCapacity;
+            return (T) this;
+        }
+
+        // the size of the pointset being tracked
+        // this is used for serialization
+        public T indexCapacity(int indexCapacity) {
+            this.indexCapacity = indexCapacity;
+            return (T) this;
+        }
+
+        // last known shingle, if internalshingle is on
+        // this shingle is not rotated
+        // this is used for serialization
         public T knownShingle(double[] knownShingle) {
             this.knownShingle = knownShingle;
             return (T) this;
         }
 
+        // count of the points being tracked
+        // used for serialization
         public T refCount(int[] refCount) {
             this.refCount = refCount;
             return (T) this;
         }
 
+        // location of the points being tracked, if not directmapped
+        // used for serialization
         public T locationList(int[] locationList) {
             this.locationList = locationList;
             return (T) this;
         }
 
-        /*
-         * public T freeIndexes(int[] freeIndexes) { this.freeIndexes = freeIndexes;
-         * return (T) this; }
-         * 
-         * public T freeIndexPointer(int freeIndexPointer) { this.freeIndexPointer =
-         * freeIndexPointer; return (T) this; }
-         */
+        // location of where points can be written
+        // used for serialization
         public T startOfFreeSegment(int startOfFreeSegment) {
             this.startOfFreeSegment = startOfFreeSegment;
             return (T) this;
         }
 
+        // the next timeStamp to accept
+        // used for serialization
         public T nextTimeStamp(long nextTimeStamp) {
             this.nextTimeStamp = nextTimeStamp;
             return (T) this;
@@ -781,20 +783,28 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
     public PointStore(Builder builder) {
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
+        checkArgument(builder.capacity > 0, "capacity must be greater than 0");
         checkArgument(builder.shingleSize == 1 || builder.dimensions == builder.shingleSize
                 || builder.dimensions % builder.shingleSize == 0, "incorrect use of shingle size");
-        checkArgument(builder.dynamicResizingEnabled || builder.currentStoreCapacity > 0,
-                "capacity must be positive if dynamic resizing is disabled");
         checkArgument(!builder.internalRotationEnabled || builder.internalShinglingEnabled,
                 "rotation can be enabled for internal shingling only");
-        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
-                || builder.knownShingle != null) {
-            checkArgument(builder.refCount == null || builder.refCount.length == builder.indexCapacity,
-                    "incorrect state");
+        builder.initialPointStoreSize.ifPresent(n -> {
+            checkState(dynamicResizingEnabled || builder.capacity >= (int) n,
+                    " incorrect initialization, enable dynamic resizing");
+        });
+        /**
+         * the following checks are due to mappers.
+         */
+        if (builder.refCount != null || builder.locationList != null || builder.knownShingle != null) {
+            checkArgument(builder.refCount != null, "reference count must be present");
+            checkArgument(builder.locationList != null, "location list must be present");
+            checkArgument(builder.refCount.length == builder.indexCapacity, "incorrect reference count length");
             // following may change if IndexManager is dynamically resized as well
-            checkArgument(builder.locationList == null || builder.locationList.length == builder.indexCapacity,
-                    " incorrect state");
-            checkArgument(builder.knownShingle == null || builder.internalShinglingEnabled, "incorrect state");
+            checkArgument(builder.locationList.length == builder.indexCapacity, " incorrect length of locations");
+            checkArgument(
+                    builder.knownShingle == null
+                            || builder.internalShinglingEnabled && builder.knownShingle.length == builder.dimensions,
+                    "incorrect shingling information");
         }
 
         this.shingleSize = builder.shingleSize;
@@ -807,19 +817,26 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         this.baseDimension = this.dimensions / this.shingleSize;
         this.capacity = builder.capacity;
 
-        if (builder.refCount != null || builder.freeIndexes != null || builder.locationList != null
-                || builder.knownShingle != null) {
-
+        if (builder.refCount == null) {
+            int size = (int) builder.initialPointStoreSize.orElse(dynamicResizingEnabled ? 1 : builder.capacity);
+            currentStoreCapacity = size * dimensions;
+            indexManager = new IndexManager(size);
+            startOfFreeSegment = 0;
+            refCount = new int[size];
+            if (internalShinglingEnabled) {
+                nextSequenceIndex = 0;
+                internalShingle = new double[dimensions];
+            }
+            locationList = new int[size];
+            Arrays.fill(locationList, INFEASIBLE_POINTSTORE_LOCATION);
+        } else {
             this.refCount = builder.refCount;
             this.locationList = builder.locationList;
             this.startOfFreeSegment = builder.startOfFreeSegment;
             this.nextSequenceIndex = builder.nextTimeStamp;
 
             if (internalShinglingEnabled) {
-                this.internalShingle = new double[dimensions];
-                if (builder.knownShingle != null) { // can be for empty forest
-                    System.arraycopy(builder.knownShingle, 0, this.internalShingle, 0, dimensions);
-                }
+                this.internalShingle = Arrays.copyOf(builder.knownShingle, dimensions);
             }
             BitSet bits = new BitSet(builder.indexCapacity);
             for (int i = 0; i < builder.indexCapacity; i++) {
@@ -828,16 +845,6 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                 }
             }
             indexManager = new IndexManager(builder.indexCapacity, bits);
-        } else {
-            indexManager = new IndexManager(builder.indexCapacity);
-            startOfFreeSegment = 0;
-            refCount = new int[builder.indexCapacity];
-            if (internalShinglingEnabled) {
-                nextSequenceIndex = 0;
-                internalShingle = new double[dimensions];
-            }
-            locationList = new int[builder.indexCapacity];
-            Arrays.fill(locationList, INFEASIBLE_POINTSTORE_LOCATION);
         }
     }
 

@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
@@ -499,7 +498,7 @@ public class Node implements INode<Node> {
         if (!isLeaf()) {
             double[] leftSum = getLeftChild().getPointSum();
             double[] rightSum = getRightChild().getPointSum();
-            checkArgument(leftSum.length == rightSum.length, "incorrect state");
+            assert leftSum.length == rightSum.length : "incorrect state";
             if (pointSum == null) {
                 pointSum = new double[leftSum.length];
             }
