@@ -159,7 +159,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
      */
     int takeIndex() {
         if (indexManager.isFull()) {
-            if (indexManager.getCapacity() < capacity && dynamicResizingEnabled) {
+            if (indexManager.getCapacity() < capacity) {
                 int oldCapacity = indexManager.getCapacity();
                 int newCapacity = Math.min(capacity, 2 * oldCapacity);
                 indexManager = new IndexManager(indexManager, newCapacity);
