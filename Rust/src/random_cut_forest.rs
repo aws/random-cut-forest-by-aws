@@ -390,20 +390,6 @@ mod tests {
     }
 
     #[test]
-    fn test_attribution() {
-        let mut forest = RandomCutForestBuilder::<f32>::new(2)
-            .num_trees(20)
-            .sample_size(4)
-            .time_decay(0.0)
-            .build();
-
-        println!("training...");
-        for _ in 0..4 {
-            forest.update(vec![0.0, 0.0]);
-        }
-    }
-
-    #[test]
     fn gaussian_blob() {
         let num_points = 1000;
         let dimensions = 3;
