@@ -18,8 +18,8 @@ package com.amazon.randomcutforest.anomalydetection;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.INodeView;
 
 public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
 
@@ -30,7 +30,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * scored
      * 
      */
-    protected final Function<BoundingBox, double[]> vecSepScore;
+    protected final Function<IBoundingBoxView, double[]> vecSepScore;
 
     /**
      * Construct a new SimulatedTransductiveScalarScoreVisitor
@@ -57,7 +57,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
 
     public TransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            BiFunction<Double, Double, Double> damp, Function<BoundingBox, double[]> vecSep) {
+            BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSep) {
         super(pointToScore, treeMass, 0, scoreSeen, scoreUnseen, damp);
         this.vecSepScore = vecSep;
         // build function is the same as scoring function
@@ -70,7 +70,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * @param depthOfNode The depth of the current node in the tree
      */
     @Override
-    public void accept(Node node, int depthOfNode) {
+    public void accept(INodeView node, int depthOfNode) {
         if (pointInsideBox) {
             return;
         }
@@ -79,7 +79,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
         // probability function used to build the trees.
 
         double probabilityOfSeparation = getProbabilityOfSeparation(node.getBoundingBox());
-        double weight = getWeight(node.getCut().getDimension(), vecSepScore, node.getBoundingBox());
+        double weight = getWeight(node.getCutDimension(), vecSepScore, node.getBoundingBox());
         if (probabilityOfSeparation == 0) {
             pointInsideBox = true;
             return;
@@ -100,7 +100,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      * @return is the probability
      */
     @Override
-    protected double getProbabilityOfSeparation(final BoundingBox boundingBox) {
+    protected double getProbabilityOfSeparation(final IBoundingBoxView boundingBox) {
         double sumOfDenominator = 0d;
         double sumOfNumerator = 0d;
 
@@ -147,11 +147,12 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
     // written in the more general form so that it can be used for the Simulated
     // version as well without any changes.
 
-    protected double getWeight(int dim, Function<BoundingBox, double[]> vecSepBuild, final BoundingBox boundingBox) {
+    protected double getWeight(int dim, Function<IBoundingBoxView, double[]> vecSepBuild,
+            final IBoundingBoxView boundingBox) {
 
         double[] vecSmall = vecSepBuild.apply(boundingBox);
         // the smaller box was built!
-        BoundingBox largeBox = boundingBox.getMergedBox(pointToScore);
+        IBoundingBoxView largeBox = boundingBox.getMergedBox(pointToScore);
         double[] vecLarge = vecSepScore.apply(largeBox);
         // the larger box is only scored!
         double sumSmall = 0;

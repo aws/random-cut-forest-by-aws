@@ -36,7 +36,7 @@ public class ArgumentParserTest {
         assertEquals(100, parser.getNumberOfTrees());
         assertEquals(256, parser.getSampleSize());
         assertEquals(0, parser.getWindowSize());
-        assertEquals(0.0, parser.getLambda());
+        assertEquals(0.0, parser.getTimeDecay());
         assertEquals(1, parser.getShingleSize());
         assertFalse(parser.getShingleCyclic());
         assertEquals(",", parser.getDelimiter());
@@ -51,7 +51,7 @@ public class ArgumentParserTest {
         assertEquals(222, parser.getNumberOfTrees());
         assertEquals(123, parser.getSampleSize());
         assertEquals(50, parser.getWindowSize());
-        assertEquals(0.02, parser.getLambda());
+        assertEquals(0.02, parser.getTimeDecay());
         assertEquals(4, parser.getShingleSize());
         assertTrue(parser.getShingleCyclic());
         assertEquals("\t", parser.getDelimiter());
@@ -65,7 +65,7 @@ public class ArgumentParserTest {
         assertEquals(222, parser.getNumberOfTrees());
         assertEquals(123, parser.getSampleSize());
         assertEquals(50, parser.getWindowSize());
-        assertEquals(0.02, parser.getLambda());
+        assertEquals(0.02, parser.getTimeDecay());
         assertEquals(4, parser.getShingleSize());
         assertEquals("\t", parser.getDelimiter());
     }

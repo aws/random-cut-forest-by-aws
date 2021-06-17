@@ -24,6 +24,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Random;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
@@ -450,7 +452,7 @@ public class RandomCutForestFunctionalTest {
         randomSeed = 123;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1e-5)
+                .dimensions(dimensions).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1e-5)
                 .storeSequenceIndexesEnabled(true).build();
 
         dataSize = 10_000;
@@ -614,7 +616,8 @@ public class RandomCutForestFunctionalTest {
             error += Math.abs(prediction - answer[j]);
         }
         error = error / 200;
-        assertTrue(error < 2 * noise);
+
+        assertTrue(error < 4 * noise);
 
     }
 
@@ -679,11 +682,11 @@ public class RandomCutForestFunctionalTest {
         // subsequent inputs and test adaptation to stream evolution
 
         RandomCutForest newforestC = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
+                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1.0 / 300)
                 .storeSequenceIndexesEnabled(true).build();
 
         RandomCutForest newforestD = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).lambda(1.0 / 300)
+                .dimensions(shinglesize).randomSeed(randomSeed).centerOfMassEnabled(true).timeDecay(1.0 / 300)
                 .storeSequenceIndexesEnabled(true).build();
 
         double amplitude = 50.0;
@@ -829,5 +832,78 @@ public class RandomCutForestFunctionalTest {
 
         }
         return shingledPoint;
+    }
+
+    @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
+            + "numTestSamples={4}, enableParallel={5}, numThreads={6}")
+    @CsvSource({ "10, 50, 256, 50000, 0, 0, 0" })
+    public void dynamicCachingChangeTest(int numDims, int numTrees, int numSamples, int numTrainSamples,
+            int numTestSamples, int enableParallel, int numThreads) {
+        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compact(false);
+        if (enableParallel == 0) {
+            forestBuilder.parallelExecutionEnabled(false);
+        }
+        if (numThreads > 0) {
+            forestBuilder.threadPoolSize(numThreads);
+        }
+        RandomCutForest forest = forestBuilder.build();
+        RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compact(true).boundingBoxCacheFraction(1.0).build();
+
+        int count = 0;
+        for (double[] point : generate(numTrainSamples, numDims, 0)) {
+            ++count;
+            double score = forest.getAnomalyScore(point);
+            double anotherScore = anotherForest.getAnomalyScore(point);
+            assertEquals(score, anotherScore, 1E-10);
+            forest.update(point);
+            anotherForest.update(point);
+            if (count % 2000 == 1000) {
+                double fraction = Math.random();
+                // System.out.println(" second forest fraction " + fraction);
+                anotherForest.setBoundingBoxCacheFraction(fraction);
+            }
+            if (count % 2000 == 0) {
+                double fraction = Math.random();
+                // System.out.println(" first forest fraction " + fraction);
+                forest.setBoundingBoxCacheFraction(fraction);
+            }
+        }
+
+    }
+
+    @ParameterizedTest(name = "{index} => numDims={0}, numTrees={1}, numSamples={2}, numTrainSamples={3}, "
+            + "numTestSamples={4}, enableParallel={5}, numThreads={6}")
+    @CsvSource({ "10, 10, 30000, 50000, 0, 0, 0" })
+    public void dynamicCachingChangeTestLarge(int numDims, int numTrees, int numSamples, int numTrainSamples,
+            int numTestSamples, int enableParallel, int numThreads) {
+        RandomCutForest.Builder<?> forestBuilder = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).boundingBoxCacheFraction(1.0).compact(false);
+        if (enableParallel == 0) {
+            forestBuilder.parallelExecutionEnabled(false);
+        }
+        if (numThreads > 0) {
+            forestBuilder.threadPoolSize(numThreads);
+        }
+        RandomCutForest forest = forestBuilder.build();
+        RandomCutForest anotherForest = RandomCutForest.builder().dimensions(numDims).numberOfTrees(numTrees)
+                .sampleSize(numSamples).randomSeed(0).compact(true).boundingBoxCacheFraction(1.0).build();
+
+        int count = 0;
+        for (double[] point : generate(numTrainSamples, numDims, 0)) {
+            ++count;
+            double score = forest.getAnomalyScore(point);
+            double anotherScore = anotherForest.getAnomalyScore(point);
+            assertEquals(score, anotherScore, 1E-10);
+            forest.update(point);
+            anotherForest.update(point);
+        }
+
+    }
+
+    private double[][] generate(int numSamples, int numDimensions, int seed) {
+        return IntStream.range(0, numSamples).mapToObj(i -> new Random(seed + i).doubles(numDimensions).toArray())
+                .toArray(double[][]::new);
     }
 }

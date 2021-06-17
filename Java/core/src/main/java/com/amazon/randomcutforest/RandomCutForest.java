@@ -31,6 +31,18 @@ import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.config.Config;
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
+import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.IStateCoordinator;
+import com.amazon.randomcutforest.executor.ParallelForestTraversalExecutor;
+import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
+import com.amazon.randomcutforest.executor.PassThroughCoordinator;
+import com.amazon.randomcutforest.executor.PointStoreCoordinator;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
+import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
@@ -41,7 +53,15 @@ import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
+import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
@@ -72,10 +92,10 @@ public class RandomCutForest {
     public static final double DEFAULT_OUTPUT_AFTER_FRACTION = 0.25;
 
     /**
-     * If the user doesn't specify an explicit lambda value, then we set it to the
-     * inverse of this coefficient times sample size.
+     * If the user doesn't specify an explicit time decay value, then we set it to
+     * the inverse of this coefficient times sample size.
      */
-    public static final double DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA = 10.0;
+    public static final double DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY = 10.0;
 
     /**
      * Default number of trees to use in the forest.
@@ -88,9 +108,56 @@ public class RandomCutForest {
     public static final boolean DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED = false;
 
     /**
+     * By default, trees will not create indexed references.
+     */
+    public static final boolean DEFAULT_COMPACT = true;
+
+    /**
+     * By default, trees will accept every point until full.
+     */
+    public static final double DEFAULT_INITIAL_ACCEPT_FRACTION = 1.0;
+
+    /**
+     * By default, the collection of points stored in the forest will increase from
+     * a small size, as needed to maximum capacity
+     */
+    public static final boolean DEFAULT_DYNAMIC_RESIZING_ENABLED = true;
+
+    /**
+     * By default, shingling will be external
+     */
+    public static final boolean DEFAULT_INTERNAL_SHINGLING_ENABLED = false;
+
+    /**
+     * By default, shingles will be a sliding window and not a cyclic buffer
+     */
+    public static final boolean DEFAULT_INTERNAL_ROTATION_ENABLED = false;
+
+    /**
+     * By default, point stores will favor speed of size for larger shingle sizes
+     */
+    public static final boolean DEFAULT_DIRECT_LOCATION_MAP = false;
+
+    /**
+     * Default floating-point precision for internal data structures.
+     */
+    public static final Precision DEFAULT_PRECISION = Precision.FLOAT_64;
+
+    /**
+     * By default, bounding boxes will be used. Disabling this will force
+     * enableCompact .
+     */
+    public static final double DEFAULT_BOUNDING_BOX_CACHE_FRACTION = 1.0;
+
+    /**
      * By default, nodes will not store center of mass.
      */
     public static final boolean DEFAULT_CENTER_OF_MASS_ENABLED = false;
+
+    /**
+     * By default RCF is unaware of shingle size
+     */
+    public static final int DEFAULT_SHINGLE_SIZE = 1;
 
     /**
      * Parallel execution is enabled by default.
@@ -106,7 +173,7 @@ public class RandomCutForest {
     /**
      * Random number generator used by the forest.
      */
-    protected final Random rng;
+    protected Random random;
     /**
      * The number of dimensions in the input data.
      */
@@ -116,6 +183,14 @@ public class RandomCutForest {
      */
     protected final int sampleSize;
     /**
+     * The shingle size (if known)
+     */
+    protected final int shingleSize;
+    /**
+     * The input dimensions for known shingle size and internal shingling
+     */
+    protected final int inputDimensions;
+    /**
      * The number of points required by stream samplers before results are returned.
      */
     protected final int outputAfter;
@@ -124,13 +199,32 @@ public class RandomCutForest {
      */
     protected final int numberOfTrees;
     /**
-     * The decay factor (lambda value) used by stream samplers in this forest.
+     * The decay factor used by stream samplers in this forest.
      */
-    protected final double lambda;
+    protected double timeDecay;
     /**
      * Store the time information
      */
     protected final boolean storeSequenceIndexesEnabled;
+    /**
+     * Enable compact representation
+     */
+    protected final boolean compact;
+    /**
+     * enables internal shingling
+     */
+    protected final boolean internalShinglingEnabled;
+
+    /**
+     * The preferred floating point precision to use in internal data structures.
+     * This will affect runtime memory and the size of a serialized model.
+     */
+    protected final Precision precision;
+    /**
+     * The following can be set between 0 and 1 (inclusive) to achieve tradeoff
+     * between smaller space, lower throughput and larger space, larger throughput
+     */
+    protected final double boundingBoxCacheFraction;
     /**
      * Enable center of mass at internal nodes
      */
@@ -140,15 +234,161 @@ public class RandomCutForest {
      */
     protected final boolean parallelExecutionEnabled;
     /**
-     * Number of threads to use in the threadpool if parallel execution is enabled.
+     * Number of threads to use in the thread pool if parallel execution is enabled.
      */
     protected final int threadPoolSize;
     /**
+     * A string to define an "execution mode" that can be used to set multiple
+     * configuration options. This field is not currently in use.
+     */
+    protected String executionMode;
+
+    protected IStateCoordinator<?, ?> stateCoordinator;
+    protected ComponentList<?, ?> components;
+
+    /**
+     * This flag is initialized to false. It is set to true when all component
+     * models are ready.
+     */
+    private boolean outputReady;
+
+    /**
+     * used for initializing the compact forests
+     */
+    private final int initialPointStoreSize;
+    private final int pointStoreCapacity;
+
+    /**
      * An implementation of forest traversal algorithms.
      */
-    protected final AbstractForestTraversalExecutor executor;
+    protected AbstractForestTraversalExecutor traversalExecutor;
 
-    protected RandomCutForest(Builder<?> builder) {
+    /**
+     * An implementation of forest update algorithms.
+     */
+    protected AbstractForestUpdateExecutor<?, ?> updateExecutor;
+
+    public <P, Q> RandomCutForest(Builder<?> builder, IStateCoordinator<P, Q> stateCoordinator,
+            ComponentList<P, Q> components, Random random) {
+        this(builder, false);
+
+        checkNotNull(stateCoordinator, "updateCoordinator must not be null");
+        checkNotNull(components, "componentModels must not be null");
+        checkNotNull(random, "random must not be null");
+
+        this.stateCoordinator = stateCoordinator;
+        this.components = components;
+        this.random = random;
+        initExecutors(stateCoordinator, components);
+    }
+
+    public RandomCutForest(Builder<?> builder) {
+        this(builder, false);
+        random = builder.getRandom();
+        if (precision == Precision.FLOAT_32) {
+            initCompactFloat(builder);
+        } else if (compact) {
+            initCompactDouble(builder);
+        } else {
+            initNonCompact();
+        }
+    }
+
+    private void initCompactDouble(Builder<?> builder) {
+        PointStoreDouble tempStore = PointStoreDouble.builder().internalRotationEnabled(builder.internalRotationEnabled)
+                .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
+                .directLocationEnabled(builder.directLocationMapEnabled)
+                .internalShinglingEnabled(internalShinglingEnabled)
+                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
+                .build();
+
+        IStateCoordinator<Integer, double[]> stateCoordinator = new PointStoreCoordinator(tempStore);
+        ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
+        for (int i = 0; i < numberOfTrees; i++) {
+            ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
+                    .randomSeed(random.nextLong()).pointStore(tempStore)
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+
+            IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
+                    .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .initialAcceptFraction(builder.initialAcceptFraction).build();
+
+            components.add(new SamplerPlusTree<>(sampler, tree));
+        }
+        this.stateCoordinator = stateCoordinator;
+        this.components = components;
+        initExecutors(stateCoordinator, components);
+    }
+
+    private void initCompactFloat(Builder<?> builder) {
+        PointStoreFloat tempStore = PointStoreFloat.builder().internalRotationEnabled(builder.internalRotationEnabled)
+                .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
+                .directLocationEnabled(builder.directLocationMapEnabled)
+                .internalShinglingEnabled(internalShinglingEnabled)
+                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
+                .build();
+
+        IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
+        ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
+        for (int i = 0; i < numberOfTrees; i++) {
+            ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat.Builder().maxSize(sampleSize)
+                    .randomSeed(random.nextLong()).pointStore(tempStore)
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+
+            IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
+                    .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
+                    .initialAcceptFraction(builder.initialAcceptFraction).build();
+
+            components.add(new SamplerPlusTree<>(sampler, tree));
+        }
+        this.stateCoordinator = stateCoordinator;
+        this.components = components;
+        initExecutors(stateCoordinator, components);
+    }
+
+    private void initNonCompact() {
+        IStateCoordinator<double[], double[]> stateCoordinator = new PassThroughCoordinator();
+        ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
+        for (int i = 0; i < numberOfTrees; i++) {
+            ITree<double[], double[]> tree = RandomCutTree.builder().randomSeed(random.nextLong())
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+
+            IStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize)
+                    .timeDecay(timeDecay).randomSeed(random.nextLong()).build();
+
+            components.add(new SamplerPlusTree<>(sampler, tree));
+        }
+        this.stateCoordinator = stateCoordinator;
+        this.components = components;
+        initExecutors(stateCoordinator, components);
+    }
+
+    protected <PointReference, Point> void initExecutors(IStateCoordinator<PointReference, Point> updateCoordinator,
+            ComponentList<PointReference, Point> components) {
+        if (parallelExecutionEnabled) {
+            traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
+            updateExecutor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
+        } else {
+            traversalExecutor = new SequentialForestTraversalExecutor(components);
+            updateExecutor = new SequentialForestUpdateExecutor<>(updateCoordinator, components);
+        }
+    }
+
+    /**
+     * This constructor is responsible for initializing a forest's configuration
+     * variables from a builder. The method signature contains a boolean argument
+     * that isn't used. This argument exists only to create a distinct method
+     * signature so that we can expose {@link #RandomCutForest(Builder)} as a
+     * protected constructor.
+     * 
+     * @param builder A Builder instance giving the desired random cut forest
+     *                configuration.
+     * @param notUsed This parameter is not used.
+     */
+    protected RandomCutForest(Builder<?> builder, boolean notUsed) {
         checkArgument(builder.numberOfTrees > 0, "numberOfTrees must be greater than 0");
         checkArgument(builder.sampleSize > 0, "sampleSize must be greater than 0");
         builder.outputAfter.ifPresent(n -> {
@@ -156,42 +396,51 @@ public class RandomCutForest {
             checkArgument(n <= builder.sampleSize, "outputAfter must be smaller or equal to sampleSize");
         });
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
-        builder.lambda.ifPresent(lambda -> {
-            checkArgument(lambda >= 0, "lambda must be greater than or equal to 0");
+        builder.timeDecay.ifPresent(timeDecay -> {
+            checkArgument(timeDecay >= 0, "timeDecay must be greater than or equal to 0");
         });
-        builder.threadPoolSize.ifPresent(n -> checkArgument(n > 0,
-                "threadPoolSize must be greater than 0. To disable thread pool, set parallel execution to 'false'."));
-
+        builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
+                "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
+        checkArgument(builder.precision == Precision.FLOAT_64 || builder.compact,
+                "single precision is only supported for compact trees");
+        checkArgument(builder.internalShinglingEnabled || builder.shingleSize == 1
+                || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
+        // checkArgument(!builder.internalShinglingEnabled || builder.shingleSize > 1,
+        // " need shingle size > 1 for internal shingling");
+        if (builder.internalRotationEnabled) {
+            checkArgument(builder.internalShinglingEnabled, " enable internal shingling");
+            checkArgument(builder.compact, " option not supported, enable compact trees");
+        }
+        builder.initialPointStoreSize.ifPresent(n -> {
+            checkArgument(n > 0, "initial point store must be greater than 0");
+            checkArgument(n > builder.sampleSize * builder.numberOfTrees || builder.dynamicResizingEnabled,
+                    " enable dynamic resizing ");
+            checkArgument(builder.compact, " enable compact trees ");
+        });
+        checkArgument(builder.boundingBoxCacheFraction >= 0 && builder.boundingBoxCacheFraction <= 1,
+                "incorrect cache fraction range");
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
         outputAfter = builder.outputAfter.orElse((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
+        internalShinglingEnabled = builder.internalShinglingEnabled;
+        shingleSize = builder.shingleSize;
         dimensions = builder.dimensions;
-        lambda = builder.lambda.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_LAMBDA * sampleSize));
+        timeDecay = builder.timeDecay.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * sampleSize));
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
-        ArrayList<TreeUpdater> treeUpdaters = new ArrayList<>(numberOfTrees);
-
-        // If a random seed was given, use it to create a new Random. Otherwise, call
-        // the 0-argument constructor
-        rng = builder.randomSeed.map(Random::new).orElseGet(Random::new);
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            SimpleStreamSampler sampler = new SimpleStreamSampler(sampleSize, lambda, rng.nextLong());
-            RandomCutTree tree = RandomCutTree.builder().storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .centerOfMassEnabled(centerOfMassEnabled).randomSeed(rng.nextLong()).build();
-            TreeUpdater updater = new TreeUpdater(sampler, tree);
-            treeUpdaters.add(updater);
-        }
+        compact = builder.compact;
+        precision = builder.precision;
+        boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
+        builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
+        inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
+        pointStoreCapacity = sampleSize * numberOfTrees + 1;
+        initialPointStoreSize = builder.initialPointStoreSize.orElse(Math.min(2 * sampleSize, pointStoreCapacity));
 
         if (parallelExecutionEnabled) {
-            // If the user specified a thread pool size, use it. Otherwise, use available
-            // processors - 1.
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
-            executor = new ParallelForestTraversalExecutor(treeUpdaters, threadPoolSize);
         } else {
             threadPoolSize = 0;
-            executor = new SequentialForestTraversalExecutor(treeUpdaters);
         }
     }
 
@@ -239,6 +488,13 @@ public class RandomCutForest {
     }
 
     /**
+     * @return the shingle size used by the point store.
+     */
+    public int getShingleSize() {
+        return shingleSize;
+    }
+
+    /**
      * @return the number of points required by stream samplers before results are
      *         returned.
      */
@@ -254,32 +510,61 @@ public class RandomCutForest {
     }
 
     /**
-     * @return return the decay factor (lambda value) used by stream samplers in
-     *         this forest.
+     * @return return the decay factor used by stream samplers in this forest.
      */
-    public double getLambda() {
-        return lambda;
+    public double getTimeDecay() {
+        return timeDecay;
     }
 
     /**
      * @return true if points are saved with sequence indexes, false otherwise.
      */
-    public boolean storeSequenceIndexesEnabled() {
+    public boolean isStoreSequenceIndexesEnabled() {
         return storeSequenceIndexesEnabled;
+    }
+
+    /**
+     * For compact forests, users can choose to specify the desired floating-point
+     * precision to use internally to store points. Choosing single-precision will
+     * reduce the memory size of the model at the cost of requiring double/float
+     * conversions.
+     *
+     * @return the desired precision to use internally to store points.
+     */
+    public Precision getPrecision() {
+        return precision;
+    }
+
+    /**
+     * @return true if points are saved with sequence indexes, false otherwise.
+     */
+    public boolean isCompact() {
+        return compact;
+    }
+
+    /**
+     * @return true if internal shingling is performed, false otherwise.
+     */
+    public boolean isInternalShinglingEnabled() {
+        return internalShinglingEnabled;
     }
 
     /**
      * @return true if tree nodes retain the center of mass, false otherwise.
      */
-    public boolean centerOfMassEnabled() {
+    public boolean isCenterOfMassEnabled() {
         return centerOfMassEnabled;
     }
 
     /**
      * @return true if parallel execution is enabled, false otherwise.
      */
-    public boolean parallelExecutionEnabled() {
+    public boolean isParallelExecutionEnabled() {
         return parallelExecutionEnabled;
+    }
+
+    public double getBoundingBoxCacheFraction() {
+        return boundingBoxCacheFraction;
     }
 
     /**
@@ -288,6 +573,78 @@ public class RandomCutForest {
      */
     public int getThreadPoolSize() {
         return threadPoolSize;
+    }
+
+    public IStateCoordinator<?, ?> getUpdateCoordinator() {
+        return stateCoordinator;
+    }
+
+    public ComponentList<?, ?> getComponents() {
+        return components;
+    }
+
+    /**
+     * Returns a clean deep copy of the point. Current clean-ups include changing
+     * negative zero -0.0 to positive zero 0.0.
+     *
+     * @param point The original data point.
+     * @return a clean deep copy of the original point.
+     */
+    public static double[] cleanCopy(double[] point) {
+        double[] pointCopy = Arrays.copyOf(point, point.length);
+        for (int i = 0; i < point.length; i++) {
+            if (pointCopy[i] == 0.0) {
+                pointCopy[i] = 0.0;
+            }
+        }
+        return pointCopy;
+    }
+
+    /**
+     * used for scoring and other function, expands to a shingled point in either
+     * case performs a clean copy
+     * 
+     * @param point input point
+     * @return a shingled copy or a clean copy
+     */
+
+    public double[] transformToShingledPoint(double[] point) {
+        checkNotNull(point, "point must not be null");
+        return (internalShinglingEnabled && point.length == inputDimensions)
+                ? stateCoordinator.getStore().transformToShingledPoint(point)
+                : cleanCopy(point);
+    }
+
+    /**
+     * transforms the missing indices on the input point to the corresponding
+     * indices of a shingled point
+     * 
+     * @param indexList input array of missing values
+     * @param length    length of the input array
+     * @return output array of missing values corresponding to shingle
+     */
+    public int[] transformIndices(int[] indexList, int length) {
+        return (internalShinglingEnabled && length == inputDimensions)
+                ? stateCoordinator.getStore().transformIndices(indexList)
+                : indexList;
+    }
+
+    /**
+     *
+     * @return the last known shingled point seen
+     */
+    public double[] lastShingledPoint() {
+        checkArgument(internalShinglingEnabled, "incorrect use");
+        return stateCoordinator.getStore().getInternalShingle();
+    }
+
+    /**
+     *
+     * @return the sequence index of the last known shingled point
+     */
+    public long nextSequenceIndex() {
+        checkArgument(internalShinglingEnabled, "incorrect use");
+        return stateCoordinator.getStore().getNextSequenceIndex();
     }
 
     /**
@@ -299,22 +656,65 @@ public class RandomCutForest {
      */
     public void update(double[] point) {
         checkNotNull(point, "point must not be null");
+        checkArgument(internalShinglingEnabled || point.length == dimensions,
+                String.format("point.length must equal %d", dimensions));
+        checkArgument(!internalShinglingEnabled || point.length == inputDimensions,
+                String.format("point.length must equal %d for internal shingling", inputDimensions));
+
+        updateExecutor.update(point);
+    }
+
+    /**
+     * Update the forest with the given point and a timestamp. The point is
+     * submitted to each sampler in the forest as if that timestamp was the correct
+     * stamp. storeSequenceIndexes must be false since the algorithm will not verify
+     * the correctness of the timestamp.
+     *
+     * @param point       The point used to update the forest.
+     * @param sequenceNum The timestamp of the corresponding point
+     */
+    public void update(double[] point, long sequenceNum) {
+        checkNotNull(point, "point must not be null");
+        checkArgument(!internalShinglingEnabled, "cannot be applied with internal shingling");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
-        executor.update(point);
+        updateExecutor.update(point, sequenceNum);
+    }
+
+    /**
+     * Update the forest such that each tree caches a fraction of the bounding
+     * boxes. This allows for a tradeoff between speed and storage.
+     *
+     * @param cacheFraction The (approximate) fraction of bounding boxes used in
+     *                      caching.
+     */
+    public void setBoundingBoxCacheFraction(double cacheFraction) {
+        checkArgument(0 <= cacheFraction && cacheFraction <= 1, "cacheFraction must be between 0 and 1 (inclusive)");
+        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, cacheFraction));
+    }
+
+    /**
+     * changes the setting of time dependent sampling on the fly
+     * 
+     * @param timeDecay new value of sampling rate
+     */
+    public void setTimeDecay(double timeDecay) {
+        checkArgument(0 <= timeDecay, "timeDecay must be greater than or equal to 0");
+        this.timeDecay = timeDecay;
+        updateExecutor.getComponents().forEach(c -> c.setConfig(Config.TIME_DECAY, timeDecay));
     }
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
-     * the trees are combined using the accumulator and then transformed using the
-     * finisher before being returned. Trees are visited in parallel using
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
+     * all the trees are combined using the accumulator and then transformed using
+     * the finisher before being returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -326,8 +726,8 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-            BinaryOperator<R> accumulator, Function<R, S> finisher) {
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+            Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -335,21 +735,21 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForest(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForest(point, visitorFactory, accumulator, finisher);
     }
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
      * individual trees are collected using the {@link java.util.stream.Collector}
      * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -359,29 +759,28 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
-            Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
-        return executor.traverseForest(point, visitorFactory, collector);
+        return traversalExecutor.traverseForest(point, visitorFactory, collector);
     }
 
     /**
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
      * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTree(double[], Visitor)}. The results from all
-     * the trees are combined using the {@link ConvergingAccumulator}, and the
+     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
+     * all the trees are combined using the {@link ConvergingAccumulator}, and the
      * method stops visiting trees after convergence is reached. The result is
      * transformed using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param accumulator    An accumulator that combines the results from
      *                       individual trees into an aggregate result and checks to
      *                       see if the result can be returned without further
@@ -395,7 +794,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, Function<RandomCutTree, Visitor<R>> visitorFactory,
+    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -404,20 +803,20 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForest(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForest(point, visitorFactory, accumulator, finisher);
     }
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
-     * from all the trees are combined using the accumulator and then transformed
-     * using the finisher before being returned.
+     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
+     * results from all the trees are combined using the accumulator and then
+     * transformed using the finisher before being returned.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a multi-vistor.
+     *                       construct a multi-visitor.
      * @param accumulator    A function that combines the results from individual
      *                       trees into an aggregate result.
      * @param finisher       A function called on the aggregate result in order to
@@ -429,7 +828,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -438,21 +837,21 @@ public class RandomCutForest {
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
 
-        return executor.traverseForestMulti(point, visitorFactory, accumulator, finisher);
+        return traversalExecutor.traverseForestMulti(point, visitorFactory, accumulator, finisher);
     }
 
     /**
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseTreeMulti(double[], MultiVisitor)}. The results
-     * from individual trees are collected using the
+     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
+     * results from individual trees are collected using the
      * {@link java.util.stream.Collector} and returned. Trees are visited in
      * parallel using {@link java.util.Collection#parallelStream()}.
      *
      * @param point          The point that defines the traversal path.
      * @param visitorFactory A factory method which is invoked for each tree to
-     *                       construct a vistor.
+     *                       construct a visitor.
      * @param collector      A collector used to aggregate individual tree results
      *                       into a final result.
      * @param <R>            The visitor result type. This is the type that will be
@@ -462,7 +861,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, Function<RandomCutTree, MultiVisitor<R>> visitorFactory,
+    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -470,7 +869,7 @@ public class RandomCutForest {
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
-        return executor.traverseForestMulti(point, visitorFactory, collector);
+        return traversalExecutor.traverseForestMulti(point, visitorFactory, collector);
     }
 
     /**
@@ -478,7 +877,7 @@ public class RandomCutForest {
      * compared with the points in the sample to compute a measure of how anomalous
      * it is. Scores are greater than 0, with higher scores corresponding to bing
      * more anomalous. A threshold of 1.0 is commonly used to distinguish anomalous
-     * points from non-anomolous ones.
+     * points from non-anomalous ones.
      * <p>
      * See {@link AnomalyScoreVisitor} for more details about the anomaly score
      * algorithm.
@@ -491,14 +890,12 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
-                tree.getRoot().getMass());
-
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
         BinaryOperator<Double> accumulator = Double::sum;
+        Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        Function<Double, Double> finisher = sum -> sum / numberOfTrees;
-
-        return traverseForest(point, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -520,8 +917,8 @@ public class RandomCutForest {
             return 0.0;
         }
 
-        Function<RandomCutTree, Visitor<Double>> visitorFactory = tree -> new AnomalyScoreVisitor(point,
-                tree.getRoot().getMass());
+        IVisitorFactory<Double> visitorFactory = (tree, x) -> new AnomalyScoreVisitor(tree.projectToTree(x),
+                tree.getMass());
 
         ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
@@ -529,7 +926,7 @@ public class RandomCutForest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        return traverseForest(point, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -551,12 +948,13 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getRoot().getMass());
+        IVisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new AnomalyAttributionVisitor(tree.projectToTree(y), tree.getMass()),
+                (tree, x) -> x.lift(tree::liftFromTree));
         BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
         Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
 
-        return traverseForest(point, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -572,16 +970,17 @@ public class RandomCutForest {
             return new DiVector(dimensions);
         }
 
-        Function<RandomCutTree, Visitor<DiVector>> visitorFactory = tree -> new AnomalyAttributionVisitor(point,
-                tree.getRoot().getMass());
+        IVisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new AnomalyAttributionVisitor(tree.projectToTree(y), tree.getMass()),
+                (tree, x) -> x.lift(tree::liftFromTree));
 
         ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
                 DEFAULT_APPROXIMATE_ANOMALY_SCORE_HIGH_IS_CRITICAL, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_PRECISION,
                 DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
 
-        Function<DiVector, DiVector> finisher = vector -> vector.scale(1.0 / accumulator.getValuesAccepted());
+        Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / accumulator.getValuesAccepted());
 
-        return traverseForest(point, visitorFactory, accumulator, finisher);
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
     /**
@@ -602,12 +1001,13 @@ public class RandomCutForest {
             return new DensityOutput(dimensions, sampleSize);
         }
 
-        Function<RandomCutTree, Visitor<InterpolationMeasure>> visitorFactory = tree -> new SimpleInterpolationVisitor(
-                point, sampleSize, 1.0, centerOfMassEnabled); // self
+        IVisitorFactory<InterpolationMeasure> visitorFactory = new VisitorFactory<>((tree,
+                y) -> new SimpleInterpolationVisitor(tree.projectToTree(y), sampleSize, 1.0, centerOfMassEnabled),
+                (tree, x) -> x.lift(tree::liftFromTree));
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
                 sampleSize, numberOfTrees);
 
-        return new DensityOutput(traverseForest(point, visitorFactory, collector));
+        return new DensityOutput(traverseForest(transformToShingledPoint(point), visitorFactory, collector));
     }
 
     /**
@@ -617,72 +1017,69 @@ public class RandomCutForest {
      * more than 1 dimension, the imputed point with the 25th percentile anomaly
      * score is returned.
      *
+     * The first function exposes the distribution.
+     *
      * @param point                 A point with missing values.
      * @param numberOfMissingValues The number of missing values in the point.
      * @param missingIndexes        An array containing the indexes of the missing
      *                              values in the point. The length of the array
      *                              should be greater than or equal to the number of
      *                              missing values.
+     * @param centrality            a parameter that provides a central estimation
+     *                              versus a more random estimation
      * @return A point with the missing values imputed.
      */
-    public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
-        checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater than or equal to 0");
-
-        // We check this condition in traverseForest, but we need to check it here s
-        // wellin case we need to copy the
-        // point in the next block
-        checkNotNull(point, "point must not be null");
-
-        if (numberOfMissingValues == 0) {
-            return Arrays.copyOf(point, point.length);
-        }
-
+    public ArrayList<double[]> getConditionalField(double[] point, int numberOfMissingValues, int[] missingIndexes,
+            double centrality) {
+        checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
                 "numberOfMissingValues must be less than or equal to missingIndexes.length");
+        checkArgument(centrality >= 0 && centrality <= 1, "centrality needs to be in range [0,1]");
+
+        if (!isOutputReady()) {
+            return new ArrayList<>();
+        }
+
+        int[] liftedIndices = transformIndices(missingIndexes, point.length);
+        IMultiVisitorFactory<double[]> visitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
+                liftedIndices, tree.projectMissingIndices(liftedIndices), 1.0);
+
+        Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
+                ArrayList::add, (left, right) -> {
+                    left.addAll(right);
+                    return left;
+                }, list -> list);
+
+        return traverseForestMulti(transformToShingledPoint(point), visitorFactory, collector);
+    }
+
+    public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
+        checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater or equal than 0");
+        checkNotNull(missingIndexes, "missingIndexes must not be null");
+        checkArgument(numberOfMissingValues <= missingIndexes.length,
+                "numberOfMissingValues must be less than or equal to missingIndexes.length");
+        checkArgument(point != null, " cannot be null");
 
         if (!isOutputReady()) {
             return new double[dimensions];
         }
-
-        Function<RandomCutTree, MultiVisitor<double[]>> visitorFactory = tree -> new ImputeVisitor(point,
-                numberOfMissingValues, missingIndexes);
+        // checks will be performed in the function call
+        ArrayList<double[]> conditionalField = getConditionalField(point, numberOfMissingValues, missingIndexes, 1.0);
 
         if (numberOfMissingValues == 1) {
-
             // when there is 1 missing value, we sort all the imputed values and return the
             // median
-
-            Collector<double[], ArrayList<Double>, ArrayList<Double>> collector = Collector.of(ArrayList::new,
-                    (list, array) -> list.add(array[missingIndexes[0]]), (left, right) -> {
-                        left.addAll(right);
-                        return left;
-                    }, list -> {
-                        list.sort(Comparator.comparing(Double::doubleValue));
-                        return list;
-                    });
-
-            ArrayList<Double> imputedValues = traverseForestMulti(point, visitorFactory, collector);
-            double[] returnPoint = Arrays.copyOf(point, dimensions);
-            returnPoint[missingIndexes[0]] = imputedValues.get(numberOfTrees / 2);
+            double[] returnPoint = Arrays.copyOf(point, point.length);
+            double[] basicList = conditionalField.stream()
+                    .mapToDouble(array -> array[transformIndices(missingIndexes, point.length)[0]]).sorted().toArray();
+            returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
             return returnPoint;
         } else {
-
             // when there is more than 1 missing value, we sort the imputed points by
-            // anomaly score and
-            // return the point with the 25th percentile anomaly score
-
-            Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
-                    ArrayList::add, (left, right) -> {
-                        left.addAll(right);
-                        return left;
-                    }, list -> {
-                        list.sort(Comparator.comparing(this::getAnomalyScore));
-                        return list;
-                    });
-
-            ArrayList<double[]> imputedPoints = traverseForestMulti(point, visitorFactory, collector);
-            return imputedPoints.get(numberOfTrees / 4);
+            // anomaly score and return the point with the 25th percentile anomaly score
+            conditionalField.sort(Comparator.comparing(this::getAnomalyScore));
+            return conditionalField.get(numberOfTrees / 4);
         }
     }
 
@@ -802,6 +1199,21 @@ public class RandomCutForest {
     }
 
     /**
+     * Extrapolate the stream into the future to produce a forecast. This method is
+     * intended to be called when the input data is being shingled internally, and
+     * it works by imputing forward one shingle block at a time.
+     *
+     * @param horizon The number of blocks to forecast.
+     * @return a forecasted time series.
+     */
+    public double[] extrapolate(int horizon) {
+        checkArgument(internalShinglingEnabled, "incorrect use");
+        IPointStore<?> store = stateCoordinator.getStore();
+        return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
+                ((int) nextSequenceIndex()) % dimensions);
+    }
+
+    /**
      * For each tree in the forest, follow the tree traversal path and return the
      * leaf node if the standard Euclidean distance between the query point and the
      * leaf point is smaller than the given threshold. Note that this will not
@@ -826,10 +1238,9 @@ public class RandomCutForest {
             return Collections.emptyList();
         }
 
-        Function<RandomCutTree, Visitor<Optional<Neighbor>>> visitorFactory = tree -> new NearNeighborVisitor(point,
-                distanceThreshold);
+        IVisitorFactory<Optional<Neighbor>> visitorFactory = (tree, x) -> new NearNeighborVisitor(x, distanceThreshold);
 
-        return traverseForest(point, visitorFactory, Neighbor.collector());
+        return traverseForest(transformToShingledPoint(point), visitorFactory, Neighbor.collector());
     }
 
     /**
@@ -853,14 +1264,14 @@ public class RandomCutForest {
      * @return true if all samplers are ready to output results.
      */
     public boolean isOutputReady() {
-        return executor.getTotalUpdates() >= outputAfter;
+        return outputReady || (outputReady = components.stream().allMatch(IComponentModel::isOutputReady));
     }
 
     /**
      * @return true if all samplers in the forest are full.
      */
     public boolean samplersFull() {
-        return executor.getTotalUpdates() >= sampleSize;
+        return stateCoordinator.getTotalUpdates() >= sampleSize;
     }
 
     /**
@@ -871,7 +1282,7 @@ public class RandomCutForest {
      * @return the total number of updates to the forest.
      */
     public long getTotalUpdates() {
-        return executor.getTotalUpdates();
+        return stateCoordinator.getTotalUpdates();
     }
 
     public static class Builder<T extends Builder<T>> {
@@ -883,12 +1294,22 @@ public class RandomCutForest {
         private int sampleSize = DEFAULT_SAMPLE_SIZE;
         private Optional<Integer> outputAfter = Optional.empty();
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
-        private Optional<Double> lambda = Optional.empty();
+        private Optional<Double> timeDecay = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
+        private boolean compact = DEFAULT_COMPACT;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
+        private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
+        private Precision precision = DEFAULT_PRECISION;
+        private double boundingBoxCacheFraction = DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+        private int shingleSize = DEFAULT_SHINGLE_SIZE;
+        protected boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
+        private boolean internalShinglingEnabled = DEFAULT_INTERNAL_SHINGLING_ENABLED;
+        protected boolean internalRotationEnabled = DEFAULT_INTERNAL_ROTATION_ENABLED;
+        protected Optional<Integer> initialPointStoreSize = Optional.empty();
+        protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
 
         public T dimensions(int dimensions) {
             this.dimensions = dimensions;
@@ -910,18 +1331,18 @@ public class RandomCutForest {
             return (T) this;
         }
 
-        public T lambda(double lambda) {
-            this.lambda = Optional.of(lambda);
+        public T shingleSize(int shingleSize) {
+            this.shingleSize = shingleSize;
+            return (T) this;
+        }
+
+        public T timeDecay(double timeDecay) {
+            this.timeDecay = Optional.of(timeDecay);
             return (T) this;
         }
 
         public T randomSeed(long randomSeed) {
             this.randomSeed = Optional.of(randomSeed);
-            return (T) this;
-        }
-
-        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
-            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
             return (T) this;
         }
 
@@ -940,8 +1361,59 @@ public class RandomCutForest {
             return (T) this;
         }
 
+        public T initialPointStoreSize(int initialPointStoreSize) {
+            this.initialPointStoreSize = Optional.of(initialPointStoreSize);
+            return (T) this;
+        }
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+            return (T) this;
+        }
+
+        public T compact(boolean compact) {
+            this.compact = compact;
+            return (T) this;
+        }
+
+        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
+            this.internalShinglingEnabled = internalShinglingEnabled;
+            return (T) this;
+        }
+
+        public T internalRotationEnabled(boolean internalRotationEnabled) {
+            this.internalRotationEnabled = internalRotationEnabled;
+            return (T) this;
+        }
+
+        public T dynamicResizingEnabled(boolean dynamicResizingEnabled) {
+            this.dynamicResizingEnabled = dynamicResizingEnabled;
+            return (T) this;
+        }
+
+        public T precision(Precision precision) {
+            this.precision = precision;
+            return (T) this;
+        }
+
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
+            return (T) this;
+        }
+
+        public T initialAcceptFraction(double initialAcceptFraction) {
+            this.initialAcceptFraction = initialAcceptFraction;
+            return (T) this;
+        }
+
         public RandomCutForest build() {
             return new RandomCutForest(this);
+        }
+
+        public Random getRandom() {
+            // If a random seed was given, use it to create a new Random. Otherwise, call
+            // the 0-argument constructor
+            return randomSeed.map(Random::new).orElseGet(Random::new);
         }
     }
 }

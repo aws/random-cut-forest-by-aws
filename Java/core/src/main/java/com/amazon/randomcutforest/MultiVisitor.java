@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * This is the interface for a visitor which can be used with
@@ -35,7 +35,7 @@ public interface MultiVisitor<R> extends Visitor<R> {
      * @return true if the traversal should split the visitor into two copies at
      *         this node, false otherwise.
      */
-    boolean trigger(final Node node);
+    boolean trigger(final INodeView node);
 
     /**
      * Return a copy of this visitor. The original visitor plus the copy will each

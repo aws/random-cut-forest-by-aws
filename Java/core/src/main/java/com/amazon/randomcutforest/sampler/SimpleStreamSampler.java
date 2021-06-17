@@ -20,22 +20,22 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
-import java.util.stream.Collectors;
 
 /**
- * SimpleStreamSampler is a sampler with a fixed sample size. Once the sampler
- * is full, when a new point is submitted to the sampler decision is made to
- * accept or reject the new point. If the point is accepted, then an older point
- * is removed from the sampler. This class implements time-based reservoir
- * sampling, which means that newer points are given more weight than older
- * points in the randomized decision.
+ * <p>
+ * SimpleStreamSampler is an implementation of time-based reservoir sampling.
+ * When a point is submitted to the sampler, the decision to accept the point
+ * gives more weight to newer points compared to older points. The newness of a
+ * point is determined by its sequence index, and larger sequence indexes are
+ * considered newer.
+ * </p>
  * <p>
  * The sampler algorithm is an example of the general weighted reservoir
  * sampling algorithm, which works like this:
- *
+ * </p>
  * <ol>
  * <li>For each item i choose a random number u(i) uniformly from the interval
  * (0, 1) and compute the weight function <code>-(1 / c(i)) * log u(i)</code>,
@@ -48,221 +48,120 @@ import java.util.stream.Collectors;
  * new item.</li>
  * </ol>
  * <p>
- * The SimpleStreamSampler creates a time-decayed sample by using the
- * coefficient function: <code>c(i) = exp(lambda * sequenceIndex(i))</code>.
+ * The coefficient function used by SimpleStreamSampler is:
+ * <code>c(i) = exp(timeDecay * sequenceIndex(i))</code>.
+ * </p>
+ * <p>
+ * For a specialized version of this algorithm that uses less runtime memory,
+ * see {@link CompactSampler}.
+ * </p>
  */
-public class SimpleStreamSampler {
-
-    /**
-     * Wraps PriorityQueue with default comparator.
-     *
-     * @param <WeightedPoint> type of comparator.
-     */
-    static class PriorityQueueWrapper<WeightedPoint> extends PriorityQueue<WeightedPoint> {
-
-        /**
-         * Constructor of PriorityQueue with default WeightedPoint comparator.
-         */
-        PriorityQueueWrapper() {
-            super((Comparator<? super WeightedPoint>) POINT_COMPARATOR);
-        }
-    }
-
-    /**
-     * This is the comparator used to order the priority queue in which we store the
-     * in-sample points. We want the head of the queue to be the element with the
-     * least priority, so we reverse the natural defined by the weight.
-     */
-    static Comparator<WeightedPoint> POINT_COMPARATOR = Comparator.comparingDouble(WeightedPoint::getWeight).reversed();
+public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
 
     /**
      * A min-heap containing the weighted points currently in sample. The head
      * element is the lowest priority point in the sample (or, equivalently, is the
      * point with the greatest weight).
      */
-    private final Queue<WeightedPoint> weightedSamples;
+    private final Queue<Weighted<P>> sample;
 
-    /**
-     * The number of points in the sample when full.
-     */
-    private final int sampleSize;
-    /**
-     * The decay factor used for generating the weight of the point. For greater
-     * values of lambda we become more biased in favor of recent points.
-     */
-    private final double lambda;
-    /**
-     * The random number generator used in sampling.
-     */
-    private final Random random;
-    /**
-     * The number of points which have been submitted to the update method.
-     */
-    private long entriesSeen;
-    /**
-     * The point evicted by the last call to {@link #sample}, or if the new point
-     * was not accepted by the sampler.
-     */
-    private transient WeightedPoint evictedPoint;
-
-    /**
-     * Construct a new SimpleStreamSampler.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param seed       The seed value used to create a random number generator.
-     */
-    public SimpleStreamSampler(final int sampleSize, final double lambda, long seed) {
-        this(sampleSize, lambda, new Random(seed));
+    public static <Q> Builder<Q> builder() {
+        return new Builder<>();
     }
 
-    /**
-     * Construct a new SimpleStreamSampler. This constructor exposes the Random
-     * argument so that it can be mocked for testing.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param lambda     The decay factor used for generating the weight of the
-     *                   point. For greater values of lambda we become more biased
-     *                   in favor of recent points.
-     * @param random     A random number generator that will be used in sampling.
-     */
-    protected SimpleStreamSampler(final int sampleSize, final double lambda, Random random) {
-        this.sampleSize = sampleSize;
-        entriesSeen = 0;
-        weightedSamples = new PriorityQueueWrapper<>();
-        this.random = random;
-        this.lambda = lambda;
-    }
-
-    /**
-     * This convenience constructor creates a SimpleStreamSampler with lambda equal
-     * to 0, which is equivalent to uniform sampling on the stream.
-     *
-     * @param sampleSize The number of points in the sampler when full.
-     * @param seed       The seed value used to create a random number generator.
-     * @return a new SimpleStreamSampler which samples uniformly from its input.
-     */
-    public static SimpleStreamSampler uniformSampler(int sampleSize, long seed) {
-        return new SimpleStreamSampler(sampleSize, 0.0, seed);
+    protected SimpleStreamSampler(Builder<P> builder) {
+        super(builder);
+        sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
+        this.timeDecay = builder.timeDecay;
     }
 
     /**
      * Submit a new point to the sampler. When the point is submitted, a new weight
-     * is computed for the point using the {@link #computeWeight} method. If the new
-     * weight is smaller than the largest weight currently in the sampler, then the
-     * new point is accepted into the sampler and the point corresponding to the
-     * largest weight is evicted.
+     * is computed for the point using the computeWeight method. If the new weight
+     * is smaller than the largest weight currently in the sampler, then the new
+     * point is accepted into the sampler and the point corresponding to the largest
+     * weight is evicted.
      *
-     * @param newPoint      A candidate point to add to the sampler.
-     * @param sequenceIndex An ordinal index corresponding to when this point was
-     *                      added to the forest.
-     * @return a WeightedPoint created from the input point if the input point is
-     *         accepted by the sampler. Return null otherwise.
+     * @param sequenceIndex The timestamp value being submitted.
+     * @return A weighted point that can be added to the sampler or null
      */
-    public WeightedPoint sample(double[] newPoint, long sequenceIndex) {
+    public boolean acceptPoint(long sequenceIndex) {
+        checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
+
         evictedPoint = null;
-        WeightedPoint candidate = null;
-        double weight = computeWeight(sequenceIndex);
-        ++entriesSeen;
+        float weight = computeWeight(sequenceIndex);
 
-        if (entriesSeen <= sampleSize || weight < weightedSamples.element().getWeight()) {
+        if ((sample.size() < capacity && random.nextDouble() < initialAcceptFraction + 1 - 1.0 * size() / capacity)
+                || weight < sample.element().getWeight()) {
             if (isFull()) {
-                evictedPoint = weightedSamples.poll();
+                evictedPoint = sample.poll();
             }
-            candidate = new WeightedPoint(newPoint, sequenceIndex, weight);
-            weightedSamples.add(candidate);
-
-            checkState(weightedSamples.size() <= sampleSize,
-                    "The number of points in the sampler is greater than the sample size");
+            acceptPointState = new AcceptPointState(sequenceIndex, weight);
+            return true;
         }
-
-        return candidate;
+        return false;
     }
 
     /**
-     * @return the point evicted by the most recent call to {@link #sample}, or null
+     * adds the sample to sampler; if the sampler was full, then the sampler has
+     * already evicted a point in determining the weight.
+     * 
+     * @param point to be entered in sampler
+     */
+
+    @Override
+    public void addPoint(P point) {
+        checkState(acceptPointState != null,
+                "this method should only be called after a successful call to acceptSample(long)");
+        sample.add(new Weighted<>(point, acceptPointState.getWeight(), acceptPointState.getSequenceIndex()));
+        acceptPointState = null;
+    }
+
+    /**
+     * Add a Weighted value directly to the sample. This method is intended to be
+     * used to restore a sampler to a pre-existing state.
+     * 
+     * @param point A weighted point.
+     */
+    public void addSample(Weighted<P> point) {
+        sample.add(point);
+    }
+
+    /**
+     * @return the point evicted by the most recent call to {@link #update}, or null
      *         if no point was evicted.
      */
-    public WeightedPoint getEvictedPoint() {
-        return evictedPoint;
+    @Override
+    public Optional<ISampled<P>> getEvictedPoint() {
+        return Optional.ofNullable(evictedPoint);
     }
 
     /**
-     * @return the list of points currently in the sample.
+     * @return the list of sampled points with weights.
      */
-    public List<double[]> getSamples() {
-        return weightedSamples.stream().map(WeightedPoint::getPoint).collect(Collectors.toList());
+    public List<Weighted<P>> getWeightedSample() {
+        return new ArrayList<>(sample);
     }
 
     /**
-     * @return the list of points currently in the sample.
+     * @return the list of sampled points.
      */
-    public List<WeightedPoint> getWeightedSamples() {
-        return new ArrayList<>(weightedSamples);
-    }
-
-    /**
-     * @return true if this sampler contains enough points to support the anomaly
-     *         score computation, false otherwise.
-     */
-    public boolean isReady() {
-        return weightedSamples.size() >= sampleSize / 4;
-    }
-
-    /**
-     * @return true if the sampler has reached it's full capacity, false otherwise.
-     */
-    public boolean isFull() {
-        return weightedSamples.size() == sampleSize;
-    }
-
-    /**
-     * Score is computed as <code>-log(w(i)) + log(-log(u(i))</code>, where
-     *
-     * <ul>
-     * <li><code>w(i) = exp(lambda * sequenceIndex)</code></li>
-     * <li><code>u(i)</code> is chosen uniformly from (0, 1)</li>
-     * </ul>
-     * <p>
-     * A higher score means lower priority. So the points with the lower score have
-     * higher chance of making it to the sample.
-     *
-     * @param sequenceIndex The sequenceIndex of the point whose score is being
-     *                      computed.
-     * @return the weight value used to define point priority
-     */
-    protected double computeWeight(long sequenceIndex) {
-        double randomNumber = 0d;
-        while (randomNumber == 0d) {
-            randomNumber = random.nextDouble();
-        }
-
-        return -sequenceIndex * lambda + Math.log(-Math.log(randomNumber));
-    }
-
-    /**
-     * @return the number of points contained by the sampler when full.
-     */
-    public long getCapacity() {
-        return sampleSize;
+    @Override
+    public List<ISampled<P>> getSample() {
+        return new ArrayList<>(sample);
     }
 
     /**
      * @return the number of points currently contained by the sampler.
      */
-    public long getSize() {
-        return weightedSamples.size();
+    @Override
+    public int size() {
+        return sample.size();
     }
 
-    /**
-     * @return the lambda value that determines the amount of bias given toward
-     *         recent points. Larger values of lambda indicate a greater bias toward
-     *         recent points. A value of 0 corresponds to a uniform sample over the
-     *         stream.
-     */
-    public double getLambda() {
-        return lambda;
+    public static class Builder<Q> extends AbstractStreamSampler.Builder<Builder<Q>> {
+        public SimpleStreamSampler<Q> build() {
+            return new SimpleStreamSampler<>(this);
+        }
     }
 }

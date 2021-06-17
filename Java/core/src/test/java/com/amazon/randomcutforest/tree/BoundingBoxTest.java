@@ -19,9 +19,7 @@ import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -137,35 +135,4 @@ public class BoundingBoxTest {
         assertFalse(box1.contains(new double[] { 5.0, 11.0 }));
     }
 
-    @Test
-    public void testEqualsAndHashCode() {
-        double[] minValues1 = new double[] { -0.1, 0.1 };
-        double[] maxValues1 = new double[] { -0.1, 0.1 };
-
-        double[] minValues2 = new double[] { -0.1 + 1e-8, 0.1 };
-        double[] maxValues2 = new double[] { -0.1, 0.1 - 1e-8 };
-
-        double[] minValues3 = new double[] { -0.1, 0.1, 100 };
-        double[] maxValues3 = new double[] { -0.1, 0.1, 4 };
-
-        BoundingBox box1 = new BoundingBox(minValues1).getMergedBox(maxValues1);
-        BoundingBox box2 = new BoundingBox(minValues1).getMergedBox(maxValues1);
-        BoundingBox box3 = new BoundingBox(minValues2).getMergedBox(maxValues1);
-        BoundingBox box4 = new BoundingBox(minValues1).getMergedBox(maxValues2);
-        BoundingBox box5 = new BoundingBox(minValues3).getMergedBox(maxValues3);
-
-        assertEquals(box1, box2);
-        assertEquals(box1.hashCode(), box2.hashCode());
-
-        assertNotEquals(box1, box3);
-        assertNotEquals(box1.hashCode(), box3.hashCode());
-
-        assertNotEquals(box1, box4);
-        assertNotEquals(box1.hashCode(), box4.hashCode());
-
-        assertNotEquals(box1, box5);
-        assertNotEquals(box1.hashCode(), box5.hashCode());
-
-        assertNotEquals(box1, new Object());
-    }
 }

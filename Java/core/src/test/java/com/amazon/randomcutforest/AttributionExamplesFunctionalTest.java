@@ -20,13 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
-@Tag("functional")
 public class AttributionExamplesFunctionalTest {
 
     private static int numberOfTrees;
@@ -59,8 +57,7 @@ public class AttributionExamplesFunctionalTest {
         randomSeed = 101;
         sampleSize = 256;
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(sampleSize)
-                .dimensions(newDimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .dimensions(newDimensions).randomSeed(randomSeed).compact(true).boundingBoxCacheFraction(0.0).build();
 
         dataSize = 2000 + 5;
 
@@ -87,8 +84,8 @@ public class AttributionExamplesFunctionalTest {
             newForest.update(data[i]);
         }
 
-        double[] queryOne = new double[30];
-        double[] queryTwo = new double[30];
+        double[] queryOne = new double[newDimensions];
+        double[] queryTwo = new double[newDimensions];
         queryTwo[1] = 1;
         double originalScoreTwo = newForest.getAnomalyScore(queryTwo);
         DiVector originalAttrTwo = newForest.getAnomalyAttribution(queryTwo);
@@ -99,7 +96,7 @@ public class AttributionExamplesFunctionalTest {
         assertTrue(originalAttrTwo.high[0] > 1.0); // due to -5 cluster
         assertTrue(originalAttrTwo.low[0] > 1.0); // due to +5 cluster
         assertTrue(originalAttrTwo.high[1] > 1); // due to +1 in query
-        assertTrue(originalAttrTwo.getHighLowSum(0) > originalAttrTwo.getHighLowSum(1));
+        assertTrue(originalAttrTwo.getHighLowSum(0) > 1.1 * originalAttrTwo.getHighLowSum(1));
 
         // we insert queryOne a few times to make sure it is sampled
         for (int i = 2000; i < 2000 + 5; i++) {
@@ -121,13 +118,13 @@ public class AttributionExamplesFunctionalTest {
         double midScoreTwo = newForest.getAnomalyScore(queryTwo);
         DiVector midAttrTwo = newForest.getAnomalyAttribution(queryTwo);
 
-        assertTrue(midScoreTwo > 2.5);
+        assertTrue(midScoreTwo > 2.4);
         assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-10);
 
         assertTrue(midAttrTwo.high[0] < 1); // due to -5 cluster !!!
         assertTrue(midAttrTwo.low[0] < 1); // due to +5 cluster !!!
         assertTrue(midAttrTwo.high[1] > 1); // due to +1 in query
-        assertTrue(midAttrTwo.getHighLowSum(0) < midAttrTwo.high[1]);
+        assertTrue(midAttrTwo.getHighLowSum(0) < 1.1 * midAttrTwo.high[1]);
         // reversal of the dominant dimension
         // still an anomaly; but the attribution is masked by points
 
@@ -138,7 +135,7 @@ public class AttributionExamplesFunctionalTest {
 
         double finalScoreTwo = newForest.getAnomalyScore(queryTwo);
         DiVector finalAttrTwo = newForest.getAnomalyAttribution(queryTwo);
-        assertTrue(finalScoreTwo > 2.5);
+        assertTrue(finalScoreTwo > 2.4);
         assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-10);
         assertTrue(finalAttrTwo.high[0] < 0.5); // due to -5 cluster !!!
         assertTrue(finalAttrTwo.low[0] < 0.5); // due to +5 cluster !!!
@@ -162,8 +159,8 @@ public class AttributionExamplesFunctionalTest {
         randomSeed = 179;
         sampleSize = 256;
         DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().numberOfTrees(100)
-                .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).lambda(1e-5).build();
+                .sampleSize(sampleSize).dimensions(newDimensions).randomSeed(randomSeed).compact(true)
+                .boundingBoxCacheFraction(new Random().nextDouble()).timeDecay(1e-5).build();
 
         dataSize = 2000 + 5;
 
@@ -207,6 +204,16 @@ public class AttributionExamplesFunctionalTest {
         assertTrue(originalAttrTwo.high[1] > 1); // due to +1 in query
         assertTrue(originalAttrTwo.getHighLowSum(0) > originalAttrTwo.getHighLowSum(1));
 
+        double apx = newForest.getApproximateDynamicScore(queryTwo, 0.1, true, 0, CommonUtils::defaultScoreSeenFunction,
+                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+        assertEquals(originalScoreTwo, CommonUtils.defaultScalarNormalizerFunction(apx, sampleSize), 0.2);
+        assertEquals(apx,
+                newForest
+                        .getApproximateDynamicAttribution(queryTwo, 0.1, true, 0, CommonUtils::defaultScoreSeenFunction,
+                                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction)
+                        .getHighLowSum(),
+                1e-10);
+
         // we insert queryOne a few times to make sure it is sampled
         for (int i = 2000; i < 2000 + 5; i++) {
             double score = newForest.getAnomalyScore(queryOne);
@@ -244,7 +251,7 @@ public class AttributionExamplesFunctionalTest {
         assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-10);
 
         assertTrue(midAttrTwo.high[1] > 1); // due to +1 in query
-        assertTrue(midAttrTwo.getHighLowSum(0) < midAttrTwo.high[1]);
+        assertTrue(midAttrTwo.getHighLowSum(0) < 1.2 * midAttrTwo.high[1]);
         // reversal of the dominant dimension
         // still an anomaly; but the attribution is masked by points
 
@@ -277,7 +284,7 @@ public class AttributionExamplesFunctionalTest {
         assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-10);
 
         assertTrue(finalAttrTwo.high[1] > 1); // due to +1 in query
-        assertTrue(2.5 * finalAttrTwo.getHighLowSum(0) < finalAttrTwo.high[1]);
+        assertTrue(2 * finalAttrTwo.getHighLowSum(0) < finalAttrTwo.high[1]);
         // the drop in high[0] and low[0] is steep and the attribution has shifted
 
         // different thresholds

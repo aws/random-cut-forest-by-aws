@@ -22,7 +22,7 @@ import java.util.Arrays;
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values
@@ -32,39 +32,92 @@ import com.amazon.randomcutforest.tree.Node;
  * value is the anomaly score for the imputed point.
  */
 public class ImputeVisitor implements MultiVisitor<double[]> {
-    private final boolean[] missing;
-    private final int numberOfMissingValues;
-    private double[] queryPoint;
-    private double rank;
+
+    // default large values for initialization; consider -ve log( 0 )
+    public static double DEFAULT_INIT_VALUE = Double.MAX_VALUE / 4;
+
+    /**
+     * an array that helps indicate the missing entires in the tree space
+     */
+    protected final boolean[] missing;
+
+    /**
+     * an array that helps indicate the missing entires in the forest space
+     */
+    protected final boolean[] liftedMissing;
+
+    /**
+     * the query point in the tree space, where the missing entries (in tree space)
+     * would be overwritten
+     */
+    protected double[] queryPoint;
+
+    /**
+     * the query point in the forest space, where the missing entries (in forest
+     * space) would be overwritten
+     */
+    protected double[] liftedPoint;
+
+    /**
+     * the unnormalized anomaly score of a point, should be interpreted as -ve
+     * log(likelihood)
+     */
+    protected double anomalyRank;
+
+    /**
+     * distance of the point in the forest space, this is not tree specific
+     */
+    protected double distance;
+
+    /**
+     * a parameter that controls central estimation ( = 1.0) and fully random sample
+     * over entire range ( = 0.0 )
+     */
+    protected double centrality;
 
     /**
      * Create a new ImputeVisitor.
      *
-     * @param queryPoint            The point with missing values that we want to
-     *                              impute.
-     * @param numberOfMissingValues The number of missing values in the query point.
-     * @param missingIndexes        The indexes of the missing values in the query
-     *                              point.
+     * @param liftedPoint          The point with missing values we want to impute
+     * @param queryPoint           The projected point in the tree space
+     * @param liftedMissingIndexes the original missing indices
+     * @param missingIndexes       The indexes of the missing values in the tree
+     *                             space
      */
-    public ImputeVisitor(double[] queryPoint, int numberOfMissingValues, int[] missingIndexes) {
-
+    public ImputeVisitor(double[] liftedPoint, double[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
+            double centrality) {
+        this.liftedPoint = Arrays.copyOf(liftedPoint, liftedPoint.length);
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.missing = new boolean[queryPoint.length];
+        this.liftedMissing = new boolean[liftedPoint.length];
+        this.centrality = centrality;
 
         if (missingIndexes == null) {
             missingIndexes = new int[0];
         }
 
-        this.numberOfMissingValues = numberOfMissingValues;
-
-        for (int i = 0; i < this.numberOfMissingValues; i++) {
+        for (int i = 0; i < missingIndexes.length; i++) {
             checkArgument(0 <= missingIndexes[i] && missingIndexes[i] < queryPoint.length,
                     "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
 
             missing[missingIndexes[i]] = true;
         }
 
-        rank = 10.0;
+        for (int i = 0; i < liftedMissingIndexes.length; i++) {
+            checkArgument(0 <= liftedMissingIndexes[i] && liftedMissingIndexes[i] < liftedPoint.length,
+                    "Missing value indexes must be between 0 (inclusive) and liftedPoint.length (exclusive)");
+
+            liftedMissing[liftedMissingIndexes[i]] = true;
+        }
+
+        anomalyRank = DEFAULT_INIT_VALUE;
+        distance = DEFAULT_INIT_VALUE;
+    }
+
+    public ImputeVisitor(double[] queryPoint, int numberOfMissingIndices, int[] missingIndexes) {
+        this(queryPoint, Arrays.copyOf(queryPoint, queryPoint.length),
+                Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)),
+                Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)), 1.0);
     }
 
     /**
@@ -76,15 +129,10 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         int length = original.queryPoint.length;
         this.queryPoint = Arrays.copyOf(original.queryPoint, length);
         this.missing = Arrays.copyOf(original.missing, length);
-        this.numberOfMissingValues = original.numberOfMissingValues;
-        rank = 10.0;
-    }
-
-    /**
-     * @return the rank of the imputed point in this visitor.
-     */
-    public double getRank() {
-        return rank;
+        this.liftedPoint = Arrays.copyOf(original.liftedPoint, original.liftedPoint.length);
+        this.liftedMissing = Arrays.copyOf(original.liftedMissing, original.liftedPoint.length);
+        anomalyRank = DEFAULT_INIT_VALUE;
+        distance = DEFAULT_INIT_VALUE;
     }
 
     /**
@@ -95,7 +143,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param node        the node being visited
      * @param depthOfNode the depth of the node being visited
      */
-    public void accept(final Node node, final int depthOfNode) {
+    public void accept(final INodeView node, final int depthOfNode) {
 
         double probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(node.getBoundingBox(), queryPoint);
 
@@ -103,8 +151,8 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
             return;
         }
 
-        rank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
-                + (1 - probabilityOfSeparation) * rank;
+        anomalyRank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
+                + (1 - probabilityOfSeparation) * anomalyRank;
     }
 
     /**
@@ -116,21 +164,33 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param depthOfNode the depth of the leaf node
      */
     @Override
-    public void acceptLeaf(final Node leafNode, final int depthOfNode) {
+    public void acceptLeaf(final INodeView leafNode, final int depthOfNode) {
+        double[] leafPoint = leafNode.getLeafPoint();
         for (int i = 0; i < queryPoint.length; i++) {
             if (missing[i]) {
-                queryPoint[i] = leafNode.getBoundingBox().getMinValue(i);
+                queryPoint[i] = leafPoint[i];
             }
         }
+        double[] liftedLeafPoint = leafNode.getLiftedLeafPoint();
+        double squaredDistance = 0;
+        for (int i = 0; i < liftedLeafPoint.length; i++) {
+            if (liftedMissing[i]) {
+                liftedPoint[i] = liftedLeafPoint[i];
+            } else {
+                double t = (liftedLeafPoint[i] - liftedPoint[i]);
+                squaredDistance += t * t;
+            }
+        }
+        distance = Math.sqrt(squaredDistance);
         double probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(leafNode.getBoundingBox(), queryPoint);
         if (probabilityOfSeparation <= 0) {
             if (depthOfNode == 0) {
-                rank = 0;
+                anomalyRank = 0;
             } else {
-                rank = scoreSeen(depthOfNode, leafNode.getMass());
+                anomalyRank = scoreSeen(depthOfNode, leafNode.getMass());
             }
         } else {
-            rank = scoreUnseen(depthOfNode, leafNode.getMass());
+            anomalyRank = scoreUnseen(depthOfNode, leafNode.getMass());
         }
     }
 
@@ -139,7 +199,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     @Override
     public double[] getResult() {
-        return queryPoint;
+        return liftedPoint;
     }
 
     /**
@@ -151,8 +211,16 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      *         in the query point, false otherwise.
      */
     @Override
-    public boolean trigger(final Node node) {
-        return missing[node.getCut().getDimension()];
+    public boolean trigger(final INodeView node) {
+        return missing[node.getCutDimension()];
+    }
+
+    protected double getAnomalyRank() {
+        return anomalyRank;
+    }
+
+    protected double getDistance() {
+        return distance;
     }
 
     /**
@@ -161,6 +229,10 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     @Override
     public MultiVisitor<double[]> newCopy() {
         return new ImputeVisitor(this);
+    }
+
+    protected boolean updateCombine(ImputeVisitor other) {
+        return other.anomalyRank < anomalyRank;
     }
 
     /**
@@ -173,10 +245,16 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     @Override
     public void combine(MultiVisitor<double[]> other) {
         ImputeVisitor visitor = (ImputeVisitor) other;
-        if (visitor.getRank() < rank) {
-            System.arraycopy(visitor.queryPoint, 0, queryPoint, 0, queryPoint.length);
-            rank = visitor.getRank();
+        if (updateCombine(visitor)) {
+            updateFrom(visitor);
         }
+    }
+
+    protected void updateFrom(ImputeVisitor visitor) {
+        System.arraycopy(visitor.queryPoint, 0, queryPoint, 0, queryPoint.length);
+        System.arraycopy(visitor.liftedPoint, 0, liftedPoint, 0, liftedPoint.length);
+        anomalyRank = visitor.anomalyRank;
+        distance = visitor.distance;
     }
 
     protected double scoreSeen(int depth, int mass) {
