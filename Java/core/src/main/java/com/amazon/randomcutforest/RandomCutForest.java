@@ -63,6 +63,7 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
+import com.amazon.randomcutforest.util.ArrayUtils;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
 /**
@@ -584,23 +585,6 @@ public class RandomCutForest {
     }
 
     /**
-     * Returns a clean deep copy of the point. Current clean-ups include changing
-     * negative zero -0.0 to positive zero 0.0.
-     *
-     * @param point The original data point.
-     * @return a clean deep copy of the original point.
-     */
-    public static double[] cleanCopy(double[] point) {
-        double[] pointCopy = Arrays.copyOf(point, point.length);
-        for (int i = 0; i < point.length; i++) {
-            if (pointCopy[i] == 0.0) {
-                pointCopy[i] = 0.0;
-            }
-        }
-        return pointCopy;
-    }
-
-    /**
      * used for scoring and other function, expands to a shingled point in either
      * case performs a clean copy
      * 
@@ -612,7 +596,7 @@ public class RandomCutForest {
         checkNotNull(point, "point must not be null");
         return (internalShinglingEnabled && point.length == inputDimensions)
                 ? stateCoordinator.getStore().transformToShingledPoint(point)
-                : cleanCopy(point);
+                : ArrayUtils.cleanCopy(point);
     }
 
     /**
