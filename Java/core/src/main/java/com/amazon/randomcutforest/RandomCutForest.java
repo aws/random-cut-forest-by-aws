@@ -1013,7 +1013,7 @@ public class RandomCutForest {
      *                              versus a more random estimation
      * @return A point with the missing values imputed.
      */
-    public ArrayList<double[]> getConditionalField(double[] point, int numberOfMissingValues, int[] missingIndexes,
+    public List<double[]> getConditionalField(double[] point, int numberOfMissingValues, int[] missingIndexes,
             double centrality) {
         checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
@@ -1038,6 +1038,21 @@ public class RandomCutForest {
         return traverseForestMulti(transformToShingledPoint(point), visitorFactory, collector);
     }
 
+    /**
+     * Given a point with missing values, return a new point with the missing values
+     * imputed. Each tree in the forest individual produces an imputed value. For
+     * 1-dimensional points, the median imputed value is returned. For points with
+     * more than 1 dimension, the imputed point with the 25th percentile anomaly
+     * score is returned.
+     *
+     * @param point                 A point with missing values.
+     * @param numberOfMissingValues The number of missing values in the point.
+     * @param missingIndexes        An array containing the indexes of the missing
+     *                              values in the point. The length of the array
+     *                              should be greater than or equal to the number of
+     *                              missing values.
+     * @return A point with the missing values imputed.
+     */
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater or equal than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
@@ -1049,7 +1064,7 @@ public class RandomCutForest {
             return new double[dimensions];
         }
         // checks will be performed in the function call
-        ArrayList<double[]> conditionalField = getConditionalField(point, numberOfMissingValues, missingIndexes, 1.0);
+        List<double[]> conditionalField = getConditionalField(point, numberOfMissingValues, missingIndexes, 1.0);
 
         if (numberOfMissingValues == 1) {
             // when there is 1 missing value, we sort all the imputed values and return the
