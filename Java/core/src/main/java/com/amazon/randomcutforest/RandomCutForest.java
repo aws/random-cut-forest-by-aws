@@ -592,7 +592,7 @@ public class RandomCutForest {
      * @return a shingled copy or a clean copy
      */
 
-    public double[] transformToShingledPoint(double[] point) {
+    protected double[] transformToShingledPoint(double[] point) {
         checkNotNull(point, "point must not be null");
         return (internalShinglingEnabled && point.length == inputDimensions)
                 ? stateCoordinator.getStore().transformToShingledPoint(point)
