@@ -623,7 +623,7 @@ public class RandomCutForest {
      * @param length    length of the input array
      * @return output array of missing values corresponding to shingle
      */
-    public int[] transformIndices(int[] indexList, int length) {
+    protected int[] transformIndices(int[] indexList, int length) {
         return (internalShinglingEnabled && length == inputDimensions)
                 ? stateCoordinator.getStore().transformIndices(indexList)
                 : indexList;
