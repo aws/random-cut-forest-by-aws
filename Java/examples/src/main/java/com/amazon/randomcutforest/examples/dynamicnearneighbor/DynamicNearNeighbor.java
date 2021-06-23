@@ -15,16 +15,15 @@
 
 package com.amazon.randomcutforest.examples.dynamicnearneighbor;
 
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.examples.Example;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
+import static java.lang.Math.PI;
 
 public class DynamicNearNeighbor implements Example {
 
@@ -34,20 +33,15 @@ public class DynamicNearNeighbor implements Example {
 
     @Override
     public String command() {
-        return "dynamic_sampling";
+        return "dynamic_near_neighbor";
     }
 
     @Override
     public String description() {
-        return "check dynamic sampling";
+        return "check dynamic near neighbor";
     }
 
-    public double[] rotateClockWise(double[] point, double theta) {
-        double[] result = new double[2];
-        result[0] = cos(theta) * point[0] + sin(theta) * point[1];
-        result[1] = -sin(theta) * point[0] + cos(theta) * point[1];
-        return result;
-    }
+
 
     @Override
     public void run() throws Exception {
@@ -58,7 +52,7 @@ public class DynamicNearNeighbor implements Example {
                 .dimensions(newDimensions).randomSeed(randomSeed).timeDecay(1.0 / 800).centerOfMassEnabled(true)
                 .storeSequenceIndexesEnabled(true).build();
 
-        String name = "/Users/sudipto/try";
+        String name = "dynamic_near_neighbor_example";
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
         double[][] data = generate(1000);
         double[] queryPoint = new double[] { 0.5, 0.6 };

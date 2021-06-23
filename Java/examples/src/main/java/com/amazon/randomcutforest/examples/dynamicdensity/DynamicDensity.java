@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.examples.dynamicdensity;
 
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
-import static java.lang.Math.PI;
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
+import static java.lang.Math.PI;
 
 public class DynamicDensity implements Example {
 
@@ -59,7 +59,7 @@ public class DynamicDensity implements Example {
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(256)
                 .dimensions(newDimensions).randomSeed(randomSeed).timeDecay(1.0 / 800).centerOfMassEnabled(true)
                 .build();
-        String name = "/Users/sudipto/dynamic_density_example";
+        String name = "dynamic_density_example";
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
         double[][] data = generate(1000);
         double[] queryPoint;
