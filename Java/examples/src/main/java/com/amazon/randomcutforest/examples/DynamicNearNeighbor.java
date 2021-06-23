@@ -13,10 +13,9 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.dynamicnearneighbor;
+package com.amazon.randomcutforest.examples;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -38,7 +37,8 @@ public class DynamicNearNeighbor implements Example {
 
     @Override
     public String description() {
-        return "check dynamic near neighbor";
+        return "shows an example of dynamic near neighbor computation where both the data and query are " +
+                "evolving in time";
     }
 
 

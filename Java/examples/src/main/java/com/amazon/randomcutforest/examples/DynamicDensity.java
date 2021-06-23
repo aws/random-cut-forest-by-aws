@@ -13,10 +13,9 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.dynamicdensity;
+package com.amazon.randomcutforest.examples;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 
 import java.io.BufferedWriter;
@@ -39,7 +38,8 @@ public class DynamicDensity implements Example {
 
     @Override
     public String description() {
-        return "check dynamic sampling";
+        return "shows two potential use of dynamic density computations; estimating density as well " +
+                "as its directional components";
     }
 
     /**
