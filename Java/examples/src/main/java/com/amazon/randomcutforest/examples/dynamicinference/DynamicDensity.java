@@ -13,9 +13,10 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples;
+package com.amazon.randomcutforest.examples.dynamicinference;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 
 import java.io.BufferedWriter;
