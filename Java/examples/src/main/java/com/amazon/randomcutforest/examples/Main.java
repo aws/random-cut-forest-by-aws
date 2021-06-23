@@ -15,11 +15,13 @@
 
 package com.amazon.randomcutforest.examples;
 
-import java.util.Map;
-import java.util.TreeMap;
-
+import com.amazon.randomcutforest.examples.dynamicinference.DynamicDensity;
+import com.amazon.randomcutforest.examples.dynamicinference.DynamicNearNeighbor;
 import com.amazon.randomcutforest.examples.serialization.JsonExample;
 import com.amazon.randomcutforest.examples.serialization.ProtostuffExample;
+
+import java.util.Map;
+import java.util.TreeMap;
 
 public class Main {
 
@@ -37,6 +39,8 @@ public class Main {
         maxCommandLength = 0;
         add(new JsonExample());
         add(new ProtostuffExample());
+        add(new DynamicDensity());
+        add(new DynamicNearNeighbor());
     }
 
     private void add(Example example) {

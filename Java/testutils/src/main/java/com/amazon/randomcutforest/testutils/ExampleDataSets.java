@@ -65,11 +65,43 @@ public class ExampleDataSets {
 
     }
 
-    static double[] rotateClockWise(double[] point, double theta) {
+    public static double[] rotateClockWise(double[] point, double theta) {
         double[] result = new double[2];
         result[0] = cos(theta) * point[0] + sin(theta) * point[1];
         result[1] = -sin(theta) * point[0] + cos(theta) * point[1];
         return result;
     }
 
+    public static double[][] generate(int size) {
+        Random prg = new Random();
+        double[][] data = new double[size][2];
+
+        for (int i = 0; i < size; i++) {
+            boolean test = false;
+            while (!test) {
+                double x = 2 * prg.nextDouble() - 1;
+                double y = 2 * prg.nextDouble() - 1;
+                if (x * x + y * y <= 1) {
+                    if (y > 0) {
+                        if (x > 0 && ((x - 0.5) * (x - 0.5) + y * y) <= 0.25) {
+                            test = ((x - 0.5) * (x - 0.5) + y * y > 1.0 / 32) && (prg.nextDouble() < 0.6);
+                        }
+                    } else {
+                        if (x > 0) {
+                            if ((x - 0.5) * (x - 0.5) + y * y > 1.0 / 32) {
+                                test = ((x - 0.5) * (x - 0.5) + y * y < 0.25) || (prg.nextDouble() < 0.4);
+                            }
+                        } else {
+                            test = ((x + 0.5) * (x + 0.5) + y * y > 0.25) && (prg.nextDouble() < 0.2);
+                        }
+                    }
+                }
+                if (test) {
+                    data[i][0] = x;
+                    data[i][1] = y;
+                }
+            }
+        }
+        return data;
+    }
 }
