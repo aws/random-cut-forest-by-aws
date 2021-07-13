@@ -126,7 +126,9 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         indexManager.checkValidIndex(index);
         if (refCount[index] == 1) {
             indexManager.releaseIndex(index);
-            locationList[index] = PointStore.INFEASIBLE_POINTSTORE_LOCATION;
+            if (!directLocationMap) {
+                locationList[index] = PointStore.INFEASIBLE_POINTSTORE_LOCATION;
+            }
         }
         return --refCount[index];
     }

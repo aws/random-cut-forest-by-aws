@@ -131,7 +131,7 @@ public abstract class AbstractRandomCutTree<Point, NodeReference, PointReference
                 // Random cuts have to take a value in the half-open interval [minValue,
                 // maxValue) to ensure that a
                 // Node has a valid left child and right child.
-                if ((cutValue == box.getMaxValue(i)) && (box.getMinValue(i) < box.getMaxValue(i))) {
+                if ((cutValue >= box.getMaxValue(i)) && (box.getMinValue(i) < box.getMaxValue(i))) {
                     cutValue = Math.nextAfter(box.getMaxValue(i), box.getMinValue(i));
                 }
 

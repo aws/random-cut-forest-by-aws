@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
+import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -984,5 +985,65 @@ public class RandomCutForestTest {
         assertEquals(forest.getNearNeighborsInSample(new double[] { 0.0, -0.0 }, 1).size(), 0);
         // the {20,-20} point is present still
         assertEquals(forest.getNearNeighborsInSample(new double[] { 20.0, -20.0 }, 1).size(), 1);
+    }
+
+    @Test
+    public void testFloatingPointRandomCut() {
+        int dimensions = 16;
+        int numberOfTrees = 41;
+        int sampleSize = 64;
+        int dataSize = 4000 * sampleSize;
+        double[][] big = generateShingledData(dataSize, dimensions, 2);
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
+                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(Precision.FLOAT_32)
+                .randomSeed(2051627799894425983L).boundingBoxCacheFraction(1.0).build();
+
+        int num = 0;
+        for (double[] point : big) {
+            forest.update(point);
+        }
+    }
+
+    private static double[][] generateShingledData(int size, int dimensions, long seed) {
+        double[][] answer = new double[size][];
+        int entryIndex = 0;
+        boolean filledShingleAtleastOnce = false;
+        double[] history = new double[dimensions];
+        int count = 0;
+        double[] data = getDataD(size + dimensions - 1, 100, 5, seed);
+        for (int j = 0; j < size + dimensions - 1; ++j) { // we stream here ....
+            history[entryIndex] = data[j];
+            entryIndex = (entryIndex + 1) % dimensions;
+            if (entryIndex == 0) {
+                filledShingleAtleastOnce = true;
+            }
+            if (filledShingleAtleastOnce) {
+                // System.out.println("Adding " + j);
+                answer[count++] = getShinglePoint(history, entryIndex, dimensions);
+            }
+        }
+        return answer;
+    }
+
+    private static double[] getShinglePoint(double[] recentPointsSeen, int indexOfOldestPoint, int shingleLength) {
+        double[] shingledPoint = new double[shingleLength];
+        int i = 0;
+        for (int j = 0; j < shingleLength; ++j) {
+            double point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
+            shingledPoint[i++] = point;
+
+        }
+        return shingledPoint;
+    }
+
+    static double[] getDataD(int num, double amplitude, double noise, long seed) {
+
+        double[] data = new double[num];
+        Random noiseprg = new Random(seed);
+        for (int i = 0; i < num; i++) {
+            data[i] = amplitude * Math.cos(2 * PI * (i + 50) / 1000) + noise * noiseprg.nextDouble();
+        }
+
+        return data;
     }
 }
