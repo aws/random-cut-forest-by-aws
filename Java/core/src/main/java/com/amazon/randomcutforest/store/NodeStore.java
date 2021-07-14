@@ -270,7 +270,7 @@ public class NodeStore implements INodeStore {
         checkState(rightIndex.length == capacity, "incorrect function call, arrays should be equal");
         int[] parentIndex = new int[2 * capacity + 1];
         Arrays.fill(parentIndex, NULL);
-        for (short i = 0; i < capacity; i++) {
+        for (int i = 0; i < capacity; i++) {
             if (leftIndex[i] != NULL) {
                 checkState(parentIndex[leftIndex[i]] == NULL, "incorrect state, conflicting parent");
                 parentIndex[leftIndex[i]] = i;

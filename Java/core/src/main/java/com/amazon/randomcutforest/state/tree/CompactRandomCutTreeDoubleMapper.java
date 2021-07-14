@@ -40,6 +40,7 @@ public class CompactRandomCutTreeDoubleMapper implements
         INodeStore nodeStore;
 
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+        nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
         nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
 
         CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder()
