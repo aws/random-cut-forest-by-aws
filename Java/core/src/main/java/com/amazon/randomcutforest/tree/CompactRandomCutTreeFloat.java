@@ -31,7 +31,7 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
     }
 
     protected CompactRandomCutTreeFloat(CompactRandomCutTreeFloat.Builder builder) {
-        super(builder);
+        super(builder.float32Precision(true).setDimensions(builder.pointStoreView.getDimensions()));
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
         super.boxCache = new BoxCacheFloat(0L, boundingBoxCacheFraction, maxSize - 1);
@@ -144,5 +144,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
 
         throw new IllegalStateException("The break point did not lie inside the expected range");
+    }
+
+    public int getDimensions() {
+        return pointStore.getDimensions();
     }
 }

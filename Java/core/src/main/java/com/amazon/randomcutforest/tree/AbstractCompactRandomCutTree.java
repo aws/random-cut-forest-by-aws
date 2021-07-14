@@ -24,9 +24,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -63,12 +65,13 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected IBoxCache<Point> boxCache;
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
+    protected boolean float32Precision;
 
     public AbstractCompactRandomCutTree(
             com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
-
+        this.float32Precision = builder.float32Precision;
         this.maxSize = builder.maxSize;
         if (builder.outputAfter.isPresent()) {
             outputAfter = builder.outputAfter.get();
@@ -77,7 +80,12 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
 
         if (builder.root == NULL) {
-            this.nodeStore = new NodeStore(maxSize - 1);
+            if (builder.float32Precision && maxSize < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
+                    && builder.dimension < Short.MAX_VALUE) {
+                this.nodeStore = new SmallNodeStore(maxSize - 1);
+            } else {
+                this.nodeStore = new NodeStore(maxSize - 1);
+            }
             this.root = null;
         } else {
             checkNotNull(builder.nodeStore, "nodeStore must not be null");
@@ -537,7 +545,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         private INodeStore nodeStore = null;
         private int root = NULL;
+        private int dimensions = 0;
         private int maxSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
+        private boolean float32Precision = (RandomCutForest.DEFAULT_PRECISION == Precision.FLOAT_32);
 
         public T nodeStore(INodeStore nodeStore) {
             this.nodeStore = nodeStore;
@@ -551,6 +561,16 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         public T maxSize(int maxSize) {
             this.maxSize = maxSize;
+            return (T) this;
+        }
+
+        public T float32Precision(boolean precision) {
+            this.float32Precision = precision;
+            return (T) this;
+        }
+
+        public T setDimensions(int dimensions) {
+            this.dimension = dimensions;
             return (T) this;
         }
 
