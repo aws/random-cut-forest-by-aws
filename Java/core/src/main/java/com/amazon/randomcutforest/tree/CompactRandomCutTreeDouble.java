@@ -28,7 +28,7 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
     }
 
     protected CompactRandomCutTreeDouble(CompactRandomCutTreeDouble.Builder builder) {
-        super(builder);
+        super(builder.float32Precision(false).dimension(builder.pointStoreView.getDimensions()));
         checkNotNull(builder.pointStoreView, "pointStore must not be null");
         super.pointStore = builder.pointStoreView;
         super.boxCache = new BoxCacheDouble(0L, boundingBoxCacheFraction, maxSize - 1);

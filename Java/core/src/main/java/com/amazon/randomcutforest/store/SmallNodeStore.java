@@ -78,25 +78,26 @@ public class SmallNodeStore implements INodeStore {
         Arrays.fill(leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
     }
 
-    public SmallNodeStore(int capacity, short[] leftIndex, short[] rightIndex, short[] cutDimension, float[] cutValue,
-            short[] leafMass, int[] leafPointIndex, short[] freeNodeIndexes, int freeNodeIndexPointer,
-            short[] freeLeafIndexes, int freeLeafIndexPointer) {
+    public SmallNodeStore(int capacity, int[] leftIndex, int[] rightIndex, short[] cutDimension, float[] cutValue,
+            int[] leafMass, int[] leafPointIndex, int[] freeNodeIndexes, int freeNodeIndexPointer,
+            int[] freeLeafIndexes, int freeLeafIndexPointer) {
 
         this.capacity = capacity;
-        this.freeNodeManager = new IndexManager(capacity, convertToInt(freeNodeIndexes), freeNodeIndexPointer);
-        this.freeLeafManager = new IndexManager(capacity + 1, convertToInt(freeLeafIndexes), freeLeafIndexPointer);
-        this.parentIndex = deriveParentIndex(leftIndex, rightIndex);
-        this.leftIndex = leftIndex;
-        this.rightIndex = rightIndex;
+        this.freeNodeManager = new IndexManager(capacity, freeNodeIndexes, freeNodeIndexPointer);
+        this.freeLeafManager = new IndexManager(capacity + 1, freeLeafIndexes, freeLeafIndexPointer);
+        this.leftIndex = convertToShort(leftIndex);
+        this.rightIndex = convertToShort(rightIndex);
+        this.parentIndex = deriveParentIndex(this.leftIndex, this.rightIndex);
+
         this.cutDimension = cutDimension;
         this.cutValue = cutValue;
-        this.mass = new short[2 * capacity + 1];
         // copy leaf mass to the later half; if mass is not null
         if (leafMass != null) {
             validateInternalState(leafPointIndex != null, " incorrect state for needing samplers");
-            System.arraycopy(leafMass, 0, this.mass, capacity, capacity + 1);
+            this.mass = convertToShort(leafMass);
             this.leafPointIndex = leafPointIndex;
         } else {
+            this.mass = new short[2 * capacity + 1];
             this.leafPointIndex = new int[capacity + 1];
             Arrays.fill(this.leafPointIndex, PointStore.INFEASIBLE_POINTSTORE_INDEX);
         }
@@ -322,9 +323,7 @@ public class SmallNodeStore implements INodeStore {
     }
 
     public int[] getLeafMass() {
-        int[] result = new int[capacity + 1];
-        System.arraycopy(mass, capacity, result, 0, capacity + 1);
-        return result;
+        return convertToInt(mass);
     }
 
     public int getLeafFreeIndexPointer() {

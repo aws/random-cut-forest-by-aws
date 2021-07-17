@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.state.tree;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.store.INodeStore;
@@ -68,6 +69,7 @@ public class CompactRandomCutTreeDoubleMapper implements
         NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
         nodeStoreMapper.setCompressionEnabled(compress);
         nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
+        nodeStoreMapper.setPrecision(Precision.FLOAT_64);
         state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
         return state;
     }

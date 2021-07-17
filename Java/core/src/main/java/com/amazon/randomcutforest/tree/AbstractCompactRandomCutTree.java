@@ -66,12 +66,14 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
     protected boolean float32Precision;
+    protected int dimension;
 
     public AbstractCompactRandomCutTree(
             com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
         this.float32Precision = builder.float32Precision;
+        this.dimension = builder.dimension;
         this.maxSize = builder.maxSize;
         if (builder.outputAfter.isPresent()) {
             outputAfter = builder.outputAfter.get();
@@ -80,8 +82,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
 
         if (builder.root == NULL) {
-            if (builder.float32Precision && maxSize < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
-                    && builder.dimension < Short.MAX_VALUE) {
+            if (isSmallNodeStoreInUse()) {
                 this.nodeStore = new SmallNodeStore(maxSize - 1);
             } else {
                 this.nodeStore = new NodeStore(maxSize - 1);
@@ -96,6 +97,15 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         if (storeSequenceIndexesEnabled) {
             sequenceIndexes = new HashMap[maxSize];
         }
+    }
+
+    public static boolean canUseSmallNodeStore(boolean float32precision, int capacity, int dimensions) {
+        return (float32precision && capacity < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
+                && dimensions < Short.MAX_VALUE);
+    }
+
+    public boolean isSmallNodeStoreInUse() {
+        return canUseSmallNodeStore(float32Precision, maxSize, dimension);
     }
 
     public INodeStore getNodeStore() {
@@ -163,7 +173,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      * maxSize in the current node store implementation.
      */
     public void reorderNodesInBreadthFirstOrder() {
-        NodeStore result = new NodeStore(maxSize - 1);
+        INodeStore result = isSmallNodeStoreInUse() ? new SmallNodeStore(maxSize - 1) : new NodeStore(maxSize - 1);
         if (root != null) {
             if (!isLeaf(root)) {
                 int nodeCounter = 0;
@@ -545,7 +555,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         private INodeStore nodeStore = null;
         private int root = NULL;
-        private int dimensions = 0;
         private int maxSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
         private boolean float32Precision = (RandomCutForest.DEFAULT_PRECISION == Precision.FLOAT_32);
 
@@ -566,11 +575,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         public T float32Precision(boolean precision) {
             this.float32Precision = precision;
-            return (T) this;
-        }
-
-        public T setDimensions(int dimensions) {
-            this.dimension = dimensions;
             return (T) this;
         }
 

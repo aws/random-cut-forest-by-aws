@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 import java.util.Arrays;
 
@@ -34,10 +33,9 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeStoreState> {
 
     /**
-     * if single precision, then stores the cut information as a float array
-     * (converted to bytes)
+     * SmallNodeStore should only be applied to FLOAT_32
      */
-    private Precision precision = Precision.FLOAT_64;
+    private Precision precision = Precision.FLOAT_32;
 
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
@@ -55,25 +53,25 @@ public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeSt
         int capacity = state.getCapacity();
         short[] cutDimension = ArrayPacking.unpackShorts(state.getCutDimension(), state.isCompressed());
         float[] cutValue = ArrayPacking.unpackFloats(state.getCutValueData());
-        short[] leftIndex = ArrayPacking.unpackShorts(state.getLeftIndex(), state.isCompressed());
-        short[] rightIndex = ArrayPacking.unpackShorts(state.getRightIndex(), state.isCompressed());
+        int[] leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), state.isCompressed());
+        int[] rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), state.isCompressed());
         if (state.isCanonicalAndNotALeaf()) {
-            reverseBits(state.getSize(), leftIndex, rightIndex);
+            NodeStoreMapper.reverseBits(state.getSize(), leftIndex, rightIndex);
         }
 
-        short[] leafMass;
+        int[] leafMass;
         int[] leafPointIndex;
         if (state.isPartialTreeStateEnabled()) {
             leafMass = null;
             leafPointIndex = null;
         } else {
-            leafMass = ArrayPacking.unpackShorts(state.getLeafMass(), state.isCompressed());
+            leafMass = ArrayPacking.unpackInts(state.getLeafMass(), state.isCompressed());
             leafPointIndex = ArrayPacking.unpackInts(state.getLeafPointIndex(), state.isCompressed());
         }
 
-        short[] nodeFreeIndexes = ArrayPacking.unpackShorts(state.getNodeFreeIndexes(), state.isCompressed());
+        int[] nodeFreeIndexes = ArrayPacking.unpackInts(state.getNodeFreeIndexes(), state.isCompressed());
         int nodeFreeIndexPointer = state.getNodeFreeIndexPointer();
-        short[] leafFreeIndexes = ArrayPacking.unpackShorts(state.getLeafFreeIndexes(), state.isCompressed());
+        int[] leafFreeIndexes = ArrayPacking.unpackInts(state.getLeafFreeIndexes(), state.isCompressed());
         int leafFreeIndexPointer = state.getLeafFreeIndexPointer();
 
         return new SmallNodeStore(capacity, leftIndex, rightIndex, cutDimension, cutValue, leafMass, leafPointIndex,
@@ -112,27 +110,7 @@ public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeSt
             state.setLeafPointIndex(ArrayPacking.pack(model.getLeafPointIndex(), state.isCompressed()));
             state.setLeafMass(ArrayPacking.pack(model.getLeafMass(), state.isCompressed()));
         }
-
         return state;
     }
 
-    void reverseBits(int size, short[] leftIndex, short[] rightIndex) {
-        short nodeCounter = 1;
-        short leafCounter = (short) leftIndex.length;
-        for (int i = 0; i < size; i++) {
-            if (leftIndex[i] != 0) {
-                leftIndex[i] = nodeCounter++;
-            } else {
-                leftIndex[i] = leafCounter++;
-            }
-            if (rightIndex[i] != 0) {
-                rightIndex[i] = nodeCounter++;
-            } else {
-                rightIndex[i] = leafCounter++;
-            }
-        }
-        for (int i = size; i < leftIndex.length; i++) {
-            leftIndex[i] = rightIndex[i] = (short) NULL;
-        }
-    }
 }

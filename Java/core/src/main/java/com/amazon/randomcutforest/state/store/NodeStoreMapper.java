@@ -36,7 +36,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
      * if single precision, then stores the cut information as a float array
      * (converted to bytes)
      */
-    private Precision precision = Precision.FLOAT_64;
+    private Precision precision;
 
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
@@ -142,7 +142,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         }
     }
 
-    void reverseBits(int size, int[] leftIndex, int[] rightIndex) {
+    protected static void reverseBits(int size, int[] leftIndex, int[] rightIndex) {
         int nodeCounter = 1;
         int leafCounter = leftIndex.length;
         for (int i = 0; i < size; i++) {

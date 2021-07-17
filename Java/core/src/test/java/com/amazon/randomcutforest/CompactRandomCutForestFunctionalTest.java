@@ -15,16 +15,11 @@
 
 package com.amazon.randomcutforest;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -35,11 +30,15 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.Random;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @Tag("functional")
 public class CompactRandomCutForestFunctionalTest {
@@ -649,6 +648,34 @@ public class CompactRandomCutForestFunctionalTest {
 
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTripLargeNodeStore() {
+        int dimensions = 5;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(5)
+                    .sampleSize(20000).precision(Precision.FLOAT_32).build();
+
+            Random r = new Random();
+            for (int i = 0; i < 30000 + new Random().nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 10000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
                 forest2.update(point);

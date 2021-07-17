@@ -26,6 +26,7 @@ import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.NodeStore;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.store.SmallNodeStore;
+import com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 
 @Getter
@@ -42,8 +43,9 @@ public class CompactRandomCutTreeFloatMapper implements
 
         INodeStore nodeStore;
 
-        if (state.getMaxSize() < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
-                && state.getDimensions() < Short.MAX_VALUE) {
+        if (AbstractCompactRandomCutTree.canUseSmallNodeStore(
+                state.getNodeStoreState().getPrecisionEnumValue() == Precision.FLOAT_32, state.getMaxSize(),
+                state.getDimensions())) {
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
             nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
@@ -74,13 +76,21 @@ public class CompactRandomCutTreeFloatMapper implements
         state.setBoundingBoxCacheFraction(model.getBoundingBoxCacheFraction());
         state.setOutputAfter(model.getOutputAfter());
         state.setSeed(model.getRandomSeed());
-        state.setDimensions(model.getDimensions());
+        state.setDimensions(model.getDimension());
 
-        NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
-        nodeStoreMapper.setCompressionEnabled(compressed);
-        nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
-        nodeStoreMapper.setPrecision(Precision.FLOAT_32);
-        state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
+        if (model.isSmallNodeStoreInUse()) {
+            SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
+            nodeStoreMapper.setCompressionEnabled(compressed);
+            nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
+            nodeStoreMapper.setPrecision(Precision.FLOAT_32);
+            state.setNodeStoreState(nodeStoreMapper.toState((SmallNodeStore) model.getNodeStore()));
+        } else {
+            NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+            nodeStoreMapper.setCompressionEnabled(compressed);
+            nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
+            nodeStoreMapper.setPrecision(Precision.FLOAT_32);
+            state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
+        }
 
         return state;
     }
