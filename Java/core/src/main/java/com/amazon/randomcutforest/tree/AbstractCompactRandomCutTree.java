@@ -24,9 +24,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
 /**
  * A Compact Random Cut Tree is a tree data structure whose leaves represent
@@ -63,12 +65,15 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected IBoxCache<Point> boxCache;
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
+    protected Precision precision;
+    protected int dimension;
 
     public AbstractCompactRandomCutTree(
             com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
-
+        this.precision = builder.precision;
+        this.dimension = builder.dimension;
         this.maxSize = builder.maxSize;
         if (builder.outputAfter.isPresent()) {
             outputAfter = builder.outputAfter.get();
@@ -77,7 +82,11 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
 
         if (builder.root == NULL) {
-            this.nodeStore = new NodeStore(maxSize - 1);
+            if (isSmallNodeStoreInUse()) {
+                this.nodeStore = new SmallNodeStore(maxSize - 1);
+            } else {
+                this.nodeStore = new NodeStore(maxSize - 1);
+            }
             this.root = null;
         } else {
             checkNotNull(builder.nodeStore, "nodeStore must not be null");
@@ -88,6 +97,15 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         if (storeSequenceIndexesEnabled) {
             sequenceIndexes = new HashMap[maxSize];
         }
+    }
+
+    public static boolean canUseSmallNodeStore(Precision precision, int capacity, int dimensions) {
+        return (precision == Precision.FLOAT_32 && capacity < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
+                && dimensions < Short.MAX_VALUE);
+    }
+
+    public boolean isSmallNodeStoreInUse() {
+        return canUseSmallNodeStore(precision, maxSize, dimension);
     }
 
     public INodeStore getNodeStore() {
@@ -155,7 +173,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
      * maxSize in the current node store implementation.
      */
     public void reorderNodesInBreadthFirstOrder() {
-        NodeStore result = new NodeStore(maxSize - 1);
+        INodeStore result = isSmallNodeStoreInUse() ? new SmallNodeStore(maxSize - 1) : new NodeStore(maxSize - 1);
         if (root != null) {
             if (!isLeaf(root)) {
                 int nodeCounter = 0;
@@ -538,6 +556,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         private INodeStore nodeStore = null;
         private int root = NULL;
         private int maxSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
+        protected Precision precision = RandomCutForest.DEFAULT_PRECISION;
 
         public T nodeStore(INodeStore nodeStore) {
             this.nodeStore = nodeStore;

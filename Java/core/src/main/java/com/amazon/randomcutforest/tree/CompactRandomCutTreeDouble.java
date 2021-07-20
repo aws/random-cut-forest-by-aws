@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Arrays;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<double[]> {
@@ -98,6 +99,10 @@ public class CompactRandomCutTreeDouble extends AbstractCompactRandomCutTree<dou
         }
 
         public CompactRandomCutTreeDouble build() {
+            if (pointStoreView == null) {
+                throw new IllegalArgumentException("pointstore cannot be null for compact trees");
+            }
+            precision = Precision.FLOAT_64;
             return new CompactRandomCutTreeDouble(this);
         }
     }

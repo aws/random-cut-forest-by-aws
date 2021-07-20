@@ -1004,7 +1004,7 @@ public class RandomCutForestTest {
         }
     }
 
-    private static double[][] generateShingledData(int size, int dimensions, long seed) {
+    public static double[][] generateShingledData(int size, int dimensions, long seed) {
         double[][] answer = new double[size][];
         int entryIndex = 0;
         boolean filledShingleAtleastOnce = false;

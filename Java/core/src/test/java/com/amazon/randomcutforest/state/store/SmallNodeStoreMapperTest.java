@@ -22,27 +22,25 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.store.NodeStore;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
-public class NodeStoreMapperTest {
-    private NodeStoreMapper mapper;
+public class SmallNodeStoreMapperTest {
+    private SmallNodeStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        mapper = new NodeStoreMapper();
-        mapper.setPrecision(Precision.FLOAT_64);
+        mapper = new SmallNodeStoreMapper();
     }
 
     @Test
     public void testRoundTrip() {
-        NodeStore store = new NodeStore(10);
+        SmallNodeStore store = new SmallNodeStore(10);
         int index1 = store.addNode(1, 2, 3, 1, 6.6, 1);
         int index2 = store.addNode(1, 4, 5, 2, -14.8, 2);
         int index3 = store.addNode(6, 7, 8, 1, 9.8, 4);
         int index4 = store.addNode(6, 10, 11, 4, -1000.01, 1);
 
-        NodeStore store2 = mapper.toModel(mapper.toState(store));
+        SmallNodeStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
 

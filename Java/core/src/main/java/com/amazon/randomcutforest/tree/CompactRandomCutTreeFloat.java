@@ -22,6 +22,7 @@ import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import java.util.Arrays;
 import java.util.Random;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<float[]> {
@@ -100,6 +101,11 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
 
         public CompactRandomCutTreeFloat build() {
+            if (pointStoreView == null) {
+                throw new IllegalArgumentException("pointstore cannot be null for compact trees");
+            }
+            this.dimension = pointStoreView.getDimensions();
+            precision = Precision.FLOAT_32;
             return new CompactRandomCutTreeFloat(this);
         }
     }
@@ -144,5 +150,9 @@ public class CompactRandomCutTreeFloat extends AbstractCompactRandomCutTree<floa
         }
 
         throw new IllegalStateException("The break point did not lie inside the expected range");
+    }
+
+    public int getDimension() {
+        return dimension;
     }
 }

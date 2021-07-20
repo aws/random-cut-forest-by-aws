@@ -658,6 +658,34 @@ public class CompactRandomCutForestFunctionalTest {
     }
 
     @Test
+    public void testUpdateAfterRoundTripLargeNodeStore() {
+        int dimensions = 5;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(5)
+                    .sampleSize(20000).precision(Precision.FLOAT_32).build();
+
+            Random r = new Random();
+            for (int i = 0; i < 30000 + new Random().nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+
+            // update re-instantiated forest
+            for (int i = 0; i < 10000; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
     public void testUpdateAfterRoundTripPartial() {
         int dimensions = 10;
         for (int trials = 0; trials < 100; trials++) {
