@@ -65,14 +65,14 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
     protected IBoxCache<Point> boxCache;
     protected Point[] pointSum;
     protected HashMap<Long, Integer>[] sequenceIndexes;
-    protected boolean float32Precision;
+    protected Precision precision;
     protected int dimension;
 
     public AbstractCompactRandomCutTree(
             com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.Builder<?> builder) {
         super(builder);
         checkArgument(builder.maxSize > 0, "maxSize must be greater than 0");
-        this.float32Precision = builder.float32Precision;
+        this.precision = builder.precision;
         this.dimension = builder.dimension;
         this.maxSize = builder.maxSize;
         if (builder.outputAfter.isPresent()) {
@@ -99,13 +99,13 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         }
     }
 
-    public static boolean canUseSmallNodeStore(boolean float32precision, int capacity, int dimensions) {
-        return (float32precision && capacity < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
+    public static boolean canUseSmallNodeStore(Precision precision, int capacity, int dimensions) {
+        return (precision == Precision.FLOAT_32 && capacity < SmallNodeStore.MAX_SMALLNODESTORE_CAPACITY
                 && dimensions < Short.MAX_VALUE);
     }
 
     public boolean isSmallNodeStoreInUse() {
-        return canUseSmallNodeStore(float32Precision, maxSize, dimension);
+        return canUseSmallNodeStore(precision, maxSize, dimension);
     }
 
     public INodeStore getNodeStore() {
@@ -556,7 +556,7 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
         private INodeStore nodeStore = null;
         private int root = NULL;
         private int maxSize = RandomCutForest.DEFAULT_SAMPLE_SIZE;
-        private boolean float32Precision = (RandomCutForest.DEFAULT_PRECISION == Precision.FLOAT_32);
+        protected Precision precision = RandomCutForest.DEFAULT_PRECISION;
 
         public T nodeStore(INodeStore nodeStore) {
             this.nodeStore = nodeStore;
@@ -570,11 +570,6 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
         public T maxSize(int maxSize) {
             this.maxSize = maxSize;
-            return (T) this;
-        }
-
-        public T float32Precision(boolean precision) {
-            this.float32Precision = precision;
             return (T) this;
         }
 

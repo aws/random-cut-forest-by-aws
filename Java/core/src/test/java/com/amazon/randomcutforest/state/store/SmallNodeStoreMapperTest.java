@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import com.amazon.randomcutforest.store.SmallNodeStore;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
 public class SmallNodeStoreMapperTest {
     private SmallNodeStoreMapper mapper;
