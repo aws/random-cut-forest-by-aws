@@ -38,6 +38,11 @@ public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
     abstract void initialize();
 
+    public void reInitialize(double cacheFraction) {
+        this.cacheFraction = cacheFraction;
+        initialize();
+    }
+
     boolean isDirectMap() {
         return cacheFraction >= 0.3;
     }

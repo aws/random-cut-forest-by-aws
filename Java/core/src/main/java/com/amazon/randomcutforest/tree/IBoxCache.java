@@ -59,4 +59,12 @@ public interface IBoxCache<Point> {
      */
     void addToBox(int index, Point point);
 
+    /**
+     * changes the fraction of boxes cached dynamically
+     * 
+     * @param fraction new fraction of boxes to be cached
+     */
+
+    void reInitialize(double fraction);
+
 }
