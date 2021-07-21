@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.examples.dynamicinference;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.returntypes.DensityOutput;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
+import static java.lang.Math.PI;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
-import static java.lang.Math.PI;
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
 
 public class DynamicDensity implements Example {
 
@@ -39,8 +39,8 @@ public class DynamicDensity implements Example {
 
     @Override
     public String description() {
-        return "shows two potential use of dynamic density computations; estimating density as well " +
-                "as its directional components";
+        return "shows two potential use of dynamic density computations; estimating density as well "
+                + "as its directional components";
     }
 
     /**

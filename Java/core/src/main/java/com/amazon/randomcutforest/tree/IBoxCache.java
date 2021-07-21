@@ -65,6 +65,6 @@ public interface IBoxCache<Point> {
      * @param fraction new fraction of boxes to be cached
      */
 
-    void reInitialize(double fraction);
+    void setCacheFraction(double fraction);
 
 }

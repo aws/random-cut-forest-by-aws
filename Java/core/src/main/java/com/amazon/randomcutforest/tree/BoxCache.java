@@ -38,7 +38,7 @@ public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
     abstract void initialize();
 
-    public void reInitialize(double cacheFraction) {
+    public void setCacheFraction(double cacheFraction) {
         this.cacheFraction = cacheFraction;
         initialize();
     }
