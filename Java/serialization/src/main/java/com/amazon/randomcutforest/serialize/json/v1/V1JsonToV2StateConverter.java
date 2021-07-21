@@ -15,6 +15,13 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.ExecutionContext;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -29,13 +36,6 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
-import java.io.Reader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class V1JsonToV2StateConverter {
 
