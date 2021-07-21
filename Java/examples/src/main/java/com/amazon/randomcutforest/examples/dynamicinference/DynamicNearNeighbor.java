@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.examples.dynamicinference;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.examples.Example;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
+import static java.lang.Math.PI;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.generate;
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
-import static java.lang.Math.PI;
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.examples.Example;
 
 public class DynamicNearNeighbor implements Example {
 
@@ -38,11 +38,9 @@ public class DynamicNearNeighbor implements Example {
 
     @Override
     public String description() {
-        return "shows an example of dynamic near neighbor computation where both the data and query are " +
-                "evolving in time";
+        return "shows an example of dynamic near neighbor computation where both the data and query are "
+                + "evolving in time";
     }
-
-
 
     @Override
     public void run() throws Exception {

@@ -575,4 +575,9 @@ public abstract class AbstractCompactRandomCutTree<Point> extends AbstractRandom
 
     }
 
+    @Override
+    public void setBoundingBoxCacheFraction(double fraction) {
+        boxCache.setCacheFraction(fraction);
+        super.setBoundingBoxCacheFraction(fraction);
+    }
 }

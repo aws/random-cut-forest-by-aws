@@ -25,14 +25,18 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class V1JsonToV2StateConverterTest {
 
@@ -44,8 +48,8 @@ public class V1JsonToV2StateConverterTest {
     }
 
     @ParameterizedTest
-    @EnumSource(V1JsonResource.class)
-    public void testConvert(V1JsonResource jsonResource) {
+    @MethodSource("args")
+    public void testConvert(V1JsonResource jsonResource, Precision precision) {
         String resource = jsonResource.getResource();
         try (InputStream is = V1JsonToV2StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
                 BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
@@ -57,7 +61,7 @@ public class V1JsonToV2StateConverterTest {
             }
 
             String json = b.toString();
-            RandomCutForestState state = converter.convert(json);
+            RandomCutForestState state = converter.convert(json, precision);
 
             assertEquals(jsonResource.getDimensions(), state.getDimensions());
             assertEquals(jsonResource.getNumberOfTrees(), state.getNumberOfTrees());
@@ -72,12 +76,15 @@ public class V1JsonToV2StateConverterTest {
             // with a few points
 
             Random random = new Random(0);
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 100; i++) {
                 double[] point = getPoint(jsonResource.getDimensions(), random);
                 double score = forest.getAnomalyScore(point);
                 assertTrue(score > 0);
                 forest.update(point);
             }
+            String newString = new ObjectMapper().writeValueAsString(new RandomCutForestMapper().toState(forest));
+            System.out.println(" Old size " + json.length() + ", new Size " + newString.length()
+                    + ", improvement factor " + json.length() / newString.length());
         } catch (IOException e) {
             fail("Unable to load JSON resource");
         }
@@ -89,5 +96,18 @@ public class V1JsonToV2StateConverterTest {
             point[i] = random.nextDouble();
         }
         return point;
+    }
+
+    static Stream<Arguments> args() {
+        return jsonParams().flatMap(
+                classParameter -> precision().map(testParameter -> Arguments.of(classParameter, testParameter)));
+    }
+
+    static Stream<Precision> precision() {
+        return Stream.of(Precision.FLOAT_32, Precision.FLOAT_64);
+    }
+
+    static Stream<V1JsonResource> jsonParams() {
+        return Stream.of(V1JsonResource.FOREST_1, V1JsonResource.FOREST_2);
     }
 }

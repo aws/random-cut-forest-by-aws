@@ -27,31 +27,36 @@ import com.amazon.randomcutforest.state.ExecutionContext;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
+import com.amazon.randomcutforest.state.store.PointStoreFloatMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
+import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
+import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
+import com.amazon.randomcutforest.tree.ITree;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class V1JsonToV2StateConverter {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public RandomCutForestState convert(String json) throws IOException {
+    public RandomCutForestState convert(String json, Precision precision) throws IOException {
         V1SerializedRandomCutForest forest = mapper.readValue(json, V1SerializedRandomCutForest.class);
-        return convert(forest);
+        return convert(forest, precision);
     }
 
-    public RandomCutForestState convert(Reader reader) throws IOException {
+    public RandomCutForestState convert(Reader reader, Precision precision) throws IOException {
         V1SerializedRandomCutForest forest = mapper.readValue(reader, V1SerializedRandomCutForest.class);
-        return convert(forest);
+        return convert(forest, precision);
     }
 
-    public RandomCutForestState convert(URL url) throws IOException {
+    public RandomCutForestState convert(URL url, Precision precision) throws IOException {
         V1SerializedRandomCutForest forest = mapper.readValue(url, V1SerializedRandomCutForest.class);
-        return convert(forest);
+        return convert(forest, precision);
     }
 
-    public RandomCutForestState convert(V1SerializedRandomCutForest serializedForest) {
+    public RandomCutForestState convert(V1SerializedRandomCutForest serializedForest, Precision precision) {
         RandomCutForestState state = new RandomCutForestState();
         state.setNumberOfTrees(serializedForest.getNumberOfTrees());
         state.setDimensions(serializedForest.getDimensions());
@@ -68,7 +73,7 @@ public class V1JsonToV2StateConverter {
         state.setSaveSamplerStateEnabled(true);
         state.setSaveTreeStateEnabled(false);
         state.setSaveCoordinatorStateEnabled(true);
-        state.setPrecision(Precision.FLOAT_64.name());
+        state.setPrecision(precision.name());
         state.setCompressed(false);
         state.setPartialTreeState(false);
 
@@ -78,35 +83,49 @@ public class V1JsonToV2StateConverter {
         state.setExecutionContext(executionContext);
 
         SamplerConverter samplerConverter = new SamplerConverter(state.getDimensions(),
-                state.getNumberOfTrees() * state.getSampleSize() + 1);
+                state.getNumberOfTrees() * state.getSampleSize() + 1, precision);
 
         Arrays.stream(serializedForest.getExecutor().getExecutor().getTreeUpdaters())
                 .map(V1SerializedRandomCutForest.TreeUpdater::getSampler).forEach(samplerConverter::addSampler);
 
-        state.setPointStoreState(samplerConverter.getPointStoreState());
+        state.setPointStoreState(samplerConverter.getPointStoreState(precision));
         state.setCompactSamplerStates(samplerConverter.compactSamplerStates);
 
         return state;
     }
 
     static class SamplerConverter {
-        private final PointStoreDouble pointStore;
+        private final IPointStore pointStore;
         private final List<CompactSamplerState> compactSamplerStates;
+        private final Precision precision;
+        private final ITree globalTree;
 
-        public SamplerConverter(int dimensions, int capacity) {
-            pointStore = new PointStoreDouble(dimensions, capacity);
+        public SamplerConverter(int dimensions, int capacity, Precision precision) {
+            if (precision == Precision.FLOAT_64) {
+                pointStore = new PointStoreDouble(dimensions, capacity);
+                globalTree = new CompactRandomCutTreeDouble.Builder().pointStore(pointStore)
+                        .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
+                        .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
+            } else {
+                pointStore = new PointStoreFloat(dimensions, capacity);
+                globalTree = new CompactRandomCutTreeFloat.Builder().pointStore(pointStore)
+                        .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
+                        .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
+            }
             compactSamplerStates = new ArrayList<>();
+            this.precision = precision;
         }
 
-        public PointStoreState getPointStoreState() {
-            return new PointStoreDoubleMapper().toState(pointStore);
+        public PointStoreState getPointStoreState(Precision precision) {
+            if (precision == Precision.FLOAT_64) {
+                return new PointStoreDoubleMapper().toState((PointStoreDouble) pointStore);
+            } else {
+                return new PointStoreFloatMapper().toState((PointStoreFloat) pointStore);
+            }
         }
 
         public void addSampler(V1SerializedRandomCutForest.Sampler sampler) {
             V1SerializedRandomCutForest.WeightedSamples[] samples = sampler.getWeightedSamples();
-            CompactRandomCutTreeDouble tree = new CompactRandomCutTreeDouble.Builder().pointStore(pointStore)
-                    .storeSequenceIndexesEnabled(false).centerOfMassEnabled(false).boundingBoxCacheFraction(1.0)
-                    .build();
             int[] pointIndex = new int[samples.length];
             float[] weight = new float[samples.length];
             long[] sequenceIndex = new long[samples.length];
@@ -115,7 +134,7 @@ public class V1JsonToV2StateConverter {
                 V1SerializedRandomCutForest.WeightedSamples sample = samples[i];
                 double[] point = sample.getPoint();
                 int index = pointStore.add(point, sample.getSequenceIndex());
-                pointIndex[i] = tree.addPoint(index, 0L);
+                pointIndex[i] = (Integer) globalTree.addPoint(index, 0L);
                 if (pointIndex[i] != index) {
                     pointStore.incrementRefCount(pointIndex[i]);
                     pointStore.decrementRefCount(index);
