@@ -66,21 +66,30 @@ public class CorrectorThresholding implements Example {
 
         for (double[] point : ShingledData.generateShingledData(dataSize, 50, dimensions, 0)) {
             score = forest.getAnomalyScore(point);
-            int signal = 0;
-            int index = 0;
+
             if (score > 0) {
-                signal = correctorThresholder.process(score);
-                if (signal < 0) {
+                if (correctorThresholder.process(score) == BasicThresholder.MORE_INFORMATION) {
+                    /**
+                     * we consider what the most recent values should have been, reflected in newPoint;
+                     * and then pass the score, score of newPoint, attribution and attribution of newPoint
+                     * to the thresholder. The idea is that "if the most likely least anomalous score is high"
+                     * (reflected in forest.getAnomalyScore(newPoint) then the most recent observations are not
+                     * an anomaly. If the still are considered an anomaly, then we look at the most egregious
+                     * subobservations in the shingle, given by maxContribution() and predict those values
+                     * -- note that this may correspond to anomalies being detecting late; and deciding on the
+                     * values when we detect anomalies (based on what we know now, as opposed to pure forecasting)
+                     */
                     DiVector attribution = forest.getAnomalyAttribution(point);
                     double[] newPoint = forest.imputeMissingValues(point, baseDimensions, likelyMissingIndices);
                     DiVector newAttribution = forest.getAnomalyAttribution(newPoint);
-                    signal = correctorThresholder.process(score, forest.getAnomalyScore(newPoint), attribution, newAttribution, count);
+                    int signal = correctorThresholder.process(score, forest.getAnomalyScore(newPoint), attribution, newAttribution, count);
+
                     if (signal == BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT) {
                         System.out.print(count + " value ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(point[dimensions - baseDimensions + i] + ", ");
                         }
-                        index = maxContribution(attribution, baseDimensions);
+                        int index = maxContribution(attribution, baseDimensions);
                         for (int i = 0; i < baseDimensions; i++) {
                             missingIndices[i] = dimensions + index * baseDimensions + i;
                         }

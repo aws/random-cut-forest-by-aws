@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.threshold;
 
 
-import com.amazon.randomcutforest.returntypes.DiVector;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import com.amazon.randomcutforest.returntypes.DiVector;
 
 public class AttributionThresholder extends BasicThresholder {
 

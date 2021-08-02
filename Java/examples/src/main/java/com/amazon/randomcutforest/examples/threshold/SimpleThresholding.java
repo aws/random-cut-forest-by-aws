@@ -29,12 +29,12 @@ public class SimpleThresholding implements Example {
 
     @Override
     public String command() {
-        return "dynamic_sampling";
+        return "simple_thresholding";
     }
 
     @Override
     public String description() {
-        return "check dynamic sampling";
+        return "check simple thresholding";
     }
 
     @Override
@@ -64,8 +64,11 @@ public class SimpleThresholding implements Example {
         for (double[] point : ShingledData.generateShingledData(dataSize, 50, shingleSize, 0)) {
             score = forest.getAnomalyScore(point);
             if (score > 0){
-                int signal = simpleThresholder.process(score);
-                if (signal == BasicThresholder.IS_ANOMALY) {
+                if (simpleThresholder.process(score) == BasicThresholder.IS_ANOMALY) {
+                    /**
+                     * Note that in the simplest case, we just assume that the anomaly designation is
+                     * due to the most recent observations.
+                     */
                     System.out.print(count + " value ");
                     for(int i=0;i<baseDimensions;i++) {
                         System.out.print(point[dimensions - baseDimensions + i] + ", ");

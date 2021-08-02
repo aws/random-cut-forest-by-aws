@@ -64,10 +64,15 @@ public class AttributionThresholding implements Example {
             score = forest.getAnomalyScore(point);
             int index = 0;
             if (score > 0){
-                int signal = highlightThresholder.process(score);
-                if (signal<0) {
+                if (highlightThresholder.process(score) == BasicThresholder.MORE_INFORMATION){
+                    /**
+                     * The goal is to chek if the score is high simply because an already detected anomaly
+                     * is in the shingle. If not, then we consider the most egregeous observations in the
+                     * shingle given by maxContribution() and impute the values -- note that anonalies may be
+                     * detected late and this is not pure forecasting.
+                     */
                     DiVector attribution = forest.getAnomalyAttribution(point);
-                    signal = highlightThresholder.process(score, attribution, count);
+                    int signal = highlightThresholder.process(score, attribution, count);
                     index = maxContribution(attribution,baseDimensions);
                     if (signal == BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT) {
                         System.out.print(count + " value ");
