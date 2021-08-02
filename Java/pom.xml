@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
 
     <name>software.amazon.randomcutforest:randomcutforest</name>
-    <description>Open Distro Random Cut Forest</description>
+    <description>OpenSearch Random Cut Forest</description>
     <url>https://github.com/aws/random-cut-forest-by-aws</url>
 
     <licenses>
@@ -41,6 +41,7 @@
         <module>benchmark</module>
         <module>examples</module>
         <module>serialization</module>
+        <module>parkservices</module>
         <module>testutils</module>
     </modules>
 
@@ -80,7 +81,6 @@
     </dependencyManagement>
 
     <build>
-        <sourceDirectory>target/generated-sources/delombok</sourceDirectory>
         <plugins>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -121,12 +121,6 @@
                 <version>1.31.0</version>
                 <configuration>
                     <java>
-                        <licenseHeader>
-                            <file>${maven.multiModuleProjectDirectory}/license-header</file>
-                        </licenseHeader>
-                        <eclipse>
-                            <file>${maven.multiModuleProjectDirectory}/spotless-eclipse.xml</file>
-                        </eclipse>
                         <removeUnusedImports/>
                         <importOrder>
                             <order>java,javax,org,com</order>
@@ -184,24 +178,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok-maven-plugin</artifactId>
-                <version>1.18.20.0</version>
-                <executions>
-                    <execution>
-                        <id>delombok</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>delombok</goal>
-                        </goals>
-                        <configuration>
-                            <addOutputDirectory>false</addOutputDirectory>
-                            <sourceDirectory>src/main/java</sourceDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.2.0</version>
@@ -230,14 +206,6 @@
 
     <reporting>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>3.0.5</version>
-                <configuration>
-                    <excludeFilterFile>findbugs-filters.xml</excludeFilterFile>
-                </configuration>
-            </plugin>
         </plugins>
     </reporting>
 

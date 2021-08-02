@@ -21,6 +21,11 @@
         </dependency>
         <dependency>
             <groupId>software.amazon.randomcutforest</groupId>
+            <artifactId>randomcutforest-parkservices</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.randomcutforest</groupId>
             <artifactId>randomcutforest-testutils</artifactId>
             <version>${project.version}</version>
         </dependency>
