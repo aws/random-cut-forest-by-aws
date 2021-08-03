@@ -52,7 +52,7 @@ public class SimpleThresholding implements Example {
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
                 .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize).precision(precision).build();
 
-        BasicThresholder simpleThresholder = new BasicThresholder(1.0/sampleSize,1,false,1.0,10);
+        BasicThresholder simpleThresholder = new BasicThresholder(1.0/sampleSize,1,1.0,10);
 
         double score;
         int count = 0;

@@ -23,6 +23,9 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.threshold.BasicThresholder;
 import com.amazon.randomcutforest.threshold.CorrectorThresholder;
 
+import static com.amazon.randomcutforest.threshold.BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT;
+import static com.amazon.randomcutforest.threshold.BasicThresholder.START_OF_ANOMALY;
+
 public class CorrectorThresholding implements Example {
 
     public static void main(String[] args) throws Exception {
@@ -84,26 +87,35 @@ public class CorrectorThresholding implements Example {
                     DiVector newAttribution = forest.getAnomalyAttribution(newPoint);
                     int signal = correctorThresholder.process(score, forest.getAnomalyScore(newPoint), attribution, newAttribution, count);
 
-                    if (signal == BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT) {
+                    if (signal == START_OF_ANOMALY || signal == CONTINUED_ANOMALY_HIGHLIGHT) {
                         System.out.print(count + " value ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(point[dimensions - baseDimensions + i] + ", ");
                         }
-                        int index = maxContribution(attribution, baseDimensions);
-                        for (int i = 0; i < baseDimensions; i++) {
-                            missingIndices[i] = dimensions + index * baseDimensions + i;
-                        }
-                        double[] expected = forest.imputeMissingValues(point, baseDimensions, missingIndices);
                         System.out.print("score " + score + ", ");
-                        if (index + 1 < 0){
-                            System.out.print( -(index+1) + " steps ago, instead of ");
-                            for(int i=0;i<baseDimensions;i++) {
+
+                        int index = maxContribution(attribution, baseDimensions);
+                        if (index + 1 < 0 && signal == START_OF_ANOMALY) {
+                            for (int i = 0; i < baseDimensions; i++) {
+                                missingIndices[i] = dimensions + index * baseDimensions + i;
+                            }
+                            double[] expected = forest.imputeMissingValues(point, baseDimensions, missingIndices);
+
+                            System.out.print(-(index + 1) + " steps ago, instead of ");
+                            for (int i = 0; i < baseDimensions; i++) {
                                 System.out.print(point[missingIndices[i]] + ", ");
                             }
-                        }
-                        System.out.print("expected ");
-                        for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(expected[missingIndices[i]] + ", ");
+
+                            System.out.print("expected ");
+                            for (int i = 0; i < baseDimensions; i++) {
+                                System.out.print(expected[missingIndices[i]] + ", ");
+                            }
+                        } else {
+                            // the anomaly is NOW
+                            System.out.print("expected ");
+                            for (int i = 0; i < baseDimensions; i++) {
+                                System.out.print(newPoint[likelyMissingIndices[i]] + ", ");
+                            }
                         }
                         System.out.println();
                     }

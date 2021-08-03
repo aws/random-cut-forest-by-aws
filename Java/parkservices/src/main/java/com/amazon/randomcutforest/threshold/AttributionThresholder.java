@@ -16,20 +16,27 @@
 package com.amazon.randomcutforest.threshold;
 
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 import com.amazon.randomcutforest.returntypes.DiVector;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class AttributionThresholder extends BasicThresholder {
 
     protected Deviation scoreDiff;
-    protected double lastScore;
-    protected boolean ignoreSimilar = false;
+    protected DiVector lastAnomalyAttribution;
+    protected boolean ignoreSimilar;
 
-    public AttributionThresholder(double discount, int baseDimension, boolean attributionEnabled, double absoluteThreshold,int minimumScores, boolean ignoreSimilar){
-        super(discount,baseDimension, attributionEnabled,absoluteThreshold,minimumScores);
+    public AttributionThresholder(double discount, int baseDimension, double absoluteThreshold,int minimumScores, boolean ignoreSimilar){
+        super(discount,baseDimension, absoluteThreshold,minimumScores);
         this.ignoreSimilar = ignoreSimilar;
         this.scoreDiff = new Deviation();
+    }
+
+    public AttributionThresholder(boolean isInAnomaly, double discount, int count, Deviation simpleDev, int baseDimension, double absoluteThreshold,int minimumScores, double lastScore, double lastAnomalyScore, Deviation scoreDiff, DiVector lastAnomalyAttribution, boolean ignoreSimilar){
+        super(isInAnomaly, discount,count, simpleDev, baseDimension, absoluteThreshold,minimumScores,lastScore,lastAnomalyScore);
+        this.ignoreSimilar = ignoreSimilar;
+        this.scoreDiff = scoreDiff;
+        this.lastAnomalyAttribution = new DiVector(lastAnomalyAttribution);
     }
 
     public int process(double newScore, DiVector attribution, int timeStamp){
@@ -41,40 +48,23 @@ public class AttributionThresholder extends BasicThresholder {
 
         final int answer;
         if (isPotentialAnomaly(newScore)) {
-            if (attributionEnabled) {
-                if (attribution == null) {
+            if (attribution == null) {
                     moreInformation = true;
                     return MORE_INFORMATION;
                 } else {
-                    moreInformation = false;
-                    if (!inAnomaly) {
-                        answer = CONTINUED_ANOMALY_HIGHLIGHT;
-                        lastAnomalyScore = newScore;
-                        lastAnomalyTimeStamp = timeStamp;
-                        inAnomaly = true;
-                        lastAnomalyAttribution = new DiVector(attribution);
-                    } else {
-                        if (trigger(attribution, timeStamp) ){//|| newScore > lastAnomalyScore + 1.5 * scoreDiff.getDeviation()) {
-                            answer = CONTINUED_ANOMALY_HIGHLIGHT;
-                            lastAnomalyScore = newScore;
-                            lastAnomalyTimeStamp = timeStamp;
-                            lastAnomalyAttribution = new DiVector(attribution);
-                        } else {
-                            answer = CONTINUED_ANOMALY_NOT_A_HIGHLIGHT;
-                        }
-                    }
-                }
-            } else {
+                moreInformation = false;
                 if (!inAnomaly) {
-                    answer = CONTINUED_ANOMALY_HIGHLIGHT;
+                    answer = START_OF_ANOMALY;
                     lastAnomalyScore = newScore;
                     lastAnomalyTimeStamp = timeStamp;
                     inAnomaly = true;
+                    lastAnomalyAttribution = new DiVector(attribution);
                 } else {
-                    if (newScore > lastAnomalyScore + 1.5 * scoreDiff.getDeviation()) {
+                    if (trigger(attribution, timeStamp)) {//|| newScore > lastAnomalyScore + 1.5 * scoreDiff.getDeviation()) {
                         answer = CONTINUED_ANOMALY_HIGHLIGHT;
-                        lastAnomalyTimeStamp = timeStamp;
                         lastAnomalyScore = newScore;
+                        lastAnomalyTimeStamp = timeStamp;
+                        lastAnomalyAttribution = new DiVector(attribution);
                     } else {
                         answer = CONTINUED_ANOMALY_NOT_A_HIGHLIGHT;
                     }
@@ -118,4 +108,15 @@ public class AttributionThresholder extends BasicThresholder {
         }
     }
 
+    public boolean isIgnoreSimilar() {
+        return ignoreSimilar;
+    }
+
+    public Deviation getScoreDiff() {
+        return scoreDiff;
+    }
+
+    public DiVector getLastAnomalyAttribution() {
+        return lastAnomalyAttribution;
+    }
 }

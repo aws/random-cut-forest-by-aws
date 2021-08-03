@@ -23,6 +23,9 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.threshold.AttributionThresholder;
 import com.amazon.randomcutforest.threshold.BasicThresholder;
 
+import static com.amazon.randomcutforest.threshold.BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT;
+import static com.amazon.randomcutforest.threshold.BasicThresholder.START_OF_ANOMALY;
+
 public class AttributionThresholding implements Example {
 
     public static void main(String[] args) throws Exception {
@@ -54,7 +57,7 @@ public class AttributionThresholding implements Example {
                 .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize).precision(precision).build();
 
 
-        AttributionThresholder highlightThresholder = new AttributionThresholder(1.0/sampleSize,1,true,1.0,10,true);
+        AttributionThresholder attributionThresholder = new AttributionThresholder(1.0/sampleSize, 1,1.0,10,false);
 
         double score;
         int count = 0;
@@ -64,7 +67,7 @@ public class AttributionThresholding implements Example {
             score = forest.getAnomalyScore(point);
             int index = 0;
             if (score > 0){
-                if (highlightThresholder.process(score) == BasicThresholder.MORE_INFORMATION){
+                if (attributionThresholder.process(score) == BasicThresholder.MORE_INFORMATION){
                     /**
                      * The goal is to chek if the score is high simply because an already detected anomaly
                      * is in the shingle. If not, then we consider the most egregeous observations in the
@@ -72,19 +75,24 @@ public class AttributionThresholding implements Example {
                      * detected late and this is not pure forecasting.
                      */
                     DiVector attribution = forest.getAnomalyAttribution(point);
-                    int signal = highlightThresholder.process(score, attribution, count);
+                    int signal = attributionThresholder.process(score, attribution, count);
                     index = maxContribution(attribution,baseDimensions);
-                    if (signal == BasicThresholder.CONTINUED_ANOMALY_HIGHLIGHT) {
+                    if (signal == START_OF_ANOMALY || signal == CONTINUED_ANOMALY_HIGHLIGHT) {
                         System.out.print(count + " value ");
                         for(int i=0;i<baseDimensions;i++) {
                             System.out.print(point[dimensions - baseDimensions + i] + ", ");
                         }
                         for(int i=0;i<baseDimensions;i++){
-                            missingIndices[i] = dimensions + index*baseDimensions + i;
+                            if (signal == START_OF_ANOMALY) {
+                                missingIndices[i] = dimensions + index * baseDimensions + i;
+                            } else {
+                                missingIndices[i] = dimensions - baseDimensions + i;
+                            }
                         }
+                        // note that a previous anomaly in the shingle can affect the prediction
                         double [] expected = forest.imputeMissingValues(point,baseDimensions,missingIndices);
                         System.out.print("score " + score + ", ");
-                        if (index + 1 < 0){
+                        if (index + 1 < 0 && signal == START_OF_ANOMALY){
                             System.out.print( -(index+1) + " steps ago, instead of ");
                             for(int i=0;i<baseDimensions;i++) {
                                 System.out.print(point[missingIndices[i]] + ", ");

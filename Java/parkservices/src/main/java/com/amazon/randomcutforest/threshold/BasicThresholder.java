@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.threshold;
 
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 import com.amazon.randomcutforest.returntypes.DiVector;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class BasicThresholder {
 
@@ -30,6 +30,8 @@ public class BasicThresholder {
 
     protected boolean moreInformation;
 
+    public static int START_OF_ANOMALY = 4;
+
     public static int CONTINUED_ANOMALY_NOT_A_HIGHLIGHT = 2;
 
     public static int CONTINUED_ANOMALY_HIGHLIGHT = 3;
@@ -38,41 +40,38 @@ public class BasicThresholder {
 
     protected double elasticity = 0.01;
 
-    protected boolean attributionEnabled  = false;
-
     protected int count = 0;
 
-    protected double discount = 0;
+    protected double discount;
 
-    protected int baseDimension = 1;
+    protected int baseDimension;
 
-    protected int minumumScores = 0;
+    protected int minimumScores;
 
     protected Deviation simpleDeviation;
 
     protected int lastAnomalyTimeStamp;
 
-    protected double absoluteThreshold = Double.MAX_VALUE;
+    protected double absoluteThreshold;
 
     protected double lastAnomalyScore;
 
-    protected DiVector lastAnomalyAttribution;
+    protected double lastScore;
 
-    public BasicThresholder(){
-        simpleDeviation = new Deviation();
+    public BasicThresholder(double discount, int baseDimension, double absoluteThreshold, int minimumScores){
+        this(false, discount, 0, new Deviation(discount), baseDimension, absoluteThreshold, minimumScores,-1.0,-1.0);
     }
 
-    public BasicThresholder(double discount){
-        simpleDeviation = new Deviation(discount);
+    public BasicThresholder(boolean isInAnomaly, double discount, int count, Deviation deviation, int baseDimension, double absoluteThreshold, int minimumScores, double lastScore, double lastAnomalyScore){
+        this.inAnomaly = isInAnomaly;
         this.discount = discount;
-    }
-
-    public BasicThresholder(double discount, int baseDimension, boolean attributionEnabled, double absoluteThreshold, int minumumScores){
-        this(discount);
+        this.count = count;
+        this.simpleDeviation = deviation;
         this.baseDimension = baseDimension;
-        this.attributionEnabled = attributionEnabled;
         this.absoluteThreshold = absoluteThreshold;
-        this.minumumScores = minumumScores;
+        this.minimumScores = minimumScores;
+        this.lastAnomalyScore = lastAnomalyScore;
+        this.lastScore = lastScore;
         moreInformation = false;
     }
 
@@ -83,7 +82,7 @@ public class BasicThresholder {
     protected boolean isPotentialAnomaly(double newScore){
         // cannot change any state
 
-        if (count <= minumumScores){
+        if (count <= minimumScores){
             return false;
         }
 
@@ -109,15 +108,6 @@ public class BasicThresholder {
 
         final int answer;
         if (isPotentialAnomaly(newScore)) {
-                if (attributionEnabled) {
-                    if (attribution == null) {
-                        moreInformation = true;
-                        return MORE_INFORMATION;
-                    } else {
-                        moreInformation = false;
-                        lastAnomalyAttribution = new DiVector(attribution);
-                    }
-                }
                 lastAnomalyScore = newScore;
                 lastAnomalyTimeStamp = timeStamp;
                 inAnomaly = true;
@@ -128,7 +118,52 @@ public class BasicThresholder {
         }
         ++count;
         simpleDeviation.update(newScore);
+        lastScore = newScore;
         return answer;
+    }
+
+    public boolean isInAnomaly() {
+        return inAnomaly;
+    }
+
+    public Deviation getSimpleDeviation() {
+        return simpleDeviation;
+    }
+
+    public double getAbsoluteThreshold() {
+        return absoluteThreshold;
+    }
+
+    public double getDiscount() {
+        return discount;
+    }
+
+    public double getElasticity() {
+        return elasticity;
+    }
+
+    public double getLastAnomalyScore() {
+        return lastAnomalyScore;
+    }
+
+    public double getLastScore() {
+        return lastScore;
+    }
+
+    public int getBaseDimension() {
+        return baseDimension;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public int getMinimumScores() {
+        return minimumScores;
+    }
+
+    public int getLastAnomalyTimeStamp(){
+        return lastAnomalyTimeStamp;
     }
 
 }

@@ -36,6 +36,13 @@ public class Deviation {
         this.discount = discount;
     }
 
+    public Deviation(double discount, double weight, double sumSquared,double sum){
+        this.discount = discount;
+        this.weight = weight;
+        this.sumSquared = sumSquared;
+        this.sum = sum;
+    }
+
     public double getMean(){
         checkArgument(weight>0, "incorrect invocation for mean");
         return sum/weight;
@@ -58,4 +65,17 @@ public class Deviation {
         return weight == 0;
     }
 
+    public double getDiscount(){return discount;}
+
+    public double getSum() {
+        return sum;
+    }
+
+    public double getSumSquared() {
+        return sumSquared;
+    }
+
+    public double getWeight() {
+        return weight;
+    }
 }

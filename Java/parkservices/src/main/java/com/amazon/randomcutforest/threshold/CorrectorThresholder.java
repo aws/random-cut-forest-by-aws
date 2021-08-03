@@ -22,17 +22,20 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class CorrectorThresholder extends AttributionThresholder {
 
-    protected Deviation scoreDiff;
-    protected double lastScore;
-    protected boolean ignoreSimilar = false;
+    protected boolean attributionEnabled;
 
     public CorrectorThresholder(double discount, int baseDimension, boolean attributionEnabled, double absoluteThreshold,int minimumScores, boolean ignoreSimilar){
-        super(discount,baseDimension, attributionEnabled,absoluteThreshold,minimumScores,ignoreSimilar);
-        this.ignoreSimilar = ignoreSimilar;
-        this.scoreDiff = new Deviation();
+        super(discount,baseDimension, absoluteThreshold,minimumScores, ignoreSimilar);
+        this.attributionEnabled = attributionEnabled;
+    }
+
+    public CorrectorThresholder(boolean isInAnomaly, double discount, int count, Deviation simpleDev, int baseDimension, double absoluteThreshold,int minimumScores, double lastScore, double lastAnomalyScore, boolean attributionEnabled, Deviation scoreDiff, DiVector lastAnomalyAttribution, boolean ignoreSimilar){
+        super(isInAnomaly,discount,count, simpleDev,baseDimension,absoluteThreshold,minimumScores,lastScore,lastAnomalyScore,scoreDiff,lastAnomalyAttribution,ignoreSimilar);
+        this.attributionEnabled = attributionEnabled;
     }
 
     public int process(double newScore, double idealScore, int timeStamp){
+        checkArgument(!attributionEnabled, "need attribution information");
         return process(newScore,idealScore,null,null,timeStamp);
     }
 
@@ -48,7 +51,7 @@ public class CorrectorThresholder extends AttributionThresholder {
                 } else {
                     moreInformation = false;
                     if (!inAnomaly) {
-                        answer = CONTINUED_ANOMALY_HIGHLIGHT;
+                        answer = START_OF_ANOMALY;
                         lastAnomalyScore = newScore;
                         inAnomaly = true;
                         lastAnomalyAttribution = new DiVector(attribution);
@@ -66,7 +69,7 @@ public class CorrectorThresholder extends AttributionThresholder {
                 }
             } else {
                 if (!inAnomaly) {
-                    answer = CONTINUED_ANOMALY_HIGHLIGHT;
+                    answer = START_OF_ANOMALY;
                     lastAnomalyScore = newScore;
                     inAnomaly = true;
                 } else {
@@ -92,29 +95,7 @@ public class CorrectorThresholder extends AttributionThresholder {
         return answer;
     }
 
-    protected boolean trigger(DiVector candidate, int timeStamp) {
-        checkArgument(lastAnomalyAttribution.getDimensions() == candidate.getDimensions(), " error in DiVectors");
-        int dimensions = candidate.getDimensions();
-
-        int difference = baseDimension * (timeStamp - lastAnomalyTimeStamp);
-
-        if (difference < dimensions) {
-            double remainder = 0;
-            for (int i = dimensions - difference; i < dimensions; i++) {
-                remainder += candidate.getHighLowSum(i);
-            }
-            return isPotentialAnomaly(remainder * dimensions / difference);
-        } else {
-            if (!ignoreSimilar) {
-                return true;
-            }
-            double sum = 0;
-            for (int i=0;i<dimensions;i++){
-                sum += Math.abs(lastAnomalyAttribution.high[i] - candidate.high[i]) +
-                        Math.abs(lastAnomalyAttribution.low[i] - candidate.low[i]);
-            }
-            return (sum > 0.3*lastScore);
-        }
+    public boolean isAttributionEnabled() {
+        return attributionEnabled;
     }
-
 }
