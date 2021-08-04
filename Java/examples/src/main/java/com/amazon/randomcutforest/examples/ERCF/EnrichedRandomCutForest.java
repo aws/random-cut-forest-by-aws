@@ -100,14 +100,18 @@ public class EnrichedRandomCutForest extends RandomCutForest {
                         }
                         newPoint = imputeMissingValues(point, missingIndices.length, missingIndices);
                         result.oldValues = new double[baseDimensions];
+                        result.flattenedAttribution = new double[baseDimensions];
                         for (int i = 0; i < baseDimensions; i++) {
                             result.oldValues[i] = point[startPosition + i];
+                            result.flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
                         }
                     }
                     result.expectedValuesList = new double [1] [];
                     result.expectedValuesList[0] = new double[baseDimensions];
+                    result.flattenedAttribution = new double[baseDimensions];
                     for (int i = 0; i < baseDimensions; i++) {
                         result.expectedValuesList[0][i] = newPoint[startPosition + i];
+                        result.flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
                     }
                     result.likelihoodOfValues = new double [] {1.0};
                 }
@@ -119,20 +123,20 @@ public class EnrichedRandomCutForest extends RandomCutForest {
     }
 
 
-    private int maxContribution(DiVector diVector, int baseDimension){
+    private int maxContribution(DiVector diVector, int baseDimension) {
         double val = 0;
-        for(int i = 0;i<baseDimension;i++){
+        for (int i = 0; i < baseDimension; i++) {
             val += diVector.getHighLowSum(i);
         }
-        int index = - diVector.getDimensions()/baseDimension;
-        for(int i = baseDimension;i<diVector.getDimensions();i += baseDimension){
+        int index = -diVector.getDimensions() / baseDimension;
+        for (int i = baseDimension; i < diVector.getDimensions(); i += baseDimension) {
             double sum = 0;
-            for(int j = 0;j<baseDimension;j++){
+            for (int j = 0; j < baseDimension; j++) {
                 sum += diVector.getHighLowSum(i + j);
             }
-            if (sum>val){
+            if (sum > val) {
                 val = sum;
-                index = (i-diVector.getDimensions())/baseDimension;
+                index = (i - diVector.getDimensions()) / baseDimension;
             }
         }
         return index;
