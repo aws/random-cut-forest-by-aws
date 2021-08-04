@@ -34,7 +34,7 @@ public class CorrectorThresholding implements Example {
 
     @Override
     public String command() {
-        return "highlight_thresholding";
+        return "corrector_thresholding";
     }
 
     @Override
@@ -52,6 +52,7 @@ public class CorrectorThresholding implements Example {
         Precision precision = Precision.FLOAT_64;
         int dataSize = 4 * sampleSize;
         int baseDimensions = 1;
+        int CONFIG_NUMBER_OF_ATTRIBUTORS=2;
 
         int dimensions = baseDimensions*shingleSize;
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
@@ -61,7 +62,7 @@ public class CorrectorThresholding implements Example {
 
         double score;
         int count = 0;
-        int [] missingIndices = new int [baseDimensions];
+        int [] missingIndices;
         int [] likelyMissingIndices = new int [baseDimensions];
         for(int i=0;i<baseDimensions;i++){
             likelyMissingIndices[i] = dimensions - baseDimensions + i;
@@ -81,14 +82,19 @@ public class CorrectorThresholding implements Example {
                      * subobservations in the shingle, given by maxContribution() and predict those values
                      * -- note that this may correspond to anomalies being detecting late; and deciding on the
                      * values when we detect anomalies (based on what we know now, as opposed to pure forecasting)
+                     *
+                     * The parameter CONFIG_NUMBER_OF_ATTRIBUTORS determines the maximum number of different attributors
+                     * we could consider; note that larger number of contributors are difficult to visualize/control
                      */
                     DiVector attribution = forest.getAnomalyAttribution(point);
-                    double[] newPoint = forest.imputeMissingValues(point, baseDimensions, likelyMissingIndices);
+                    int startPosition = attribution.getDimensions() - baseDimensions;
+                    likelyMissingIndices = largestFeatures(attribution,startPosition,baseDimensions,CONFIG_NUMBER_OF_ATTRIBUTORS);
+                    double[] newPoint = forest.imputeMissingValues(point, likelyMissingIndices.length, likelyMissingIndices);
                     DiVector newAttribution = forest.getAnomalyAttribution(newPoint);
                     int signal = correctorThresholder.process(score, forest.getAnomalyScore(newPoint), attribution, newAttribution, count);
 
                     if (signal == START_OF_ANOMALY || signal == CONTINUED_ANOMALY_HIGHLIGHT) {
-                        System.out.print(count + " value ");
+                        System.out.print("timestamp " + count + ", value ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(point[dimensions - baseDimensions + i] + ", ");
                         }
@@ -96,30 +102,25 @@ public class CorrectorThresholding implements Example {
 
                         int index = maxContribution(attribution, baseDimensions);
                         if (index + 1 < 0 && signal == START_OF_ANOMALY) {
+                            // anomaly in the past and detected late
+                            startPosition = attribution.getDimensions() + index * baseDimensions;
+                            missingIndices = largestFeatures(attribution, startPosition, baseDimensions, CONFIG_NUMBER_OF_ATTRIBUTORS);
                             for (int i = 0; i < baseDimensions; i++) {
                                 missingIndices[i] = dimensions + index * baseDimensions + i;
                             }
-                            double[] expected = forest.imputeMissingValues(point, baseDimensions, missingIndices);
+                            newPoint = forest.imputeMissingValues(point, missingIndices.length, missingIndices);
 
                             System.out.print(-(index + 1) + " steps ago, instead of ");
                             for (int i = 0; i < baseDimensions; i++) {
-                                System.out.print(point[missingIndices[i]] + ", ");
+                                System.out.print(point[startPosition + i] + ", ");
                             }
-
-                            System.out.print("expected ");
-                            for (int i = 0; i < baseDimensions; i++) {
-                                System.out.print(expected[missingIndices[i]] + ", ");
-                            }
-                        } else {
-                            // the anomaly is NOW
-                            System.out.print("expected ");
-                            for (int i = 0; i < baseDimensions; i++) {
-                                System.out.print(newPoint[likelyMissingIndices[i]] + ", ");
-                            }
+                        }
+                        System.out.print("expected ");
+                        for (int i = 0; i < baseDimensions; i++) {
+                            System.out.print(newPoint[startPosition + i] + ", ");
                         }
                         System.out.println();
                     }
-
                 }
             }
             ++count;
@@ -145,5 +146,26 @@ public class CorrectorThresholding implements Example {
             }
         }
         return index;
+    }
+
+    private int[] largestFeatures(DiVector diVector, int position, int baseDimension, int max_number){
+        double sum = 0;
+        for(int i=0;i<baseDimension;i++){
+            sum += diVector.getHighLowSum(i + position);
+        }
+        int count = 0;
+        for(int i=0;i<baseDimension;i++){
+            if (diVector.getHighLowSum(i + position) > sum/(max_number + 1)) {
+                ++count;
+            }
+        }
+        int [] answer = new int [count];
+        count = 0;
+        for(int i=0;i<baseDimension;i++){
+            if (diVector.getHighLowSum(i + position) > sum/(max_number + 1)) {
+                answer[count++] = i + position;
+            }
+        }
+        return answer;
     }
 }
