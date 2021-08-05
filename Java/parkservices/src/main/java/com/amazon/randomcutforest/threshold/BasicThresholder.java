@@ -75,11 +75,11 @@ public class BasicThresholder {
         moreInformation = false;
     }
 
-    protected double basicThreshold(){
+    public double basicThreshold(){
         return simpleDeviation.getMean() + 3 * simpleDeviation.getDeviation();
     }
 
-    protected boolean isPotentialAnomaly(double newScore){
+    public boolean isPotentialAnomaly(double newScore){
         // cannot change any state
 
         if (count <= minimumScores){
@@ -95,7 +95,7 @@ public class BasicThresholder {
         if (inAnomaly) {
             return (newScore > basicThreshold() - elasticity);
         } else {
-            return (newScore > basicThreshold() + elasticity);
+            return (newScore > basicThreshold());
         }
     }
 

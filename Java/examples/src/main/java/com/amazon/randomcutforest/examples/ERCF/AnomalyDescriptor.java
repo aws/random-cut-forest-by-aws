@@ -20,6 +20,9 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 public class AnomalyDescriptor {
     // anomalies should have score for postprocessing
     double score;
+    // the following describes the grade of the anomaly in the range [0:1] where
+    // 0 is not an anomaly
+    double anomalyGrade;
     // same for attribution; this is basic RCF attribution which has high/low information
     DiVector attribution;
     // timestamp (basically a sequence index); kept as long  for potential future use
@@ -30,8 +33,6 @@ public class AnomalyDescriptor {
      * and should happen sometime; for shingle size 1; this is always 0
      * */
     int relativeIndex;
-
-    boolean startOfAnomaly;
 
     // a flattened version denoting the basic contribution of each input variable (not shingled) for the
     // time slice indicated by relativeIndex

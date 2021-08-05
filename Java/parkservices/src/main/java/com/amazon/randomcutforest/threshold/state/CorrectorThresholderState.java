@@ -25,6 +25,8 @@ public class CorrectorThresholderState {
 
     private String version = V2_1;
 
+    private long randomseed;
+
     private boolean inAnomaly;
 
     private double elasticity;
@@ -54,5 +56,7 @@ public class CorrectorThresholderState {
     private double lastScore;
 
     private boolean ignoreSimilar;
+
+    private boolean previousIsPotentialAnomaly;
 
 }

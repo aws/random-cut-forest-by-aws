@@ -30,7 +30,7 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         DeviationMapper deviationMapper = new DeviationMapper();
         Deviation simpleDeviation = deviationMapper.toModel(state.getSimpleDeviationState());
         Deviation scoreDiff = deviationMapper.toModel(state.getScoreDiffState());
-        return new CorrectorThresholder(state.isInAnomaly(),state.getDiscount(), state.getCount(), simpleDeviation, state.getBaseDimension(),state.getAbsoluteThreshold(),state.getMinimumScores(),state.getLastScore(),state.getLastAnomalyScore(),state.isAttributionEnabled(),scoreDiff,state.getLastAnomalyAttribution(),state.isIgnoreSimilar());
+        return new CorrectorThresholder(state.isInAnomaly(),state.getDiscount(), state.getCount(), simpleDeviation, state.getBaseDimension(),state.getAbsoluteThreshold(),state.getMinimumScores(),state.getLastScore(),state.getLastAnomalyScore(),state.isAttributionEnabled(),scoreDiff,state.getLastAnomalyAttribution(),state.isIgnoreSimilar(),state.isPreviousIsPotentialAnomaly());
     }
 
     @Override
@@ -52,6 +52,7 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         state.setLastAnomalyScore(model.getLastAnomalyScore());
         state.setLastAnomalyAttribution(model.getLastAnomalyAttribution());
         state.setIgnoreSimilar(model.isIgnoreSimilar());
+        state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setScoreDiffState(deviationMapper.toState(model.getScoreDiff()));
         return state;
     }

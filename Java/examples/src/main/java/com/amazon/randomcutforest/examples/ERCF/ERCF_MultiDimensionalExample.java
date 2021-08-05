@@ -18,22 +18,22 @@ package com.amazon.randomcutforest.examples.ERCF;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.examples.datasets.ShingledData;
+import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimData;
 
-public class ERCFexample implements Example {
+public class ERCF_MultiDimensionalExample implements Example {
 
     public static void main(String[] args) throws Exception {
-        new ERCFexample().run();
+        new ERCF_MultiDimensionalExample().run();
     }
 
     @Override
     public String command() {
-        return "ERCF_example";
+        return "ERCF_MultiDim_example";
     }
 
     @Override
     public String description() {
-        return "ERCF Example";
+        return "ERCF MUlti Dimensional Example";
     }
 
     @Override
@@ -43,27 +43,28 @@ public class ERCFexample implements Example {
         int shingleSize = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.FLOAT_64;
+        Precision precision = Precision.FLOAT_32;
         int dataSize = 4 * sampleSize;
-        int baseDimensions = 1;
-        int CONFIG_NUMBER_OF_ATTRIBUTORS = 2;
+        int baseDimensions = 2;
 
         int dimensions = baseDimensions * shingleSize;
-        EnrichedRandomCutForest forest = new EnrichedRandomCutForest(RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
-                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize).precision(precision));
+        ExtendedRandomCutForest forest = new ExtendedRandomCutForest(RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
+                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize).precision(precision),0.01);
 
 
-        for (double[] point : ShingledData.generateShingledData(dataSize, 50, dimensions, 0)) {
+        for (double[] point : ShingledMultiDimData.generateShingledData(dataSize, 50, shingleSize, 2,0)) {
+
             AnomalyDescriptor result = forest.process(point);
-            if (result != null) {
+
+            if (result.anomalyGrade != 0) {
                 System.out.print("timestamp " + result.timeStamp + ", value ");
                 for (int i = 0; i < baseDimensions; i++) {
                     System.out.print(result.currentValues[i] + ", ");
                 }
-                System.out.print("score " + result.score + ", ");
+                System.out.print("score " + result.score + ", grade " + result.anomalyGrade + ", ");
 
 
-                if (result.startOfAnomaly) {
+                if (result.relativeIndex !=0) {
                     System.out.print(-result.relativeIndex + " steps ago, instead of ");
                     for (int i = 0; i < baseDimensions; i++) {
                         System.out.print(result.oldValues[i] + ", ");

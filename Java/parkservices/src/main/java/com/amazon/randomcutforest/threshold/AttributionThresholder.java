@@ -29,7 +29,7 @@ public class AttributionThresholder extends BasicThresholder {
     public AttributionThresholder(double discount, int baseDimension, double absoluteThreshold,int minimumScores, boolean ignoreSimilar){
         super(discount,baseDimension, absoluteThreshold,minimumScores);
         this.ignoreSimilar = ignoreSimilar;
-        this.scoreDiff = new Deviation();
+        this.scoreDiff = new Deviation(discount);
     }
 
     public AttributionThresholder(boolean isInAnomaly, double discount, int count, Deviation simpleDev, int baseDimension, double absoluteThreshold,int minimumScores, double lastScore, double lastAnomalyScore, Deviation scoreDiff, DiVector lastAnomalyAttribution, boolean ignoreSimilar){
@@ -60,7 +60,7 @@ public class AttributionThresholder extends BasicThresholder {
                     inAnomaly = true;
                     lastAnomalyAttribution = new DiVector(attribution);
                 } else {
-                    if (trigger(attribution, timeStamp)) {//|| newScore > lastAnomalyScore + 1.5 * scoreDiff.getDeviation()) {
+                    if (trigger(attribution, timeStamp)) {
                         answer = CONTINUED_ANOMALY_HIGHLIGHT;
                         lastAnomalyScore = newScore;
                         lastAnomalyTimeStamp = timeStamp;
@@ -76,7 +76,7 @@ public class AttributionThresholder extends BasicThresholder {
         }
         ++count;
         simpleDeviation.update(newScore);
-        if (count>1 && newScore > lastScore){
+        if (count>1){
             scoreDiff.update(newScore - lastScore);
         }
         lastScore = newScore;
