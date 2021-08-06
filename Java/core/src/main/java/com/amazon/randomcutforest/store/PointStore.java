@@ -821,7 +821,7 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
 
         if (builder.refCount == null) {
             int size = (int) builder.initialPointStoreSize.orElse(dynamicResizingEnabled ? 1 : builder.capacity);
-            currentStoreCapacity = size * dimensions;
+            currentStoreCapacity = size;
             indexManager = new IndexManager(size);
             startOfFreeSegment = 0;
             refCount = new int[size];
