@@ -60,7 +60,7 @@ public class ERCF_MultiDimensionalExample implements Example {
         int dimensions = baseDimensions * shingleSize;
         ExtendedRandomCutForest forest = new ExtendedRandomCutForest(RandomCutForest.builder().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).outputAfter(32).precision(precision), 0.01);
+                .sampleSize(sampleSize).precision(precision), 0.01);
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
