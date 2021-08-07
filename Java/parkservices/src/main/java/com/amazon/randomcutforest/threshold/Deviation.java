@@ -28,6 +28,8 @@ public class Deviation {
 
     protected double sum = 0;
 
+    protected int count = 0;
+
     public Deviation(){
         discount = 0;
     }
@@ -36,11 +38,12 @@ public class Deviation {
         this.discount = discount;
     }
 
-    public Deviation(double discount, double weight, double sumSquared,double sum){
+    public Deviation(double discount, double weight, double sumSquared,double sum, int count){
         this.discount = discount;
         this.weight = weight;
         this.sumSquared = sumSquared;
         this.sum = sum;
+        this.count = 0;
     }
 
     public double getMean(){
@@ -48,11 +51,15 @@ public class Deviation {
         return sum/weight;
     }
 
+
     public void update(double score){
-        sum = sum * (1 - discount) + score;
-        sumSquared = sumSquared * (1-discount) + score * score;
-        weight = weight * (1-discount) + 1.0;
+        double factor = Math.min(1-discount,1-1.0/(count+2));
+        sum = sum * factor + score;
+        sumSquared = sumSquared * factor + score * score;
+        weight = weight * factor + 1.0;
+        ++count;
     }
+
 
     public double getDeviation(){
         checkArgument(weight>0, "incorrect invocation for standard deviation");
@@ -77,5 +84,9 @@ public class Deviation {
 
     public double getWeight() {
         return weight;
+    }
+
+    public int getCount() {
+        return count;
     }
 }

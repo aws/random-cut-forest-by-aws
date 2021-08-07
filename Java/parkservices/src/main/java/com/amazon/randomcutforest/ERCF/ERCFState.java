@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.ERCF;
+package com.amazon.randomcutforest.ERCF;
 
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.threshold.state.CorrectorThresholderState;
@@ -24,4 +24,5 @@ public class ERCFState {
     RandomCutForestState forestState;
     CorrectorThresholderState thresholderState;
     int count;
+    int numberOfAttributors;
 }

@@ -52,7 +52,7 @@ public class SimpleThresholding implements Example {
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).randomSeed(0)
                 .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize).precision(precision).build();
 
-        BasicThresholder simpleThresholder = new BasicThresholder(1.0/sampleSize,1,1.0,10);
+        BasicThresholder simpleThresholder = new BasicThresholder(1.0/sampleSize,1,shingleSize);
 
         double score;
         int count = 0;
@@ -64,7 +64,7 @@ public class SimpleThresholding implements Example {
         for (double[] point : ShingledData.generateShingledData(dataSize, 50, shingleSize, 0)) {
             score = forest.getAnomalyScore(point);
             if (score > 0){
-                if (simpleThresholder.process(score) == BasicThresholder.IS_ANOMALY) {
+                if (simpleThresholder.process(score,count) != BasicThresholder.NOT_ANOMALY) {
                     /**
                      * Note that in the simplest case, we just assume that the anomaly designation is
                      * due to the most recent observations.

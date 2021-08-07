@@ -25,6 +25,14 @@ public class CorrectorThresholderState {
 
     private String version = V2_1;
 
+    private double UPPER_ANCHOR_SCORE;
+
+    private double Z_FACTOR;
+
+    private double TRIGGER_FACTOR;
+
+    private double BASIC_FACTOR;
+
     private long randomseed;
 
     private boolean inAnomaly;
@@ -38,6 +46,8 @@ public class CorrectorThresholderState {
     private double discount;
 
     private int baseDimension;
+
+    private int shingleSize;
 
     private int minimumScores;
 

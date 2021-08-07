@@ -30,7 +30,7 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         DeviationMapper deviationMapper = new DeviationMapper();
         Deviation simpleDeviation = deviationMapper.toModel(state.getSimpleDeviationState());
         Deviation scoreDiff = deviationMapper.toModel(state.getScoreDiffState());
-        return new CorrectorThresholder(state.isInAnomaly(),state.getDiscount(), state.getCount(), simpleDeviation, state.getBaseDimension(),state.getAbsoluteThreshold(),state.getMinimumScores(),state.getLastScore(),state.getLastAnomalyScore(),state.isAttributionEnabled(),scoreDiff,state.getLastAnomalyAttribution(),state.isIgnoreSimilar(),state.isPreviousIsPotentialAnomaly());
+        return new CorrectorThresholder(state, simpleDeviation, scoreDiff);
     }
 
     @Override
@@ -38,11 +38,17 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         CorrectorThresholderState state = new CorrectorThresholderState();
         DeviationMapper deviationMapper = new DeviationMapper();
 
+        state.setZ_FACTOR(model.getzFactor());
+        state.setUPPER_ANCHOR_SCORE(model.getUpperThreshold());
+        state.setTRIGGER_FACTOR(model.getTriggerFactor());
         state.setDiscount(model.getDiscount());
-        state.setAbsoluteThreshold(model.getAbsoluteThreshold());
+        state.setElasticity(model.getElasticity());
+        state.setBASIC_FACTOR(model.getBASIC_FACTOR());
+        state.setAbsoluteThreshold(model.getLowerThreshold());
         state.setCount(model.getCount());
         state.setInAnomaly(model.isInAnomaly());
         state.setBaseDimension(model.getBaseDimension());
+        state.setShingleSize(model.getShingleSize());
         state.setElasticity(model.getElasticity());
         state.setMinimumScores(model.getMinimumScores());
         state.setAttributionEnabled(model.isAttributionEnabled());

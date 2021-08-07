@@ -15,14 +15,10 @@
 
 package com.amazon.randomcutforest.examples.datasets;
 
-import static java.lang.Math.PI;
-
 import java.util.Random;
 
-/**
- * Serialize a Random Cut Forest using the
- * <a href="https://github.com/protostuff/protostuff">protostuff</a> library.
- */
+import static java.lang.Math.PI;
+
 public class ShingledData {
 
     public static double[][] generateShingledData(int size, int period, int dimensions, long seed) {
@@ -64,8 +60,11 @@ public class ShingledData {
         for (int i = 0; i < num; i++) {
             data[i] = amplitude * Math.cos(2 * PI * (i + 50) / period) + noise * noiseprg.nextDouble();
             if (noiseprg.nextDouble() < 0.01) {
-                data[i] += noiseprg.nextDouble()<0.5? 10*noise: -10*noise;
+                double change = noiseprg.nextDouble() < 0.5 ? 10 * noise : -10 * noise;
+                data[i] += change;
+                System.out.println(" timestamp " + i + " changing by " + change);
             }
+
         }
 
         return data;

@@ -13,19 +13,16 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold.state;
+package com.amazon.randomcutforest.examples.datasets;
 
-import lombok.Data;
+public class MultiDimDataWithKey{
+    public double [] [] data;
+    public int [] changeIndices;
+    public double[][] changes;
 
-@Data
-public class DeviationState {
-    private double discount;
-
-    private double weight;
-
-    private double sumSquared;
-
-    private double sum;
-
-    private int count;
+    public MultiDimDataWithKey(double[][] data, int[] changeIndices, double [][] changes){
+        this.data = data;
+        this.changeIndices = changeIndices;
+        this.changes = changes;
+    }
 }

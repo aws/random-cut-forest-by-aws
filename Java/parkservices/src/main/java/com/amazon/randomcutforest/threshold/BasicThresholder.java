@@ -16,10 +16,6 @@
 package com.amazon.randomcutforest.threshold;
 
 
-import com.amazon.randomcutforest.returntypes.DiVector;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 public class BasicThresholder {
 
     public static int IS_ANOMALY = 1;
@@ -29,12 +25,6 @@ public class BasicThresholder {
     public static int MORE_INFORMATION = -1;
 
     protected boolean moreInformation;
-
-    public static int START_OF_ANOMALY = 4;
-
-    public static int CONTINUED_ANOMALY_NOT_A_HIGHLIGHT = 2;
-
-    public static int CONTINUED_ANOMALY_HIGHLIGHT = 3;
 
     protected boolean inAnomaly = false;
 
@@ -46,32 +36,31 @@ public class BasicThresholder {
 
     protected int baseDimension;
 
-    protected int minimumScores;
+    protected int shingleSize;
+
+    protected int minimumScores = 10;
 
     protected Deviation simpleDeviation;
 
     protected int lastAnomalyTimeStamp;
 
-    protected double absoluteThreshold;
+    protected double lowerThreshold = 0.8;
 
     protected double lastAnomalyScore;
 
     protected double lastScore;
 
-    public BasicThresholder(double discount, int baseDimension, double absoluteThreshold, int minimumScores){
-        this(false, discount, 0, new Deviation(discount), baseDimension, absoluteThreshold, minimumScores,-1.0,-1.0);
+    protected double BASIC_FACTOR = 3.0;
+
+    public BasicThresholder(double discount, int baseDimension, int shingleSize){
+        this.discount=discount;
+        simpleDeviation = new Deviation(discount);
+        this.baseDimension=baseDimension;
+        this.shingleSize = shingleSize;
     }
 
-    public BasicThresholder(boolean isInAnomaly, double discount, int count, Deviation deviation, int baseDimension, double absoluteThreshold, int minimumScores, double lastScore, double lastAnomalyScore){
-        this.inAnomaly = isInAnomaly;
-        this.discount = discount;
-        this.count = count;
+    public BasicThresholder(Deviation deviation){
         this.simpleDeviation = deviation;
-        this.baseDimension = baseDimension;
-        this.absoluteThreshold = absoluteThreshold;
-        this.minimumScores = minimumScores;
-        this.lastAnomalyScore = lastAnomalyScore;
-        this.lastScore = lastScore;
         moreInformation = false;
     }
 
@@ -82,30 +71,18 @@ public class BasicThresholder {
     public boolean isPotentialAnomaly(double newScore){
         // cannot change any state
 
-        if (count <= minimumScores){
+        if (count <= minimumScores || newScore < lowerThreshold) {
             return false;
         }
 
-
-        if (newScore < absoluteThreshold) {
-            return false;
-        }
-
-
-        if (inAnomaly) {
+        if (inAnomaly && shingleSize>1) {
             return (newScore > basicThreshold() - elasticity);
         } else {
             return (newScore > basicThreshold());
         }
     }
 
-    public int process(double newScore){
-        return process(newScore,newScore, null, null, 0);
-    }
-
-    public int process(double newScore, double idealScore, DiVector attribution, DiVector idealAttrib, int timeStamp) {
-        checkArgument(!moreInformation || attribution != null, "incorrect state, need more information");
-
+    public int process(double newScore, int timeStamp){
         final int answer;
         if (isPotentialAnomaly(newScore)) {
                 lastAnomalyScore = newScore;
@@ -130,8 +107,8 @@ public class BasicThresholder {
         return simpleDeviation;
     }
 
-    public double getAbsoluteThreshold() {
-        return absoluteThreshold;
+    public double getLowerThreshold() {
+        return lowerThreshold;
     }
 
     public double getDiscount() {
@@ -154,6 +131,10 @@ public class BasicThresholder {
         return baseDimension;
     }
 
+    public int getShingleSize() {
+        return shingleSize;
+    }
+
     public int getCount() {
         return count;
     }
@@ -164,6 +145,18 @@ public class BasicThresholder {
 
     public int getLastAnomalyTimeStamp(){
         return lastAnomalyTimeStamp;
+    }
+
+    public double getBASIC_FACTOR() {
+        return BASIC_FACTOR;
+    }
+
+    public void setBasic_Factor(double factor){
+        BASIC_FACTOR = factor;
+    }
+
+    public void setElasticity(double elasticity){
+        this.elasticity = elasticity;
     }
 
 }

@@ -27,7 +27,7 @@ public class DeviationMapper implements IStateMapper<Deviation, DeviationState> 
 
     @Override
     public Deviation toModel(DeviationState state, long seed) {
-        return new Deviation(state.getDiscount(),state.getWeight(),state.getSumSquared(),state.getSum());
+        return new Deviation(state.getDiscount(),state.getWeight(),state.getSumSquared(),state.getSum(),state.getCount());
     }
 
     @Override
@@ -37,7 +37,7 @@ public class DeviationMapper implements IStateMapper<Deviation, DeviationState> 
         state.setSum(model.getSum());
         state.setSumSquared(model.getSumSquared());
         state.setWeight(model.getWeight());
-
+        state.setCount(model.getCount());
         return state;
     }
 

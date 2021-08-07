@@ -13,37 +13,46 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.ERCF;
+package com.amazon.randomcutforest.ERCF;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 
 public class AnomalyDescriptor {
     // anomalies should have score for postprocessing
-    double score;
+    public double rcfScore;
     // the following describes the grade of the anomaly in the range [0:1] where
     // 0 is not an anomaly
-    double anomalyGrade;
+    public double anomalyGrade;
     // same for attribution; this is basic RCF attribution which has high/low information
-    DiVector attribution;
+    public DiVector attribution;
     // timestamp (basically a sequence index); kept as long  for potential future use
-    long timeStamp;
+    public long timeStamp;
 
+    // number of trees in the forest
+    public int forestSize;
+
+    // flag indicating of expected values are present -- one reason for them not being present
+    // is that forecasting can requires more values than anomaly detection,
+    public boolean expectedValuesPresent;
+
+    // flag indicating if the anomaly is the start of an anomaly or part of a run of anomalies
+    public boolean startOfAnomaly;
     /**
      * position of the anomaly vis a vis the current time (can be -ve) if anomaly is detected late, which can
      * and should happen sometime; for shingle size 1; this is always 0
      * */
-    int relativeIndex;
+    public int relativeIndex;
 
     // a flattened version denoting the basic contribution of each input variable (not shingled) for the
     // time slice indicated by relativeIndex
-    double[] flattenedAttribution;
+    public double[] flattenedAttribution;
 
     // current values
-    double[] currentValues;
+    public double[] currentValues;
 
     // the values being replaced; may correspond to past
-    double[] oldValues;
+    public double[] oldValues;
 
-    double [][] expectedValuesList;
-    double[] likelihoodOfValues;
+    public double [][] expectedValuesList;
+    public double[] likelihoodOfValues;
 }

@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.ERCF;
+package com.amazon.randomcutforest.ERCF;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.state.IStateMapper;
@@ -35,7 +35,7 @@ public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFSta
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         CorrectorThresholder thresholder = correctorThresholderMapper.toModel(state.thresholderState);
-        return  new ExtendedRandomCutForest(forest,thresholder,state.getCount());
+        return  new ExtendedRandomCutForest(forest,thresholder,state.getCount(), state.getNumberOfAttributors());
     }
 
     @Override
