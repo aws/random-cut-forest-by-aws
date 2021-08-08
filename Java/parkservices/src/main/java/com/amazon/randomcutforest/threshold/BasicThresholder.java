@@ -65,7 +65,7 @@ public class BasicThresholder {
     }
 
     public double basicThreshold(){
-        return simpleDeviation.getMean() + 3 * simpleDeviation.getDeviation();
+        return simpleDeviation.getMean() + BASIC_FACTOR * simpleDeviation.getDeviation();
     }
 
     public boolean isPotentialAnomaly(double newScore){

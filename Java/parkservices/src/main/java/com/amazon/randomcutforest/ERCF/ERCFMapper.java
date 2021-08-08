@@ -53,6 +53,7 @@ public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFSta
         CorrectorThresholderMapper correctorThresholderMapper =  new CorrectorThresholderMapper();
         state.setThresholderState(correctorThresholderMapper.toState(model.getCorrectorThresholder()));
         state.setCount(model.getCount());
+        state.setNumberOfAttributors(model.getNumberOfAttributors());
         return state;
     }
 

@@ -66,19 +66,23 @@ public class CorrectorThresholder extends BasicThresholder {
     public CorrectorThresholder(CorrectorThresholderState state, Deviation simpleDeviation,Deviation scoreDiff){
         super(simpleDeviation);
         this.scoreDiff = scoreDiff;
-        this.lastAnomalyAttribution = new DiVector(state.getLastAnomalyAttribution());
+        this.lastAnomalyAttribution = (state.getLastAnomalyAttribution() != null)?new DiVector(state.getLastAnomalyAttribution()):null;
         this.ignoreSimilar = state.isIgnoreSimilar();
         this.shingleSize = state.getShingleSize();
         this.attributionEnabled = state.isAttributionEnabled();
         this.previousIsPotentialAnomaly = state.isPreviousIsPotentialAnomaly();
-        this.zFactor = state.getZ_FACTOR();
-        this.triggerFactor = state.getTRIGGER_FACTOR();
-        this.upperThreshold = state.getUPPER_ANCHOR_SCORE();
+        this.zFactor = state.getZFactor();
+        this.ignoreSimilarFactor=state.getIgnoreSimilarFactor();
+        this.upperZfactor = state.getUpperZfactor();
+        this.triggerFactor = state.getTriggerFactor();
+        this.upperThreshold = state.getUpperThreshold();
+        this.lowerThreshold = state.getLowerThreshold();
+        this.initialThreshold = state.getInitialThreshold();
+        this.absoluteScoreFraction = state.getAbsoluteScoreFraction();
         this.inAnomaly = state.isInAnomaly();
         this.discount = state.getDiscount();
         this.count = state.getCount();
         this.baseDimension = state.getBaseDimension();
-        this.lowerThreshold = state.getAbsoluteThreshold();
         this.minimumScores = state.getMinimumScores();
         this.lastAnomalyScore = state.getLastAnomalyScore();
         this.lastScore = state.getLastScore();
@@ -275,8 +279,16 @@ public class CorrectorThresholder extends BasicThresholder {
         return zFactor;
     }
 
+    public double getUpperZFactor() {
+        return upperZfactor;
+    }
+
     public double getUpperThreshold() {
         return upperThreshold;
+    }
+
+    public double getLowerThreshold() {
+        return lowerThreshold;
     }
 
     public void setUpperThreshold(double score) {
@@ -301,5 +313,13 @@ public class CorrectorThresholder extends BasicThresholder {
 
     public void setMoreInformation(boolean flag){
         moreInformation = false;
+    }
+
+    public double getAbsoluteScoreFraction() {
+        return absoluteScoreFraction;
+    }
+
+    public double getInitialThreshold(){
+        return initialThreshold;
     }
 }

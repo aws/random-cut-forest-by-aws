@@ -38,13 +38,14 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         CorrectorThresholderState state = new CorrectorThresholderState();
         DeviationMapper deviationMapper = new DeviationMapper();
 
-        state.setZ_FACTOR(model.getzFactor());
-        state.setUPPER_ANCHOR_SCORE(model.getUpperThreshold());
-        state.setTRIGGER_FACTOR(model.getTriggerFactor());
+        state.setZFactor(model.getzFactor());
+        state.setUpperZfactor(model.getUpperZFactor());
+        state.setTriggerFactor(model.getTriggerFactor());
+        state.setUpperThreshold(model.getUpperThreshold());
+        state.setLowerThreshold(model.getLowerThreshold());
+        state.setInitialThreshold(model.getInitialThreshold());
         state.setDiscount(model.getDiscount());
         state.setElasticity(model.getElasticity());
-        state.setBASIC_FACTOR(model.getBASIC_FACTOR());
-        state.setAbsoluteThreshold(model.getLowerThreshold());
         state.setCount(model.getCount());
         state.setInAnomaly(model.isInAnomaly());
         state.setBaseDimension(model.getBaseDimension());
@@ -58,6 +59,7 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         state.setLastAnomalyScore(model.getLastAnomalyScore());
         state.setLastAnomalyAttribution(model.getLastAnomalyAttribution());
         state.setIgnoreSimilar(model.isIgnoreSimilar());
+        state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setScoreDiffState(deviationMapper.toState(model.getScoreDiff()));
         return state;

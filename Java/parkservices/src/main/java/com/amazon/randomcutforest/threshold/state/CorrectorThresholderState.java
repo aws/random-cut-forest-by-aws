@@ -25,14 +25,6 @@ public class CorrectorThresholderState {
 
     private String version = V2_1;
 
-    private double UPPER_ANCHOR_SCORE;
-
-    private double Z_FACTOR;
-
-    private double TRIGGER_FACTOR;
-
-    private double BASIC_FACTOR;
-
     private long randomseed;
 
     private boolean inAnomaly;
@@ -55,8 +47,6 @@ public class CorrectorThresholderState {
 
     private int lastAnomalyTimeStamp;
 
-    private double absoluteThreshold;
-
     private double lastAnomalyScore;
 
     private DiVector lastAnomalyAttribution;
@@ -69,4 +59,19 @@ public class CorrectorThresholderState {
 
     private boolean previousIsPotentialAnomaly;
 
+    private double absoluteScoreFraction;
+
+    private double upperThreshold;
+
+    private double lowerThreshold;
+
+    private double initialThreshold;
+
+    private double zFactor;
+
+    private double triggerFactor;
+
+    private double upperZfactor;
+
+    private double ignoreSimilarFactor;
 }
