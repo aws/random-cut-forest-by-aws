@@ -50,6 +50,7 @@ public class ExtendedRandomCutForest{
     // is large -- but the setting below (and increasing it) should reduce the number of anomalies flagged.
     double lowerThreshold = 1.0;
 
+    // used for filtering shingles
     double [] lastAnomalyPoint;
 
     int lastAnomalyTimeStamp;
@@ -65,7 +66,7 @@ public class ExtendedRandomCutForest{
         correctorThresholder = new CorrectorThresholder(anomalyRate, baseDimensions, shingleSize, true, lowerThreshold, minimumScores, false);
     }
 
-    public ExtendedRandomCutForest(RandomCutForest forest, CorrectorThresholder thresholder, int count, int numberOfAttributors){
+    public ExtendedRandomCutForest(RandomCutForest forest, CorrectorThresholder thresholder, int count, int numberOfAttributors,double[] lastAnomalyPoint,int lastAnomalyTimeStamp){
         checkArgument(!forest.isInternalShinglingEnabled(), "internal shingling not suported");
         this.forest = forest;
         baseDimensions = forest.getDimensions() / forest.getShingleSize();
@@ -73,6 +74,8 @@ public class ExtendedRandomCutForest{
         this.correctorThresholder = thresholder;
         this.numberOfAttributors = numberOfAttributors;
         this.count = count;
+        this.lastAnomalyTimeStamp =lastAnomalyTimeStamp;
+        this.lastAnomalyPoint = (lastAnomalyPoint==null)?null:Arrays.copyOf(lastAnomalyPoint,lastAnomalyPoint.length);
     }
 
     public AnomalyDescriptor process(double[] point) {
@@ -243,5 +246,13 @@ public class ExtendedRandomCutForest{
 
     public int getNumberOfAttributors() {
         return numberOfAttributors;
+    }
+
+    public double[] getLastAnomalyPoint() {
+        return (lastAnomalyPoint==null)?null:Arrays.copyOf(lastAnomalyPoint,lastAnomalyPoint.length);
+    }
+
+    public int getLastAnomalyTimeStamp() {
+        return lastAnomalyTimeStamp;
     }
 }

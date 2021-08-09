@@ -25,4 +25,6 @@ public class ERCFState {
     CorrectorThresholderState thresholderState;
     int count;
     int numberOfAttributors;
+    double[] lastAnomalyPoint;
+    int lastAnomalyTimeStamp;
 }

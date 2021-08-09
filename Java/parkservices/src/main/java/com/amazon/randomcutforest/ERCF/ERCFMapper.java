@@ -35,7 +35,8 @@ public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFSta
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         CorrectorThresholder thresholder = correctorThresholderMapper.toModel(state.thresholderState);
-        return  new ExtendedRandomCutForest(forest,thresholder,state.getCount(), state.getNumberOfAttributors());
+        return  new ExtendedRandomCutForest(forest,thresholder,state.getCount(),state.getNumberOfAttributors(),
+                state.getLastAnomalyPoint(), state.lastAnomalyTimeStamp);
     }
 
     @Override
@@ -53,6 +54,8 @@ public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFSta
         CorrectorThresholderMapper correctorThresholderMapper =  new CorrectorThresholderMapper();
         state.setThresholderState(correctorThresholderMapper.toState(model.getCorrectorThresholder()));
         state.setCount(model.getCount());
+        state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
+        state.setLastAnomalyPoint(model.getLastAnomalyPoint());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
         return state;
     }

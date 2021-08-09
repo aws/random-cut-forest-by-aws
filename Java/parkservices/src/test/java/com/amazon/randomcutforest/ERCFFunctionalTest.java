@@ -34,15 +34,16 @@ public class ERCFFunctionalTest {
         int dimensions = 10;
         for (int trials = 0; trials < 100; trials++) {
 
+            long seed = new Random().nextLong();
             RandomCutForest.Builder builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(0);
+                    .precision(Precision.FLOAT_32).randomSeed(seed);
 
             ExtendedRandomCutForest first = new ExtendedRandomCutForest(builder,0.01);
             ExtendedRandomCutForest second = new ExtendedRandomCutForest(builder,0.01);
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(300); i++) {
+            for (int i = 0; i < new Random().nextInt(1000); i++) {
                 double [] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 AnomalyDescriptor firstResult = first.process(point);
                 AnomalyDescriptor secondResult = second.process(point);

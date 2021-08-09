@@ -44,6 +44,7 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         state.setUpperThreshold(model.getUpperThreshold());
         state.setLowerThreshold(model.getLowerThreshold());
         state.setInitialThreshold(model.getInitialThreshold());
+        state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
         state.setDiscount(model.getDiscount());
         state.setElasticity(model.getElasticity());
         state.setCount(model.getCount());
