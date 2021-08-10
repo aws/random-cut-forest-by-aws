@@ -16,10 +16,10 @@
 package com.amazon.randomcutforest.threshold;
 
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.threshold.state.CorrectorThresholderState;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class CorrectorThresholder extends BasicThresholder {
 

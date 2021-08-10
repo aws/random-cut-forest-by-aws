@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.examples.datasets;
 
-import java.util.Arrays;
-import java.util.Random;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static java.lang.Math.PI;
+
+import java.util.Arrays;
+import java.util.Random;
 
 public class ShingledMultiDimDataWithKeys {
 

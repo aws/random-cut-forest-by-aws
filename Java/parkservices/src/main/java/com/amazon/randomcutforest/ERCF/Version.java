@@ -15,20 +15,6 @@
 
 package com.amazon.randomcutforest.ERCF;
 
-import static com.amazon.randomcutforest.threshold.state.Version.V2_1;
-
-import lombok.Data;
-
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import com.amazon.randomcutforest.threshold.state.CorrectorThresholderState;
-
-@Data
-public class ERCFState {
-    private String version = V2_1;
-    RandomCutForestState forestState;
-    CorrectorThresholderState thresholderState;
-    int count;
-    int numberOfAttributors;
-    double[] lastAnomalyPoint;
-    int lastAnomalyTimeStamp;
+public class Version {
+    public static final String V2_1 = "2.1";
 }

@@ -15,10 +15,11 @@
 
 package com.amazon.randomcutforest.threshold.state;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
+import static com.amazon.randomcutforest.threshold.state.Version.V2_1;
+
 import lombok.Data;
 
-import static com.amazon.randomcutforest.threshold.state.Version.V2_1;
+import com.amazon.randomcutforest.returntypes.DiVector;
 
 @Data
 public class CorrectorThresholderState {

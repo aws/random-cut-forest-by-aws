@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.examples.datasets;
 
-import java.util.Random;
-
 import static java.lang.Math.PI;
+
+import java.util.Random;
 
 public class ShingledData {
 

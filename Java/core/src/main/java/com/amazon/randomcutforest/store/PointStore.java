@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Optional;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * PointStore is a fixed size repository of points, where each point is a float

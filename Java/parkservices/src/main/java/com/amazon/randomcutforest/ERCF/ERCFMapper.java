@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.ERCF;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.threshold.CorrectorThresholder;
 import com.amazon.randomcutforest.threshold.state.CorrectorThresholderMapper;
-import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 @Setter

@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.ERCF;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.Arrays;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.threshold.BasicThresholder;
 import com.amazon.randomcutforest.threshold.CorrectorThresholder;
-
-import java.util.Arrays;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class ExtendedRandomCutForest{
 
