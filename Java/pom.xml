@@ -42,6 +42,7 @@
         <module>examples</module>
         <module>serialization</module>
         <module>testutils</module>
+        <module>parkservices</module>
     </modules>
 
     <dependencyManagement>
