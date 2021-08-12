@@ -114,7 +114,7 @@ public class V1JsonToV2StateConverterTest {
                 models.add(json);
             }
 
-            RandomCutForestState state = converter.convert(models, testNumberOfTrees, precision);
+            RandomCutForestState state = converter.convert(models, testNumberOfTrees, precision).get();
 
             assertEquals(jsonResource.getDimensions(), state.getDimensions());
             assertEquals(testNumberOfTrees, state.getNumberOfTrees());

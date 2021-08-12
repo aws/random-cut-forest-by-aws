@@ -22,7 +22,9 @@ import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.ExecutionContext;
@@ -48,13 +50,20 @@ public class V1JsonToV2StateConverter {
         return convert(forest, precision);
     }
 
-    public RandomCutForestState convert(ArrayList<String> jsons, int numberOfTrees, Precision precision)
+    public Optional<RandomCutForestState> convert(ArrayList<String> jsons, int numberOfTrees, Precision precision)
             throws IOException {
-        ArrayList<V1SerializedRandomCutForest> forests = new ArrayList<>();
+        ArrayList<V1SerializedRandomCutForest> forests = new ArrayList<>(jsons.size());
+        int sum = 0;
+
         for (int i = 0; i < jsons.size(); i++) {
-            forests.add(mapper.readValue(jsons.get(i), V1SerializedRandomCutForest.class));
+            V1SerializedRandomCutForest forest = mapper.readValue(jsons.get(i), V1SerializedRandomCutForest.class);
+            forests.add(forest);
+            sum += forest.getNumberOfTrees();
         }
-        return convert(forests, numberOfTrees, precision);
+        if (sum < numberOfTrees) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(convert(forests, numberOfTrees, precision));
     }
 
     public RandomCutForestState convert(Reader reader, Precision precision) throws IOException {
@@ -68,9 +77,7 @@ public class V1JsonToV2StateConverter {
     }
 
     public RandomCutForestState convert(V1SerializedRandomCutForest serializedForest, Precision precision) {
-        ArrayList<V1SerializedRandomCutForest> newList = new ArrayList<>();
-        newList.add(serializedForest);
-        return convert(newList, serializedForest.getNumberOfTrees(), precision);
+        return convert(Collections.singletonList(serializedForest), serializedForest.getNumberOfTrees(), precision);
     }
 
     static class SamplerConverter {
@@ -191,10 +198,10 @@ public class V1JsonToV2StateConverter {
         SamplerConverter samplerConverter = new SamplerConverter(state.getDimensions(),
                 state.getNumberOfTrees() * state.getSampleSize() + 1, precision, numberOfTrees);
 
-        for (int i = 0; i < serializedForests.size(); i++) {
-            Arrays.stream(serializedForests.get(i).getExecutor().getExecutor().getTreeUpdaters())
-                    .map(V1SerializedRandomCutForest.TreeUpdater::getSampler).forEach(samplerConverter::addSampler);
-        }
+        serializedForests.stream().flatMap(f -> Arrays.stream(f.getExecutor().getExecutor().getTreeUpdaters()))
+                .limit(numberOfTrees).map(V1SerializedRandomCutForest.TreeUpdater::getSampler)
+                .forEach(samplerConverter::addSampler);
+
         state.setPointStoreState(samplerConverter.getPointStoreState(precision));
         state.setCompactSamplerStates(samplerConverter.compactSamplerStates);
 
