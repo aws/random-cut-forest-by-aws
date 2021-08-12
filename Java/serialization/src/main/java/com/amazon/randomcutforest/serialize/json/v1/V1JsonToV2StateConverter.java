@@ -15,6 +15,15 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.ExecutionContext;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -30,15 +39,6 @@ import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 public class V1JsonToV2StateConverter {
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -48,10 +48,11 @@ public class V1JsonToV2StateConverter {
         return convert(forest, precision);
     }
 
-    public RandomCutForestState convert(ArrayList<String> jsons, int numberOfTrees, Precision precision) throws IOException {
+    public RandomCutForestState convert(ArrayList<String> jsons, int numberOfTrees, Precision precision)
+            throws IOException {
         ArrayList<V1SerializedRandomCutForest> forests = new ArrayList<>();
-        for(int i=0; i<jsons.size();i++) {
-                forests.add(mapper.readValue(jsons.get(i), V1SerializedRandomCutForest.class));
+        for (int i = 0; i < jsons.size(); i++) {
+            forests.add(mapper.readValue(jsons.get(i), V1SerializedRandomCutForest.class));
         }
         return convert(forests, numberOfTrees, precision);
     }
@@ -69,7 +70,7 @@ public class V1JsonToV2StateConverter {
     public RandomCutForestState convert(V1SerializedRandomCutForest serializedForest, Precision precision) {
         ArrayList<V1SerializedRandomCutForest> newList = new ArrayList<>();
         newList.add(serializedForest);
-        return convert(newList,serializedForest.getNumberOfTrees(),precision);
+        return convert(newList, serializedForest.getNumberOfTrees(), precision);
     }
 
     static class SamplerConverter {
@@ -134,27 +135,30 @@ public class V1JsonToV2StateConverter {
             samplerState.setMaxSequenceIndex(sampler.getEntriesSeen());
             samplerState.setInitialAcceptFraction(1.0);
 
-            if (compactSamplerStates.size()<maxNumberOfTrees) {
+            if (compactSamplerStates.size() < maxNumberOfTrees) {
                 compactSamplerStates.add(samplerState);
             }
         }
     }
 
     /**
-     * the function merges a collection of RCF-1.0 models with same model parameters and fixes the
-     * number of trees in the new model (which has to be less or equal than the sum of the old models)
-     * The conversion uses the execution context of the first forest and can be adjusted subsequently
-     * by setters
-     * @param serializedForests A non-empty list of forests (together having more trees than numberOfTrees)
-     * @param numberOfTrees the new number of trees
-     * @param precision the precision of the new forest
+     * the function merges a collection of RCF-1.0 models with same model parameters
+     * and fixes the number of trees in the new model (which has to be less or equal
+     * than the sum of the old models) The conversion uses the execution context of
+     * the first forest and can be adjusted subsequently by setters
+     * 
+     * @param serializedForests A non-empty list of forests (together having more
+     *                          trees than numberOfTrees)
+     * @param numberOfTrees     the new number of trees
+     * @param precision         the precision of the new forest
      * @return a merged RCF with the first numberOfTrees trees
      */
-    public RandomCutForestState convert(List<V1SerializedRandomCutForest> serializedForests, int numberOfTrees, Precision precision) {
-        checkArgument(serializedForests.size()>0, "incorrect usage of convert");
-        checkArgument(numberOfTrees >0, "incorrect parameter");
+    public RandomCutForestState convert(List<V1SerializedRandomCutForest> serializedForests, int numberOfTrees,
+            Precision precision) {
+        checkArgument(serializedForests.size() > 0, "incorrect usage of convert");
+        checkArgument(numberOfTrees > 0, "incorrect parameter");
         int sum = 0;
-        for(int i = 0;i<serializedForests.size();i++){
+        for (int i = 0; i < serializedForests.size(); i++) {
             sum += serializedForests.get(i).getNumberOfTrees();
         }
         checkArgument(sum >= numberOfTrees, "incorrect parameters");
@@ -185,9 +189,9 @@ public class V1JsonToV2StateConverter {
         state.setExecutionContext(executionContext);
 
         SamplerConverter samplerConverter = new SamplerConverter(state.getDimensions(),
-                state.getNumberOfTrees() * state.getSampleSize() + 1, precision,numberOfTrees);
+                state.getNumberOfTrees() * state.getSampleSize() + 1, precision, numberOfTrees);
 
-        for(int i = 0;i<serializedForests.size();i++) {
+        for (int i = 0; i < serializedForests.size(); i++) {
             Arrays.stream(serializedForests.get(0).getExecutor().getExecutor().getTreeUpdaters())
                     .map(V1SerializedRandomCutForest.TreeUpdater::getSampler).forEach(samplerConverter::addSampler);
         }

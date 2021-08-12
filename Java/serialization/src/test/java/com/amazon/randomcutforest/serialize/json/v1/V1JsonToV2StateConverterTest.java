@@ -15,15 +15,9 @@
 
 package com.amazon.randomcutforest.serialize.json.v1;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,9 +28,16 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class V1JsonToV2StateConverterTest {
 
@@ -90,14 +91,12 @@ public class V1JsonToV2StateConverterTest {
         }
     }
 
-
-
     @ParameterizedTest
     @MethodSource("args")
     public void testMerge(V1JsonResource jsonResource, Precision precision) {
         String resource = jsonResource.getResource();
         try (InputStream is = V1JsonToV2StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
-             BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
+                BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
 
             StringBuilder b = new StringBuilder();
             String line;
@@ -107,10 +106,11 @@ public class V1JsonToV2StateConverterTest {
 
             String json = b.toString();
             int number = new Random().nextInt(10) + 1;
-            int testNumberOfTrees = Math.min(100,1 + new Random().nextInt(number*jsonResource.getNumberOfTrees() - 1));
+            int testNumberOfTrees = Math.min(100,
+                    1 + new Random().nextInt(number * jsonResource.getNumberOfTrees() - 1));
             ArrayList<String> models = new ArrayList<>();
 
-            for(int i=0;i<number; i++){
+            for (int i = 0; i < number; i++) {
                 models.add(json);
             }
 
@@ -135,14 +135,16 @@ public class V1JsonToV2StateConverterTest {
                 assertTrue(score > 0);
                 forest.update(point);
             }
-            int expectedSize = (int) Math.floor(1.0*testNumberOfTrees*json.length()/(number*jsonResource.getNumberOfTrees()));
+            int expectedSize = (int) Math
+                    .floor(1.0 * testNumberOfTrees * json.length() / (number * jsonResource.getNumberOfTrees()));
             String newString = new ObjectMapper().writeValueAsString(new RandomCutForestMapper().toState(forest));
-            System.out.println(" Copied " + number + " times, old number of trees " + jsonResource.getNumberOfTrees() + ", new trees " + testNumberOfTrees + ", Expected Old size " + expectedSize + ", new Size " + newString.length());
+            System.out.println(" Copied " + number + " times, old number of trees " + jsonResource.getNumberOfTrees()
+                    + ", new trees " + testNumberOfTrees + ", Expected Old size " + expectedSize + ", new Size "
+                    + newString.length());
         } catch (IOException e) {
             fail("Unable to load JSON resource");
         }
     }
-
 
     private double[] getPoint(int dimensions, Random random) {
         double[] point = new double[dimensions];
