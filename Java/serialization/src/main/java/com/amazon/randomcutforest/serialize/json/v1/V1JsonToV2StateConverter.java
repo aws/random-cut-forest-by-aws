@@ -192,7 +192,7 @@ public class V1JsonToV2StateConverter {
                 state.getNumberOfTrees() * state.getSampleSize() + 1, precision, numberOfTrees);
 
         for (int i = 0; i < serializedForests.size(); i++) {
-            Arrays.stream(serializedForests.get(0).getExecutor().getExecutor().getTreeUpdaters())
+            Arrays.stream(serializedForests.get(i).getExecutor().getExecutor().getTreeUpdaters())
                     .map(V1SerializedRandomCutForest.TreeUpdater::getSampler).forEach(samplerConverter::addSampler);
         }
         state.setPointStoreState(samplerConverter.getPointStoreState(precision));
