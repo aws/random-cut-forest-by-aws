@@ -106,36 +106,36 @@ public class V1JsonToV2StateConverter {
         }
 
         public void addSampler(V1SerializedRandomCutForest.Sampler sampler) {
-            V1SerializedRandomCutForest.WeightedSamples[] samples = sampler.getWeightedSamples();
-            int[] pointIndex = new int[samples.length];
-            float[] weight = new float[samples.length];
-            long[] sequenceIndex = new long[samples.length];
-
-            for (int i = 0; i < samples.length; i++) {
-                V1SerializedRandomCutForest.WeightedSamples sample = samples[i];
-                double[] point = sample.getPoint();
-                int index = pointStore.add(point, sample.getSequenceIndex());
-                pointIndex[i] = (Integer) globalTree.addPoint(index, 0L);
-                if (pointIndex[i] != index) {
-                    pointStore.incrementRefCount(pointIndex[i]);
-                    pointStore.decrementRefCount(index);
-                }
-                weight[i] = (float) sample.getWeight();
-                sequenceIndex[i] = sample.getSequenceIndex();
-            }
-
-            CompactSamplerState samplerState = new CompactSamplerState();
-            samplerState.setSize(samples.length);
-            samplerState.setCapacity(sampler.getSampleSize());
-            samplerState.setTimeDecay(sampler.getLambda());
-            samplerState.setPointIndex(pointIndex);
-            samplerState.setWeight(weight);
-            samplerState.setSequenceIndex(sequenceIndex);
-            samplerState.setSequenceIndexOfMostRecentTimeDecayUpdate(0L);
-            samplerState.setMaxSequenceIndex(sampler.getEntriesSeen());
-            samplerState.setInitialAcceptFraction(1.0);
-
             if (compactSamplerStates.size() < maxNumberOfTrees) {
+                V1SerializedRandomCutForest.WeightedSamples[] samples = sampler.getWeightedSamples();
+                int[] pointIndex = new int[samples.length];
+                float[] weight = new float[samples.length];
+                long[] sequenceIndex = new long[samples.length];
+
+                for (int i = 0; i < samples.length; i++) {
+                    V1SerializedRandomCutForest.WeightedSamples sample = samples[i];
+                    double[] point = sample.getPoint();
+                    int index = pointStore.add(point, sample.getSequenceIndex());
+                    pointIndex[i] = (Integer) globalTree.addPoint(index, 0L);
+                    if (pointIndex[i] != index) {
+                        pointStore.incrementRefCount(pointIndex[i]);
+                        pointStore.decrementRefCount(index);
+                    }
+                    weight[i] = (float) sample.getWeight();
+                    sequenceIndex[i] = sample.getSequenceIndex();
+                }
+
+                CompactSamplerState samplerState = new CompactSamplerState();
+                samplerState.setSize(samples.length);
+                samplerState.setCapacity(sampler.getSampleSize());
+                samplerState.setTimeDecay(sampler.getLambda());
+                samplerState.setPointIndex(pointIndex);
+                samplerState.setWeight(weight);
+                samplerState.setSequenceIndex(sequenceIndex);
+                samplerState.setSequenceIndexOfMostRecentTimeDecayUpdate(0L);
+                samplerState.setMaxSequenceIndex(sampler.getEntriesSeen());
+                samplerState.setInitialAcceptFraction(1.0);
+
                 compactSamplerStates.add(samplerState);
             }
         }
