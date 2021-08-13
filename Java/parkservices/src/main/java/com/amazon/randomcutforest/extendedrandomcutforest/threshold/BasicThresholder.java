@@ -20,7 +20,7 @@ import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicT
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
-public class BasicThresholder {
+public class BasicThresholder implements IThresholder{
 
     public static int IS_ANOMALY = 1;
 

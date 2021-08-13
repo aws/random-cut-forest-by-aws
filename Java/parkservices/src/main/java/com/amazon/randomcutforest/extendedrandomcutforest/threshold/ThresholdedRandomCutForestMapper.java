@@ -16,7 +16,7 @@
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.CorrectorThresholderMapper;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import lombok.Getter;
@@ -30,11 +30,11 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
     public ThresholdedRandomCutForest toModel(ThresholdedRandomCutForestState state, long seed) {
 
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
-        CorrectorThresholderMapper correctorThresholderMapper = new CorrectorThresholderMapper();
+        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
-        CorrectorThresholder correctorThresholder = correctorThresholderMapper.toModel(state.getCorrectedThresholderState());
-        return  new ThresholdedRandomCutForest(forest,correctorThresholder);
+        BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
+        return  new ThresholdedRandomCutForest(forest, thresholder, state);
     }
 
     @Override
@@ -49,8 +49,23 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
 
         state.setForestState(randomCutForestMapper.toState(model.getForest()));
 
-        CorrectorThresholderMapper correctorThresholderMapper =  new CorrectorThresholderMapper();
-        state.setCorrectedThresholderState(correctorThresholderMapper.toState(model.getCorrectorThresholder()));
+        BasicThresholderMapper thresholderMapper =  new BasicThresholderMapper();
+        state.setThresholderState(thresholderMapper.toState((BasicThresholder) model.getThresholder()));
+
+
+        state.setTriggerFactor(model.getTriggerFactor());
+        state.setInAnomaly(model.isInAnomaly());
+        state.setLastScore(model.getLastScore());
+        state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
+        state.setLastAnomalyScore(model.getLastAnomalyScore());
+        state.setLastAnomalyAttribution(model.getLastAnomalyAttribution());
+        state.setLastAnomalyPoint(model.getLastAnomalyPoint());
+        state.setLastExpectedPoint(model.getLastExpectedPoint());
+        state.setIgnoreSimilar(model.isIgnoreSimilar());
+        state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
+        state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
+        state.setNumberOfAttributors(model.getNumberOfAttributors());
+
         return state;
     }
 

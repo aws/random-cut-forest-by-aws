@@ -15,7 +15,8 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.CorrectorThresholderState;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
+import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import lombok.Data;
 
@@ -25,5 +26,18 @@ import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state
 public class ThresholdedRandomCutForestState {
     private String version = V2_1;
     RandomCutForestState forestState;
-    CorrectorThresholderState correctedThresholderState;
+    private BasicThresholderState thresholderState;
+    private double ignoreSimilarFactor;
+    private double triggerFactor;
+    private long lastAnomalyTimeStamp;
+    private double lastAnomalyScore;
+    private DiVector lastAnomalyAttribution;
+    private double lastScore;
+    private double[] lastAnomalyPoint;
+    private double[] lastExpectedPoint;
+    private boolean previousIsPotentialAnomaly;
+    private boolean inAnomaly;
+    private boolean ignoreSimilar;
+    private int numberOfAttributors;
+    private long randomseed;
 }

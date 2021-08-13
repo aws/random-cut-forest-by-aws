@@ -27,6 +27,8 @@ public class AnomalyDescriptor {
     public DiVector attribution;
     // timestamp (basically a sequence index); kept as long  for potential future use
     public long timeStamp;
+    // confidence, for both anomalies/non-anomalies
+    public double confidence;
 
     // number of trees in the forest
     public int forestSize;
