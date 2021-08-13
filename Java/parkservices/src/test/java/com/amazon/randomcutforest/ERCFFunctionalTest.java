@@ -15,17 +15,16 @@
 
 package com.amazon.randomcutforest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.Random;
-
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.extendedrandomcutforest.AnomalyDescriptor;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.ThresholdedRandomCutForestMapper;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.ERCF.AnomalyDescriptor;
-import com.amazon.randomcutforest.ERCF.ERCFMapper;
-import com.amazon.randomcutforest.ERCF.ExtendedRandomCutForest;
-import com.amazon.randomcutforest.config.Precision;
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag("functional")
 public class ERCFFunctionalTest {
@@ -33,14 +32,14 @@ public class ERCFFunctionalTest {
     @Test
     public void testRoundTrip() {
         int dimensions = 10;
-        for (int trials = 0; trials < 100; trials++) {
+        for (int trials = 0; trials < 10; trials++) {
 
             long seed = new Random().nextLong();
             RandomCutForest.Builder builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .precision(Precision.FLOAT_32).randomSeed(seed);
 
-            ExtendedRandomCutForest first = new ExtendedRandomCutForest(builder,0.01);
-            ExtendedRandomCutForest second = new ExtendedRandomCutForest(builder,0.01);
+            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder,0.01);
+            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder,0.01);
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
@@ -55,8 +54,8 @@ public class ERCFFunctionalTest {
             }
 
             // serialize + deserialize
-            ERCFMapper mapper = new ERCFMapper();
-            ExtendedRandomCutForest third = mapper.toModel(mapper.toState(second));
+            ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+            ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
 
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {

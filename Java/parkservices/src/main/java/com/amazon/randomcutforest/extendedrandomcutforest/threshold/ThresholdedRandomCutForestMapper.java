@@ -13,36 +13,33 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.ERCF;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.CorrectorThresholderMapper;
+import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.threshold.CorrectorThresholder;
-import com.amazon.randomcutforest.threshold.state.CorrectorThresholderMapper;
-
 @Getter
 @Setter
-public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFState> {
+public class ThresholdedRandomCutForestMapper implements IStateMapper<ThresholdedRandomCutForest, ThresholdedRandomCutForestState> {
 
     @Override
-    public ExtendedRandomCutForest toModel(ERCFState state, long seed) {
+    public ThresholdedRandomCutForest toModel(ThresholdedRandomCutForestState state, long seed) {
 
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
         CorrectorThresholderMapper correctorThresholderMapper = new CorrectorThresholderMapper();
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
-        CorrectorThresholder thresholder = correctorThresholderMapper.toModel(state.thresholderState);
-        return  new ExtendedRandomCutForest(forest,thresholder,state.getCount(),state.getNumberOfAttributors(),
-                state.getLastAnomalyPoint(), state.lastAnomalyTimeStamp);
+        CorrectorThresholder correctorThresholder = correctorThresholderMapper.toModel(state.getCorrectedThresholderState());
+        return  new ThresholdedRandomCutForest(forest,correctorThresholder);
     }
 
     @Override
-    public ERCFState toState(ExtendedRandomCutForest model) {
-        ERCFState state = new ERCFState();
+    public ThresholdedRandomCutForestState toState(ThresholdedRandomCutForest model) {
+        ThresholdedRandomCutForestState state = new ThresholdedRandomCutForestState();
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
         randomCutForestMapper.setPartialTreeStateEnabled(true);
         randomCutForestMapper.setSaveTreeStateEnabled(true);
@@ -53,11 +50,7 @@ public class ERCFMapper implements IStateMapper<ExtendedRandomCutForest, ERCFSta
         state.setForestState(randomCutForestMapper.toState(model.getForest()));
 
         CorrectorThresholderMapper correctorThresholderMapper =  new CorrectorThresholderMapper();
-        state.setThresholderState(correctorThresholderMapper.toState(model.getCorrectorThresholder()));
-        state.setCount(model.getCount());
-        state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
-        state.setLastAnomalyPoint(model.getLastAnomalyPoint());
-        state.setNumberOfAttributors(model.getNumberOfAttributors());
+        state.setCorrectedThresholderState(correctorThresholderMapper.toState(model.getCorrectorThresholder()));
         return state;
     }
 

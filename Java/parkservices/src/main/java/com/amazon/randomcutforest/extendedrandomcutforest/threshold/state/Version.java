@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.ERCF;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
 public class Version {
     public static final String V2_1 = "2.1";

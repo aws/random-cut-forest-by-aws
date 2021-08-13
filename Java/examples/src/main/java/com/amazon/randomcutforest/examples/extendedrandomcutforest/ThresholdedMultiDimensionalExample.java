@@ -13,33 +13,33 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.ERCF;
+package com.amazon.randomcutforest.examples.extendedrandomcutforest;
 
-import java.util.Arrays;
-import java.util.Random;
-
-import com.amazon.randomcutforest.ERCF.AnomalyDescriptor;
-import com.amazon.randomcutforest.ERCF.ExtendedRandomCutForest;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
 import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys;
+import com.amazon.randomcutforest.extendedrandomcutforest.AnomalyDescriptor;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.ThresholdedRandomCutForest;
 
-public class ERCF_MultiDimensionalExample implements Example {
+import java.util.Arrays;
+import java.util.Random;
+
+public class ThresholdedMultiDimensionalExample implements Example {
 
     public static void main(String[] args) throws Exception {
-        new ERCF_MultiDimensionalExample().run();
+        new ThresholdedMultiDimensionalExample().run();
     }
 
     @Override
     public String command() {
-        return "ERCF_Multi_Dim_example";
+        return "Thresholded_Multi_Dim_example";
     }
 
     @Override
     public String description() {
-        return "ERCF Multi Dimensional Example";
+        return "Thresholded Multi Dimensional Example";
     }
 
     @Override
@@ -55,10 +55,10 @@ public class ERCF_MultiDimensionalExample implements Example {
         // change this to try different number of attributes,
         // note that the number of anomalies are 1% per dimension;
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 5;
+        int baseDimensions = 1;
 
         int dimensions = baseDimensions * shingleSize;
-        ExtendedRandomCutForest forest = new ExtendedRandomCutForest(RandomCutForest.builder().compact(true)
+        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest(RandomCutForest.builder().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision), 0.01);
 

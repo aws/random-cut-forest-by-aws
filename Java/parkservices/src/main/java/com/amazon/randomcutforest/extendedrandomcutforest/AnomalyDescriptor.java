@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.ERCF;
+package com.amazon.randomcutforest.extendedrandomcutforest;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 

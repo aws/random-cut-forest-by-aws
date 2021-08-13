@@ -13,19 +13,17 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold.state;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.CorrectorThresholderState;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 import lombok.Data;
 
+import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
+
 @Data
-public class DeviationState {
-    private double discount;
-
-    private double weight;
-
-    private double sumSquared;
-
-    private double sum;
-
-    private int count;
+public class ThresholdedRandomCutForestState {
+    private String version = V2_1;
+    RandomCutForestState forestState;
+    CorrectorThresholderState correctedThresholderState;
 }

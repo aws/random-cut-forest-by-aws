@@ -13,14 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold.state;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.BasicThresholder;
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.CorrectorThresholder;
+import com.amazon.randomcutforest.state.IStateMapper;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.threshold.CorrectorThresholder;
-import com.amazon.randomcutforest.threshold.Deviation;
 
 @Getter
 @Setter
@@ -28,34 +28,21 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
 
     @Override
     public CorrectorThresholder toModel(CorrectorThresholderState state, long seed) {
-        DeviationMapper deviationMapper = new DeviationMapper();
-        Deviation simpleDeviation = deviationMapper.toModel(state.getSimpleDeviationState());
-        Deviation scoreDiff = deviationMapper.toModel(state.getScoreDiffState());
-        return new CorrectorThresholder(state, simpleDeviation, scoreDiff);
+        BasicThresholderMapper mapper = new BasicThresholderMapper();
+
+        BasicThresholder thresholder = mapper.toModel(state.getThresholderState());
+        return new CorrectorThresholder(thresholder, state);
     }
 
     @Override
     public CorrectorThresholderState toState(CorrectorThresholder model) {
         CorrectorThresholderState state = new CorrectorThresholderState();
-        DeviationMapper deviationMapper = new DeviationMapper();
+        BasicThresholderMapper mapper = new BasicThresholderMapper();
 
-        state.setZFactor(model.getzFactor());
-        state.setUpperZfactor(model.getUpperZFactor());
+        state.setThresholderState(mapper.toState(model.getThresholder()));
+        state.setLastAnomalyPoint(model.getLastAnomalyPoint());
         state.setTriggerFactor(model.getTriggerFactor());
-        state.setUpperThreshold(model.getUpperThreshold());
-        state.setLowerThreshold(model.getLowerThreshold());
-        state.setInitialThreshold(model.getInitialThreshold());
-        state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
-        state.setDiscount(model.getDiscount());
-        state.setElasticity(model.getElasticity());
-        state.setCount(model.getCount());
         state.setInAnomaly(model.isInAnomaly());
-        state.setBaseDimension(model.getBaseDimension());
-        state.setShingleSize(model.getShingleSize());
-        state.setElasticity(model.getElasticity());
-        state.setMinimumScores(model.getMinimumScores());
-        state.setAttributionEnabled(model.isAttributionEnabled());
-        state.setSimpleDeviationState(deviationMapper.toState(model.getSimpleDeviation()));
         state.setLastScore(model.getLastScore());
         state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
         state.setLastAnomalyScore(model.getLastAnomalyScore());
@@ -63,7 +50,8 @@ public class CorrectorThresholderMapper implements IStateMapper<CorrectorThresho
         state.setIgnoreSimilar(model.isIgnoreSimilar());
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
-        state.setScoreDiffState(deviationMapper.toState(model.getScoreDiff()));
+        state.setNumberOfAttributors(model.getNumberOfAttributors());
+
         return state;
     }
 

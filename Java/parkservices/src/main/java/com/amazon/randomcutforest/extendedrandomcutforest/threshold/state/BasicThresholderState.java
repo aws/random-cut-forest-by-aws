@@ -13,16 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold.state;
-
-import static com.amazon.randomcutforest.threshold.state.Version.V2_1;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
+import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
 
 @Data
-public class CorrectorThresholderState {
+public class BasicThresholderState {
 
     private String version = V2_1;
 
@@ -36,31 +34,17 @@ public class CorrectorThresholderState {
 
     private int count;
 
-    private double discount;
+    private double primaryDiscount;
 
-    private int baseDimension;
-
-    private int shingleSize;
+    private double secondaryDiscount;
 
     private int minimumScores;
 
-    private DeviationState simpleDeviationState;
+    private DeviationState primaryDeviationState;
 
-    private int lastAnomalyTimeStamp;
-
-    private double lastAnomalyScore;
-
-    private DiVector lastAnomalyAttribution;
-
-    private DeviationState scoreDiffState;
+    private DeviationState secondaryDeviationState;
 
     private double lastScore;
-
-    private boolean ignoreSimilar;
-
-    private boolean previousIsPotentialAnomaly;
-
-    private double absoluteScoreFraction;
 
     private double upperThreshold;
 
@@ -70,9 +54,10 @@ public class CorrectorThresholderState {
 
     private double zFactor;
 
-    private double triggerFactor;
-
     private double upperZfactor;
 
-    private double ignoreSimilarFactor;
+    private double absoluteScoreFraction;
+
+    private double horizon;
+
 }

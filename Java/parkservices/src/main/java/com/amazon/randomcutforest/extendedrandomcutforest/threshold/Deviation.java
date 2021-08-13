@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;

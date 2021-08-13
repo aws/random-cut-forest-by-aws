@@ -13,22 +13,19 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.ERCF;
-
-import static com.amazon.randomcutforest.threshold.state.Version.V2_1;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.state.RandomCutForestState;
-import com.amazon.randomcutforest.threshold.state.CorrectorThresholderState;
-
 @Data
-public class ERCFState {
-    private String version = V2_1;
-    RandomCutForestState forestState;
-    CorrectorThresholderState thresholderState;
-    int count;
-    int numberOfAttributors;
-    double[] lastAnomalyPoint;
-    int lastAnomalyTimeStamp;
+public class DeviationState {
+    private double discount;
+
+    private double weight;
+
+    private double sumSquared;
+
+    private double sum;
+
+    private int count;
 }

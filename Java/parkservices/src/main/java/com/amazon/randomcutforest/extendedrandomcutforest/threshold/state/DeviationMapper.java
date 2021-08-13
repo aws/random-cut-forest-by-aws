@@ -13,13 +13,12 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.threshold.state;
+package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.Deviation;
+import com.amazon.randomcutforest.state.IStateMapper;
 import lombok.Getter;
 import lombok.Setter;
-
-import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.threshold.Deviation;
 
 @Getter
 @Setter
