@@ -15,10 +15,11 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.Deviation;
-import com.amazon.randomcutforest.state.IStateMapper;
 import lombok.Getter;
 import lombok.Setter;
+
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.Deviation;
+import com.amazon.randomcutforest.state.IStateMapper;
 
 @Getter
 @Setter

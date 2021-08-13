@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.examples.extendedrandomcutforest;
 
+import java.util.Arrays;
+import java.util.Random;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
@@ -22,9 +25,6 @@ import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
 import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys;
 import com.amazon.randomcutforest.extendedrandomcutforest.AnomalyDescriptor;
 import com.amazon.randomcutforest.extendedrandomcutforest.threshold.ThresholdedRandomCutForest;
-
-import java.util.Arrays;
-import java.util.Random;
 
 public class ThresholdedMultiDimensionalExample implements Example {
 
@@ -55,7 +55,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
         // change this to try different number of attributes,
         // note that the number of anomalies are 1% per dimension;
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 1;
+        int baseDimensions = 4;
 
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest(RandomCutForest.builder().compact(true)

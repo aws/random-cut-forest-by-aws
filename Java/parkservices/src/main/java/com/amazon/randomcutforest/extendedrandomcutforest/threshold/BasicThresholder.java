@@ -16,9 +16,9 @@
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
 
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
 
 public class BasicThresholder implements IThresholder{
 
@@ -36,7 +36,7 @@ public class BasicThresholder implements IThresholder{
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
-    protected double horizon = 1;
+    protected double horizon = 0.5;
 
     protected int minimumScores = 10;
 

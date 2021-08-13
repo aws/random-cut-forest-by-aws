@@ -15,12 +15,13 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 @Setter
@@ -54,7 +55,7 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
 
 
         state.setTriggerFactor(model.getTriggerFactor());
-        state.setInAnomaly(model.isInAnomaly());
+        state.setInAnomaly(model.isInHighScoreRegion());
         state.setLastScore(model.getLastScore());
         state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
         state.setLastAnomalyScore(model.getLastAnomalyScore());

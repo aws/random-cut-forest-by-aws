@@ -15,9 +15,9 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
 
-import lombok.Data;
-
 import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
+
+import lombok.Data;
 
 @Data
 public class BasicThresholderState {

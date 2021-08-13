@@ -39,6 +39,10 @@ public class AnomalyDescriptor {
 
     // flag indicating if the anomaly is the start of an anomaly or part of a run of anomalies
     public boolean startOfAnomaly;
+
+    // flag indicating if the time stamp is in elevated score region to be considered as anomaly
+    public boolean inHighScoreRegion;
+
     /**
      * position of the anomaly vis a vis the current time (can be -ve) if anomaly is detected late, which can
      * and should happen sometime; for shingle size 1; this is always 0

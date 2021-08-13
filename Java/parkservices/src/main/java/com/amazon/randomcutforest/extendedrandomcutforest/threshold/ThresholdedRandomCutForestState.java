@@ -15,12 +15,13 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
+import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
+
+import lombok.Data;
+
 import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.state.RandomCutForestState;
-import lombok.Data;
-
-import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
 
 @Data
 public class ThresholdedRandomCutForestState {
