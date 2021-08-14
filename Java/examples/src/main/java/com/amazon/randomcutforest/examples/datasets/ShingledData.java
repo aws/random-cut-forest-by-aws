@@ -35,7 +35,6 @@ public class ShingledData {
                 filledShingleAtleastOnce = true;
             }
             if (filledShingleAtleastOnce) {
-                // System.out.println("Adding " + j);
                 answer[count++] = getShinglePoint(history, entryIndex, dimensions);
             }
         }

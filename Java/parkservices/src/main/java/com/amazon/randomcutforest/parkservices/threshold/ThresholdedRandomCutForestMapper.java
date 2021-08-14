@@ -13,15 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
-
-import lombok.Getter;
-import lombok.Setter;
+package com.amazon.randomcutforest.parkservices.threshold;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderMapper;
+import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -36,7 +35,22 @@ public class ThresholdedRandomCutForestMapper
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
-        return new ThresholdedRandomCutForest(forest, thresholder, state);
+        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder);
+        tForest.setIgnoreSimilar(state.isIgnoreSimilar());
+        tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
+        tForest.setLastScore(state.getLastScore());
+        tForest.setLastAnomalyScore(state.getLastAnomalyScore());
+        tForest.setLastAnomalyTimeStamp(state.getLastAnomalyTimeStamp());
+        tForest.setPreviousIsPotentialAnomaly(state.isPreviousIsPotentialAnomaly());
+        tForest.setTriggerFactor(state.getTriggerFactor());
+        tForest.setNumberOfAttributors(state.getNumberOfAttributors());
+        tForest.setInHighScoreRegion(state.isInHighScoreRegion());
+        tForest.setLastAnomalyAttribution(state.getLastAnomalyAttribution());
+        tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
+        tForest.setLastExpectedPoint(state.getLastExpectedPoint());
+        tForest.setLastAnomalyAttribution(state.getLastAnomalyAttribution());
+
+        return tForest;
     }
 
     @Override
@@ -55,7 +69,7 @@ public class ThresholdedRandomCutForestMapper
         state.setThresholderState(thresholderMapper.toState((BasicThresholder) model.getThresholder()));
 
         state.setTriggerFactor(model.getTriggerFactor());
-        state.setInAnomaly(model.isInHighScoreRegion());
+        state.setInHighScoreRegion(model.isInHighScoreRegion());
         state.setLastScore(model.getLastScore());
         state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
         state.setLastAnomalyScore(model.getLastAnomalyScore());

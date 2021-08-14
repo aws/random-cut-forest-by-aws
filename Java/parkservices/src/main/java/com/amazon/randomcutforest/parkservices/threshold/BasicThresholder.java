@@ -13,30 +13,32 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
+package com.amazon.randomcutforest.parkservices.threshold;
+
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
-
+@Getter
+@Setter
 public class BasicThresholder implements IThresholder {
 
-    public static int IS_ANOMALY = 1;
-
-    public static int NOT_ANOMALY = 0;
-
+    // a parameter to make high score regions a contiguous region as opposed to
+    // collection of points in and out of the region
     protected double elasticity = 0.01;
 
+    // keeping a count of the values seen because both variables may not be used
     protected int count = 0;
-
-    protected double primaryDiscount;
-
-    protected double secondaryDiscount;
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
     protected double horizon = 0.5;
 
+    // below these many observations, deviation is not useful
     protected int minimumScores = 10;
 
     protected Deviation primaryDeviation;
@@ -61,38 +63,26 @@ public class BasicThresholder implements IThresholder {
     // is useful in determining grade
     protected double upperZfactor = 5.0;
 
-    protected double lastScore;
-
     public BasicThresholder(double discount) {
-        this.primaryDiscount = discount;
         primaryDeviation = new Deviation(discount);
-        this.secondaryDiscount = discount;
         secondaryDeviation = new Deviation(discount);
     }
 
-    public BasicThresholder(Deviation deviation) {
-        primaryDiscount = deviation.getDiscount();
-        secondaryDiscount = primaryDiscount;
-        this.primaryDeviation = deviation;
-        this.secondaryDeviation = new Deviation(deviation.getDiscount());
-    }
-
-    public BasicThresholder(BasicThresholderState state, Deviation primary, Deviation secondary) {
+    public BasicThresholder(Deviation primary, Deviation secondary) {
         this.primaryDeviation = primary;
         this.secondaryDeviation = secondary;
-        this.elasticity = state.getElasticity();
-        this.count = state.getCount();
-        this.primaryDiscount = state.getPrimaryDiscount();
-        this.secondaryDiscount = state.getSecondaryDiscount();
-        this.horizon = state.getHorizon();
-        this.lastScore = state.getLastScore();
-        this.minimumScores = state.getMinimumScores();
-        this.absoluteScoreFraction = state.getAbsoluteScoreFraction();
-        this.upperThreshold = state.getUpperThreshold();
-        this.initialThreshold = state.getInitialThreshold();
-        this.lowerThreshold = state.getLowerThreshold();
-        this.zFactor = state.getZFactor();
-        this.upperZfactor = state.getUpperZfactor();
+    }
+
+    /**
+     * The constructor creates a thresholder from a sample of scores and a future discount rate
+     * @param scores list of scores
+     * @param futureAnomalyRate discount/decay factor of scores going forward
+     */
+    public BasicThresholder(List<Double> scores,double futureAnomalyRate){
+        this.primaryDeviation = new Deviation(0);
+        this.secondaryDeviation = new Deviation(0);
+        scores.forEach(s -> {update(s,s);});
+        primaryDeviation.setDiscount(1 - futureAnomalyRate);
     }
 
     protected boolean isDeviationReady() {
@@ -192,71 +182,4 @@ public class BasicThresholder implements IThresholder {
         return secondaryDeviation;
     }
 
-    public double getPrimaryDiscount() {
-        return primaryDiscount;
-    }
-
-    public double getSecondaryDiscount() {
-        return secondaryDiscount;
-    }
-
-    public double getElasticity() {
-        return elasticity;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
-    public int getMinimumScores() {
-        return minimumScores;
-    }
-
-    public void setElasticity(double elasticity) {
-        this.elasticity = elasticity;
-    }
-
-    public double getzFactor() {
-        return zFactor;
-    }
-
-    public double getUpperZFactor() {
-        return upperZfactor;
-    }
-
-    public double getUpperThreshold() {
-        return upperThreshold;
-    }
-
-    public double getLowerThreshold() {
-        return lowerThreshold;
-    }
-
-    public void setUpperThreshold(double score) {
-        upperThreshold = score;
-    }
-
-    public void setzFactor(double factor) {
-        zFactor = factor;
-    }
-
-    public double getHorizon() {
-        return horizon;
-    }
-
-    public double getInitialThreshold() {
-        return initialThreshold;
-    }
-
-    public double getAbsoluteScoreFraction() {
-        return absoluteScoreFraction;
-    }
-
-    public double getLastScore() {
-        return lastScore;
-    }
-
-    public void setLowerThreshold(double lowerThreshold) {
-        this.lowerThreshold = lowerThreshold;
-    }
 }

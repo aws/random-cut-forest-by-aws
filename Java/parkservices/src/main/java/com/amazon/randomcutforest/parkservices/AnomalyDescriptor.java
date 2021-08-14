@@ -13,58 +13,103 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest;
+package com.amazon.randomcutforest.parkservices;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+@Getter
+@Setter
 public class AnomalyDescriptor {
+
+    public static int NUMBER_OF_ECPECTED_VALUES = 1;
+
     // anomalies should have score for postprocessing
-    public double rcfScore;
+    double rcfScore;
     // the following describes the grade of the anomaly in the range [0:1] where
     // 0 is not an anomaly
-    public double anomalyGrade;
+    double anomalyGrade;
+
     // same for attribution; this is basic RCF attribution which has high/low
     // information
-    public DiVector attribution;
+    DiVector attribution;
+
     // timestamp (basically a sequence index); kept as long for potential future use
-    public long timeStamp;
+    long timeStamp;
+
     // confidence, for both anomalies/non-anomalies
-    public double confidence;
+    double confidence;
 
     // number of trees in the forest
-    public int forestSize;
+    int forestSize;
 
     // flag indicating of expected values are present -- one reason for them not
     // being present
     // is that forecasting can requires more values than anomaly detection,
-    public boolean expectedValuesPresent;
+    boolean expectedValuesPresent;
 
     // flag indicating if the anomaly is the start of an anomaly or part of a run of
     // anomalies
-    public boolean startOfAnomaly;
+    boolean startOfAnomaly;
 
     // flag indicating if the time stamp is in elevated score region to be
     // considered as anomaly
-    public boolean inHighScoreRegion;
+    boolean inHighScoreRegion;
 
     /**
      * position of the anomaly vis a vis the current time (can be -ve) if anomaly is
      * detected late, which can and should happen sometime; for shingle size 1; this
      * is always 0
      */
-    public int relativeIndex;
+    int relativeIndex;
 
     // a flattened version denoting the basic contribution of each input variable
     // (not shingled) for the
     // time slice indicated by relativeIndex
-    public double[] flattenedAttribution;
+    double[] flattenedAttribution;
 
     // current values
-    public double[] currentValues;
+    double[] currentValues;
 
     // the values being replaced; may correspond to past
-    public double[] oldValues;
+    double[] oldValues;
 
-    public double[][] expectedValuesList;
-    public double[] likelihoodOfValues;
+    // expected values, currently set to maximum 1
+    double[][] expectedValuesList;
+
+    // likelihood values for the list
+    double[] likelihoodOfValues;
+
+    public void setCurrentValues(double [] currentValues){
+        this.currentValues = Arrays.copyOf(currentValues,currentValues.length);
+    }
+
+    public void setAttribution(DiVector attribution) {
+        this.attribution = new DiVector(attribution);
+    }
+
+    public void setOldValues(double[] values){
+        this.oldValues = Arrays.copyOf(values,values.length);
+    }
+
+    public void setFlattenedAttribution(double[] values){
+        this.flattenedAttribution = Arrays.copyOf(values,values.length);
+    }
+
+    public void setExpectedValues(int position, double[] values, double likelihood){
+        checkArgument(position < NUMBER_OF_ECPECTED_VALUES, "Increase size of expected array");
+        if (expectedValuesList == null){
+            expectedValuesList = new double [NUMBER_OF_ECPECTED_VALUES] [];
+        }
+        if (likelihoodOfValues == null){
+            likelihoodOfValues = new double [NUMBER_OF_ECPECTED_VALUES];
+        }
+        expectedValuesList[position] = Arrays.copyOf(values,values.length);
+        likelihoodOfValues[position] = likelihood;
+    }
 }

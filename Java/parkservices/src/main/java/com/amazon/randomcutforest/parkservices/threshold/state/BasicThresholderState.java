@@ -13,11 +13,11 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
-
-import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
+package com.amazon.randomcutforest.parkservices.threshold.state;
 
 import lombok.Data;
+
+import static com.amazon.randomcutforest.state.Version.V2_1;
 
 @Data
 public class BasicThresholderState {
@@ -34,17 +34,11 @@ public class BasicThresholderState {
 
     private int count;
 
-    private double primaryDiscount;
-
-    private double secondaryDiscount;
-
     private int minimumScores;
 
     private DeviationState primaryDeviationState;
 
     private DeviationState secondaryDeviationState;
-
-    private double lastScore;
 
     private double upperThreshold;
 

@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
+package com.amazon.randomcutforest.parkservices.threshold.state;
 
 import lombok.Data;
 

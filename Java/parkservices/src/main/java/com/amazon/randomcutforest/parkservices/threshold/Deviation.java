@@ -13,13 +13,17 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
+package com.amazon.randomcutforest.parkservices.threshold;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
+/**
+ * This class maintains a simple discounted statistics. Setters are avoided except for discount rate
+ * which is useful as initialization from raw scores
+ */
 public class Deviation {
 
-    protected final double discount;
+    protected double discount;
 
     protected double weight = 0;
 
@@ -71,6 +75,10 @@ public class Deviation {
 
     public double getDiscount() {
         return discount;
+    }
+
+    protected void setDiscount(double discount) {
+        this.discount = discount;
     }
 
     public double getSum() {

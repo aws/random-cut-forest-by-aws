@@ -13,8 +13,19 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold.state;
+package com.amazon.randomcutforest.parkservices.threshold;
 
-public class Version {
-    public static final String V2_1 = "2.1";
+public interface IThresholder {
+
+    double getAnomalyGrade(double score, double optionalParameter);
+
+    double getAnomalyGrade(double score);
+
+    double getConfidenceScore(double score);
+
+    void update(double score);
+
+    void update(double primary, double secondary);
+
+    void setLowerThreshold(double threshold);
 }

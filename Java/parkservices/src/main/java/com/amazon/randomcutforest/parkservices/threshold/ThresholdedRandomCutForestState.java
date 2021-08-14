@@ -13,15 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
+package com.amazon.randomcutforest.parkservices.threshold;
 
-import static com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.Version.V2_1;
-
-import lombok.Data;
-
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
+import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderState;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.state.RandomCutForestState;
+import lombok.Data;
+
+import static com.amazon.randomcutforest.state.Version.V2_1;
 
 @Data
 public class ThresholdedRandomCutForestState {
@@ -37,8 +36,8 @@ public class ThresholdedRandomCutForestState {
     private double[] lastAnomalyPoint;
     private double[] lastExpectedPoint;
     private boolean previousIsPotentialAnomaly;
-    private boolean inAnomaly;
+    private boolean inHighScoreRegion;
     private boolean ignoreSimilar;
     private int numberOfAttributors;
-    private long randomseed;
+    private long randomSeed;
 }
