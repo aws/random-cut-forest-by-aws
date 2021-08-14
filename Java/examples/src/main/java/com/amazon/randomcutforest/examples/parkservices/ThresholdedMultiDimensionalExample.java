@@ -62,19 +62,21 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision), 0.01);
 
-        long seed = -2964388187841650835L;new Random().nextLong();
+        long seed = -1650970779366521582L;
+        new Random().nextLong();
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
-        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50, shingleSize, baseDimensions,
-                seed);
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50,
+                shingleSize, baseDimensions, seed);
         int keyCounter = 0;
         for (double[] point : dataWithKeys.data) {
 
             AnomalyDescriptor result = forest.process(point);
 
             if (keyCounter < dataWithKeys.changeIndices.length
-                    && result.getTimeStamp() + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]){
-                System.out.println("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
+                    && result.getTimeStamp() + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " CHANGE "
+                        + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 
@@ -95,7 +97,8 @@ public class ThresholdedMultiDimensionalExample implements Example {
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
                             if (result.getOldValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print("( " + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
+                                System.out.print("( "
+                                        + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     } else {
@@ -103,7 +106,9 @@ public class ThresholdedMultiDimensionalExample implements Example {
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
                             if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print("( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
+                                System.out.print(
+                                        "( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i])
+                                                + " ) ");
                             }
                         }
                     }

@@ -36,8 +36,8 @@ public class ThresholdedRandomCutForest {
     // the same anomaly
     // within the same shingle or across different time points
     protected double ignoreSimilarFactor = 0.3;
-    // uses attribution by default; can be useful without attribution as a general
-    // featurization
+
+    // a different test for anomalies in the same shingle
     protected double triggerFactor = 3.0;
 
     // saved attribution of the last seen anomaly
@@ -59,10 +59,11 @@ public class ThresholdedRandomCutForest {
     // (for the top numberOfAttributor fields) for the last anomaly
     double[] lastExpectedPoint;
 
-    // indicates that previous point was a canditae anomaly
+    // indicates that previous point was a candidate anomaly
     boolean previousIsPotentialAnomaly;
 
-    // indicates if we are in a region where scores are high; this can be useful in its own right
+    // indicates if we are in a region where scores are high; this can be useful in
+    // its own right
     boolean inHighScoreRegion;
 
     // flag that determines if we should dedup similar anomalies not in the same
@@ -71,7 +72,7 @@ public class ThresholdedRandomCutForest {
     protected boolean ignoreSimilar;
 
     // for anomaly description we would only look at these may top attributors
-    // note that expected value is not well defined when this number is greater than
+    // note that expected value is not well-defined when this number is greater than
     // 1
     int numberOfAttributors = 2;
 
@@ -111,14 +112,17 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
-     * The core update mechanism for thresholding, note that the score is used in the primary
-     * statistic in thresholder (which maintains two) and the secondary statistic is the score difference
-     * Since RandomCutForests are stochastic data structures, scores from imndividual trees followa trajectory
-     * not unlike martingales. The differencing eliminates the effect or a run of high/low scores.
-     * @param score typically the score produced by the forest
-     * @param secondScore either the score or a corrected score which simulates "what if the past anomalies
-     *                    were not present"
-     * @param flag a flag to indicate if the last point was aotential anomaly
+     * The core update mechanism for thresholding, note that the score is used in
+     * the primary statistic in thresholder (which maintains two) and the secondary
+     * statistic is the score difference Since RandomCutForests are stochastic data
+     * structures, scores from individual trees follow a trajectory not unlike
+     * martingales. The differencing eliminates the effect or a run of high/low
+     * scores.
+     * 
+     * @param score       typically the score produced by the forest
+     * @param secondScore either the score or a corrected score which simulates
+     *                    "what if the past anomalies were not present"
+     * @param flag        a flag to indicate if the last point was potential anomaly
      */
     protected void update(double score, double secondScore, boolean flag) {
         if (useLastScore()) {
@@ -129,14 +133,16 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
-     * uses the attribution information to find the time slice which contributed most to the anomaly
-     * note that the basic length of the vectors is shingleSize * basDimension; the startIndex corresponds to
-     * the shingle entry beyond which the search is performed. if two anomalies are in a shingle
-     * it would focus on later one, the previous one would have been (hopefully) reported earlier.
-     * @param diVector attribution of current shingle
+     * uses the attribution information to find the time slice which contributed
+     * most to the anomaly note that the basic length of the vectors is shingleSize
+     * * basDimension; the startIndex corresponds to the shingle entry beyond which
+     * the search is performed. if two anomalies are in a shingle it would focus on
+     * later one, the previous one would have been (hopefully) reported earlier.
+     * 
+     * @param diVector      attribution of current shingle
      * @param baseDimension number of attributes/variables in original data
-     * @param startIndex time slice of the farthest in the past we are looking
-     * @return the index (in this shingle) which has largest contributions
+     * @param startIndex    time slice of the farthest in the past we are looking
+     * @return the index (in this shingle) which has the largest contributions
      */
     private int maxContribution(DiVector diVector, int baseDimension, int startIndex) {
         double val = 0;
@@ -159,16 +165,19 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
-     * given an attribution vector finds the top attributors corresponding to the shingle entry marked by position
+     * given an attribution vector finds the top attributors corresponding to the
+     * shingle entry marked by position
      *
-     * @param diVector attribution of the current point
-     * @param position the specific time slice we are focusing on, can be the most recent or a previous one if we
-     *                 were analyzing past anomalies (but still in the shingle)
+     * @param diVector      attribution of the current point
+     * @param position      the specific time slice we are focusing on, can be the
+     *                      most recent or a previous one if we were analyzing past
+     *                      anomalies (but still in the shingle)
      * @param baseDimension number of variables/attributes in original data
-     * @param max_number the number of top attributors we are seeking; this should not be more than 2 or 3, it can be
-     *                   exceedingly hard to reason about more
-     * @return the specific attribute locations within the shingle which has the largest attribution in
-     *         [position, position+baseDimension-1]
+     * @param max_number    the number of top attributors we are seeking; this
+     *                      should not be more than 2 or 3, it can be exceedingly
+     *                      hard to reason about more
+     * @return the specific attribute locations within the shingle which has the
+     *         largest attribution in [position, position+baseDimension-1]
      */
     private int[] largestFeatures(DiVector diVector, int position, int baseDimension, int max_number) {
         if (baseDimension == 1) {
@@ -180,8 +189,17 @@ public class ThresholdedRandomCutForest {
             sum += values[i] = diVector.getHighLowSum(i + position);
         }
         Arrays.sort(values);
-        double cutoff = values[baseDimension - Math.min(max_number, baseDimension)];
-        int[] answer = new int[Math.min(max_number, baseDimension)];
+        int pick = Math.min(max_number, baseDimension);
+        double cutoff = values[baseDimension - pick];
+        // we will now throw away top attributors which are insignificant (10%) of the
+        // next value
+        while (pick > 1) {
+            if (values[baseDimension - pick] < 10 * values[baseDimension - pick + 1]) {
+                --pick;
+                cutoff = values[baseDimension - pick];
+            }
+        }
+        int[] answer = new int[pick];
         int count = 0;
         for (int i = 0; i < baseDimension; i++) {
             if (diVector.getHighLowSum(i + position) >= cutoff && diVector.getHighLowSum(i + position) > sum * 0.1) {
@@ -192,13 +210,17 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
-     * in a high score region with a previous anomalies, we use this to determine if the "residual contribution
-     * since the last anomaly would have sufficed to trigger anomaly designation on its own.
-     * @param candidate attribution of the current point in consideration
-     * @param gap how long ago did the previous anomaly occur
+     * in a high score region with a previous anomalies, we use this to determine if
+     * the "residual contribution" since the last anomaly would have sufficed to
+     * trigger anomaly designation on its own.
+     * 
+     * @param candidate     attribution of the current point in consideration
+     * @param gap           how long ago did the previous anomaly occur
      * @param baseDimension number of input attributes/variables (before shingling)
-     * @param ideal a form of expected attribution; can be null if there was no previous anomaly in the shingle
-     * @return true/false if the residual (extrapolated) score would trigger anomaly designation
+     * @param ideal         a form of expected attribution; can be null if there was
+     *                      no previous anomaly in the shingle
+     * @return true/false if the residual (extrapolated) score would trigger anomaly
+     *         designation
      */
     protected boolean trigger(DiVector candidate, int gap, int baseDimension, DiVector ideal) {
         if (lastAnomalyAttribution == null) {
@@ -240,8 +262,10 @@ public class ThresholdedRandomCutForest {
 
     /**
      * core routine which collates the information about the most recent point
+     * 
      * @param point input (shingled) point
-     * @return description containing scores, grade, confidence, expected values, attribution etc.
+     * @return description containing scores, grade, confidence, expected values,
+     *         attribution etc.
      */
     protected AnomalyDescriptor getAnomalyDescription(double[] point) {
         AnomalyDescriptor result = new AnomalyDescriptor();
@@ -254,11 +278,14 @@ public class ThresholdedRandomCutForest {
         result.setAttribution(attribution);
         int shingleSize = forest.getShingleSize();
         int baseDimensions = forest.getDimensions() / shingleSize;
-         double [] currentValues = new double[baseDimensions];
+        double[] currentValues = new double[baseDimensions];
         int startPosition = (shingleSize - 1) * baseDimensions;
         System.arraycopy(point, startPosition, currentValues, 0, baseDimensions);
         result.setCurrentValues(currentValues);
 
+        if (timeStamp == 332) {
+            System.out.println("HA");
+        }
         // the forecast may not be reasonable with less data
         boolean reasonableForecast = (timeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
                 && (shingleSize * baseDimensions >= 4);
@@ -287,11 +314,11 @@ public class ThresholdedRandomCutForest {
          * due to the past and do not need to vend anomaly -- because the most recent
          * point, on their own would not produce an anomalous shingle.
          *
-         * However the strategy is only executable if there are (A) sufficiently many
+         * However, the strategy is only executable if there are (A) sufficiently many
          * observations and (B) enough data in each time point such that the forecast is
          * reasonable. While forecasts can be corrected for very low shingle sizes and
          * say 1d input, the allure of RCF is in the multivariate case. Even for 1d, a
-         * shiglesize of 4 or larger would produce reasonable forecast for the purposes
+         * shingleSize of 4 or larger would produce reasonable forecast for the purposes
          * of anomaly detection.
          */
 
@@ -300,7 +327,8 @@ public class ThresholdedRandomCutForest {
         if (reasonableForecast && lastAnomalyPoint != null && lastExpectedPoint != null && gap < shingleSize) {
             double[] correctedPoint = Arrays.copyOf(point, point.length);
             if (point.length - gap * baseDimensions >= 0)
-                System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0, point.length - gap * baseDimensions);
+                System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
+                        point.length - gap * baseDimensions);
             double correctedScore = forest.getAnomalyScore(correctedPoint);
             if (thresholder.getAnomalyGrade(correctedScore) == 0) {
                 // fixing the past makes this anomaly go away; nothing to do but process the
@@ -313,9 +341,9 @@ public class ThresholdedRandomCutForest {
         }
 
         /**
-         * We now check the most egregeous values seen in the current timestamp, as
+         * We now check the most egregious values seen in the current timestamp, as
          * determined by attribution. Those locations provide information about (a)
-         * which attributes and (b) what the values should have been. However those
+         * which attributes and (b) what the values should have been. However, those
          * calculations of imputation only make sense when sufficient observations are
          * available.
          */
@@ -334,7 +362,7 @@ public class ThresholdedRandomCutForest {
         /**
          * we now find the time slice, relative to the current time, which is indicative
          * of the high score. relativeIndex = 0 is current time. It is negative if the
-         * most egregeous attribution was due to the past values in the shingle
+         * most egregious attribution was due to the past values in the shingle
          */
 
         result.setRelativeIndex(maxContribution(attribution, baseDimensions, -shingleSize) + 1);
@@ -382,21 +410,21 @@ public class ThresholdedRandomCutForest {
                     int[] missingIndices = largestFeatures(attribution, startPosition, baseDimensions,
                             numberOfAttributors);
                     newPoint = forest.imputeMissingValues(point, missingIndices.length, missingIndices);
-                    double [] oldValues = new double[baseDimensions];
+                    double[] oldValues = new double[baseDimensions];
                     System.arraycopy(point, startPosition, oldValues, 0, baseDimensions);
                     result.setOldValues(oldValues);
                 }
             }
             if (reasonableForecast) {
-                double [] values = new double[baseDimensions];
+                double[] values = new double[baseDimensions];
                 System.arraycopy(newPoint, startPosition, values, 0, baseDimensions);
-                result.setExpectedValues(0,values,1.0);
+                result.setExpectedValues(0, values, 1.0);
                 lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
             } else {
                 lastExpectedPoint = null;
             }
 
-            double [] flattenedAttribution = new double[baseDimensions];
+            double[] flattenedAttribution = new double[baseDimensions];
             for (int i = 0; i < baseDimensions; i++) {
                 flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
             }
@@ -405,13 +433,12 @@ public class ThresholdedRandomCutForest {
         return result;
     }
 
-
     public DiVector getLastAnomalyAttribution() {
-        return (lastAnomalyAttribution == null)?null:new DiVector(lastAnomalyAttribution);
+        return (lastAnomalyAttribution == null) ? null : new DiVector(lastAnomalyAttribution);
     }
 
     public void setLastAnomalyAttribution(DiVector diVector) {
-        lastAnomalyAttribution = (diVector == null)?null:new DiVector(diVector);
+        lastAnomalyAttribution = (diVector == null) ? null : new DiVector(diVector);
     }
 
     public double[] getLastAnomalyPoint() {
@@ -422,16 +449,16 @@ public class ThresholdedRandomCutForest {
         return copyIfNotnull(lastExpectedPoint);
     }
 
-    public void setLastAnomalyPoint(double [] point) {
+    public void setLastAnomalyPoint(double[] point) {
         lastAnomalyPoint = copyIfNotnull(point);
     }
 
-    public void setLastExpectedPoint(double [] point) {
+    public void setLastExpectedPoint(double[] point) {
         lastExpectedPoint = copyIfNotnull(point);
     }
 
-    private double[] copyIfNotnull(double[] array){
-        return array==null?null:Arrays.copyOf(array,array.length);
+    private double[] copyIfNotnull(double[] array) {
+        return array == null ? null : Arrays.copyOf(array, array.length);
     }
 
 }

@@ -45,7 +45,6 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         return thresholder;
     }
 
-
     @Override
     public BasicThresholderState toState(BasicThresholder model) {
         BasicThresholderState state = new BasicThresholderState();

@@ -18,8 +18,8 @@ package com.amazon.randomcutforest.parkservices.threshold;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
- * This class maintains a simple discounted statistics. Setters are avoided except for discount rate
- * which is useful as initialization from raw scores
+ * This class maintains a simple discounted statistics. Setters are avoided
+ * except for discount rate which is useful as initialization from raw scores
  */
 public class Deviation {
 

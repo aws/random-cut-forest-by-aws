@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.examples.datasets;
 
-public class MultiDimDataWithKey{
-    public double [] [] data;
-    public int [] changeIndices;
+public class MultiDimDataWithKey {
+    public double[][] data;
+    public int[] changeIndices;
     public double[][] changes;
 
-    public MultiDimDataWithKey(double[][] data, int[] changeIndices, double [][] changes){
+    public MultiDimDataWithKey(double[][] data, int[] changeIndices, double[][] changes) {
         this.data = data;
         this.changeIndices = changeIndices;
         this.changes = changes;

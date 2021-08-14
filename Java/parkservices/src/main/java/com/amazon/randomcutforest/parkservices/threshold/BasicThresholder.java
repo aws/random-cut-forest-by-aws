@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.List;
@@ -55,7 +54,8 @@ public class BasicThresholder implements IThresholder {
     // initial absolute threshold used to determine anomalies before sufficient
     // values are seen
     protected double initialThreshold = 1.5;
-    // used to determine the suprise coefficient above which we can call a potential
+    // used to determine the surprise coefficient above which we can call a
+    // potential
     // anomaly
     protected double zFactor = 2.5;
     // an upper bound of zFactor and triggerFactor beyond which the point is
@@ -74,14 +74,16 @@ public class BasicThresholder implements IThresholder {
     }
 
     /**
-     * The constructor creates a thresholder from a sample of scores and a future discount rate
-     * @param scores list of scores
+     * The constructor creates a thresholder from a sample of scores and a future
+     * discount rate
+     * 
+     * @param scores            list of scores
      * @param futureAnomalyRate discount/decay factor of scores going forward
      */
-    public BasicThresholder(List<Double> scores,double futureAnomalyRate){
+    public BasicThresholder(List<Double> scores, double futureAnomalyRate) {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
-        scores.forEach(s -> {update(s,s);});
+        scores.forEach(s -> update(s, s));
         primaryDeviation.setDiscount(1 - futureAnomalyRate);
     }
 
@@ -140,8 +142,11 @@ public class BasicThresholder implements IThresholder {
             if (score < longTermThreshold(factor)) {
                 return 0;
             }
-            double tFactor = Math.min(upperZfactor, (score - primaryDeviation.getMean()) / longTermDeviation());
-            checkArgument(tFactor >= zFactor, "should not be here");
+            double tFactor = upperZfactor;
+            if (longTermDeviation() > 0) {
+                tFactor = Math.min(tFactor, score - primaryDeviation.getMean() / longTermDeviation());
+            }
+
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
             if (score < basicThreshold(factor)) {

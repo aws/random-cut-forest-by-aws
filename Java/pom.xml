@@ -37,10 +37,10 @@
 
     <modules>
         <module>core</module>
+        <module>parkservices</module>
         <module>benchmark</module>
         <module>examples</module>
         <module>serialization</module>
-        <module>parkservices</module>
         <module>testutils</module>
     </modules>
 
@@ -120,6 +120,12 @@
                 <version>1.31.0</version>
                 <configuration>
                     <java>
+                        <licenseHeader>
+                            <file>${maven.multiModuleProjectDirectory}/license-header</file>
+                        </licenseHeader>
+                        <eclipse>
+                            <file>${maven.multiModuleProjectDirectory}/spotless-eclipse.xml</file>
+                        </eclipse>
                         <removeUnusedImports/>
                         <importOrder>
                             <order>java,javax,org,com</order>
@@ -205,6 +211,14 @@
 
     <reporting>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.5</version>
+                <configuration>
+                    <excludeFilterFile>findbugs-filters.xml</excludeFilterFile>
+                </configuration>
+            </plugin>
         </plugins>
     </reporting>
 

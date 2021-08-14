@@ -28,7 +28,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 @Setter
 public class AnomalyDescriptor {
 
-    public static int NUMBER_OF_ECPECTED_VALUES = 1;
+    public static int NUMBER_OF_EXPECTED_VALUES = 1;
 
     // anomalies should have score for postprocessing
     double rcfScore;
@@ -86,31 +86,31 @@ public class AnomalyDescriptor {
     // likelihood values for the list
     double[] likelihoodOfValues;
 
-    public void setCurrentValues(double [] currentValues){
-        this.currentValues = Arrays.copyOf(currentValues,currentValues.length);
+    public void setCurrentValues(double[] currentValues) {
+        this.currentValues = Arrays.copyOf(currentValues, currentValues.length);
     }
 
     public void setAttribution(DiVector attribution) {
         this.attribution = new DiVector(attribution);
     }
 
-    public void setOldValues(double[] values){
-        this.oldValues = Arrays.copyOf(values,values.length);
+    public void setOldValues(double[] values) {
+        this.oldValues = Arrays.copyOf(values, values.length);
     }
 
-    public void setFlattenedAttribution(double[] values){
-        this.flattenedAttribution = Arrays.copyOf(values,values.length);
+    public void setFlattenedAttribution(double[] values) {
+        this.flattenedAttribution = Arrays.copyOf(values, values.length);
     }
 
-    public void setExpectedValues(int position, double[] values, double likelihood){
-        checkArgument(position < NUMBER_OF_ECPECTED_VALUES, "Increase size of expected array");
-        if (expectedValuesList == null){
-            expectedValuesList = new double [NUMBER_OF_ECPECTED_VALUES] [];
+    public void setExpectedValues(int position, double[] values, double likelihood) {
+        checkArgument(position < NUMBER_OF_EXPECTED_VALUES, "Increase size of expected array");
+        if (expectedValuesList == null) {
+            expectedValuesList = new double[NUMBER_OF_EXPECTED_VALUES][];
         }
-        if (likelihoodOfValues == null){
-            likelihoodOfValues = new double [NUMBER_OF_ECPECTED_VALUES];
+        if (likelihoodOfValues == null) {
+            likelihoodOfValues = new double[NUMBER_OF_EXPECTED_VALUES];
         }
-        expectedValuesList[position] = Arrays.copyOf(values,values.length);
+        expectedValuesList[position] = Arrays.copyOf(values, values.length);
         likelihoodOfValues[position] = likelihood;
     }
 }
