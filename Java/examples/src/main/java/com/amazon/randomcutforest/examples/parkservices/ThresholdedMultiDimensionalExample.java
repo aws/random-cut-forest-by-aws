@@ -62,8 +62,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision), 0.01);
 
-        long seed = -1650970779366521582L;
-        new Random().nextLong();
+        long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50,
