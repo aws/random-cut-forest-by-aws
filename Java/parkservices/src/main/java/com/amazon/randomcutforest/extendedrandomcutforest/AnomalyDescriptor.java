@@ -23,9 +23,10 @@ public class AnomalyDescriptor {
     // the following describes the grade of the anomaly in the range [0:1] where
     // 0 is not an anomaly
     public double anomalyGrade;
-    // same for attribution; this is basic RCF attribution which has high/low information
+    // same for attribution; this is basic RCF attribution which has high/low
+    // information
     public DiVector attribution;
-    // timestamp (basically a sequence index); kept as long  for potential future use
+    // timestamp (basically a sequence index); kept as long for potential future use
     public long timeStamp;
     // confidence, for both anomalies/non-anomalies
     public double confidence;
@@ -33,23 +34,28 @@ public class AnomalyDescriptor {
     // number of trees in the forest
     public int forestSize;
 
-    // flag indicating of expected values are present -- one reason for them not being present
+    // flag indicating of expected values are present -- one reason for them not
+    // being present
     // is that forecasting can requires more values than anomaly detection,
     public boolean expectedValuesPresent;
 
-    // flag indicating if the anomaly is the start of an anomaly or part of a run of anomalies
+    // flag indicating if the anomaly is the start of an anomaly or part of a run of
+    // anomalies
     public boolean startOfAnomaly;
 
-    // flag indicating if the time stamp is in elevated score region to be considered as anomaly
+    // flag indicating if the time stamp is in elevated score region to be
+    // considered as anomaly
     public boolean inHighScoreRegion;
 
     /**
-     * position of the anomaly vis a vis the current time (can be -ve) if anomaly is detected late, which can
-     * and should happen sometime; for shingle size 1; this is always 0
-     * */
+     * position of the anomaly vis a vis the current time (can be -ve) if anomaly is
+     * detected late, which can and should happen sometime; for shingle size 1; this
+     * is always 0
+     */
     public int relativeIndex;
 
-    // a flattened version denoting the basic contribution of each input variable (not shingled) for the
+    // a flattened version denoting the basic contribution of each input variable
+    // (not shingled) for the
     // time slice indicated by relativeIndex
     public double[] flattenedAttribution;
 
@@ -59,6 +65,6 @@ public class AnomalyDescriptor {
     // the values being replaced; may correspond to past
     public double[] oldValues;
 
-    public double [][] expectedValuesList;
+    public double[][] expectedValuesList;
     public double[] likelihoodOfValues;
 }

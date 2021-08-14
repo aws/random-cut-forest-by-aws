@@ -15,12 +15,11 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import com.amazon.randomcutforest.extendedrandomcutforest.threshold.state.BasicThresholderState;
 
-public class BasicThresholder implements IThresholder{
+public class BasicThresholder implements IThresholder {
 
     public static int IS_ANOMALY = 1;
 
@@ -51,35 +50,37 @@ public class BasicThresholder implements IThresholder{
     protected double upperThreshold = 2.0;
     // the upper threshold of scores above which points are likely anomalies
     protected double lowerThreshold = 1.0;
-    //initial absolute threshold used to determine anomalies before sufficient values are seen
+    // initial absolute threshold used to determine anomalies before sufficient
+    // values are seen
     protected double initialThreshold = 1.5;
-    // used to determine the suprise coefficient above which we can call a potential anomaly
+    // used to determine the suprise coefficient above which we can call a potential
+    // anomaly
     protected double zFactor = 2.5;
-    // an upper bound of zFactor and triggerFactor beyond which the point is mathematically anomalous
+    // an upper bound of zFactor and triggerFactor beyond which the point is
+    // mathematically anomalous
     // is useful in determining grade
     protected double upperZfactor = 5.0;
 
     protected double lastScore;
 
-
-    public BasicThresholder(double discount){
-        this.primaryDiscount=discount;
+    public BasicThresholder(double discount) {
+        this.primaryDiscount = discount;
         primaryDeviation = new Deviation(discount);
-        this.secondaryDiscount=discount;
+        this.secondaryDiscount = discount;
         secondaryDeviation = new Deviation(discount);
     }
 
-    public BasicThresholder(Deviation deviation){
+    public BasicThresholder(Deviation deviation) {
         primaryDiscount = deviation.getDiscount();
         secondaryDiscount = primaryDiscount;
         this.primaryDeviation = deviation;
         this.secondaryDeviation = new Deviation(deviation.getDiscount());
     }
 
-    public BasicThresholder(BasicThresholderState state, Deviation primary, Deviation secondary){
+    public BasicThresholder(BasicThresholderState state, Deviation primary, Deviation secondary) {
         this.primaryDeviation = primary;
         this.secondaryDeviation = secondary;
-        this.elasticity =state.getElasticity();
+        this.elasticity = state.getElasticity();
         this.count = state.getCount();
         this.primaryDiscount = state.getPrimaryDiscount();
         this.secondaryDiscount = state.getSecondaryDiscount();
@@ -94,8 +95,7 @@ public class BasicThresholder implements IThresholder{
         this.upperZfactor = state.getUpperZfactor();
     }
 
-
-    protected boolean isDeviationReady(){
+    protected boolean isDeviationReady() {
         if (count < minimumScores) {
             return false;
         }
@@ -109,42 +109,41 @@ public class BasicThresholder implements IThresholder{
         }
     }
 
-    protected double intermediateTermFraction(){
-        if (count < minimumScores){
+    protected double intermediateTermFraction() {
+        if (count < minimumScores) {
             return 0;
-        } else if (count> 2*minimumScores){
+        } else if (count > 2 * minimumScores) {
             return 1;
         } else {
-            return (count - minimumScores)*1.0/minimumScores;
+            return (count - minimumScores) * 1.0 / minimumScores;
         }
     }
 
-    protected boolean isLongTermReady(){
+    protected boolean isLongTermReady() {
         return (intermediateTermFraction() == 1);
     }
 
     protected double basicThreshold(double factor) {
         if (!isDeviationReady()) { // count < minimumScore is this branch
-            return Math.max(initialThreshold,lowerThreshold);
+            return Math.max(initialThreshold, lowerThreshold);
         } else if (isLongTermReady()) {
             return longTermThreshold(factor);
         } else {
-            return Math.max(lowerThreshold,intermediateTermFraction()*longTermThreshold(factor)
-                    + (1-intermediateTermFraction())*initialThreshold);
+            return Math.max(lowerThreshold, intermediateTermFraction() * longTermThreshold(factor)
+                    + (1 - intermediateTermFraction()) * initialThreshold);
         }
 
     }
-    protected double longTermThreshold(double factor){
-        return Math.max(lowerThreshold,primaryDeviation.getMean() + factor * longTermDeviation());
+
+    protected double longTermThreshold(double factor) {
+        return Math.max(lowerThreshold, primaryDeviation.getMean() + factor * longTermDeviation());
     }
 
-    protected double longTermDeviation(){
-        return ( horizon * primaryDeviation.getDeviation() +
-                (1-horizon) *secondaryDeviation.getDeviation());
+    protected double longTermDeviation() {
+        return (horizon * primaryDeviation.getDeviation() + (1 - horizon) * secondaryDeviation.getDeviation());
     }
 
-
-    public double getAnomalyGrade(double score,double factor){
+    public double getAnomalyGrade(double score, double factor) {
         checkArgument(factor >= zFactor, "incorrect call");
         // please change here is a first cut
         if (isLongTermReady()) {
@@ -155,36 +154,35 @@ public class BasicThresholder implements IThresholder{
             checkArgument(tFactor >= zFactor, "should not be here");
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
-            if (score <basicThreshold(factor)){
+            if (score < basicThreshold(factor)) {
                 return 0;
             }
-            double upper = Math.max(upperThreshold,2*basicThreshold(factor));
+            double upper = Math.max(upperThreshold, 2 * basicThreshold(factor));
             double quasiScore = Math.min(score, upper);
-            return (quasiScore - basicThreshold(factor))/(upper - basicThreshold(factor));
+            return (quasiScore - basicThreshold(factor)) / (upper - basicThreshold(factor));
         }
     }
 
-    public double getAnomalyGrade(double score){
-        return getAnomalyGrade(score,zFactor);
+    public double getAnomalyGrade(double score) {
+        return getAnomalyGrade(score, zFactor);
     }
 
-    public double getConfidenceScore(double score){
+    public double getConfidenceScore(double score) {
         // please change
         return 0;
     }
 
-    public void update(double score){
+    public void update(double score) {
 
         primaryDeviation.update(score);
         ++count;
     }
 
-    public void update(double primary,double secondary){
+    public void update(double primary, double secondary) {
         primaryDeviation.update(primary);
         secondaryDeviation.update(secondary);
         ++count;
     }
-
 
     public Deviation getPrimaryDeviation() {
         return primaryDeviation;
@@ -206,7 +204,6 @@ public class BasicThresholder implements IThresholder{
         return elasticity;
     }
 
-
     public int getCount() {
         return count;
     }
@@ -215,10 +212,9 @@ public class BasicThresholder implements IThresholder{
         return minimumScores;
     }
 
-    public void setElasticity(double elasticity){
+    public void setElasticity(double elasticity) {
         this.elasticity = elasticity;
     }
-
 
     public double getzFactor() {
         return zFactor;
@@ -241,7 +237,7 @@ public class BasicThresholder implements IThresholder{
     }
 
     public void setzFactor(double factor) {
-        zFactor =factor;
+        zFactor = factor;
     }
 
     public double getHorizon() {

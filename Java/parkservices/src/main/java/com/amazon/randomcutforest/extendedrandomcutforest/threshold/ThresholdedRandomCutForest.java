@@ -15,22 +15,24 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.extendedrandomcutforest.AnomalyDescriptor;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
-public class ThresholdedRandomCutForest{
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+public class ThresholdedRandomCutForest {
 
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
 
-    // a parameter that determines if the current potential anomaly is describing the same anomaly
+    // a parameter that determines if the current potential anomaly is describing
+    // the same anomaly
     // within the same shingle or across different time points
     protected double ignoreSimilarFactor = 0.3;
-    // uses attribution by default; can be useful without attribution as a general featurization
+    // uses attribution by default; can be useful without attribution as a general
+    // featurization
     protected double triggerFactor = 3.0;
 
     // saved attribution of the last seen anomaly
@@ -44,36 +46,37 @@ public class ThresholdedRandomCutForest{
     boolean previousIsPotentialAnomaly;
     boolean inHighScoreRegion;
 
-    // flag that determines if we should dedup similar anomalies not in the same shingle, for example an
+    // flag that determines if we should dedup similar anomalies not in the same
+    // shingle, for example an
     // anomaly, with the same pattern is repeated across more than a shingle
     protected boolean ignoreSimilar;
 
     // for anomaly description we would only look at these may top attributors
-    // note that expected value is not well defined when this number is greater than 1
+    // note that expected value is not well defined when this number is greater than
+    // 1
     int numberOfAttributors = 2;
 
     protected RandomCutForest forest;
     protected BasicThresholder thresholder;
 
-
-
-    public ThresholdedRandomCutForest(RandomCutForest.Builder builder, double anomalyRate){
+    public ThresholdedRandomCutForest(RandomCutForest.Builder builder, double anomalyRate) {
         forest = builder.build();
-        checkArgument(!forest.isInternalShinglingEnabled(),"Incorrect setting, not supported");
+        checkArgument(!forest.isInternalShinglingEnabled(), "Incorrect setting, not supported");
         thresholder = new BasicThresholder(anomalyRate);
-        if (forest.getDimensions()/forest.getShingleSize() == 1){
+        if (forest.getDimensions() / forest.getShingleSize() == 1) {
             thresholder.setLowerThreshold(1.1);
         }
     }
 
-    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder, ThresholdedRandomCutForestState state){
+    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder,
+            ThresholdedRandomCutForestState state) {
         this.forest = forest;
         this.thresholder = thresholder;
         this.inHighScoreRegion = state.isInAnomaly();
-        this.lastAnomalyPoint = (state.getLastAnomalyPoint() == null)?null:Arrays.copyOf(state.getLastAnomalyPoint(),state.getLastAnomalyPoint().length);
-        this.lastExpectedPoint = (state.getLastExpectedPoint() == null)?null:Arrays.copyOf(state.getLastExpectedPoint(),state.getLastExpectedPoint().length);
-        this.lastAnomalyAttribution = (state.getLastAnomalyAttribution() == null)?null:
-                new DiVector(state.getLastAnomalyAttribution());
+        this.lastAnomalyPoint = copyIfNotnull(state.getLastAnomalyPoint());
+        this.lastExpectedPoint = copyIfNotnull(state.getLastExpectedPoint());
+        this.lastAnomalyAttribution = (state.getLastAnomalyAttribution() == null) ? null
+                : new DiVector(state.getLastAnomalyAttribution());
         this.lastAnomalyTimeStamp = state.getLastAnomalyTimeStamp();
         this.lastAnomalyScore = state.getLastAnomalyScore();
         this.lastScore = state.getLastScore();
@@ -85,11 +88,10 @@ public class ThresholdedRandomCutForest{
     }
 
     public AnomalyDescriptor process(double[] point) {
-       AnomalyDescriptor result = getAnomalyDescription(point);
-       forest.update(point);
-       return result;
+        AnomalyDescriptor result = getAnomalyDescription(point);
+        forest.update(point);
+        return result;
     }
-
 
     public RandomCutForest getForest() {
         return forest;
@@ -98,7 +100,6 @@ public class ThresholdedRandomCutForest{
     public IThresholder getThresholder() {
         return thresholder;
     }
-
 
     protected boolean useLastScore() {
         return lastScore > 0 && !previousIsPotentialAnomaly;
@@ -134,7 +135,7 @@ public class ThresholdedRandomCutForest{
 
     private int[] largestFeatures(DiVector diVector, int position, int baseDimension, int max_number) {
         if (baseDimension == 1) {
-            return new int[]{position};
+            return new int[] { position };
         }
         double sum = 0;
         double[] values = new double[baseDimension];
@@ -146,8 +147,7 @@ public class ThresholdedRandomCutForest{
         int[] answer = new int[Math.min(max_number, baseDimension)];
         int count = 0;
         for (int i = 0; i < baseDimension; i++) {
-            if (diVector.getHighLowSum(i + position) >= cutoff &&
-                    diVector.getHighLowSum(i + position) > sum * 0.1) {
+            if (diVector.getHighLowSum(i + position) >= cutoff && diVector.getHighLowSum(i + position) > sum * 0.1) {
                 answer[count++] = position + i;
             }
         }
@@ -173,10 +173,11 @@ public class ThresholdedRandomCutForest{
             } else {
                 double differentialRemainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {
-                    differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i]) + Math.abs(candidate.high[i] - ideal.high[i]);
+                    differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
+                            + Math.abs(candidate.high[i] - ideal.high[i]);
                 }
-                return (differentialRemainder > ignoreSimilarFactor * lastAnomalyScore) &&
-                        thresholder.getAnomalyGrade(differentialRemainder * dimensions / difference, triggerFactor) > 0;
+                return (differentialRemainder > ignoreSimilarFactor * lastAnomalyScore) && thresholder
+                        .getAnomalyGrade(differentialRemainder * dimensions / difference, triggerFactor) > 0;
             }
         } else {
             if (!ignoreSimilar) {
@@ -184,8 +185,8 @@ public class ThresholdedRandomCutForest{
             }
             double sum = 0;
             for (int i = 0; i < dimensions; i++) {
-                sum += Math.abs(lastAnomalyAttribution.high[i] - candidate.high[i]) +
-                        Math.abs(lastAnomalyAttribution.low[i] - candidate.low[i]);
+                sum += Math.abs(lastAnomalyAttribution.high[i] - candidate.high[i])
+                        + Math.abs(lastAnomalyAttribution.low[i] - candidate.low[i]);
             }
             return (sum > ignoreSimilarFactor * lastScore);
         }
@@ -203,15 +204,13 @@ public class ThresholdedRandomCutForest{
         int startPosition = (shingleSize - 1) * baseDimensions;
 
         // the forecast may not be reasonable with less data
-        boolean reasonableForecast = (result.timeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED) && (shingleSize * baseDimensions >= 4);
+        boolean reasonableForecast = (result.timeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
+                && (shingleSize * baseDimensions >= 4);
 
         for (int i = 0; i < baseDimensions; i++) {
             result.currentValues[i] = point[startPosition + i];
         }
 
-        if (result.timeStamp == 864){
-            System.out.println("HA");
-        }
         /**
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
@@ -219,7 +218,7 @@ public class ThresholdedRandomCutForest{
         if (thresholder.getAnomalyGrade(result.rcfScore) == 0) {
             result.anomalyGrade = 0;
             inHighScoreRegion = false;
-            update(result.rcfScore, result.rcfScore,false);
+            update(result.rcfScore, result.rcfScore, false);
             return result;
         }
 
@@ -227,16 +226,19 @@ public class ThresholdedRandomCutForest{
         result.inHighScoreRegion = true;
 
         /**
-         * We now check if (1) we have another anomaly in the current shingle (2) have predictions
-         * about what the values should have been and (3) replacing by those "should have been" makes the
-         * anomaly score of the new shingled point low enough to not be an anomaly. In this case we can
-         * "explain" the high score is due to the past and do not need to vend anomaly -- because the most
-         * recent point, on their own would not produce an anomalous shingle.
+         * We now check if (1) we have another anomaly in the current shingle (2) have
+         * predictions about what the values should have been and (3) replacing by those
+         * "should have been" makes the anomaly score of the new shingled point low
+         * enough to not be an anomaly. In this case we can "explain" the high score is
+         * due to the past and do not need to vend anomaly -- because the most recent
+         * point, on their own would not produce an anomalous shingle.
          *
-         * However the strategy is only executable if there are (A) sufficiently many observations and (B) enough
-         * data in each time point such that the forecast is reasonable. While forecasts can be corrected for very low
-         * shingle sizes and say 1d input, the allure of RCF is in the multivariate case. Even for 1d, a shiglesize of
-         * 4 or larger would produce reasonable forecast for the purposes of anomaly detection.
+         * However the strategy is only executable if there are (A) sufficiently many
+         * observations and (B) enough data in each time point such that the forecast is
+         * reasonable. While forecasts can be corrected for very low shingle sizes and
+         * say 1d input, the allure of RCF is in the multivariate case. Even for 1d, a
+         * shiglesize of 4 or larger would produce reasonable forecast for the purposes
+         * of anomaly detection.
          */
 
         int gap = (int) (result.timeStamp - lastAnomalyTimeStamp);
@@ -248,42 +250,47 @@ public class ThresholdedRandomCutForest{
             }
             double correctedScore = forest.getAnomalyScore(correctedPoint);
             if (thresholder.getAnomalyGrade(correctedScore) == 0) {
-                // fixing the past makes this anomaly go away; nothing to do but process the score
+                // fixing the past makes this anomaly go away; nothing to do but process the
+                // score
                 // we will not change inAnomaly however, because the score has been larger
-                update(result.rcfScore, correctedScore,false);
+                update(result.rcfScore, correctedScore, false);
                 result.anomalyGrade = 0;
                 return result;
             }
         }
 
         /**
-         * We now check the most egregeous values seen in the current timestamp, as determined by attribution.
-         * Those locations provide information about (a) which attributes and (b) what the values should have
-         * been. However those calculations of imputation only make sense when sufficient observations are available.
+         * We now check the most egregeous values seen in the current timestamp, as
+         * determined by attribution. Those locations provide information about (a)
+         * which attributes and (b) what the values should have been. However those
+         * calculations of imputation only make sense when sufficient observations are
+         * available.
          */
 
         double[] newPoint = null;
         double newScore = 0;
         DiVector newAttribution = null;
         if (reasonableForecast) {
-            int[] likelyMissingIndices = largestFeatures(result.attribution, startPosition, baseDimensions, numberOfAttributors);
+            int[] likelyMissingIndices = largestFeatures(result.attribution, startPosition, baseDimensions,
+                    numberOfAttributors);
             newPoint = forest.imputeMissingValues(point, likelyMissingIndices.length, likelyMissingIndices);
             newAttribution = forest.getAnomalyAttribution(newPoint);
             newScore = forest.getAnomalyScore(newPoint);
         }
 
         /**
-         * we now find the time slice, relative to the current time, which is indicative of the high
-         * score. relativeIndex = 0 is current time. It is negative if the most egregeous attribution
-         * was due to the past values in the shingle
+         * we now find the time slice, relative to the current time, which is indicative
+         * of the high score. relativeIndex = 0 is current time. It is negative if the
+         * most egregeous attribution was due to the past values in the shingle
          */
 
         result.relativeIndex = maxContribution(result.attribution, baseDimensions, -shingleSize) + 1;
 
         /**
-         * if we are transitioning from low score to high score range (given by inAnomaly) then
-         * we check if the new part of the input could have triggered anomaly on its own
-         * That decision is vended by trigger() which extrapolates a partial shingle
+         * if we are transitioning from low score to high score range (given by
+         * inAnomaly) then we check if the new part of the input could have triggered
+         * anomaly on its own That decision is vended by trigger() which extrapolates a
+         * partial shingle
          */
         if (!inHighScoreRegion && trigger(result.attribution, gap, baseDimensions, null)) {
             result.anomalyGrade = thresholder.getAnomalyGrade(result.rcfScore);
@@ -292,7 +299,7 @@ public class ThresholdedRandomCutForest{
             result.startOfAnomaly = true;
             lastAnomalyAttribution = new DiVector(result.attribution);
             lastAnomalyTimeStamp = result.timeStamp;
-            lastAnomalyPoint = Arrays.copyOf(point,point.length);
+            lastAnomalyPoint = Arrays.copyOf(point, point.length);
             update(result.rcfScore, result.rcfScore, true);
         } else {
             /**
@@ -303,22 +310,23 @@ public class ThresholdedRandomCutForest{
                 lastAnomalyScore = result.rcfScore;
                 lastAnomalyAttribution = new DiVector(result.attribution);
                 lastAnomalyTimeStamp = result.timeStamp;
-                lastAnomalyPoint = Arrays.copyOf(point,point.length);
+                lastAnomalyPoint = Arrays.copyOf(point, point.length);
                 update(result.rcfScore, result.rcfScore, true);
             } else {
                 // not changing inAnomaly
                 result.anomalyGrade = 0;
-                update(result.rcfScore, result.rcfScore,false);
+                update(result.rcfScore, result.rcfScore, false);
             }
         }
 
-        if (result.anomalyGrade>0){
+        if (result.anomalyGrade > 0) {
             result.expectedValuesPresent = reasonableForecast;
             if (result.relativeIndex < 0 && result.startOfAnomaly) {
                 // anomaly in the past and detected late; repositioning the computation
                 startPosition = result.attribution.getDimensions() + (result.relativeIndex - 1) * baseDimensions;
                 if (result.expectedValuesPresent) {
-                    int[] missingIndices = largestFeatures(result.attribution, startPosition, baseDimensions, numberOfAttributors);
+                    int[] missingIndices = largestFeatures(result.attribution, startPosition, baseDimensions,
+                            numberOfAttributors);
                     newPoint = forest.imputeMissingValues(point, missingIndices.length, missingIndices);
                     result.oldValues = new double[baseDimensions];
                     for (int i = 0; i < baseDimensions; i++) {
@@ -332,8 +340,8 @@ public class ThresholdedRandomCutForest{
                 for (int i = 0; i < baseDimensions; i++) {
                     result.expectedValuesList[0][i] = newPoint[startPosition + i];
                 }
-                result.likelihoodOfValues = new double[]{1.0};
-                lastExpectedPoint = Arrays.copyOf(newPoint,newPoint.length);
+                result.likelihoodOfValues = new double[] { 1.0 };
+                lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
             } else {
                 lastExpectedPoint = null;
             }
@@ -358,7 +366,6 @@ public class ThresholdedRandomCutForest{
         return lastAnomalyAttribution;
     }
 
-
     public double getIgnoreSimilarFactor() {
         return ignoreSimilarFactor;
     }
@@ -368,11 +375,11 @@ public class ThresholdedRandomCutForest{
     }
 
     public double[] getLastAnomalyPoint() {
-        return (lastAnomalyPoint == null)? null:Arrays.copyOf(lastAnomalyPoint,lastAnomalyPoint.length);
+        return (lastAnomalyPoint == null) ? null : Arrays.copyOf(lastAnomalyPoint, lastAnomalyPoint.length);
     }
 
     public double[] getLastExpectedPoint() {
-        return (lastExpectedPoint == null)? null:Arrays.copyOf(lastExpectedPoint,lastExpectedPoint.length);
+        return (lastExpectedPoint == null) ? null : Arrays.copyOf(lastExpectedPoint, lastExpectedPoint.length);
     }
 
     public boolean isInHighScoreRegion() {
@@ -391,7 +398,7 @@ public class ThresholdedRandomCutForest{
         return lastAnomalyScore;
     }
 
-    public void setIgnoreSimilarFactor(double factor){
+    public void setIgnoreSimilarFactor(double factor) {
         ignoreSimilarFactor = factor;
     }
 
@@ -399,8 +406,12 @@ public class ThresholdedRandomCutForest{
         return numberOfAttributors;
     }
 
-    public void setLowerThreshold(double threshold){
+    public void setLowerThreshold(double threshold) {
         thresholder.setLowerThreshold(threshold);
+    }
+
+    private double[] copyIfNotnull(double[] array){
+        return array==null?null:Arrays.copyOf(array,array.length);
     }
 
 }

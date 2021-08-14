@@ -25,7 +25,8 @@ import com.amazon.randomcutforest.state.RandomCutForestMapper;
 
 @Getter
 @Setter
-public class ThresholdedRandomCutForestMapper implements IStateMapper<ThresholdedRandomCutForest, ThresholdedRandomCutForestState> {
+public class ThresholdedRandomCutForestMapper
+        implements IStateMapper<ThresholdedRandomCutForest, ThresholdedRandomCutForestState> {
 
     @Override
     public ThresholdedRandomCutForest toModel(ThresholdedRandomCutForestState state, long seed) {
@@ -35,7 +36,7 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
-        return  new ThresholdedRandomCutForest(forest, thresholder, state);
+        return new ThresholdedRandomCutForest(forest, thresholder, state);
     }
 
     @Override
@@ -50,9 +51,8 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
 
         state.setForestState(randomCutForestMapper.toState(model.getForest()));
 
-        BasicThresholderMapper thresholderMapper =  new BasicThresholderMapper();
+        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
         state.setThresholderState(thresholderMapper.toState((BasicThresholder) model.getThresholder()));
-
 
         state.setTriggerFactor(model.getTriggerFactor());
         state.setInAnomaly(model.isInHighScoreRegion());
@@ -69,6 +69,5 @@ public class ThresholdedRandomCutForestMapper implements IStateMapper<Thresholde
 
         return state;
     }
-
 
 }

@@ -25,10 +25,10 @@ import com.amazon.randomcutforest.state.IStateMapper;
 @Setter
 public class DeviationMapper implements IStateMapper<Deviation, DeviationState> {
 
-
     @Override
     public Deviation toModel(DeviationState state, long seed) {
-        return new Deviation(state.getDiscount(),state.getWeight(),state.getSumSquared(),state.getSum(),state.getCount());
+        return new Deviation(state.getDiscount(), state.getWeight(), state.getSumSquared(), state.getSum(),
+                state.getCount());
     }
 
     @Override

@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 public class Deviation {
@@ -30,15 +29,15 @@ public class Deviation {
 
     protected int count = 0;
 
-    public Deviation(){
+    public Deviation() {
         discount = 0;
     }
 
-    public Deviation(double discount){
+    public Deviation(double discount) {
         this.discount = discount;
     }
 
-    public Deviation(double discount, double weight, double sumSquared,double sum, int count){
+    public Deviation(double discount, double weight, double sumSquared, double sum, int count) {
         this.discount = discount;
         this.weight = weight;
         this.sumSquared = sumSquared;
@@ -46,33 +45,33 @@ public class Deviation {
         this.count = 0;
     }
 
-    public double getMean(){
-        checkArgument(weight>0, "incorrect invocation for mean");
-        return sum/weight;
+    public double getMean() {
+        checkArgument(weight > 0, "incorrect invocation for mean");
+        return sum / weight;
     }
 
-
-    public void update(double score){
-        double factor = Math.min(1-discount,1-1.0/(count+2));
+    public void update(double score) {
+        double factor = Math.min(1 - discount, 1 - 1.0 / (count + 2));
         sum = sum * factor + score;
         sumSquared = sumSquared * factor + score * score;
         weight = weight * factor + 1.0;
         ++count;
     }
 
-
-    public double getDeviation(){
-        checkArgument(weight>0, "incorrect invocation for standard deviation");
-        double temp = sum/weight;
-        double answer = sumSquared/weight - temp * temp;
-        return (answer>0)?Math.sqrt(answer):0;
+    public double getDeviation() {
+        checkArgument(weight > 0, "incorrect invocation for standard deviation");
+        double temp = sum / weight;
+        double answer = sumSquared / weight - temp * temp;
+        return (answer > 0) ? Math.sqrt(answer) : 0;
     }
 
-    public boolean isEmpty(){
+    public boolean isEmpty() {
         return weight == 0;
     }
 
-    public double getDiscount(){return discount;}
+    public double getDiscount() {
+        return discount;
+    }
 
     public double getSum() {
         return sum;

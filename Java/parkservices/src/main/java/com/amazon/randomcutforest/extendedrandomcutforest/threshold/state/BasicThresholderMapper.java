@@ -31,7 +31,7 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         DeviationMapper deviationMapper = new DeviationMapper();
         Deviation primaryDeviation = deviationMapper.toModel(state.getPrimaryDeviationState());
         Deviation secondaryDeviation = deviationMapper.toModel(state.getSecondaryDeviationState());
-        return new BasicThresholder(state, primaryDeviation,secondaryDeviation);
+        return new BasicThresholder(state, primaryDeviation, secondaryDeviation);
     }
 
     @Override

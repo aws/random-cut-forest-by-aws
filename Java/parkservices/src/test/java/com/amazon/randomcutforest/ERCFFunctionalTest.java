@@ -39,18 +39,18 @@ public class ERCFFunctionalTest {
             RandomCutForest.Builder builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .precision(Precision.FLOAT_32).randomSeed(seed);
 
-            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder,0.01);
-            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder,0.01);
+            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder, 0.01);
+            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder, 0.01);
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
             for (int i = 0; i < new Random().nextInt(1000); i++) {
-                double [] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 AnomalyDescriptor firstResult = first.process(point);
                 AnomalyDescriptor secondResult = second.process(point);
 
-                assertEquals(firstResult.rcfScore,secondResult.rcfScore,1e-10);
-                assertEquals(firstResult.rcfScore,forest.getAnomalyScore(point),1e-10);
+                assertEquals(firstResult.rcfScore, secondResult.rcfScore, 1e-10);
+                assertEquals(firstResult.rcfScore, forest.getAnomalyScore(point), 1e-10);
                 forest.update(point);
             }
 
@@ -65,9 +65,9 @@ public class ERCFFunctionalTest {
                 AnomalyDescriptor secondResult = second.process(point);
                 AnomalyDescriptor thirdResult = third.process(point);
                 double score = forest.getAnomalyScore(point);
-                assertEquals(score,firstResult.rcfScore,1e-10);
-                assertEquals(score,secondResult.rcfScore,1e-10);
-                assertEquals(score,thirdResult.rcfScore,1e-10);
+                assertEquals(score, firstResult.rcfScore, 1e-10);
+                assertEquals(score, secondResult.rcfScore, 1e-10);
+                assertEquals(score, thirdResult.rcfScore, 1e-10);
                 forest.update(point);
             }
         }

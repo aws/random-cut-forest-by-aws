@@ -15,10 +15,9 @@
 
 package com.amazon.randomcutforest.extendedrandomcutforest.threshold;
 
-
 public interface IThresholder {
 
-    double getAnomalyGrade(double score,double optionalParameter);
+    double getAnomalyGrade(double score, double optionalParameter);
 
     double getAnomalyGrade(double score);
 
@@ -26,7 +25,7 @@ public interface IThresholder {
 
     void update(double score);
 
-    void update(double primary,double secondary);
+    void update(double primary, double secondary);
 
     void setLowerThreshold(double threshold);
 }
