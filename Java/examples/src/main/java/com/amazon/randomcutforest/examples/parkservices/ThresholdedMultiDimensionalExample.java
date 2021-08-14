@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.extendedrandomcutforest;
+package com.amazon.randomcutforest.examples.parkservices;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -23,8 +23,8 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
 import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys;
-import com.amazon.randomcutforest.extendedrandomcutforest.AnomalyDescriptor;
-import com.amazon.randomcutforest.extendedrandomcutforest.threshold.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
+import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
 
 public class ThresholdedMultiDimensionalExample implements Example {
 
@@ -62,7 +62,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision), 0.01);
 
-        long seed = new Random().nextLong();
+        long seed = -2964388187841650835L;new Random().nextLong();
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50, shingleSize, baseDimensions,
@@ -73,37 +73,37 @@ public class ThresholdedMultiDimensionalExample implements Example {
             AnomalyDescriptor result = forest.process(point);
 
             if (keyCounter < dataWithKeys.changeIndices.length
-                    && result.timeStamp + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]){
-                System.out.println("timestamp " + (result.timeStamp + shingleSize - 1) + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
+                    && result.getTimeStamp() + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]){
+                System.out.println("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 
-            if (result.anomalyGrade != 0) {
-                System.out.print("timestamp " + (result.timeStamp + shingleSize - 1) + " RESULT value ");
+            if (result.getAnomalyGrade() != 0) {
+                System.out.print("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " RESULT value ");
                 for (int i = 0; i < baseDimensions; i++) {
-                    System.out.print(result.currentValues[i] + ", ");
+                    System.out.print(result.getCurrentValues()[i] + ", ");
                 }
-                System.out.print("score " + result.rcfScore + ", grade " + result.anomalyGrade + ", ");
+                System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
 
-                if (result.expectedValuesPresent) {
-                    if (result.relativeIndex != 0 && result.startOfAnomaly) {
-                        System.out.print(-result.relativeIndex + " steps ago, instead of ");
+                if (result.isExpectedValuesPresent()) {
+                    if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
+                        System.out.print(-result.getRelativeIndex() + " steps ago, instead of ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.oldValues[i] + ", ");
+                            System.out.print(result.getOldValues()[i] + ", ");
                         }
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.expectedValuesList[0][i] + ", ");
-                            if (result.oldValues[i] != result.expectedValuesList[0][i]) {
-                                System.out.print("( " + (result.oldValues[i] - result.expectedValuesList[0][i]) + " ) ");
+                            System.out.print(result.getExpectedValuesList()[0][i] + ", ");
+                            if (result.getOldValues()[i] != result.getExpectedValuesList()[0][i]) {
+                                System.out.print("( " + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     } else {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.expectedValuesList[0][i] + ", ");
-                            if (result.currentValues[i] != result.expectedValuesList[0][i]) {
-                                System.out.print("( " + (result.currentValues[i] - result.expectedValuesList[0][i]) + " ) ");
+                            System.out.print(result.getExpectedValuesList()[0][i] + ", ");
+                            if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
+                                System.out.print("( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     }
