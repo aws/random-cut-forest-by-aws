@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
+import com.amazon.randomcutforest.returntypes.DiVector;
 
 @Getter
 @Setter

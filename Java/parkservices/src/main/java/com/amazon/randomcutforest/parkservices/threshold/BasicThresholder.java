@@ -16,12 +16,12 @@
 package com.amazon.randomcutforest.parkservices.threshold;
 
 
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.List;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

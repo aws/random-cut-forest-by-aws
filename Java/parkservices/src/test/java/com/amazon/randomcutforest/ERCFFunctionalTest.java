@@ -15,16 +15,17 @@
 
 package com.amazon.randomcutforest;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForestMapper;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
-import java.util.Random;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag("functional")
 public class ERCFFunctionalTest {

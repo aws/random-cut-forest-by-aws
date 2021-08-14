@@ -15,12 +15,13 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 @Setter
