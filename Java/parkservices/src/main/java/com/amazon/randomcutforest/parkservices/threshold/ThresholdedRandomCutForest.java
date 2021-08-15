@@ -283,9 +283,6 @@ public class ThresholdedRandomCutForest {
         System.arraycopy(point, startPosition, currentValues, 0, baseDimensions);
         result.setCurrentValues(currentValues);
 
-        if (timeStamp == 332) {
-            System.out.println("HA");
-        }
         // the forecast may not be reasonable with less data
         boolean reasonableForecast = (timeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
                 && (shingleSize * baseDimensions >= 4);
@@ -349,7 +346,7 @@ public class ThresholdedRandomCutForest {
          */
 
         double[] newPoint = null;
-        double newScore = 0;
+        double newScore = score;
         DiVector newAttribution = null;
         if (reasonableForecast) {
             int[] likelyMissingIndices = largestFeatures(attribution, startPosition, baseDimensions,
@@ -373,7 +370,7 @@ public class ThresholdedRandomCutForest {
          * anomaly on its own That decision is vended by trigger() which extrapolates a
          * partial shingle
          */
-        if (!inHighScoreRegion && trigger(attribution, gap, baseDimensions, null)) {
+        if (!previousIsPotentialAnomaly && trigger(attribution, gap, baseDimensions, null)) {
             result.setAnomalyGrade(thresholder.getAnomalyGrade(score));
             lastAnomalyScore = score;
             inHighScoreRegion = true;
@@ -392,11 +389,11 @@ public class ThresholdedRandomCutForest {
                 lastAnomalyAttribution = new DiVector(attribution);
                 lastAnomalyTimeStamp = timeStamp;
                 lastAnomalyPoint = Arrays.copyOf(point, point.length);
-                update(score, score, true);
+                update(score, newScore, true);
             } else {
                 // not changing inAnomaly
                 result.setAnomalyGrade(0);
-                update(score, score, false);
+                update(score, newScore, true);
             }
         }
 

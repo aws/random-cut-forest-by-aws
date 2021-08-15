@@ -144,7 +144,7 @@ public class BasicThresholder implements IThresholder {
             }
             double tFactor = upperZfactor;
             if (longTermDeviation() > 0) {
-                tFactor = Math.min(tFactor, score - primaryDeviation.getMean() / longTermDeviation());
+                tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / longTermDeviation());
             }
 
             return (tFactor - zFactor) / (upperZfactor - zFactor);
