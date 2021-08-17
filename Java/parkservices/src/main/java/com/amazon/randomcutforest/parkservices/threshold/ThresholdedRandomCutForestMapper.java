@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.parkservices.state.DiVectorMapper;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
@@ -46,10 +47,9 @@ public class ThresholdedRandomCutForestMapper
         tForest.setTriggerFactor(state.getTriggerFactor());
         tForest.setNumberOfAttributors(state.getNumberOfAttributors());
         tForest.setInHighScoreRegion(state.isInHighScoreRegion());
-        tForest.setLastAnomalyAttribution(state.getLastAnomalyAttribution());
+        tForest.setLastAnomalyAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
         tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
-        tForest.setLastAnomalyAttribution(state.getLastAnomalyAttribution());
 
         return tForest;
     }
@@ -74,7 +74,7 @@ public class ThresholdedRandomCutForestMapper
         state.setLastScore(model.getLastScore());
         state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
         state.setLastAnomalyScore(model.getLastAnomalyScore());
-        state.setLastAnomalyAttribution(model.getLastAnomalyAttribution());
+        state.setLastAnomalyAttribution(new DiVectorMapper().toState(model.getLastAnomalyAttribution()));
         state.setLastAnomalyPoint(model.getLastAnomalyPoint());
         state.setLastExpectedPoint(model.getLastExpectedPoint());
         state.setIgnoreSimilar(model.isIgnoreSimilar());

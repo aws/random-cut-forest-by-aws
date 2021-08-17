@@ -19,8 +19,8 @@ import static com.amazon.randomcutforest.state.Version.V2_1;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.parkservices.state.DiVectorState;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderState;
-import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 
 @Data
@@ -32,7 +32,7 @@ public class ThresholdedRandomCutForestState {
     private double triggerFactor;
     private long lastAnomalyTimeStamp;
     private double lastAnomalyScore;
-    private DiVector lastAnomalyAttribution;
+    private DiVectorState lastAnomalyAttribution;
     private double lastScore;
     private double[] lastAnomalyPoint;
     private double[] lastExpectedPoint;
