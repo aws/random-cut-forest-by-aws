@@ -46,7 +46,7 @@ public class Deviation {
         this.weight = weight;
         this.sumSquared = sumSquared;
         this.sum = sum;
-        this.count = 0;
+        this.count = count;
     }
 
     public double getMean() {

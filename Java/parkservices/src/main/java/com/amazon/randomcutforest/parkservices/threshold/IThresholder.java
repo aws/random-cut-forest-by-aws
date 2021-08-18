@@ -17,13 +17,11 @@ package com.amazon.randomcutforest.parkservices.threshold;
 
 public interface IThresholder {
 
-    double getAnomalyGrade(double score, double optionalParameter);
+    double getAnomalyGrade(double score, boolean previous, double optionalParameter);
 
-    double getAnomalyGrade(double score);
+    double getAnomalyGrade(double score, boolean previous);
 
     double getConfidenceScore(double score);
-
-    void update(double score);
 
     void update(double primary, double secondary);
 

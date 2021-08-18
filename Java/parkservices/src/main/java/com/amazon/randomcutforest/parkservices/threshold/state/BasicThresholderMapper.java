@@ -58,7 +58,6 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
         state.setElasticity(model.getElasticity());
         state.setCount(model.getCount());
-        state.setElasticity(model.getElasticity());
         state.setMinimumScores(model.getMinimumScores());
         state.setPrimaryDeviationState(deviationMapper.toState(model.getPrimaryDeviation()));
         state.setSecondaryDeviationState(deviationMapper.toState(model.getSecondaryDeviation()));

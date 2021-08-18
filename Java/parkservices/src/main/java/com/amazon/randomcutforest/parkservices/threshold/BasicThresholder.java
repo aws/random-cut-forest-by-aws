@@ -30,7 +30,10 @@ public class BasicThresholder implements IThresholder {
     // collection of points in and out of the region
     protected double elasticity = 0.01;
 
-    // keeping a count of the values seen because both variables may not be used
+    // keeping a count of the values seen because both deviation variables
+    // primaryDeviation
+    // and secondaryDeviation may not be used always -- in current code, the are
+    // both used always
     protected int count = 0;
 
     // horizon = 0 is short term, switches to secondary
@@ -47,7 +50,7 @@ public class BasicThresholder implements IThresholder {
     // fraction of the grade that comes from absolute scores in the long run
     protected double absoluteScoreFraction = 0.5;
 
-    // the upper threshold of scores above which points are likely anomalies
+    // the upper threshold of scores above which points are anomalies
     protected double upperThreshold = 2.0;
     // the upper threshold of scores above which points are likely anomalies
     protected double lowerThreshold = 1.0;
@@ -135,11 +138,13 @@ public class BasicThresholder implements IThresholder {
         return (horizon * primaryDeviation.getDeviation() + (1 - horizon) * secondaryDeviation.getDeviation());
     }
 
-    public double getAnomalyGrade(double score, double factor) {
+    public double getAnomalyGrade(double score, boolean previous, double factor) {
         checkArgument(factor >= zFactor, "incorrect call");
         // please change here is a first cut
+
+        double elasticScore = (previous) ? elasticity : 0;
         if (isLongTermReady()) {
-            if (score < longTermThreshold(factor)) {
+            if (score < longTermThreshold(factor) - elasticScore) {
                 return 0;
             }
             double tFactor = upperZfactor;
@@ -149,7 +154,7 @@ public class BasicThresholder implements IThresholder {
 
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
-            if (score < basicThreshold(factor)) {
+            if (score < basicThreshold(factor) - elasticScore) {
                 return 0;
             }
             double upper = Math.max(upperThreshold, 2 * basicThreshold(factor));
@@ -158,8 +163,8 @@ public class BasicThresholder implements IThresholder {
         }
     }
 
-    public double getAnomalyGrade(double score) {
-        return getAnomalyGrade(score, zFactor);
+    public double getAnomalyGrade(double score, boolean previous) {
+        return getAnomalyGrade(score, previous, zFactor);
     }
 
     public double getConfidenceScore(double score) {
@@ -167,8 +172,7 @@ public class BasicThresholder implements IThresholder {
         return 0;
     }
 
-    public void update(double score) {
-
+    protected void updatePrimary(double score) {
         primaryDeviation.update(score);
         ++count;
     }

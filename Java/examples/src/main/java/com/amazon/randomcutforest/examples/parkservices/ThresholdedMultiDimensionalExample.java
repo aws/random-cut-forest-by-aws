@@ -53,7 +53,6 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int dataSize = 4 * sampleSize;
 
         // change this to try different number of attributes,
-        // note that the number of anomalies are 1% per dimension;
         // this parameter is not expected to be larger than 5 for this example
         int baseDimensions = 4;
 

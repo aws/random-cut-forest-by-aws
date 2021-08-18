@@ -71,15 +71,16 @@ public class ThresholdedRandomCutForest {
     // anomaly, with the same pattern is repeated across more than a shingle
     protected boolean ignoreSimilar;
 
-    // for anomaly description we would only look at these may top attributors
-    // note that expected value is not well-defined when this number is greater than
-    // 1
+    // for anomaly description we would only look at these many top attributors
+    // AExpected value is not well-defined when this number is greater than 1
+    // that being said there is no formal restriction other than the fact that the
+    // answers would be error prone as this parameter is raised.
     int numberOfAttributors = 2;
 
     protected RandomCutForest forest;
     protected IThresholder thresholder;
 
-    public ThresholdedRandomCutForest(RandomCutForest.Builder builder, double anomalyRate) {
+    public ThresholdedRandomCutForest(RandomCutForest.Builder<?> builder, double anomalyRate) {
         forest = builder.build();
         checkArgument(!forest.isInternalShinglingEnabled(), "Incorrect setting, not supported");
         thresholder = new BasicThresholder(anomalyRate);
@@ -222,7 +223,8 @@ public class ThresholdedRandomCutForest {
      * @return true/false if the residual (extrapolated) score would trigger anomaly
      *         designation
      */
-    protected boolean trigger(DiVector candidate, int gap, int baseDimension, DiVector ideal) {
+    protected boolean trigger(DiVector candidate, int gap, int baseDimension, DiVector ideal,
+            boolean previousIsPotentialAnomaly) {
         if (lastAnomalyAttribution == null) {
             return true;
         }
@@ -237,15 +239,17 @@ public class ThresholdedRandomCutForest {
                 for (int i = dimensions - difference; i < dimensions; i++) {
                     remainder += candidate.getHighLowSum(i);
                 }
-                return thresholder.getAnomalyGrade(remainder * dimensions / difference, triggerFactor) > 0;
+                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly,
+                        triggerFactor) > 0;
             } else {
                 double differentialRemainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {
                     differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
                             + Math.abs(candidate.high[i] - ideal.high[i]);
                 }
-                return (differentialRemainder > ignoreSimilarFactor * lastAnomalyScore) && thresholder
-                        .getAnomalyGrade(differentialRemainder * dimensions / difference, triggerFactor) > 0;
+                return (differentialRemainder > ignoreSimilarFactor * lastAnomalyScore)
+                        && thresholder.getAnomalyGrade(differentialRemainder * dimensions / difference,
+                                previousIsPotentialAnomaly, triggerFactor) > 0;
             }
         } else {
             if (!ignoreSimilar) {
@@ -290,7 +294,7 @@ public class ThresholdedRandomCutForest {
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
          */
-        if (thresholder.getAnomalyGrade(score) == 0) {
+        if (thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly) == 0) {
             result.setAnomalyGrade(0);
             inHighScoreRegion = false;
             result.setInHighScoreRegion(inHighScoreRegion);
@@ -327,10 +331,12 @@ public class ThresholdedRandomCutForest {
                 System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
                         point.length - gap * baseDimensions);
             double correctedScore = forest.getAnomalyScore(correctedPoint);
-            if (thresholder.getAnomalyGrade(correctedScore) == 0) {
+            // we know we are looking previous anomalies
+            if (thresholder.getAnomalyGrade(correctedScore, true) == 0) {
                 // fixing the past makes this anomaly go away; nothing to do but process the
                 // score
-                // we will not change inAnomaly however, because the score has been larger
+                // we will not change inHighScoreRegion however, because the score has been
+                // larger
                 update(score, correctedScore, false);
                 result.setAnomalyGrade(0);
                 return result;
@@ -370,8 +376,8 @@ public class ThresholdedRandomCutForest {
          * anomaly on its own That decision is vended by trigger() which extrapolates a
          * partial shingle
          */
-        if (!previousIsPotentialAnomaly && trigger(attribution, gap, baseDimensions, null)) {
-            result.setAnomalyGrade(thresholder.getAnomalyGrade(score));
+        if (!previousIsPotentialAnomaly && trigger(attribution, gap, baseDimensions, null, false)) {
+            result.setAnomalyGrade(thresholder.getAnomalyGrade(score, false));
             lastAnomalyScore = score;
             inHighScoreRegion = true;
             result.setStartOfAnomaly(true);
@@ -383,8 +389,9 @@ public class ThresholdedRandomCutForest {
             /**
              * we again check if the new input produces an anomaly/not on its own
              */
-            if (trigger(attribution, gap, baseDimensions, newAttribution) && score > newScore) {
-                result.setAnomalyGrade(thresholder.getAnomalyGrade(score));
+            if (trigger(attribution, gap, baseDimensions, newAttribution, previousIsPotentialAnomaly)
+                    && score > newScore) {
+                result.setAnomalyGrade(thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly));
                 lastAnomalyScore = score;
                 lastAnomalyAttribution = new DiVector(attribution);
                 lastAnomalyTimeStamp = timeStamp;
