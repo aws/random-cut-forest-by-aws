@@ -39,15 +39,15 @@ public class ERCFFunctionalTest {
             RandomCutForest.Builder builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .precision(Precision.FLOAT_32).randomSeed(seed);
 
-            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder, 0.01);
-            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder, 0.01);
+            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder, 0.01, false);
+            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder, 0.01, false);
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
             for (int i = 0; i < new Random().nextInt(1000); i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                AnomalyDescriptor firstResult = first.process(point);
-                AnomalyDescriptor secondResult = second.process(point);
+                AnomalyDescriptor firstResult = first.process(point, 0L);
+                AnomalyDescriptor secondResult = second.process(point, 0L);
 
                 assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
                 assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
@@ -61,9 +61,9 @@ public class ERCFFunctionalTest {
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                AnomalyDescriptor firstResult = first.process(point);
-                AnomalyDescriptor secondResult = second.process(point);
-                AnomalyDescriptor thirdResult = third.process(point);
+                AnomalyDescriptor firstResult = first.process(point, 0L);
+                AnomalyDescriptor secondResult = second.process(point, 0L);
+                AnomalyDescriptor thirdResult = third.process(point, 0L);
                 double score = forest.getAnomalyScore(point);
                 assertEquals(score, firstResult.getRcfScore(), 1e-10);
                 assertEquals(score, secondResult.getRcfScore(), 1e-10);

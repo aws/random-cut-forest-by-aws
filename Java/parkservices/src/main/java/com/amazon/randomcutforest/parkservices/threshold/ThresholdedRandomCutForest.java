@@ -77,26 +77,47 @@ public class ThresholdedRandomCutForest {
     // answers would be error prone as this parameter is raised.
     int numberOfAttributors = 2;
 
+    int valuesSeen = 0;
+
+    Deviation timeStampDeviation;
+
+    long previousTimeStamp = 0;
+
+    boolean timeStampDifferencingEnabled;
+
     protected RandomCutForest forest;
     protected IThresholder thresholder;
 
-    public ThresholdedRandomCutForest(RandomCutForest.Builder<?> builder, double anomalyRate) {
+    public ThresholdedRandomCutForest(RandomCutForest.Builder<?> builder, double anomalyRate,
+            boolean timeStampDifferencingEnabled) {
         forest = builder.build();
-        checkArgument(!forest.isInternalShinglingEnabled(), "Incorrect setting, not supported");
+        checkArgument(!forest.isRotationEnabled(), "Incorrect setting, not supported");
         thresholder = new BasicThresholder(anomalyRate);
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
             thresholder.setLowerThreshold(1.1);
         }
+        this.timeStampDifferencingEnabled = timeStampDifferencingEnabled;
+        if (timeStampDifferencingEnabled) {
+            timeStampDeviation = new Deviation();
+        }
     }
 
-    public ThresholdedRandomCutForest(RandomCutForest forest, IThresholder thresholder) {
+    public ThresholdedRandomCutForest(RandomCutForest forest, IThresholder thresholder, Deviation deviation) {
         this.forest = forest;
         this.thresholder = thresholder;
+        this.timeStampDeviation = deviation;
     }
 
-    public AnomalyDescriptor process(double[] point) {
+    public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
+        double[] point = forest.transformToShingledPoint(inputPoint);
         AnomalyDescriptor result = getAnomalyDescription(point);
-        forest.update(point);
+        if (timeStampDifferencingEnabled && valuesSeen > 0) {
+            timeStampDeviation.update(timestamp - previousTimeStamp);
+        } else if (valuesSeen == 0) {
+            previousTimeStamp = timestamp;
+        }
+        ++valuesSeen;
+        forest.update(inputPoint);
         return result;
     }
 
@@ -455,6 +476,10 @@ public class ThresholdedRandomCutForest {
 
     public void setLastAnomalyPoint(double[] point) {
         lastAnomalyPoint = copyIfNotnull(point);
+    }
+
+    public Deviation getTimeStampDeviation() {
+        return timeStampDeviation;
     }
 
     public void setLastExpectedPoint(double[] point) {

@@ -21,6 +21,7 @@ import lombok.Setter;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.state.DiVectorMapper;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderMapper;
+import com.amazon.randomcutforest.parkservices.threshold.state.DeviationMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 
@@ -37,7 +38,10 @@ public class ThresholdedRandomCutForestMapper
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
-        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder);
+
+        Deviation timeStampDeviation = new DeviationMapper().toModel(state.getTimeStampDeviationState());
+
+        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, timeStampDeviation);
         tForest.setIgnoreSimilar(state.isIgnoreSimilar());
         tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
         tForest.setLastScore(state.getLastScore());
@@ -50,6 +54,9 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastAnomalyAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
         tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
+        tForest.setValuesSeen(state.getValuesSeen());
+        tForest.setPreviousTimeStamp(state.getPreviousTimeStamp());
+        tForest.setTimeStampDifferencingEnabled(state.isTimeStampDifferencingEnabled());
 
         return tForest;
     }
@@ -78,6 +85,9 @@ public class ThresholdedRandomCutForestMapper
         state.setLastAnomalyPoint(model.getLastAnomalyPoint());
         state.setLastExpectedPoint(model.getLastExpectedPoint());
         state.setIgnoreSimilar(model.isIgnoreSimilar());
+        state.setPreviousTimeStamp(model.getPreviousTimeStamp());
+        state.setValuesSeen(model.getValuesSeen());
+        state.setTimeStampDeviationState(new DeviationMapper().toState(model.getTimeStampDeviation()));
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());

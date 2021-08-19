@@ -21,6 +21,7 @@ import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.DiVectorState;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderState;
+import com.amazon.randomcutforest.parkservices.threshold.state.DeviationState;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 
 @Data
@@ -40,5 +41,9 @@ public class ThresholdedRandomCutForestState {
     private boolean inHighScoreRegion;
     private boolean ignoreSimilar;
     private int numberOfAttributors;
+    private boolean timeStampDifferencingEnabled;
+    private long previousTimeStamp;
+    private int valuesSeen;
+    private DeviationState timeStampDeviationState;
     private long randomSeed;
 }

@@ -26,10 +26,10 @@ import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
 
-public class ThresholdedMultiDimensionalExample implements Example {
+public class ThresholdedInternalShinglingExample implements Example {
 
     public static void main(String[] args) throws Exception {
-        new ThresholdedMultiDimensionalExample().run();
+        new ThresholdedInternalShinglingExample().run();
     }
 
     @Override
@@ -59,27 +59,28 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest(RandomCutForest.builder().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).precision(precision), 0.01, false);
+                .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision), 0.01, false);
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
-        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50,
-                shingleSize, baseDimensions, seed);
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
+                100, 5, seed, baseDimensions);
+
         int keyCounter = 0;
         for (double[] point : dataWithKeys.data) {
 
             AnomalyDescriptor result = forest.process(point, 0L);
 
             if (keyCounter < dataWithKeys.changeIndices.length
-                    && result.getTimeStamp() + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " CHANGE "
+                    && result.getTimeStamp() == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println("timestamp " + (result.getTimeStamp()) + " CHANGE "
                         + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("timestamp " + (result.getTimeStamp() + shingleSize - 1) + " RESULT value ");
+                System.out.print("timestamp " + (result.getTimeStamp()) + " RESULT value ");
                 for (int i = 0; i < baseDimensions; i++) {
                     System.out.print(result.getCurrentValues()[i] + ", ");
                 }

@@ -58,7 +58,7 @@ public class ShingledMultiDimDataWithKeys {
         return shingledPoint;
     }
 
-    private static MultiDimDataWithKey getMultiDimData(int num, int period, double amplitude, double noise, long seed,
+    public static MultiDimDataWithKey getMultiDimData(int num, int period, double amplitude, double noise, long seed,
             int baseDimension) {
         double[][] data = new double[num][];
         double[][] changes = new double[num][];
