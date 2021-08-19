@@ -37,6 +37,7 @@
 
     <modules>
         <module>core</module>
+        <module>parkservices</module>
         <module>benchmark</module>
         <module>examples</module>
         <module>serialization</module>

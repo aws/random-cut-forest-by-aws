@@ -592,11 +592,20 @@ public class RandomCutForest {
      * @return a shingled copy or a clean copy
      */
 
-    protected double[] transformToShingledPoint(double[] point) {
+    public double[] transformToShingledPoint(double[] point) {
         checkNotNull(point, "point must not be null");
         return (internalShinglingEnabled && point.length == inputDimensions)
                 ? stateCoordinator.getStore().transformToShingledPoint(point)
                 : ArrayUtils.cleanCopy(point);
+    }
+
+    /**
+     * does the pointstore use rotated shingles
+     * 
+     * @return true/false based on pointstore
+     */
+    public boolean isRotationEnabled() {
+        return stateCoordinator.getStore().isInternalRotationEnabled();
     }
 
     /**

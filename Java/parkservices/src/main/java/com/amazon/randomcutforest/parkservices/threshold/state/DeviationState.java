@@ -13,9 +13,19 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state;
+package com.amazon.randomcutforest.parkservices.threshold.state;
 
-public class Version {
-    public static final String V2_0 = "2.0";
-    public static final String V2_1 = "2.1";
+import lombok.Data;
+
+@Data
+public class DeviationState {
+    private double discount;
+
+    private double weight;
+
+    private double sumSquared;
+
+    private double sum;
+
+    private int count;
 }

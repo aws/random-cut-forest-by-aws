@@ -21,6 +21,11 @@
         </dependency>
         <dependency>
             <groupId>software.amazon.randomcutforest</groupId>
+            <artifactId>randomcutforest-parkservices</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.randomcutforest</groupId>
             <artifactId>randomcutforest-testutils</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -43,6 +48,12 @@
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-runtime</artifactId>
             <version>1.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.14</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
