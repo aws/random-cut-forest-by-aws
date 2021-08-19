@@ -97,9 +97,7 @@ public class ThresholdedRandomCutForest {
             thresholder.setLowerThreshold(1.1);
         }
         this.timeStampDifferencingEnabled = timeStampDifferencingEnabled;
-        if (timeStampDifferencingEnabled) {
-            timeStampDeviation = new Deviation();
-        }
+        timeStampDeviation = new Deviation();
     }
 
     public ThresholdedRandomCutForest(RandomCutForest forest, IThresholder thresholder, Deviation deviation) {
