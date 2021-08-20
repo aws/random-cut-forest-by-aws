@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.examples.parkservices;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
@@ -56,12 +55,17 @@ public class ThresholdedInternalShinglingExample implements Example {
         // this parameter is not expected to be larger than 5 for this example
         int baseDimensions = 4;
 
+        long count = 0;
+
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest(RandomCutForest.builder().compact(true)
+        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision), 0.01, false);
+                .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                .timeStampDifferencingEnabled(true).normalizeTimeDifferences(true).build();
 
         long seed = new Random().nextLong();
+        Random noisePRG = new Random();
+
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
@@ -70,7 +74,8 @@ public class ThresholdedInternalShinglingExample implements Example {
         int keyCounter = 0;
         for (double[] point : dataWithKeys.data) {
 
-            AnomalyDescriptor result = forest.process(point, 0L);
+            AnomalyDescriptor result = forest.process(point, 100 * count + noisePRG.nextInt(10) - 5);
+            ++count;
 
             if (keyCounter < dataWithKeys.changeIndices.length
                     && result.getTimeStamp() == dataWithKeys.changeIndices[keyCounter]) {

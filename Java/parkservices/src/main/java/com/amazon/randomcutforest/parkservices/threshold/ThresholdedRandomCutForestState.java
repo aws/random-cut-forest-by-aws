@@ -46,4 +46,7 @@ public class ThresholdedRandomCutForestState {
     private int valuesSeen;
     private DeviationState timeStampDeviationState;
     private long randomSeed;
+    private boolean imputeEnabled;
+    private int imputeStrategy;
+    private boolean normalizeTimeDifferences;
 }

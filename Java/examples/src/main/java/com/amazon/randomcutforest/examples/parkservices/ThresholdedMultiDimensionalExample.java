@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.examples.parkservices;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
@@ -57,9 +56,11 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int baseDimensions = 4;
 
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest(RandomCutForest.builder().compact(true)
+
+        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).precision(precision), 0.01, false);
+                .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).timeStampDifferencingEnabled(false)
+                .build();
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);

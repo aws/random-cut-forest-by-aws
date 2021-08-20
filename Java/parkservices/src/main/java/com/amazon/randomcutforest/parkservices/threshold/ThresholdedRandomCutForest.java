@@ -16,13 +16,29 @@
 package com.amazon.randomcutforest.parkservices.threshold;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_COMPACT;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_DIRECT_LOCATION_MAP;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INTERNAL_ROTATION_ENABLED;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INTERNAL_SHINGLING_ENABLED;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_NUMBER_OF_TREES;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_PARALLEL_EXECUTION_ENABLED;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_PRECISION;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 
 import java.util.Arrays;
+import java.util.Optional;
+import java.util.Random;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
@@ -31,6 +47,10 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 public class ThresholdedRandomCutForest {
 
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
+
+    public static int FILL_VALUES = 0;
+
+    public static int FILL_IN_PREVIOUS = 1;
 
     // a parameter that determines if the current potential anomaly is describing
     // the same anomaly
@@ -77,27 +97,55 @@ public class ThresholdedRandomCutForest {
     // answers would be error prone as this parameter is raised.
     int numberOfAttributors = 2;
 
+    // this parameter is used in imputing missing values in the input
     int valuesSeen = 0;
 
+    // the input corresponds to timestamp data and this statistic helps align input
     Deviation timeStampDeviation;
 
+    // recording the last seen timestamp
     long previousTimeStamp = 0;
 
+    // based on this flag the data would be augmented internally with the difference
+    // of time stamps
+    // the values in AnomalyDescriptor would correspond to this increased dimension
     boolean timeStampDifferencingEnabled;
+
+    // normalize time difference;
+    boolean normalizeTimeDifferences;
+
+    // if the option is set then it imputes missing values
+    boolean imputeEnabled = false;
+
+    // particular strategy for impute
+    int imputeStrategy = FILL_IN_PREVIOUS;
 
     protected RandomCutForest forest;
     protected IThresholder thresholder;
 
-    public ThresholdedRandomCutForest(RandomCutForest.Builder<?> builder, double anomalyRate,
-            boolean timeStampDifferencingEnabled) {
-        forest = builder.build();
-        checkArgument(!forest.isRotationEnabled(), "Incorrect setting, not supported");
-        thresholder = new BasicThresholder(anomalyRate);
+    public ThresholdedRandomCutForest(Builder builder) {
+        checkArgument(!builder.internalRotationEnabled, "Incorrect setting, not supported");
+        checkArgument(!builder.timeStampDifferencingEnabled || builder.internalShinglingEnabled,
+                "" + " timestamps require internal shingling");
+        checkArgument(!builder.imputeEnabled || builder.internalShinglingEnabled,
+                "" + " imputations require internal shingling");
+        checkArgument(!builder.imputeEnabled || !builder.timeStampDifferencingEnabled,
+                " cannot have both impute and time differencing");
+        checkArgument(!builder.imputeEnabled || builder.dimensions >= 4 && builder.shingleSize > 1,
+                "imputation will be noisy/unhelpful");
+        checkArgument(!normalizeTimeDifferences || timeStampDifferencingEnabled, "incorrect normalization option");
+        this.timeStampDifferencingEnabled = builder.timeStampDifferencingEnabled;
+        this.imputeEnabled = builder.imputeEnabled;
+        this.normalizeTimeDifferences = builder.normalizeTimeDifferences;
+        timeStampDeviation = new Deviation();
+        if (this.timeStampDifferencingEnabled) {
+            builder.dimensions += builder.shingleSize;
+        }
+        forest = builder.buildForest();
+        thresholder = new BasicThresholder(builder.anomalyRate);
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
             thresholder.setLowerThreshold(1.1);
         }
-        this.timeStampDifferencingEnabled = timeStampDifferencingEnabled;
-        timeStampDeviation = new Deviation();
     }
 
     public ThresholdedRandomCutForest(RandomCutForest forest, IThresholder thresholder, Deviation deviation) {
@@ -107,15 +155,59 @@ public class ThresholdedRandomCutForest {
     }
 
     public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
-        double[] point = forest.transformToShingledPoint(inputPoint);
+        double[] input = inputPoint;
+        if (timeStampDifferencingEnabled) { // augment with time difference
+            input = new double[inputPoint.length + 1];
+            System.arraycopy(inputPoint, 0, input, 0, inputPoint.length);
+            if (valuesSeen <= 1) {
+                input[inputPoint.length] = 0;
+            } else {
+                double diff = timestamp - previousTimeStamp;
+                if (normalizeTimeDifferences) {
+                    checkArgument(diff > 0, "incorrect time parameters");
+                    if (Math.abs(diff - timeStampDeviation.getMean()) > 4 * timeStampDeviation.getDeviation()) {
+                        input[inputPoint.length] = 4;
+                    } else {
+                        input[inputPoint.length] = (diff - timeStampDeviation.getMean())
+                                / timeStampDeviation.getDeviation();
+                    }
+                } else {
+                    input[inputPoint.length] = diff - timeStampDeviation.getMean();
+                }
+            }
+        } else if (imputeEnabled && valuesSeen > 1) {
+            checkArgument(timeStampDeviation.getMean() <= 0, " incorrect timestamps for imputation");
+            checkArgument(timeStampDeviation.getMean() > 2 * timeStampDeviation.getDeviation(),
+                    " too many gaps for this strategy");
+            checkArgument(timestamp > previousTimeStamp, "incorrect order of time");
+            int gap = (int) Math.floor((timestamp - previousTimeStamp) / timeStampDeviation.getMean());
+            if (gap >= 2) {
+                int dimension = forest.getDimensions();
+                int baseDimension = dimension / forest.getShingleSize();
+                double[] last = forest.lastShingledPoint();
+                if (imputeStrategy == FILL_IN_PREVIOUS) {
+                    double[] newPart = new double[baseDimension];
+                    System.arraycopy(last, dimension - baseDimension, newPart, 0, baseDimension);
+                    for (int i = 0; i < gap - 1; i++) {
+                        forest.update(newPart);
+                    }
+                }
+                /*
+                 * NOT yet finished else if (imputeStrategy == FILL_VALUES) {
+                 * 
+                 * }
+                 * 
+                 */
+            }
+        }
+        double[] point = forest.transformToShingledPoint(input);
         AnomalyDescriptor result = getAnomalyDescription(point);
         if (timeStampDifferencingEnabled && valuesSeen > 0) {
             timeStampDeviation.update(timestamp - previousTimeStamp);
-        } else if (valuesSeen == 0) {
-            previousTimeStamp = timestamp;
         }
+        previousTimeStamp = timestamp;
         ++valuesSeen;
-        forest.update(inputPoint);
+        forest.update(input);
         return result;
     }
 
@@ -486,6 +578,179 @@ public class ThresholdedRandomCutForest {
 
     private double[] copyIfNotnull(double[] array) {
         return array == null ? null : Arrays.copyOf(array, array.length);
+    }
+
+    public static class Builder<T extends Builder<T>> {
+
+        public ThresholdedRandomCutForest build() {
+            return new ThresholdedRandomCutForest(this);
+        }
+
+        public RandomCutForest buildForest() {
+            RandomCutForest.Builder<?> builder = new RandomCutForest.Builder<>().dimensions(dimensions)
+                    .sampleSize(sampleSize).numberOfTrees(numberOfTrees).compact(compact)
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).centerOfMassEnabled(centerOfMassEnabled)
+                    .parallelExecutionEnabled(parallelExecutionEnabled).precision(precision)
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).shingleSize(shingleSize)
+                    .internalShinglingEnabled(internalShinglingEnabled)
+                    .internalShinglingEnabled(internalShinglingEnabled).initialAcceptFraction(initialAcceptFraction);
+            outputAfter.ifPresent(builder::outputAfter);
+            timeDecay.ifPresent(builder::timeDecay);
+            randomSeed.ifPresent(builder::randomSeed);
+            threadPoolSize.ifPresent(builder::threadPoolSize);
+            initialPointStoreSize.ifPresent(builder::initialPointStoreSize);
+            return builder.build();
+        }
+
+        // We use Optional types for optional primitive fields when it doesn't make
+        // sense to use a constant default.
+
+        private int dimensions;
+        private int sampleSize = DEFAULT_SAMPLE_SIZE;
+        private Optional<Integer> outputAfter = Optional.empty();
+        private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
+        private Optional<Double> timeDecay = Optional.empty();
+        private Optional<Long> randomSeed = Optional.empty();
+        private boolean compact = DEFAULT_COMPACT;
+        private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+        private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
+        private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
+        private Optional<Integer> threadPoolSize = Optional.empty();
+        private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
+        private Precision precision = DEFAULT_PRECISION;
+        private double boundingBoxCacheFraction = DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+        private int shingleSize = DEFAULT_SHINGLE_SIZE;
+        private boolean internalShinglingEnabled = DEFAULT_INTERNAL_SHINGLING_ENABLED;
+        protected boolean internalRotationEnabled = DEFAULT_INTERNAL_ROTATION_ENABLED;
+        protected Optional<Integer> initialPointStoreSize = Optional.empty();
+        protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
+        protected double anomalyRate = 0.01;
+        protected boolean timeStampDifferencingEnabled = false;
+        protected boolean imputeEnabled = false;
+        protected int imputeStrategy = FILL_IN_PREVIOUS;
+        protected boolean normalizeTimeDifferences = false;
+
+        public T dimensions(int dimensions) {
+            this.dimensions = dimensions;
+            return (T) this;
+        }
+
+        public T sampleSize(int sampleSize) {
+            this.sampleSize = sampleSize;
+            return (T) this;
+        }
+
+        public T outputAfter(int outputAfter) {
+            this.outputAfter = Optional.of(outputAfter);
+            return (T) this;
+        }
+
+        public T numberOfTrees(int numberOfTrees) {
+            this.numberOfTrees = numberOfTrees;
+            return (T) this;
+        }
+
+        public T shingleSize(int shingleSize) {
+            this.shingleSize = shingleSize;
+            return (T) this;
+        }
+
+        public T timeDecay(double timeDecay) {
+            this.timeDecay = Optional.of(timeDecay);
+            return (T) this;
+        }
+
+        public T randomSeed(long randomSeed) {
+            this.randomSeed = Optional.of(randomSeed);
+            return (T) this;
+        }
+
+        public T centerOfMassEnabled(boolean centerOfMassEnabled) {
+            this.centerOfMassEnabled = centerOfMassEnabled;
+            return (T) this;
+        }
+
+        public T parallelExecutionEnabled(boolean parallelExecutionEnabled) {
+            this.parallelExecutionEnabled = parallelExecutionEnabled;
+            return (T) this;
+        }
+
+        public T threadPoolSize(int threadPoolSize) {
+            this.threadPoolSize = Optional.of(threadPoolSize);
+            return (T) this;
+        }
+
+        public T initialPointStoreSize(int initialPointStoreSize) {
+            this.initialPointStoreSize = Optional.of(initialPointStoreSize);
+            return (T) this;
+        }
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+            return (T) this;
+        }
+
+        public T compact(boolean compact) {
+            this.compact = compact;
+            return (T) this;
+        }
+
+        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
+            this.internalShinglingEnabled = internalShinglingEnabled;
+            return (T) this;
+        }
+
+        public T internalRotationEnabled(boolean internalRotationEnabled) {
+            this.internalRotationEnabled = internalRotationEnabled;
+            return (T) this;
+        }
+
+        public T precision(Precision precision) {
+            this.precision = precision;
+            return (T) this;
+        }
+
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
+            return (T) this;
+        }
+
+        public T initialAcceptFraction(double initialAcceptFraction) {
+            this.initialAcceptFraction = initialAcceptFraction;
+            return (T) this;
+        }
+
+        public Random getRandom() {
+            // If a random seed was given, use it to create a new Random. Otherwise, call
+            // the 0-argument constructor
+            return randomSeed.map(Random::new).orElseGet(Random::new);
+        }
+
+        public T anomalyRate(double anomalyRate) {
+            this.anomalyRate = anomalyRate;
+            return (T) this;
+        }
+
+        public T timeStampDifferencingEnabled(boolean timeStampDifferencingEnabled) {
+            this.timeStampDifferencingEnabled = timeStampDifferencingEnabled;
+            return (T) this;
+        }
+
+        public T imputeEnabled(boolean imputeEnabled) {
+            this.imputeEnabled = imputeEnabled;
+            return (T) this;
+        }
+
+        public T imputeStrategy(int imputeStrategy) {
+            this.imputeStrategy = imputeStrategy;
+            return (T) this;
+        }
+
+        public T normalizeTimeDifferences(boolean normalizeTimeDifferences) {
+            this.normalizeTimeDifferences = normalizeTimeDifferences;
+            return (T) this;
+        }
+
     }
 
 }

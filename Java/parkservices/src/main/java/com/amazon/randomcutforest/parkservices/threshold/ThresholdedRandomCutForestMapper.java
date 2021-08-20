@@ -57,6 +57,9 @@ public class ThresholdedRandomCutForestMapper
         tForest.setValuesSeen(state.getValuesSeen());
         tForest.setPreviousTimeStamp(state.getPreviousTimeStamp());
         tForest.setTimeStampDifferencingEnabled(state.isTimeStampDifferencingEnabled());
+        tForest.setImputeEnabled(state.isImputeEnabled());
+        tForest.setImputeStrategy(state.getImputeStrategy());
+        tForest.setNormalizeTimeDifferences(state.isNormalizeTimeDifferences());
 
         return tForest;
     }
@@ -91,6 +94,10 @@ public class ThresholdedRandomCutForestMapper
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
+        state.setTimeStampDifferencingEnabled(model.isTimeStampDifferencingEnabled());
+        state.setImputeEnabled(model.isImputeEnabled());
+        state.setImputeStrategy(model.getImputeStrategy());
+        state.setNormalizeTimeDifferences(model.isNormalizeTimeDifferences());
 
         return state;
     }
