@@ -384,7 +384,7 @@ public class RandomCutForest {
      * that isn't used. This argument exists only to create a distinct method
      * signature so that we can expose {@link #RandomCutForest(Builder)} as a
      * protected constructor.
-     * 
+     *
      * @param builder A Builder instance giving the desired random cut forest
      *                configuration.
      * @param notUsed This parameter is not used.
@@ -587,12 +587,12 @@ public class RandomCutForest {
     /**
      * used for scoring and other function, expands to a shingled point in either
      * case performs a clean copy
-     * 
+     *
      * @param point input point
      * @return a shingled copy or a clean copy
      */
 
-    protected double[] transformToShingledPoint(double[] point) {
+    public double[] transformToShingledPoint(double[] point) {
         checkNotNull(point, "point must not be null");
         return (internalShinglingEnabled && point.length == inputDimensions)
                 ? stateCoordinator.getStore().transformToShingledPoint(point)
@@ -600,9 +600,18 @@ public class RandomCutForest {
     }
 
     /**
+     * does the pointstore use rotated shingles
+     *
+     * @return true/false based on pointstore
+     */
+    public boolean isRotationEnabled() {
+        return stateCoordinator.getStore().isInternalRotationEnabled();
+    }
+
+    /**
      * transforms the missing indices on the input point to the corresponding
      * indices of a shingled point
-     * 
+     *
      * @param indexList input array of missing values
      * @param length    length of the input array
      * @return output array of missing values corresponding to shingle
@@ -678,7 +687,7 @@ public class RandomCutForest {
 
     /**
      * changes the setting of time dependent sampling on the fly
-     * 
+     *
      * @param timeDecay new value of sampling rate
      */
     public void setTimeDecay(double timeDecay) {

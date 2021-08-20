@@ -13,9 +13,16 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state;
+package com.amazon.randomcutforest.examples.datasets;
 
-public class Version {
-    public static final String V2_0 = "2.0";
-    public static final String V2_1 = "2.1";
+public class MultiDimDataWithKey {
+    public double[][] data;
+    public int[] changeIndices;
+    public double[][] changes;
+
+    public MultiDimDataWithKey(double[][] data, int[] changeIndices, double[][] changes) {
+        this.data = data;
+        this.changeIndices = changeIndices;
+        this.changes = changes;
+    }
 }
