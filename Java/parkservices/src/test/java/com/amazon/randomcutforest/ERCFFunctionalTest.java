@@ -36,11 +36,13 @@ public class ERCFFunctionalTest {
         for (int trials = 0; trials < 10; trials++) {
 
             long seed = new Random().nextLong();
-            RandomCutForest.Builder builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
+            RandomCutForest.Builder<?> builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .precision(Precision.FLOAT_32).randomSeed(seed);
 
-            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest(builder, 0.01, false);
-            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(builder, 0.01, false);
+            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).anomalyRate(0.01).build();
+            ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).anomalyRate(0.01).build();
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
