@@ -19,6 +19,8 @@ import static com.amazon.randomcutforest.state.Version.V2_1;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.config.FillIn;
+import com.amazon.randomcutforest.config.Mode;
 import com.amazon.randomcutforest.parkservices.state.DiVectorState;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderState;
 import com.amazon.randomcutforest.parkservices.threshold.state.DeviationState;
@@ -47,6 +49,10 @@ public class ThresholdedRandomCutForestState {
     private DeviationState timeStampDeviationState;
     private long randomSeed;
     private boolean imputeEnabled;
-    private int imputeStrategy;
+    private boolean storeImputed;
+    private FillIn fillIn;
     private boolean normalizeTimeDifferences;
+    private Mode mode;
+    private double[] lastShingledPoint;
+    private double[] defaultFill;
 }

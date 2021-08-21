@@ -29,6 +29,8 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_PRECISION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+import static com.amazon.randomcutforest.config.FillIn.FIXEDVALUES;
+import static com.amazon.randomcutforest.config.FillIn.PREVIOUS;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -38,19 +40,41 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.FillIn;
+import com.amazon.randomcutforest.config.Mode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
+/**
+ * This class provides a combined RCF and thresholder, both of which operate in
+ * a streaming manner and respect the arrow of time. The class is ideally
+ * supposed to be used in one of three modes;
+ *
+ * Sparse : this corresponds to sequence of events and time stamps are augmented
+ * to the incoming point. ShingleSize 4 or higher is preferable; lowering the
+ * shingleSize may lose quality of anomalies and explanations. Internal
+ * Shingling shoule be used.
+ *
+ * Bursty : this corresponds to intermittent data and again shinglesize of 4 or
+ * more is preferable missing value can be filled with 0's or specified values
+ * (a vector of same length as the input point specifying coordinate values.
+ * Choosing to store the imputed intermediate values in RCF is an option.
+ *
+ * Moderately continuous: missing values are filled in via previous values or
+ * using impute; the latter would use a minimum number of observations, and
+ * would fill in via previous till that point is reached. ShingleSize is
+ * recommended to be 4. Choosing to store the imputed intermediate values in RCF
+ * is an option.
+ *
+ * Custom: change parameters themselves
+ *
+ */
 @Getter
 @Setter
 public class ThresholdedRandomCutForest {
 
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
-
-    public static int FILL_VALUES = 0;
-
-    public static int FILL_IN_PREVIOUS = 1;
 
     // a parameter that determines if the current potential anomaly is describing
     // the same anomaly
@@ -117,13 +141,27 @@ public class ThresholdedRandomCutForest {
     // if the option is set then it imputes missing values
     boolean imputeEnabled = false;
 
+    // store imputed shingles
+    boolean storeImputed = false;
+
     // particular strategy for impute
-    int imputeStrategy = FILL_IN_PREVIOUS;
+    FillIn fillIn = PREVIOUS;
+
+    // mode of operation
+    Mode mode = Mode.MODERATE;
+
+    // for FILL_VALUES
+    double[] defaultFill;
+
+    // last point
+    double[] lastShingledPoint;
+
+    boolean internalShingling;
 
     protected RandomCutForest forest;
     protected IThresholder thresholder;
 
-    public ThresholdedRandomCutForest(Builder builder) {
+    public ThresholdedRandomCutForest(Builder<?> builder) {
         checkArgument(!builder.internalRotationEnabled, "Incorrect setting, not supported");
         checkArgument(!builder.timeStampDifferencingEnabled || builder.internalShinglingEnabled,
                 "" + " timestamps require internal shingling");
@@ -133,7 +171,9 @@ public class ThresholdedRandomCutForest {
                 " cannot have both impute and time differencing");
         checkArgument(!builder.imputeEnabled || builder.dimensions >= 4 && builder.shingleSize > 1,
                 "imputation will be noisy/unhelpful");
-        checkArgument(!normalizeTimeDifferences || timeStampDifferencingEnabled, "incorrect normalization option");
+        checkArgument(!builder.normalizeTimeDifferences || builder.timeStampDifferencingEnabled,
+                "incorrect normalization option");
+
         this.timeStampDifferencingEnabled = builder.timeStampDifferencingEnabled;
         this.imputeEnabled = builder.imputeEnabled;
         this.normalizeTimeDifferences = builder.normalizeTimeDifferences;
@@ -142,6 +182,7 @@ public class ThresholdedRandomCutForest {
             builder.dimensions += builder.shingleSize;
         }
         forest = builder.buildForest();
+        lastShingledPoint = new double[forest.getDimensions()];
         thresholder = new BasicThresholder(builder.anomalyRate);
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
             thresholder.setLowerThreshold(1.1);
@@ -159,45 +200,36 @@ public class ThresholdedRandomCutForest {
         if (timeStampDifferencingEnabled) { // augment with time difference
             input = new double[inputPoint.length + 1];
             System.arraycopy(inputPoint, 0, input, 0, inputPoint.length);
-            if (valuesSeen <= 1) {
-                input[inputPoint.length] = 0;
-            } else {
-                double diff = timestamp - previousTimeStamp;
-                if (normalizeTimeDifferences) {
-                    checkArgument(diff > 0, "incorrect time parameters");
-                    if (Math.abs(diff - timeStampDeviation.getMean()) > 4 * timeStampDeviation.getDeviation()) {
-                        input[inputPoint.length] = 4;
+            input[inputPoint.length] = (valuesSeen <= 1) ? 0
+                    : map(timestamp - previousTimeStamp, normalizeTimeDifferences);
+        } else {
+            if (imputeEnabled && valuesSeen > 1) {
+                checkArgument(timeStampDeviation.getMean() <= 0, " incorrect timestamps for imputation");
+                checkArgument(timeStampDeviation.getMean() > 2 * timeStampDeviation.getDeviation(),
+                        " too many gaps for this strategy");
+                checkArgument(timestamp > previousTimeStamp, "incorrect order of time");
+                int gap = (int) Math.floor((timestamp - previousTimeStamp) / timeStampDeviation.getMean());
+                if (gap >= 1.8) {
+                    int dimension = forest.getDimensions();
+                    int baseDimension = dimension / forest.getShingleSize();
+                    if (storeImputed) {
+                        checkArgument(forest.isInternalShinglingEnabled(), "error");
+                        for (int i = 0; i < gap - 1; i++) {
+                            forest.update(extractNew(fillIn, baseDimension, forest.lastShingledPoint()));
+                        }
                     } else {
-                        input[inputPoint.length] = (diff - timeStampDeviation.getMean())
-                                / timeStampDeviation.getDeviation();
-                    }
-                } else {
-                    input[inputPoint.length] = diff - timeStampDeviation.getMean();
-                }
-            }
-        } else if (imputeEnabled && valuesSeen > 1) {
-            checkArgument(timeStampDeviation.getMean() <= 0, " incorrect timestamps for imputation");
-            checkArgument(timeStampDeviation.getMean() > 2 * timeStampDeviation.getDeviation(),
-                    " too many gaps for this strategy");
-            checkArgument(timestamp > previousTimeStamp, "incorrect order of time");
-            int gap = (int) Math.floor((timestamp - previousTimeStamp) / timeStampDeviation.getMean());
-            if (gap >= 2) {
-                int dimension = forest.getDimensions();
-                int baseDimension = dimension / forest.getShingleSize();
-                double[] last = forest.lastShingledPoint();
-                if (imputeStrategy == FILL_IN_PREVIOUS) {
-                    double[] newPart = new double[baseDimension];
-                    System.arraycopy(last, dimension - baseDimension, newPart, 0, baseDimension);
-                    for (int i = 0; i < gap - 1; i++) {
-                        forest.update(newPart);
+                        checkArgument(internalShingling, "error");
+                        checkArgument(inputPoint.length == baseDimension, "error in length");
+                        for (int i = 0; i < gap - 1; i++) {
+                            double[] newPart = extractNew(fillIn, baseDimension, lastShingledPoint);
+                            shiftLeft(lastShingledPoint, baseDimension);
+                            copyAtEnd(lastShingledPoint, newPart);
+                        }
+                        shiftLeft(lastShingledPoint, baseDimension);
+                        copyAtEnd(lastShingledPoint, inputPoint);
+                        input = Arrays.copyOf(lastShingledPoint, dimension);
                     }
                 }
-                /*
-                 * NOT yet finished else if (imputeStrategy == FILL_VALUES) {
-                 * 
-                 * }
-                 * 
-                 */
             }
         }
         double[] point = forest.transformToShingledPoint(input);
@@ -393,9 +425,10 @@ public class ThresholdedRandomCutForest {
         result.setAttribution(attribution);
         int shingleSize = forest.getShingleSize();
         int baseDimensions = forest.getDimensions() / shingleSize;
-        double[] currentValues = new double[baseDimensions];
         int startPosition = (shingleSize - 1) * baseDimensions;
-        System.arraycopy(point, startPosition, currentValues, 0, baseDimensions);
+        int adjustTime = (timeStampDifferencingEnabled) ? 1 : 0;
+        double[] currentValues = new double[baseDimensions - adjustTime];
+        System.arraycopy(point, startPosition, currentValues, 0, baseDimensions - adjustTime);
         result.setCurrentValues(currentValues);
 
         // the forecast may not be reasonable with less data
@@ -525,25 +558,32 @@ public class ThresholdedRandomCutForest {
                     int[] missingIndices = largestFeatures(attribution, startPosition, baseDimensions,
                             numberOfAttributors);
                     newPoint = forest.imputeMissingValues(point, missingIndices.length, missingIndices);
-                    double[] oldValues = new double[baseDimensions];
-                    System.arraycopy(point, startPosition, oldValues, 0, baseDimensions);
+                    double[] oldValues = new double[baseDimensions - adjustTime];
+                    System.arraycopy(point, startPosition, oldValues, 0, baseDimensions - adjustTime);
                     result.setOldValues(oldValues);
                 }
             }
             if (reasonableForecast) {
-                double[] values = new double[baseDimensions];
-                System.arraycopy(newPoint, startPosition, values, 0, baseDimensions);
+                double[] values = new double[baseDimensions - adjustTime];
+                System.arraycopy(newPoint, startPosition, values, 0, baseDimensions - adjustTime);
                 result.setExpectedValues(0, values, 1.0);
                 lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
+                if (timeStampDifferencingEnabled) {
+                    result.setExpectedTimeStamp(
+                            inverseMap(newPoint[startPosition + baseDimensions - 1], normalizeTimeDifferences));
+                }
             } else {
                 lastExpectedPoint = null;
             }
 
-            double[] flattenedAttribution = new double[baseDimensions];
-            for (int i = 0; i < baseDimensions; i++) {
+            double[] flattenedAttribution = new double[baseDimensions - adjustTime];
+            for (int i = 0; i < baseDimensions - adjustTime; i++) {
                 flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
             }
             result.setFlattenedAttribution(flattenedAttribution);
+            if (timeStampDifferencingEnabled) {
+                result.setTimeAttribution(attribution.getHighLowSum(startPosition + baseDimensions - 1));
+            }
         }
         return result;
     }
@@ -627,7 +667,8 @@ public class ThresholdedRandomCutForest {
         protected double anomalyRate = 0.01;
         protected boolean timeStampDifferencingEnabled = false;
         protected boolean imputeEnabled = false;
-        protected int imputeStrategy = FILL_IN_PREVIOUS;
+        protected FillIn fillin = PREVIOUS;
+        protected Mode mode = Mode.CUSTOM;
         protected boolean normalizeTimeDifferences = false;
 
         public T dimensions(int dimensions) {
@@ -741,8 +782,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T imputeStrategy(int imputeStrategy) {
-            this.imputeStrategy = imputeStrategy;
+        public T fillIn(FillIn fillIn) {
+            this.fillin = fillIn;
             return (T) this;
         }
 
@@ -751,6 +792,88 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
+        public T setMode(Mode mode) {
+            this.mode = mode;
+            return (T) this;
+        }
+
     }
 
+    double map(long timeStampDiff, boolean normalize) {
+        if (normalize) {
+            if (timeStampDiff - timeStampDeviation.getMean() > 4 * timeStampDeviation.getDeviation()) {
+                return 2;
+            }
+            if (timeStampDiff - timeStampDeviation.getMean() < -4 * timeStampDeviation.getDeviation()) {
+                return -2;
+            } else {
+                return (timeStampDiff - timeStampDeviation.getMean()) / (2 * timeStampDeviation.getDeviation());
+            }
+        } else {
+            return timeStampDiff - timeStampDeviation.getMean();
+        }
+    }
+
+    long inverseMap(double gap, boolean normalize) {
+        if (normalize) {
+            return (long) Math.floor(timeStampDeviation.getMean() + 2 * gap * timeStampDeviation.getDeviation());
+        } else {
+            return (long) Math.floor(gap + timeStampDeviation.getMean());
+        }
+    }
+
+    double[] extractNew(FillIn fillin, int baseDimension, double[] lastShingledPoint) {
+        double[] result = new double[baseDimension];
+        if (fillin == FillIn.ZERO) {
+            return result;
+        }
+        if (fillin == FIXEDVALUES) {
+            System.arraycopy(defaultFill, 0, result, 0, baseDimension);
+            return result;
+        }
+        int dimension = forest.getDimensions();
+        if (fillin == PREVIOUS || forest.getTotalUpdates() < MINIMUM_OBSERVATIONS_FOR_EXPECTED && dimension >= 4
+                && baseDimension <= 2) {
+            System.arraycopy(lastShingledPoint, dimension - baseDimension, result, 0, baseDimension);
+            return result;
+        }
+        int[] positions = new int[baseDimension];
+        double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
+        shiftLeft(temp, baseDimension);
+        for (int y = 0; y < baseDimension; y++) {
+            positions[y] = dimension - baseDimension + y;
+        }
+        double[] newPoint = forest.imputeMissingValues(temp, baseDimension, positions);
+        System.arraycopy(newPoint, dimension - baseDimension, result, 0, baseDimension);
+        return result;
+    }
+
+    void shiftLeft(double[] array, int baseDimension) {
+        for (int i = 0; i < array.length - baseDimension; i++) {
+            array[i] = array[i + baseDimension];
+        }
+    }
+
+    void copyAtEnd(double[] array, double[] small) {
+        checkArgument(array.length > small.length, " incorrect operation ");
+        for (int i = 0; i < small.length; i++) {
+            array[i] = array[array.length - small.length + i];
+        }
+    }
+
+    public double[] getLastShingledPoint() {
+        return copyIfNotnull(lastShingledPoint);
+    }
+
+    public void setLastShingledPoint(double[] point) {
+        lastShingledPoint = copyIfNotnull(point);
+    }
+
+    public double[] getDefaultFill() {
+        return copyIfNotnull(defaultFill);
+    }
+
+    public void setDefaultFill(double[] values) {
+        defaultFill = copyIfNotnull(values);
+    }
 }

@@ -56,12 +56,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int baseDimensions = 4;
 
         int dimensions = baseDimensions * shingleSize;
-<<<<<<< HEAD
-
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
-=======
-        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder().compact(true)
->>>>>>> 8b7d9700301b6b5ce39cc9f3010ba6d78acb9c0a
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).timeStampDifferencingEnabled(false)
                 .build();

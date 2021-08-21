@@ -58,8 +58,11 @@ public class ThresholdedRandomCutForestMapper
         tForest.setPreviousTimeStamp(state.getPreviousTimeStamp());
         tForest.setTimeStampDifferencingEnabled(state.isTimeStampDifferencingEnabled());
         tForest.setImputeEnabled(state.isImputeEnabled());
-        tForest.setImputeStrategy(state.getImputeStrategy());
+        tForest.setFillIn(state.getFillIn());
+        tForest.setLastShingledPoint(state.getLastShingledPoint());
         tForest.setNormalizeTimeDifferences(state.isNormalizeTimeDifferences());
+        tForest.setDefaultFill(state.getDefaultFill());
+        tForest.setStoreImputed(state.isStoreImputed());
 
         return tForest;
     }
@@ -96,8 +99,12 @@ public class ThresholdedRandomCutForestMapper
         state.setNumberOfAttributors(model.getNumberOfAttributors());
         state.setTimeStampDifferencingEnabled(model.isTimeStampDifferencingEnabled());
         state.setImputeEnabled(model.isImputeEnabled());
-        state.setImputeStrategy(model.getImputeStrategy());
+        state.setFillIn(model.getFillIn());
+        state.setMode(model.getMode());
+        state.setLastShingledPoint(model.getLastShingledPoint());
+        state.setDefaultFill(model.getDefaultFill());
         state.setNormalizeTimeDifferences(model.isNormalizeTimeDifferences());
+        state.setStoreImputed(model.isStoreImputed());
 
         return state;
     }

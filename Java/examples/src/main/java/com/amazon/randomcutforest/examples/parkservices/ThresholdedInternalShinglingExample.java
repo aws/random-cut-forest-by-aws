@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.examples.parkservices;
 
+import java.util.Arrays;
+import java.util.Random;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
 import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
-
-import java.util.Arrays;
-import java.util.Random;
 
 public class ThresholdedInternalShinglingExample implements Example {
 

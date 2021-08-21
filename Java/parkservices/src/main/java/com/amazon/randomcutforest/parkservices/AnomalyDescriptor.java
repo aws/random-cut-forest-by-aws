@@ -43,6 +43,9 @@ public class AnomalyDescriptor {
     // timestamp (basically a sequence index); kept as long for potential future use
     long timeStamp;
 
+    // if the anomaly is due to timestamp when it is augmented
+    long expectedTimeStamp;
+
     // confidence, for both anomalies/non-anomalies
     double confidence;
 
@@ -73,6 +76,9 @@ public class AnomalyDescriptor {
     // (not shingled) for the
     // time slice indicated by relativeIndex
     double[] flattenedAttribution;
+
+    // when time is appended
+    double timeAttribution;
 
     // current values
     double[] currentValues;
