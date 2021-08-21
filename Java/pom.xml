@@ -40,7 +40,6 @@
         <module>parkservices</module>
         <module>benchmark</module>
         <module>examples</module>
-        <module>parkservices</module>
         <module>serialization</module>
         <module>testutils</module>
     </modules>
