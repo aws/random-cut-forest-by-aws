@@ -40,10 +40,12 @@ public class AnomalyDescriptor {
     // information
     DiVector attribution;
 
+    long numberOfUpdates;
+
     // timestamp (basically a sequence index); kept as long for potential future use
     long timeStamp;
 
-    // if the anomaly is due to timestamp when it is augmented
+    // if the anomaly is due to timestamp when it is augmented only for current time
     long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
@@ -85,6 +87,9 @@ public class AnomalyDescriptor {
 
     // the values being replaced; may correspond to past
     double[] oldValues;
+
+    // older timestamp if that is replaced
+    long oldTimeStamp;
 
     // expected values, currently set to maximum 1
     double[][] expectedValuesList;

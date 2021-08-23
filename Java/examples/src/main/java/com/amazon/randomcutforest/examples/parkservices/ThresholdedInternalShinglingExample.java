@@ -18,12 +18,13 @@ package com.amazon.randomcutforest.examples.parkservices;
 import java.util.Arrays;
 import java.util.Random;
 
+import com.amazon.randomcutforest.config.Mode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.examples.datasets.MultiDimDataWithKey;
-import com.amazon.randomcutforest.examples.datasets.ShingledMultiDimDataWithKeys;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 public class ThresholdedInternalShinglingExample implements Example {
 
@@ -61,10 +62,13 @@ public class ThresholdedInternalShinglingExample implements Example {
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
-                .timeStampDifferencingEnabled(true).normalizeTimeDifferences(true).build();
+                .setMode(Mode.TIMEAUGMENTED).normalizeTime(true).build();
 
-        long seed = new Random().nextLong();
-        Random noisePRG = new Random();
+        long seed = -1980663695491958710L;
+        new Random().nextLong();
+        long newSeed = 2081836497573511944L;
+        new Random().nextLong();
+        Random noisePRG = new Random(newSeed);
 
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
@@ -75,17 +79,15 @@ public class ThresholdedInternalShinglingExample implements Example {
         for (double[] point : dataWithKeys.data) {
 
             AnomalyDescriptor result = forest.process(point, 100 * count + noisePRG.nextInt(10) - 5);
-            ++count;
 
-            if (keyCounter < dataWithKeys.changeIndices.length
-                    && result.getTimeStamp() == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (result.getTimeStamp()) + " CHANGE "
-                        + Arrays.toString(dataWithKeys.changes[keyCounter]));
+            if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
+                System.out
+                        .println("timestamp " + count + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("timestamp " + (result.getTimeStamp()) + " RESULT value ");
+                System.out.print("timestamp " + count + " RESULT value ");
                 for (int i = 0; i < baseDimensions; i++) {
                     System.out.print(result.getCurrentValues()[i] + ", ");
                 }
@@ -119,6 +121,7 @@ public class ThresholdedInternalShinglingExample implements Example {
                 }
                 System.out.println();
             }
+            ++count;
         }
 
     }

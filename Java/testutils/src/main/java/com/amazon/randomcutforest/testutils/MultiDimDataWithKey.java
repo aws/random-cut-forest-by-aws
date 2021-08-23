@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.datasets;
+package com.amazon.randomcutforest.testutils;
 
 public class MultiDimDataWithKey {
     public double[][] data;

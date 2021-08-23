@@ -43,16 +43,21 @@ public class ThresholdedRandomCutForestState {
     private boolean inHighScoreRegion;
     private boolean ignoreSimilar;
     private int numberOfAttributors;
+    private int stopNormalization;
+    private double clipFactor;
     private boolean timeStampDifferencingEnabled;
-    private long previousTimeStamp;
+    private long[] previousTimeStamps;
     private int valuesSeen;
     private DeviationState timeStampDeviationState;
+    private DeviationState[] deviationStates;
+    private boolean normalizeValues;
     private long randomSeed;
-    private boolean imputeEnabled;
-    private boolean storeImputed;
+    private boolean useImptedInModel;
+    private double useImputedFraction;
     private FillIn fillIn;
-    private boolean normalizeTimeDifferences;
+    private boolean normalizeTime;
     private Mode mode;
     private double[] lastShingledPoint;
+    private double[] lastShingledInput;
     private double[] defaultFill;
 }

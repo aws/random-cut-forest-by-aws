@@ -21,26 +21,22 @@ package com.amazon.randomcutforest.config;
 public enum Mode {
 
     /**
-     * sparse: we should add timestamps, fill in is not meaningful
+     * a standard mode that uses shingling and most known applications; it uses the
+     * last K data points where K=1 would correspond to non time series (population)
+     * analysis
      */
-    SPARSE,
+    STANDARD,
     /**
-     * continuous, with potentially long gaps where data would me missing fill in
-     * with zero or specific values is most reasonable
+     * time stamp is added automatically to data to correlate within RCF itself;
+     * this is useful for event streaams and for modeling sparse events. Option is
+     * provided to normalize the time gaps.
      */
-    BURSTY,
+    TIMEAUGMENTED,
     /**
-     * dense data, shorter gaps; filling in with previous value/imputation is
-     * reasonable
+     * uses various Fill-In strageies for data with gaps but not really sparse. Must
+     * have shingleSize greater than 1, typically larger shingle size is better, and
+     * so is fewer input dimensions
      */
-    MODERATE,
-    /**
-     * ignores timestamp and treats data as sequence, no FillIn
-     */
-    LASTFEW,
-    /**
-     * change parameters at will
-     */
-    CUSTOM;
+    STREAMINGIMPUTE;
 
 }

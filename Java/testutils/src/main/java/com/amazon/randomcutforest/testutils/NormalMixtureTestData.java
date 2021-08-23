@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.testutils;
 
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -80,6 +81,37 @@ public class NormalMixtureTestData {
         }
 
         return result;
+    }
+
+    public MultiDimDataWithKey generateTestDataWithKey(int numberOfRows, int numberOfColumns, int seed) {
+        double[][] resultData = new double[numberOfRows][numberOfColumns];
+        int[] change = new int[numberOfRows];
+        int numberOfChanges = 0;
+        boolean anomaly = false;
+
+        NormalDistribution dist;
+        if (seed != 0)
+            dist = new NormalDistribution(new Random(seed));
+        else
+            dist = new NormalDistribution(new Random());
+
+        for (int i = 0; i < numberOfRows; i++) {
+            if (!anomaly) {
+                fillRow(resultData[i], dist, baseMu, baseSigma);
+                if (Math.random() < transitionToAnomalyProbability) {
+                    change[numberOfChanges++] = i + 1; // next item is different
+                    anomaly = true;
+                }
+            } else {
+                fillRow(resultData[i], dist, anomalyMu, anomalySigma);
+                if (Math.random() < transitionToBaseProbability) {
+                    anomaly = false;
+                    change[numberOfChanges++] = i + 1; // next item is different
+                }
+            }
+        }
+
+        return new MultiDimDataWithKey(resultData, Arrays.copyOf(change, numberOfChanges), null);
     }
 
     private void fillRow(double[] row, NormalDistribution dist, double mu, double sigma) {
