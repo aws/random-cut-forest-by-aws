@@ -31,12 +31,12 @@ public enum ForestMode {
      * this is useful for event streaams and for modeling sparse events. Option is
      * provided to normalize the time gaps.
      */
-    TIMEAUGMENTED,
+    TIME_AUGMENTED,
     /**
      * uses various Fill-In strageies for data with gaps but not really sparse. Must
      * have shingleSize greater than 1, typically larger shingle size is better, and
      * so is fewer input dimensions
      */
-    STREAMINGIMPUTE;
+    STREAMING_IMPUTE;
 
 }

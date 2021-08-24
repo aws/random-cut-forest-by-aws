@@ -42,7 +42,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -54,7 +54,7 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
                 .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -66,7 +66,7 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -79,7 +79,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -91,7 +91,7 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
                 .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -104,7 +104,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
                         .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -266,11 +266,13 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
-                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .setMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
-                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .setMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .anomalyRate(0.01).build();
 
         Random r = new Random();
         long count = 0;
@@ -317,11 +319,13 @@ public class ThresholdedRandomCutForestTest {
                 .build();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
-                .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
-                .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).build();
 
         Random r = new Random();
         long count = 0;

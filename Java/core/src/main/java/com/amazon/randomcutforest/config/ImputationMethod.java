@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.config;
 /**
  * Options for filling in missing values
  */
-public enum FillIn {
+public enum ImputationMethod {
 
     /**
      * use all 0's
@@ -27,7 +27,7 @@ public enum FillIn {
     /**
      * use a fixed set of specified values (same as input dimension)
      */
-    FIXEDVALUES,
+    FIXED_VALUES,
     /**
      * last known value in each input dimension
      */

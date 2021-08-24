@@ -28,8 +28,8 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
-import static com.amazon.randomcutforest.config.FillIn.FIXEDVALUES;
-import static com.amazon.randomcutforest.config.FillIn.PREVIOUS;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -39,8 +39,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.FillIn;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.returntypes.DiVector;
@@ -151,7 +151,7 @@ public class ThresholdedRandomCutForest {
     int numberOfImputed;
 
     // particular strategy for impute
-    FillIn fillIn = PREVIOUS;
+    ImputationMethod imputationMethod = PREVIOUS;
 
     // forestMode of operation
     ForestMode forestMode = ForestMode.STANDARD;
@@ -181,18 +181,18 @@ public class ThresholdedRandomCutForest {
         lastShingledInput = new double[builder.dimensions];
         differencing = builder.differencing;
 
-        if (builder.forestMode == ForestMode.TIMEAUGMENTED) {
+        if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
             inputLength = builder.dimensions / builder.shingleSize;
             builder.dimensions += builder.shingleSize;
             normalizeTime = builder.normalizeTime;
             // force internal shingling for this option
             builder.internalShinglingEnabled = Optional.of(true);
-        } else if (builder.forestMode == ForestMode.STREAMINGIMPUTE) {
+        } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
             inputLength = builder.dimensions / builder.shingleSize;
-            this.fillIn = builder.fillin;
+            this.imputationMethod = builder.fillin;
             numberOfImputed = builder.shingleSize;
             builder.internalShinglingEnabled = Optional.of(false);
-            if (this.fillIn == FIXEDVALUES) {
+            if (this.imputationMethod == FIXED_VALUES) {
                 int baseDimension = builder.dimensions / builder.shingleSize;
                 // shingling will be performed in this layer and not in forest
                 // so that we control admittance of imputed shingles
@@ -262,7 +262,7 @@ public class ThresholdedRandomCutForest {
         checkArgument(input.length == deviationList.length, " mismatch in length");
         double[] normalized = new double[input.length];
         for (int i = 0; i < input.length; i++) {
-            normalized[i] = map(input[i], true, deviationList[i]);
+            normalized[i] = normalize(input[i], true, deviationList[i]);
         }
         return normalized;
     }
@@ -279,7 +279,8 @@ public class ThresholdedRandomCutForest {
         double[] scaledInput = new double[normalized.length + 1];
         System.arraycopy(normalized, 0, scaledInput, 0, normalized.length);
         scaledInput[normalized.length] = (valuesSeen <= 1) ? 0
-                : map(timestamp - previousTimeStamps[forest.getShingleSize() - 1], normalizeTime, timeStampDeviation);
+                : normalize(timestamp - previousTimeStamps[forest.getShingleSize() - 1], normalizeTime,
+                        timeStampDeviation);
         return scaledInput;
     }
 
@@ -304,7 +305,7 @@ public class ThresholdedRandomCutForest {
             if (gap >= 1.5) {
                 checkArgument(input.length == baseDimension, "error in length");
                 for (int i = 0; i < gap - 1; i++) {
-                    double[] newPart = extractNew(fillIn, baseDimension, lastShingledPoint);
+                    double[] newPart = impute(imputationMethod, baseDimension, lastShingledPoint);
                     shiftLeft(lastShingledPoint, baseDimension);
                     copyAtEnd(lastShingledPoint, newPart);
                     numberOfImputed++;
@@ -335,7 +336,7 @@ public class ThresholdedRandomCutForest {
             timeStampDeviation.update(timeStamp - previousTimeStamps[forest.getShingleSize() - 1]);
             if (normalizeValues && valuesSeen < stopNormalization) {
                 for (int i = 0; i < input.length; i++) {
-                    deviationList[i].update(map(input[i], true, deviationList[i]));
+                    deviationList[i].update(normalize(input[i], true, deviationList[i]));
                 }
             }
         }
@@ -368,9 +369,9 @@ public class ThresholdedRandomCutForest {
 
         double[] scaledInput = (normalizeValues) ? applyNormalization(input) : input;
 
-        if (forestMode == ForestMode.TIMEAUGMENTED) {
+        if (forestMode == ForestMode.TIME_AUGMENTED) {
             scaledInput = augmentTime(scaledInput, timestamp);
-        } else if (forestMode == ForestMode.STREAMINGIMPUTE) {
+        } else if (forestMode == ForestMode.STREAMING_IMPUTE) {
             scaledInput = applyImpute(scaledInput, timestamp);
         }
 
@@ -383,7 +384,7 @@ public class ThresholdedRandomCutForest {
         updateState(inputPoint, input, timestamp);
 
         // update forest
-        if (forestMode != ForestMode.STREAMINGIMPUTE
+        if (forestMode != ForestMode.STREAMING_IMPUTE
                 || numberOfImputed < useImputedFraction * forest.getShingleSize()) {
             forest.update(scaledInput);
         }
@@ -566,14 +567,14 @@ public class ThresholdedRandomCutForest {
         double score = attribution.getHighLowSum();
         result.setRcfScore(score);
         long internalTimeStamp = forest.getTotalUpdates();
-        result.setNumberOfUpdates(internalTimeStamp);
-        result.setTimeStamp(inputTimeStamp);
+        result.setTotalUpdates(internalTimeStamp);
+        result.setTimestamp(inputTimeStamp);
         result.setForestSize(forest.getNumberOfTrees());
         result.setAttribution(attribution);
         int shingleSize = forest.getShingleSize();
         int baseDimensions = forest.getDimensions() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
-        int adjustTime = (forestMode == ForestMode.TIMEAUGMENTED) ? 1 : 0;
+        int adjustTime = (forestMode == ForestMode.TIME_AUGMENTED) ? 1 : 0;
 
         if (score > 0) {
             double[] currentValues = Arrays.copyOf(inputPoint, inputPoint.length);
@@ -632,7 +633,7 @@ public class ThresholdedRandomCutForest {
                                 + y] += lastAnomalyPoint[point.length - baseDimensions + y]
                                         - lastExpectedPoint[point.length - baseDimensions + y];
                     }
-                } else if (forestMode == ForestMode.TIMEAUGMENTED) {
+                } else if (forestMode == ForestMode.TIME_AUGMENTED) {
                     // need to fix the effect of the timestamp on the next stamp due to differencing
                     // in case of normalization there is an issue is discount is set too high (but
                     // not for the default)
@@ -743,7 +744,7 @@ public class ThresholdedRandomCutForest {
                 }
 
                 result.setRelativeIndex(index);
-                if (forestMode == ForestMode.TIMEAUGMENTED) {
+                if (forestMode == ForestMode.TIME_AUGMENTED) {
                     result.setExpectedTimeStamp(inverseMapTime(newPoint[startPosition + baseDimensions - 1],
                             result.getRelativeIndex(), normalizeTime));
                 }
@@ -751,7 +752,7 @@ public class ThresholdedRandomCutForest {
                 double[] values = new double[baseDimensions - adjustTime];
                 for (int i = 0; i < baseDimensions - adjustTime; i++) {
                     values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
-                            : inverseMap(newPoint[startPosition + i], 0, normalizeValues, differencing, deviationList,
+                            : denormalize(newPoint[startPosition + i], 0, normalizeValues, differencing, deviationList,
                                     i);
                 }
                 result.setExpectedValues(0, values, 1.0);
@@ -765,7 +766,7 @@ public class ThresholdedRandomCutForest {
                 flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
             }
             result.setFlattenedAttribution(flattenedAttribution);
-            if (forestMode == ForestMode.TIMEAUGMENTED) {
+            if (forestMode == ForestMode.TIME_AUGMENTED) {
                 result.setTimeAttribution(attribution.getHighLowSum(startPosition + baseDimensions - 1));
             }
         }
@@ -812,7 +813,7 @@ public class ThresholdedRandomCutForest {
      * @param deviation statistic
      * @return the normalized value
      */
-    double map(double value, boolean normalize, Deviation deviation) {
+    double normalize(double value, boolean normalize, Deviation deviation) {
         if (normalize) {
             if (value - deviation.getMean() >= 2 * clipFactor * deviation.getDeviation()) {
                 return clipFactor;
@@ -828,7 +829,18 @@ public class ThresholdedRandomCutForest {
         }
     }
 
-    double inverseMap(double gap, int relativeIndex, boolean normalize, boolean difference, Deviation[] deviations,
+    /**
+     * inverse of above map
+     * 
+     * @param gap           observed value
+     * @param relativeIndex position in index (often 0)
+     * @param normalize     (flag indicating normalization
+     * @param difference    are values
+     * @param deviations    statistic of attribute
+     * @param index         attribute number
+     * @return potential value
+     */
+    double denormalize(double gap, int relativeIndex, boolean normalize, boolean difference, Deviation[] deviations,
             int index) {
         int base = lastShingledInput.length / forest.getShingleSize();
         int position = (forest.getShingleSize() - 1 + relativeIndex) * base;
@@ -873,12 +885,12 @@ public class ThresholdedRandomCutForest {
      *         input
      */
 
-    double[] extractNew(FillIn fillin, int baseDimension, double[] lastShingledPoint) {
+    double[] impute(ImputationMethod fillin, int baseDimension, double[] lastShingledPoint) {
         double[] result = new double[baseDimension];
-        if (fillin == FillIn.ZERO) {
+        if (fillin == ImputationMethod.ZERO) {
             return result;
         }
-        if (fillin == FIXEDVALUES) {
+        if (fillin == FIXED_VALUES) {
             System.arraycopy(defaultFill, 0, result, 0, baseDimension);
             return result;
         }
@@ -966,7 +978,7 @@ public class ThresholdedRandomCutForest {
         protected Optional<Boolean> internalShinglingEnabled = Optional.empty();
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
         protected double anomalyRate = 0.01;
-        protected FillIn fillin = PREVIOUS;
+        protected ImputationMethod fillin = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
         protected boolean normalizeTime = false;
         protected boolean normalizeValues = false;
@@ -975,7 +987,7 @@ public class ThresholdedRandomCutForest {
         protected boolean differencing = false;
 
         void validate() {
-            if (forestMode == ForestMode.TIMEAUGMENTED) {
+            if (forestMode == ForestMode.TIME_AUGMENTED) {
                 if (internalShinglingEnabled.isPresent()) {
                     checkArgument(shingleSize == 1 || internalShinglingEnabled.get(),
                             " shingle size has to be 1 or " + "internal shingling must turned on");
@@ -987,7 +999,7 @@ public class ThresholdedRandomCutForest {
                 if (useImputedFraction.isPresent()) {
                     throw new IllegalArgumentException(" imputation infeasible");
                 }
-            } else if (forestMode == ForestMode.STREAMINGIMPUTE) {
+            } else if (forestMode == ForestMode.STREAMING_IMPUTE) {
                 checkArgument(shingleSize > 1, "imputation with shingle size 1 is not meaningful");
                 internalShinglingEnabled.ifPresent(x -> checkArgument(x, " non-internal shingling requires "
                         + " full shingles : for these there is nothing to imputer "));
@@ -1115,8 +1127,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T fillIn(FillIn fillIn) {
-            this.fillin = fillIn;
+        public T fillIn(ImputationMethod imputationMethod) {
+            this.fillin = imputationMethod;
             return (T) this;
         }
 

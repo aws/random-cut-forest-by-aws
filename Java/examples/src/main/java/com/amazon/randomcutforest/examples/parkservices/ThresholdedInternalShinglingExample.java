@@ -66,7 +66,7 @@ public class ThresholdedInternalShinglingExample implements Example {
 
         long seed = new Random().nextLong();
         long newSeed = new Random().nextLong();
-        Random noisePRG = new Random(newSeed);
+        Random noise = new Random(newSeed);
 
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
@@ -76,7 +76,12 @@ public class ThresholdedInternalShinglingExample implements Example {
         int keyCounter = 0;
         for (double[] point : dataWithKeys.data) {
 
-            AnomalyDescriptor result = forest.process(point, 100 * count + noisePRG.nextInt(10) - 5);
+            // idea is that we expect the arrival order to be roughly 100 apart (say
+            // seconds)
+            // then the noise corresponds to a jitter; one can try TIME_AUGMENTED and
+            // .normalizeTime(true)
+
+            AnomalyDescriptor result = forest.process(point, 100 * count + noise.nextInt(10) - 5);
 
             if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
                 System.out

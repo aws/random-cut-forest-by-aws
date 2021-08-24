@@ -64,7 +64,7 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
         tForest.setValuesSeen(state.getValuesSeen());
         tForest.setPreviousTimeStamps(state.getPreviousTimeStamps());
-        tForest.setFillIn(state.getFillIn());
+        tForest.setImputationMethod(state.getImputationMethod());
         tForest.setLastShingledPoint(state.getLastShingledPoint());
         tForest.setNormalizeTime(state.isNormalizeTime());
         tForest.setDefaultFill(state.getDefaultFill());
@@ -120,7 +120,7 @@ public class ThresholdedRandomCutForestMapper
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
-        state.setFillIn(model.getFillIn());
+        state.setImputationMethod(model.getImputationMethod());
         state.setForestMode(model.getForestMode());
         state.setLastShingledPoint(model.getLastShingledPoint());
         state.setDefaultFill(model.getDefaultFill());
