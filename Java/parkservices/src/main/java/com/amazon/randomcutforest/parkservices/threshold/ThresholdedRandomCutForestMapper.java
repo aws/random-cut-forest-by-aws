@@ -72,8 +72,10 @@ public class ThresholdedRandomCutForestMapper
         tForest.setNormalizeValues(state.isNormalizeValues());
         tForest.setStopNormalization(state.getStopNormalization());
         tForest.setClipFactor(state.getClipFactor());
-        tForest.setMode(state.getMode());
+        tForest.setForestMode(state.getForestMode());
         tForest.setLastShingledInput(state.getLastShingledInput());
+        tForest.setDifferencing(state.isDifferencing());
+        tForest.setLastRelativeIndex(state.getLastRelativeIndex());
 
         return tForest;
     }
@@ -119,7 +121,7 @@ public class ThresholdedRandomCutForestMapper
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
         state.setFillIn(model.getFillIn());
-        state.setMode(model.getMode());
+        state.setForestMode(model.getForestMode());
         state.setLastShingledPoint(model.getLastShingledPoint());
         state.setDefaultFill(model.getDefaultFill());
         state.setNormalizeTime(model.isNormalizeTime());
@@ -127,6 +129,8 @@ public class ThresholdedRandomCutForestMapper
         state.setClipFactor(model.getClipFactor());
         state.setStopNormalization(model.getStopNormalization());
         state.setLastShingledInput(model.getLastShingledInput());
+        state.setDifferencing(model.isDifferencing());
+        state.setLastRelativeIndex(model.getLastRelativeIndex());
         return state;
     }
 

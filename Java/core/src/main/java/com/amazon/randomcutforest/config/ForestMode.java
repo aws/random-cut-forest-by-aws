@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.config;
 /**
  * Options for using RCF, specially with thresholds
  */
-public enum Mode {
+public enum ForestMode {
 
     /**
      * a standard mode that uses shingling and most known applications; it uses the

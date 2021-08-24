@@ -23,7 +23,7 @@ import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.config.Mode;
+import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
@@ -42,7 +42,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -54,7 +54,7 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -66,7 +66,7 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -79,7 +79,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.STREAMINGIMPUTE)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -91,8 +91,8 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.STREAMINGIMPUTE).shingleSize(shingleSize)
-                .anomalyRate(0.01).build());
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
+                .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
     @Test
@@ -104,7 +104,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.STREAMINGIMPUTE)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMINGIMPUTE)
                         .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -123,7 +123,7 @@ public class ThresholdedRandomCutForestTest {
                     .internalShinglingEnabled(true).anomalyRate(0.01).build();
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).anomalyRate(0.01)
-                    .setMode(Mode.STANDARD).internalShinglingEnabled(false).build();
+                    .setMode(ForestMode.STANDARD).internalShinglingEnabled(false).build();
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
@@ -266,10 +266,10 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
 
         Random r = new Random();
@@ -317,10 +317,10 @@ public class ThresholdedRandomCutForestTest {
                 .build();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(Mode.TIMEAUGMENTED)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIMEAUGMENTED)
                 .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
 
         Random r = new Random();
