@@ -59,10 +59,10 @@ public class ThresholdedInternalShinglingExample implements Example {
         long count = 0;
 
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
-                .setMode(ForestMode.STANDARD).build();
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).setMode(ForestMode.STANDARD)
+                .build();
 
         long seed = 0;
         new Random().nextLong();
