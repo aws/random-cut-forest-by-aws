@@ -314,10 +314,6 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).internalShinglingEnabled(true).shingleSize(shingleSize).randomSeed(seed)
-                .build();
-
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
@@ -334,13 +330,10 @@ public class ThresholdedRandomCutForestTest {
 
         for (double[] point : dataWithKeys.data) {
             long stamp = 1000 * count + r.nextInt(10) - 5;
-            double score = forest.getAnomalyScore(point);
             AnomalyDescriptor firstResult = first.process(point, stamp);
             AnomalyDescriptor secondResult = second.process(point, stamp);
             ++count;
-            assertEquals(firstResult.getRcfScore(), score, 0.2);
             assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            forest.update(point);
         }
 
         // serialize + deserialize
@@ -358,7 +351,6 @@ public class ThresholdedRandomCutForestTest {
             AnomalyDescriptor thirdResult = third.process(point, stamp);
             assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
             assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
-            forest.update(point);
             ++count;
         }
     }

@@ -47,27 +47,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
- * a streaming manner and respect the arrow of time. The class is ideally
- * supposed to be used in one of three modes;
- *
- * Sparse : this corresponds to sequence of events and time stamps are augmented
- * to the incoming point. ShingleSize 4 or higher is preferable; lowering the
- * shingleSize may lose quality of anomalies and explanations. Internal
- * Shingling shoule be used.
- *
- * Bursty : this corresponds to intermittent data and again shinglesize of 4 or
- * more is preferable missing value can be filled with 0's or specified values
- * (a vector of same length as the input point specifying coordinate values.
- * Choosing to store the imputed intermediate values in RCF is an option.
- *
- * Moderately continuous: missing values are filled in via previous values or
- * using impute; the latter would use a minimum number of observations, and
- * would fill in via previous till that point is reached. ShingleSize is
- * recommended to be 4. Choosing to store the imputed intermediate values in RCF
- * is an option.
- *
- * Custom: change parameters themselves
- *
+ * a streaming manner and respect the arrow of time.
  */
 @Getter
 @Setter
@@ -96,21 +76,21 @@ public class ThresholdedRandomCutForest {
     protected double lastScore;
 
     // actual value of the last anomalous point (shingle)
-    double[] lastAnomalyPoint;
+    protected double[] lastAnomalyPoint;
 
     // location of the anomaly in the last anomalous shingle
-    int lastRelativeIndex = 0;
+    protected int lastRelativeIndex = 0;
 
     // if sufficient observations are present, what is the expected values
     // (for the top numberOfAttributor fields) for the last anomaly
-    double[] lastExpectedPoint;
+    protected double[] lastExpectedPoint;
 
     // indicates that previous point was a candidate anomaly
-    boolean previousIsPotentialAnomaly;
+    protected boolean previousIsPotentialAnomaly;
 
     // indicates if we are in a region where scores are high; this can be useful in
     // its own right
-    boolean inHighScoreRegion;
+    protected boolean inHighScoreRegion;
 
     // flag that determines if we should dedup similar anomalies not in the same
     // shingle, for example an
@@ -121,55 +101,58 @@ public class ThresholdedRandomCutForest {
     // AExpected value is not well-defined when this number is greater than 1
     // that being said there is no formal restriction other than the fact that the
     // answers would be error prone as this parameter is raised.
-    int numberOfAttributors = 2;
+    protected int numberOfAttributors = 2;
 
     // this parameter is used in imputing missing values in the input
-    int valuesSeen = 0;
+    protected int valuesSeen = 0;
 
     // the input corresponds to timestamp data and this statistic helps align input
-    Deviation timeStampDeviation;
+    protected Deviation timeStampDeviation;
 
     // can be used to normalize data
-    Deviation[] deviationList;
+    protected Deviation[] deviationList;
 
     // for possible normalization
-    boolean normalizeValues = false;
+    protected boolean normalizeValues = false;
 
     // for possible martingale transforms
-    boolean differencing = false;
+    protected boolean differencing = false;
 
     // recording the last seen timestamp
-    long[] previousTimeStamps;
+    protected long[] previousTimeStamps;
 
     // normalize time difference;
-    boolean normalizeTime = false;
+    protected boolean normalizeTime = false;
 
     // fraction of data that should re actual input
-    double useImputedFraction = 0.5;
+    protected double useImputedFraction = 0.5;
 
     // number of imputed values in stored shingle
-    int numberOfImputed;
+    protected int numberOfImputed;
 
     // particular strategy for impute
-    ImputationMethod imputationMethod = PREVIOUS;
+    protected ImputationMethod imputationMethod = PREVIOUS;
 
     // forestMode of operation
-    ForestMode forestMode = ForestMode.STANDARD;
+    protected ForestMode forestMode = ForestMode.STANDARD;
 
     // for FILL_VALUES
-    double[] defaultFill;
+    protected double[] defaultFill;
 
     // last point
-    double[] lastShingledPoint;
+    protected double[] lastShingledPoint;
 
     // last shingled values (without normalization/change or augmentation by time)
-    double[] lastShingledInput;
+    protected double[] lastShingledInput;
 
     // sequence number to stop normalization at
-    int stopNormalization = 100;
+    protected int stopNormalization = 100;
 
     // used in normalization
-    double clipFactor = 5.0;
+    protected double clipFactor = 5.0;
+
+    // used for confidence
+    protected int lastReset;
 
     protected RandomCutForest forest;
     protected IThresholder thresholder;
@@ -262,7 +245,7 @@ public class ThresholdedRandomCutForest {
         checkArgument(input.length == deviationList.length, " mismatch in length");
         double[] normalized = new double[input.length];
         for (int i = 0; i < input.length; i++) {
-            normalized[i] = normalize(input[i], true, deviationList[i]);
+            normalized[i] = normalize(input[i], deviationList[i]);
         }
         return normalized;
     }
@@ -278,9 +261,12 @@ public class ThresholdedRandomCutForest {
     public double[] augmentTime(double[] normalized, long timestamp) {
         double[] scaledInput = new double[normalized.length + 1];
         System.arraycopy(normalized, 0, scaledInput, 0, normalized.length);
-        scaledInput[normalized.length] = (valuesSeen <= 1) ? 0
-                : normalize(timestamp - previousTimeStamps[forest.getShingleSize() - 1], normalizeTime,
-                        timeStampDeviation);
+        if (valuesSeen <= 1) {
+            scaledInput[normalized.length] = 0;
+        } else {
+            double timeshift = timestamp - previousTimeStamps[forest.getShingleSize() - 1];
+            scaledInput[normalized.length] = (normalizeTime) ? normalize(timeshift, timeStampDeviation) : timeshift;
+        }
         return scaledInput;
     }
 
@@ -293,7 +279,7 @@ public class ThresholdedRandomCutForest {
      * @param timestamp current timestamp
      * @return the most recent shingle (after applying the current input)
      */
-    double[] applyImpute(double[] input, long timestamp) {
+    protected double[] applyImpute(double[] input, long timestamp) {
         int shingleSize = forest.getShingleSize();
         int dimension = forest.getDimensions();
         int baseDimension = dimension / shingleSize;
@@ -329,14 +315,14 @@ public class ThresholdedRandomCutForest {
      * @param input      potentially differenced input, maybe in normalization
      * @param timeStamp  current stamp
      */
-    void updateState(double[] inputPoint, double[] input, long timeStamp) {
+    protected void updateState(double[] inputPoint, double[] input, long timeStamp) {
         int shingleSize = forest.getShingleSize();
 
         if (valuesSeen > 0) {
             timeStampDeviation.update(timeStamp - previousTimeStamps[forest.getShingleSize() - 1]);
             if (normalizeValues && valuesSeen < stopNormalization) {
                 for (int i = 0; i < input.length; i++) {
-                    deviationList[i].update(normalize(input[i], true, deviationList[i]));
+                    deviationList[i].update(normalize(input[i], deviationList[i]));
                 }
             }
         }
@@ -436,7 +422,7 @@ public class ThresholdedRandomCutForest {
      * @param startIndex    time slice of the farthest in the past we are looking
      * @return the index (in this shingle) which has the largest contributions
      */
-    private int maxContribution(DiVector diVector, int baseDimension, int startIndex) {
+    protected int maxContribution(DiVector diVector, int baseDimension, int startIndex) {
         double val = 0;
         int index = startIndex;
         int position = diVector.getDimensions() + startIndex * baseDimension;
@@ -471,7 +457,7 @@ public class ThresholdedRandomCutForest {
      * @return the specific attribute locations within the shingle which has the
      *         largest attribution in [position, position+baseDimension-1]
      */
-    private int[] largestFeatures(DiVector diVector, int position, int baseDimension, int max_number) {
+    protected int[] largestFeatures(DiVector diVector, int position, int baseDimension, int max_number) {
         if (baseDimension == 1) {
             return new int[] { position };
         }
@@ -505,11 +491,15 @@ public class ThresholdedRandomCutForest {
      * the "residual contribution" since the last anomaly would have sufficed to
      * trigger anomaly designation on its own.
      * 
-     * @param candidate     attribution of the current point in consideration
-     * @param gap           how long ago did the previous anomaly occur
-     * @param baseDimension number of input attributes/variables (before shingling)
-     * @param ideal         a form of expected attribution; can be null if there was
-     *                      no previous anomaly in the shingle
+     * @param candidate                  attribution of the current point in
+     *                                   consideration
+     * @param gap                        how long ago did the previous anomaly occur
+     * @param baseDimension              number of input attributes/variables
+     *                                   (before shingling)
+     * @param ideal                      a form of expected attribution; can be null
+     *                                   if there was no previous anomaly in the
+     *                                   shingle
+     * @param previousIsPotentialAnomaly is the previous point a potential anomaly
      * @return true/false if the residual (extrapolated) score would trigger anomaly
      *         designation
      */
@@ -555,9 +545,130 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
+     * once an anomaly is found, this records the expected values (provided there is
+     * sufficient data to enable a meanigful value). It avoids calling the
+     * imputation for a second time. It also provides the expected values for the
+     * most likely place of anomaly (indicated by index) as opposed to likely values
+     * for current input.
+     * 
+     * @param inputPoint the actual input point
+     * @param point      the (potentially) transformed point for RCF
+     * @param expected   the expected values computed previously in determining an
+     *                   anomaly
+     * @param result     the descriptor where information is stored
+     * @param index      the relative position in the shingle where anomaly is
+     *                   likely located
+     */
+    void addExpectedAndUpdateState(double[] inputPoint, double[] point, double[] expected, AnomalyDescriptor result,
+            int index) {
+        int shingleSize = forest.getShingleSize();
+        int baseDimensions = forest.getDimensions() / shingleSize;
+        int startPosition = (shingleSize - 1) * baseDimensions;
+        int adjustTime = (forestMode == ForestMode.TIME_AUGMENTED) ? 1 : 0;
+        double[] reference = inputPoint;
+        double[] newPoint = expected;
+
+        if (index < 0 && result.isStartOfAnomaly()) {
+            // anomaly in the past and detected late; repositioning the computation
+            // index 0 is current time
+            startPosition = shingleSize * baseDimensions + (result.getRelativeIndex() - 1) * baseDimensions;
+
+            int[] likelyMissingIndices = largestFeatures(result.getAttribution(), startPosition, baseDimensions,
+                    numberOfAttributors);
+            newPoint = forest.imputeMissingValues(point, likelyMissingIndices.length, likelyMissingIndices);
+            int base = baseDimensions - adjustTime;
+            double[] oldValues = new double[base];
+            System.arraycopy(lastShingledInput, (shingleSize - 1 + result.getRelativeIndex()) * base, oldValues, 0,
+                    base);
+            reference = oldValues;
+            result.setOldValues(oldValues);
+            result.setRelativeIndex(index);
+            result.setOldTimeStamp(previousTimeStamps[shingleSize - 1 + result.getRelativeIndex()]);
+        } else {
+            result.setRelativeIndex(0);
+        }
+
+        if (forestMode == ForestMode.TIME_AUGMENTED) {
+            result.setExpectedTimeStamp(inverseMapTime(newPoint[startPosition + baseDimensions - 1],
+                    result.getRelativeIndex(), normalizeTime));
+        }
+
+        double[] values = new double[baseDimensions - adjustTime];
+        for (int i = 0; i < baseDimensions - adjustTime; i++) {
+            values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
+                    : denormalize(newPoint[startPosition + i], normalizeValues, differencing, deviationList, i);
+        }
+        result.setExpectedValues(0, values, 1.0);
+        lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
+    }
+
+    /**
+     * a first stage corrector that attempts to fix the after effects of a previous
+     * anomaly which may be in the shingle, or just preceding the shingle
+     * 
+     * @param point          the current (transformed) point under evaluation
+     * @param gap            the relative position of the previous anomaly being
+     *                       corrected
+     * @param shingleSize    size of the shingle
+     * @param baseDimensions number of dimensions in each shingle
+     * @return the score of the corrected point
+     */
+    double applyBasicCorrector(double[] point, int gap, int shingleSize, int baseDimensions) {
+        double[] correctedPoint = Arrays.copyOf(point, point.length);
+        if (gap < shingleSize) {
+            System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
+                    point.length - gap * baseDimensions);
+        }
+        if (lastRelativeIndex == 0) { // is is possible to fix other cases, but is more complicated
+            if (differencing) {
+                // this works for time augmentation since time is always differenced
+                for (int y = 0; y < baseDimensions; y++) {
+                    correctedPoint[point.length - gap * baseDimensions
+                            + y] += lastAnomalyPoint[point.length - baseDimensions + y]
+                                    - lastExpectedPoint[point.length - baseDimensions + y];
+                }
+            } else if (forestMode == ForestMode.TIME_AUGMENTED) {
+                // need to fix the effect of the timestamp on the next stamp due to differencing
+                // in case of normalization there is an issue is discount is set too high (but
+                // not for the default)
+                correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
+                        - lastExpectedPoint[point.length - 1];
+            }
+        }
+        return forest.getAnomalyScore(correctedPoint);
+    }
+
+    /**
+     * adds the attribution values for the current time slice in the shingle; as
+     * opposed to aggregate information across the entire shingle
+     * 
+     * @param baseDimensions number of entries in each shingle
+     * @param adjustTime     0/1 indicating TIME_AUGMENTATION
+     * @param startPosition  the starting position (0 .. shingleSize -1) for the
+     *                       most interesting aspect
+     * @param attribution    attribution of the whole shingle
+     * @param result         the descriptor to store this in
+     */
+
+    void addCurrentTimeAttribution(int baseDimensions, int adjustTime, int startPosition, DiVector attribution,
+            AnomalyDescriptor result) {
+        double[] flattenedAttribution = new double[baseDimensions - adjustTime];
+        for (int i = 0; i < baseDimensions - adjustTime; i++) {
+            flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
+        }
+        result.setCurrentTimeAttribution(flattenedAttribution);
+        if (forestMode == ForestMode.TIME_AUGMENTED) {
+            result.setTimeAttribution(attribution.getHighLowSum(startPosition + baseDimensions - 1));
+        }
+    }
+
+    /**
      * core routine which collates the information about the most recent point
      * 
-     * @param point input (shingled) point
+     * @param point          input (shingled) point, ready for RCF
+     * @param inputTimeStamp timestamp of input
+     * @param inputPoint     actual input point (need not be shingled, or augmented
+     *                       with time)
      * @return description containing scores, grade, confidence, expected values,
      *         attribution etc.
      */
@@ -580,9 +691,7 @@ public class ThresholdedRandomCutForest {
             double[] currentValues = Arrays.copyOf(inputPoint, inputPoint.length);
             result.setCurrentValues(currentValues);
         }
-        // the forecast may not be reasonable with less data
-        boolean reasonableForecast = (internalTimeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
-                && (shingleSize * baseDimensions >= 4);
+
         /**
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
@@ -593,12 +702,11 @@ public class ThresholdedRandomCutForest {
             result.setInHighScoreRegion(inHighScoreRegion);
             update(score, score, false);
             return result;
-        } else {
-            inHighScoreRegion = true;
         }
 
         // the score is now high enough to be considered an anomaly
-        result.setInHighScoreRegion(inHighScoreRegion);
+        inHighScoreRegion = true;
+        result.setInHighScoreRegion(true);
 
         /**
          * We now check if (1) we have another anomaly in the current shingle (2) have
@@ -619,30 +727,12 @@ public class ThresholdedRandomCutForest {
         int gap = (int) (internalTimeStamp - lastAnomalyTimeStamp);
         // note gap cannot be less or equal 0
 
-        if (reasonableForecast && lastAnomalyPoint != null && lastExpectedPoint != null && gap <= shingleSize) {
-            double[] correctedPoint = Arrays.copyOf(point, point.length);
-            if (gap < shingleSize) {
-                System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
-                        point.length - gap * baseDimensions);
-            }
-            if (lastRelativeIndex == 0) { // is is possible to fix other cases, but is more complicated
-                if (differencing) {
-                    // this works for time augmentation since time is always differenced
-                    for (int y = 0; y < baseDimensions; y++) {
-                        correctedPoint[point.length - gap * baseDimensions
-                                + y] += lastAnomalyPoint[point.length - baseDimensions + y]
-                                        - lastExpectedPoint[point.length - baseDimensions + y];
-                    }
-                } else if (forestMode == ForestMode.TIME_AUGMENTED) {
-                    // need to fix the effect of the timestamp on the next stamp due to differencing
-                    // in case of normalization there is an issue is discount is set too high (but
-                    // not for the default)
-                    correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
-                            - lastExpectedPoint[point.length - 1];
-                }
-            }
+        // the forecast may not be reasonable with less data
+        boolean reasonableForecast = (internalTimeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
+                && (shingleSize * baseDimensions >= 4);
 
-            double correctedScore = forest.getAnomalyScore(correctedPoint);
+        if (reasonableForecast && lastAnomalyPoint != null && lastExpectedPoint != null && gap <= shingleSize) {
+            double correctedScore = applyBasicCorrector(point, gap, shingleSize, baseDimensions);
             // we know we are looking previous anomalies
             if (thresholder.getAnomalyGrade(correctedScore, true) == 0) {
                 // fixing the past makes this anomaly go away; nothing to do but process the
@@ -713,63 +803,20 @@ public class ThresholdedRandomCutForest {
                 lastAnomalyPoint = Arrays.copyOf(point, point.length);
                 update(score, newScore, true);
             } else {
-                // not changing inAnomaly
-                result.setAnomalyGrade(0);
+                // previousIsPotentialAnomaly is true now, but not calling it anomaly either
                 update(score, newScore, true);
+                result.setAnomalyGrade(0);
+                return result;
             }
         }
 
-        if (result.getAnomalyGrade() > 0) {
-            result.setExpectedValuesPresent(reasonableForecast);
-            if (reasonableForecast) {
-                double[] reference = inputPoint;
-                if (index < 0 && result.isStartOfAnomaly()) {
-                    // anomaly in the past and detected late; repositioning the computation
-                    // index 0 is current time
-                    startPosition = attribution.getDimensions() + (result.getRelativeIndex() - 1) * baseDimensions;
-
-                    likelyMissingIndices = largestFeatures(attribution, startPosition, baseDimensions,
-                            numberOfAttributors);
-                    newPoint = forest.imputeMissingValues(point, likelyMissingIndices.length, likelyMissingIndices);
-                    int base = baseDimensions - adjustTime;
-                    double[] oldValues = new double[base];
-                    for (int i = 0; i < base; i++) {
-                        oldValues[i] = lastShingledInput[(shingleSize - 1 + result.getRelativeIndex()) * base + i];
-                    }
-                    reference = oldValues;
-                    result.setOldValues(oldValues);
-                    result.setOldTimeStamp(previousTimeStamps[shingleSize - 1 + result.getRelativeIndex()]);
-                } else {
-                    index = 0;
-                }
-
-                result.setRelativeIndex(index);
-                if (forestMode == ForestMode.TIME_AUGMENTED) {
-                    result.setExpectedTimeStamp(inverseMapTime(newPoint[startPosition + baseDimensions - 1],
-                            result.getRelativeIndex(), normalizeTime));
-                }
-
-                double[] values = new double[baseDimensions - adjustTime];
-                for (int i = 0; i < baseDimensions - adjustTime; i++) {
-                    values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
-                            : denormalize(newPoint[startPosition + i], 0, normalizeValues, differencing, deviationList,
-                                    i);
-                }
-                result.setExpectedValues(0, values, 1.0);
-                lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
-            } else {
-                lastExpectedPoint = null;
-            }
-
-            double[] flattenedAttribution = new double[baseDimensions - adjustTime];
-            for (int i = 0; i < baseDimensions - adjustTime; i++) {
-                flattenedAttribution[i] = attribution.getHighLowSum(startPosition + i);
-            }
-            result.setFlattenedAttribution(flattenedAttribution);
-            if (forestMode == ForestMode.TIME_AUGMENTED) {
-                result.setTimeAttribution(attribution.getHighLowSum(startPosition + baseDimensions - 1));
-            }
+        result.setExpectedValuesPresent(reasonableForecast);
+        if (reasonableForecast) {
+            addExpectedAndUpdateState(inputPoint, point, newPoint, result, index);
+        } else {
+            lastExpectedPoint = null;
         }
+        addCurrentTimeAttribution(baseDimensions, adjustTime, startPosition, attribution, result);
         return result;
     }
 
@@ -801,7 +848,7 @@ public class ThresholdedRandomCutForest {
         lastExpectedPoint = copyIfNotnull(point);
     }
 
-    private double[] copyIfNotnull(double[] array) {
+    protected double[] copyIfNotnull(double[] array) {
         return array == null ? null : Arrays.copyOf(array, array.length);
     }
 
@@ -809,41 +856,34 @@ public class ThresholdedRandomCutForest {
      * maps a value shifted to the current mean or to a relative space
      * 
      * @param value     input value of dimension
-     * @param normalize flag that determines relative or shift
      * @param deviation statistic
      * @return the normalized value
      */
-    double normalize(double value, boolean normalize, Deviation deviation) {
-        if (normalize) {
-            if (value - deviation.getMean() >= 2 * clipFactor * deviation.getDeviation()) {
-                return clipFactor;
-            }
-            if (value - deviation.getMean() < -2 * clipFactor * deviation.getDeviation()) {
-                return -clipFactor;
-            } else {
-                // deviation cannot be 0
-                return (value - deviation.getMean()) / (2 * deviation.getDeviation());
-            }
+    protected double normalize(double value, Deviation deviation) {
+        if (value - deviation.getMean() >= 2 * clipFactor * deviation.getDeviation()) {
+            return clipFactor;
+        }
+        if (value - deviation.getMean() < -2 * clipFactor * deviation.getDeviation()) {
+            return -clipFactor;
         } else {
-            return value;
+            // deviation cannot be 0
+            return (value - deviation.getMean()) / (2 * deviation.getDeviation());
         }
     }
 
     /**
      * inverse of above map
      * 
-     * @param gap           observed value
-     * @param relativeIndex position in index (often 0)
-     * @param normalize     (flag indicating normalization
-     * @param difference    are values
-     * @param deviations    statistic of attribute
-     * @param index         attribute number
+     * @param gap        observed value
+     * @param normalize  (flag indicating normalization
+     * @param difference are values
+     * @param deviations statistic of attribute
+     * @param index      attribute number
      * @return potential value
      */
-    double denormalize(double gap, int relativeIndex, boolean normalize, boolean difference, Deviation[] deviations,
-            int index) {
+    protected double denormalize(double gap, boolean normalize, boolean difference, Deviation[] deviations, int index) {
         int base = lastShingledInput.length / forest.getShingleSize();
-        int position = (forest.getShingleSize() - 1 + relativeIndex) * base;
+        int position = (forest.getShingleSize() - 1) * base;
         if (normalize) {
             double value = deviations[index].getMean() + 2 * gap * deviations[index].getDeviation();
             return (difference) ? value + lastShingledInput[position + index] : value;
@@ -854,15 +894,15 @@ public class ThresholdedRandomCutForest {
 
     /**
      * maps the time back. The returned value is an approximation for
-     * relativePoisition < 0 which corresponds to an anomaly in the past. Since the
-     * state of the statistic is now changed based on more recent values
+     * relativePosition less than 0 which corresponds to an anomaly in the past.
+     * Since the state of the statistic is now changed based on more recent values
      * 
      * @param gap              estimated value
      * @param relativePosition how far back in the shingle
      * @param normalize        the flag that determines normalization
      * @return transform of the time value to original input space
      */
-    long inverseMapTime(double gap, int relativePosition, boolean normalize) {
+    protected long inverseMapTime(double gap, int relativePosition, boolean normalize) {
         // note this ocrresponds to differencing being always on
         checkArgument(forest.getShingleSize() + relativePosition >= 0, " error");
         int shingleSize = forest.getShingleSize();
@@ -885,7 +925,7 @@ public class ThresholdedRandomCutForest {
      *         input
      */
 
-    double[] impute(ImputationMethod fillin, int baseDimension, double[] lastShingledPoint) {
+    protected double[] impute(ImputationMethod fillin, int baseDimension, double[] lastShingledPoint) {
         double[] result = new double[baseDimension];
         if (fillin == ImputationMethod.ZERO) {
             return result;
@@ -911,25 +951,23 @@ public class ThresholdedRandomCutForest {
         return result;
     }
 
-    void shiftLeft(double[] array, int baseDimension) {
+    protected void shiftLeft(double[] array, int baseDimension) {
         for (int i = 0; i < array.length - baseDimension; i++) {
             array[i] = array[i + baseDimension];
         }
     }
 
-    long[] getPreviousTimeStamps() {
+    protected long[] getPreviousTimeStamps() {
         return (previousTimeStamps == null) ? null : Arrays.copyOf(previousTimeStamps, previousTimeStamps.length);
     }
 
-    void setPreviousTimeStamps(long[] values) {
+    protected void setPreviousTimeStamps(long[] values) {
         previousTimeStamps = (values == null) ? null : Arrays.copyOf(values, values.length);
     }
 
-    void copyAtEnd(double[] array, double[] small) {
+    protected void copyAtEnd(double[] array, double[] small) {
         checkArgument(array.length > small.length, " incorrect operation ");
-        for (int i = 0; i < small.length; i++) {
-            array[array.length - small.length + i] = small[i];
-        }
+        System.arraycopy(small, 0, array, array.length - small.length, small.length);
     }
 
     public double[] getLastShingledPoint() {
@@ -954,6 +992,13 @@ public class ThresholdedRandomCutForest {
 
     public void setDefaultFill(double[] values) {
         defaultFill = copyIfNotnull(values);
+    }
+
+    /**
+     * @return a new builder.
+     */
+    public static Builder<?> builder() {
+        return new Builder<>();
     }
 
     public static class Builder<T extends Builder<T>> {

@@ -64,8 +64,10 @@ public class ThresholdedInternalShinglingExample implements Example {
                 .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
                 .setMode(ForestMode.STANDARD).build();
 
-        long seed = new Random().nextLong();
-        long newSeed = new Random().nextLong();
+        long seed = 0;
+        new Random().nextLong();
+        long newSeed = 0;
+        new Random().nextLong();
         Random noise = new Random(newSeed);
 
         System.out.println("seed = " + seed);

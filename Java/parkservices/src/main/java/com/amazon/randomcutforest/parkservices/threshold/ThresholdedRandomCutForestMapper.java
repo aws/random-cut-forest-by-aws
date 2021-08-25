@@ -76,7 +76,7 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastShingledInput(state.getLastShingledInput());
         tForest.setDifferencing(state.isDifferencing());
         tForest.setLastRelativeIndex(state.getLastRelativeIndex());
-
+        tForest.setLastReset(state.getLastReset());
         return tForest;
     }
 
@@ -131,6 +131,7 @@ public class ThresholdedRandomCutForestMapper
         state.setLastShingledInput(model.getLastShingledInput());
         state.setDifferencing(model.isDifferencing());
         state.setLastRelativeIndex(model.getLastRelativeIndex());
+        state.setLastReset(model.getLastReset());
         return state;
     }
 

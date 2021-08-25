@@ -82,7 +82,7 @@ public class AnomalyDescriptor {
     // a flattened version denoting the basic contribution of each input variable
     // (not shingled) for the
     // time slice indicated by relativeIndex
-    double[] flattenedAttribution;
+    double[] currentTimeAttribution;
 
     // when time is appended
     double timeAttribution;
@@ -114,8 +114,8 @@ public class AnomalyDescriptor {
         this.oldValues = Arrays.copyOf(values, values.length);
     }
 
-    public void setFlattenedAttribution(double[] values) {
-        this.flattenedAttribution = Arrays.copyOf(values, values.length);
+    public void setCurrentTimeAttribution(double[] values) {
+        this.currentTimeAttribution = Arrays.copyOf(values, values.length);
     }
 
     public void setExpectedValues(int position, double[] values, double likelihood) {
