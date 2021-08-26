@@ -22,6 +22,7 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.state.DiVectorMapper;
 import com.amazon.randomcutforest.parkservices.threshold.state.BasicThresholderMapper;
 import com.amazon.randomcutforest.parkservices.threshold.state.DeviationMapper;
+import com.amazon.randomcutforest.parkservices.threshold.state.DeviationState;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 
@@ -38,10 +39,17 @@ public class ThresholdedRandomCutForestMapper
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
-
-        Deviation timeStampDeviation = new DeviationMapper().toModel(state.getTimeStampDeviationState());
-
-        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, timeStampDeviation);
+        DeviationMapper deviationMapper = new DeviationMapper();
+        Deviation timeStampDeviation = deviationMapper.toModel(state.getTimeStampDeviationState());
+        Deviation[] deviations = null;
+        if (state.isNormalizeValues()) {
+            deviations = new Deviation[state.getDeviationStates().length];
+            for (int i = 0; i < state.getDeviationStates().length; i++) {
+                deviations[i] = deviationMapper.toModel(state.getDeviationStates()[i]);
+            }
+        }
+        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, timeStampDeviation,
+                deviations);
         tForest.setIgnoreSimilar(state.isIgnoreSimilar());
         tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
         tForest.setLastScore(state.getLastScore());
@@ -55,9 +63,20 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
         tForest.setValuesSeen(state.getValuesSeen());
-        tForest.setPreviousTimeStamp(state.getPreviousTimeStamp());
-        tForest.setTimeStampDifferencingEnabled(state.isTimeStampDifferencingEnabled());
-
+        tForest.setPreviousTimeStamps(state.getPreviousTimeStamps());
+        tForest.setImputationMethod(state.getImputationMethod());
+        tForest.setLastShingledPoint(state.getLastShingledPoint());
+        tForest.setNormalizeTime(state.isNormalizeTime());
+        tForest.setDefaultFill(state.getDefaultFill());
+        tForest.setUseImputedFraction(state.getUseImputedFraction());
+        tForest.setNormalizeValues(state.isNormalizeValues());
+        tForest.setStopNormalization(state.getStopNormalization());
+        tForest.setClipFactor(state.getClipFactor());
+        tForest.setForestMode(state.getForestMode());
+        tForest.setLastShingledInput(state.getLastShingledInput());
+        tForest.setDifferencing(state.isDifferencing());
+        tForest.setLastRelativeIndex(state.getLastRelativeIndex());
+        tForest.setLastReset(state.getLastReset());
         return tForest;
     }
 
@@ -76,6 +95,17 @@ public class ThresholdedRandomCutForestMapper
         BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
         state.setThresholderState(thresholderMapper.toState((BasicThresholder) model.getThresholder()));
 
+        DeviationMapper deviationMapper = new DeviationMapper();
+        state.setTimeStampDeviationState(deviationMapper.toState(model.getTimeStampDeviation()));
+        state.setNormalizeValues(model.isNormalizeValues());
+        DeviationState[] deviationStates = null;
+        if (model.isNormalizeValues()) {
+            deviationStates = new DeviationState[model.getDeviationList().length];
+            for (int i = 0; i < model.deviationList.length; i++) {
+                deviationStates[i] = deviationMapper.toState(model.deviationList[i]);
+            }
+        }
+
         state.setTriggerFactor(model.getTriggerFactor());
         state.setInHighScoreRegion(model.isInHighScoreRegion());
         state.setLastScore(model.getLastScore());
@@ -85,13 +115,23 @@ public class ThresholdedRandomCutForestMapper
         state.setLastAnomalyPoint(model.getLastAnomalyPoint());
         state.setLastExpectedPoint(model.getLastExpectedPoint());
         state.setIgnoreSimilar(model.isIgnoreSimilar());
-        state.setPreviousTimeStamp(model.getPreviousTimeStamp());
+        state.setPreviousTimeStamps(model.getPreviousTimeStamps());
         state.setValuesSeen(model.getValuesSeen());
-        state.setTimeStampDeviationState(new DeviationMapper().toState(model.getTimeStampDeviation()));
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
-
+        state.setImputationMethod(model.getImputationMethod());
+        state.setForestMode(model.getForestMode());
+        state.setLastShingledPoint(model.getLastShingledPoint());
+        state.setDefaultFill(model.getDefaultFill());
+        state.setNormalizeTime(model.isNormalizeTime());
+        state.setUseImputedFraction(model.getUseImputedFraction());
+        state.setClipFactor(model.getClipFactor());
+        state.setStopNormalization(model.getStopNormalization());
+        state.setLastShingledInput(model.getLastShingledInput());
+        state.setDifferencing(model.isDifferencing());
+        state.setLastRelativeIndex(model.getLastRelativeIndex());
+        state.setLastReset(model.getLastReset());
         return state;
     }
 

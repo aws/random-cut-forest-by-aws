@@ -13,16 +13,28 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.datasets;
+package com.amazon.randomcutforest.config;
 
-public class MultiDimDataWithKey {
-    public double[][] data;
-    public int[] changeIndices;
-    public double[][] changes;
+/**
+ * Options for filling in missing values
+ */
+public enum ImputationMethod {
 
-    public MultiDimDataWithKey(double[][] data, int[] changeIndices, double[][] changes) {
-        this.data = data;
-        this.changeIndices = changeIndices;
-        this.changes = changes;
-    }
+    /**
+     * use all 0's
+     */
+    ZERO,
+    /**
+     * use a fixed set of specified values (same as input dimension)
+     */
+    FIXED_VALUES,
+    /**
+     * last known value in each input dimension
+     */
+    PREVIOUS,
+    /**
+     * use the RCF imputation; but would often require a minimum number of
+     * observations and would use PREVIOUS till that point
+     */
+    RCF;
 }

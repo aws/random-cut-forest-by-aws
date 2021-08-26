@@ -13,9 +13,8 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.examples.datasets;
+package com.amazon.randomcutforest.testutils;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static java.lang.Math.PI;
 
 import java.util.Arrays;
@@ -50,7 +49,6 @@ public class ShingledMultiDimDataWithKeys {
         int count = 0;
         for (int j = 0; j < shingleLength; ++j) {
             double[] point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
-            checkArgument(point.length == baseDimension, "error in point set");
             for (int i = 0; i < baseDimension; i++) {
                 shingledPoint[count++] = point[i];
             }

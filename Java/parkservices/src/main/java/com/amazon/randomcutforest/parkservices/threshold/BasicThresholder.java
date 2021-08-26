@@ -27,7 +27,10 @@ import lombok.Setter;
 public class BasicThresholder implements IThresholder {
 
     // a parameter to make high score regions a contiguous region as opposed to
-    // collection of points in and out of the region
+    // collection of points in and out of the region for example the scores
+    // can be 1.0, 0.99, 1.0, 0.99 and the thresholds which depend on all scores
+    // seen
+    // before can be 0.99, 1.0, 0.99, 1.0 .. this parameter smooths the comparison
     protected double elasticity = 0.01;
 
     // keeping a count of the values seen because both deviation variables
@@ -154,12 +157,13 @@ public class BasicThresholder implements IThresholder {
 
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
-            if (score < basicThreshold(factor) - elasticScore) {
+            double t = basicThreshold(factor);
+            if (score < t - elasticScore) {
                 return 0;
             }
-            double upper = Math.max(upperThreshold, 2 * basicThreshold(factor));
+            double upper = Math.max(upperThreshold, 2 * t);
             double quasiScore = Math.min(score, upper);
-            return (quasiScore - basicThreshold(factor)) / (upper - basicThreshold(factor));
+            return (quasiScore - t) / (upper - t);
         }
     }
 

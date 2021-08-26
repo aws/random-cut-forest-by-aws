@@ -40,8 +40,18 @@ public class AnomalyDescriptor {
     // information
     DiVector attribution;
 
-    // timestamp (basically a sequence index); kept as long for potential future use
-    long timeStamp;
+    // sequence index (the number of updates to RCF) -- it is possible in imputation
+    // that
+    // the number of updates more than the input tuples seen by the overall program
+    long totalUpdates;
+
+    // timestamp (basically a sequence index, but can be scaled and jittered as in
+    // the example);
+    // kept as long for potential future use
+    long timestamp;
+
+    // if the anomaly is due to timestamp when it is augmented only for current time
+    long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
     double confidence;
@@ -72,13 +82,19 @@ public class AnomalyDescriptor {
     // a flattened version denoting the basic contribution of each input variable
     // (not shingled) for the
     // time slice indicated by relativeIndex
-    double[] flattenedAttribution;
+    double[] currentTimeAttribution;
+
+    // when time is appended
+    double timeAttribution;
 
     // current values
     double[] currentValues;
 
     // the values being replaced; may correspond to past
     double[] oldValues;
+
+    // older timestamp if that is replaced
+    long oldTimeStamp;
 
     // expected values, currently set to maximum 1
     double[][] expectedValuesList;
@@ -98,8 +114,8 @@ public class AnomalyDescriptor {
         this.oldValues = Arrays.copyOf(values, values.length);
     }
 
-    public void setFlattenedAttribution(double[] values) {
-        this.flattenedAttribution = Arrays.copyOf(values, values.length);
+    public void setCurrentTimeAttribution(double[] values) {
+        this.currentTimeAttribution = Arrays.copyOf(values, values.length);
     }
 
     public void setExpectedValues(int position, double[] values, double likelihood) {

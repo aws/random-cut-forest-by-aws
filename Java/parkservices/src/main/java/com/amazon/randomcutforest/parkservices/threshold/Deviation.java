@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
 /**
  * This class maintains a simple discounted statistics. Setters are avoided
  * except for discount rate which is useful as initialization from raw scores
@@ -50,8 +48,7 @@ public class Deviation {
     }
 
     public double getMean() {
-        checkArgument(weight > 0, "incorrect invocation for mean");
-        return sum / weight;
+        return (weight <= 0) ? 0 : sum / weight;
     }
 
     public void update(double score) {
@@ -63,7 +60,9 @@ public class Deviation {
     }
 
     public double getDeviation() {
-        checkArgument(weight > 0, "incorrect invocation for standard deviation");
+        if (weight <= 0) {
+            return 0;
+        }
         double temp = sum / weight;
         double answer = sumSquared / weight - temp * temp;
         return (answer > 0) ? Math.sqrt(answer) : 0;
