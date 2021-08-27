@@ -26,12 +26,24 @@ import lombok.Setter;
 @Setter
 public class BasicThresholder implements IThresholder {
 
+    public static double DEFAULT_ELASTICITY = 0.01;
+    public static double DEFAULT_HORIZON = 0.5;
+    public static double DEFAULT_HORIZON_ONED = 0.75;
+    public static int DEFAULT_MINIMUM_SCORES = 10;
+    public static double DEFAULT_ABSOLUTE_SCORE_FRACTION = 0.5;
+    public static double DEFAULT_UPPER_THRESHOLD = 2.0;
+    public static double DEFAULT_LOWER_THRESHOLD = 1.0;
+    public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
+    public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
+    public static double DEFAULT_Z_FACTOR = 2.5;
+    public static double DEFAULT_UPPER_FACTOR = 5.0;
+
     // a parameter to make high score regions a contiguous region as opposed to
     // collection of points in and out of the region for example the scores
     // can be 1.0, 0.99, 1.0, 0.99 and the thresholds which depend on all scores
     // seen
     // before can be 0.99, 1.0, 0.99, 1.0 .. this parameter smooths the comparison
-    protected double elasticity = 0.01;
+    protected double elasticity = DEFAULT_ELASTICITY;
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
@@ -41,33 +53,33 @@ public class BasicThresholder implements IThresholder {
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
-    protected double horizon = 0.5;
+    protected double horizon = DEFAULT_HORIZON;
 
     // below these many observations, deviation is not useful
-    protected int minimumScores = 10;
+    protected int minimumScores = DEFAULT_MINIMUM_SCORES;
 
     protected Deviation primaryDeviation;
 
     protected Deviation secondaryDeviation;
 
     // fraction of the grade that comes from absolute scores in the long run
-    protected double absoluteScoreFraction = 0.5;
+    protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
 
     // the upper threshold of scores above which points are anomalies
-    protected double upperThreshold = 2.0;
+    protected double upperThreshold = DEFAULT_UPPER_THRESHOLD;
     // the upper threshold of scores above which points are likely anomalies
-    protected double lowerThreshold = 1.0;
+    protected double lowerThreshold = DEFAULT_LOWER_THRESHOLD;
     // initial absolute threshold used to determine anomalies before sufficient
     // values are seen
-    protected double initialThreshold = 1.5;
+    protected double initialThreshold = DEFAULT_INITIAL_THRESHOLD;
     // used to determine the surprise coefficient above which we can call a
     // potential
     // anomaly
-    protected double zFactor = 2.5;
+    protected double zFactor = DEFAULT_Z_FACTOR;
     // an upper bound of zFactor and triggerFactor beyond which the point is
     // mathematically anomalous
     // is useful in determining grade
-    protected double upperZfactor = 5.0;
+    protected double upperZfactor = DEFAULT_UPPER_FACTOR;
 
     public BasicThresholder(double discount) {
         primaryDeviation = new Deviation(discount);

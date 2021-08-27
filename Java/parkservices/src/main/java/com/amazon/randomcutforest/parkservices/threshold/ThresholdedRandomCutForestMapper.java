@@ -49,7 +49,7 @@ public class ThresholdedRandomCutForestMapper
             }
         }
         ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, timeStampDeviation,
-                deviations);
+                deviations, state.getInitialTimeStamps(), state.getInitialValues());
         tForest.setIgnoreSimilar(state.isIgnoreSimilar());
         tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
         tForest.setLastScore(state.getLastScore());
@@ -77,6 +77,7 @@ public class ThresholdedRandomCutForestMapper
         tForest.setDifferencing(state.isDifferencing());
         tForest.setLastRelativeIndex(state.getLastRelativeIndex());
         tForest.setLastReset(state.getLastReset());
+        tForest.setStartNormalization(state.getStartNormalization());
         return tForest;
     }
 
@@ -132,6 +133,9 @@ public class ThresholdedRandomCutForestMapper
         state.setDifferencing(model.isDifferencing());
         state.setLastRelativeIndex(model.getLastRelativeIndex());
         state.setLastReset(model.getLastReset());
+        state.setInitialTimeStamps(model.getInitialTimeStamps());
+        state.setInitialValues(model.getInitialValues());
+        state.setStartNormalization(model.getStartNormalization());
         return state;
     }
 

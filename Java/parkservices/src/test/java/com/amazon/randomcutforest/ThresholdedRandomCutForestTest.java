@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,8 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
@@ -44,68 +50,45 @@ public class ThresholdedRandomCutForestTest {
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
                         .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
-    }
 
-    @Test
-    public void testConfigAugmentTwo() {
-        int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 1; // passes due to this
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
-        assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
-                .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
-    }
-
-    @Test
-    public void testConfigAugmentThree() {
-        int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 4;
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
+        // have to enable internal shingling or keep it unspecified
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
     @Test
-    public void testConfigAugmentFour() {
+    public void testConfigAugmentTwo() {
+        int baseDimensions = 2;
+        int shingleSize = 1; // passes due to this
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        assertDoesNotThrow(() -> {
+            ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(false).shingleSize(shingleSize)
+                    .anomalyRate(0.01).build();
+            assertEquals(forest.getForest().getDimensions(), dimensions + 1);
+        });
+
+    }
+
+    @Test
+    public void testConfigImpute() {
         int sampleSize = 256;
         int baseDimensions = 2;
         int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
+        // have to enable internal shingling or keep it unfixed
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
                         .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
-    }
 
-    @Test
-    public void testConfigAugmentFive() {
-        int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 4;
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
                 .shingleSize(shingleSize).anomalyRate(0.01).build());
-    }
-
-    @Test
-    public void testConfigAugmentSix() {
-        int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 1; // due to this
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
-        assertThrows(IllegalArgumentException.class,
-                () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE)
-                        .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
     @Test
@@ -314,10 +297,9 @@ public class ThresholdedRandomCutForestTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).build();
+        ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true)
+                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
@@ -354,4 +336,243 @@ public class ThresholdedRandomCutForestTest {
             ++count;
         }
     }
+
+    @Test
+    void testImputeConfig() {
+        int baseDimensions = 1;
+        int shingleSize = 2;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+
+        // not providing values
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES).normalizeTime(true)
+                    .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+        });
+
+        // incorrect number of values to fill
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .fillValues(new double[] { 0.0, 17.0 }).normalizeTime(true).internalShinglingEnabled(true)
+                    .shingleSize(shingleSize).anomalyRate(0.01).build();
+        });
+
+        assertDoesNotThrow(() -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .fillValues(new double[] { 2.0 }).internalShinglingEnabled(true).shingleSize(shingleSize)
+                    .anomalyRate(0.01).build();
+        });
+    }
+
+    @ParameterizedTest
+    @EnumSource(ImputationMethod.class)
+    void testImpute(ImputationMethod method) {
+        int baseDimensions = 1;
+        int shingleSize = 1;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        System.out.println(seed);
+
+        // shingle size 1 ie not useful for impute
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.STREAMING_IMPUTE).fillIn(method).normalizeTime(true)
+                    .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+        });
+
+        int newShingleSize = 4;
+        int newDimensions = baseDimensions * newShingleSize;
+
+        // time is used in impute and not for normalization
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(newDimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .setMode(ForestMode.STREAMING_IMPUTE).fillIn(method).normalizeTime(true)
+                    .internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01).build();
+        });
+
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(newDimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE).fillIn(method)
+                .internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01).useImputedFraction(0.76)
+                .fillValues(new double[] { 0 }).build();
+
+        double[] fixedData = new double[] { 1.0 };
+        double[] newData = new double[] { 10.0 };
+        Random random = new Random(0);
+        int count = 0;
+        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
+            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
+            ++count;
+        }
+
+        // note every will have an update
+        assertEquals(forest.getForest().getTotalUpdates(), count);
+        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
+        assert (result.getAnomalyGrade() > 0);
+        assert (result.isExpectedValuesPresent());
+        assert (result.getRelativeIndex() == 0);
+        assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-6);
+        // the gap is 1000 + 113 which is about 9 times 113
+        // but only the first three entries are allowed in with shinglesize 4,
+        // after which the imputation is 100% and
+        // only at most 76% imputed tuples are allowed in the forest
+        // an additional one arise from the actual input
+        assertEquals(forest.getForest().getTotalUpdates(), count + 4);
+        // triggerring consecutive anomalies (no differencing) -- this should fail
+        // because we discover previous point is still the cause
+        assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 0);
+        assert (forest.process(new double[] { 20 }, (long) count * 113 + 1226).getAnomalyGrade() > 0);
+
+        long stamp = (long) count * 113 + 1226;
+        // time has to increase
+        assertThrows(IllegalArgumentException.class, () -> {
+            forest.process(new double[] { 20 }, stamp);
+        });
+    }
+
+    // streaming normalization does not seem to make sense with fill-in with 0 or
+    // fixed values (in actual data)
+    @ParameterizedTest
+    @EnumSource(value = ImputationMethod.class, names = { "PREVIOUS", "RCF" })
+    void testImputeNormalize(ImputationMethod method) {
+        int baseDimensions = 1;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        System.out.println(seed);
+
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE).fillIn(method)
+                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).useImputedFraction(0.76)
+                .fillValues(new double[] { 1.0 }).outputAfter(10).normalizeValues(true).build();
+
+        double[] fixedData = new double[] { 1.0 };
+        double[] newData = new double[] { 10.0 };
+        Random random = new Random();
+        long count = 0;
+        int spread = (int) Math.floor(random.nextDouble() * 100);
+        for (int i = 0; i < 200 + spread; i++) {
+            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
+            ++count;
+        }
+
+        // note every will have an update
+        assertEquals(forest.getForest().getTotalUpdates(), count);
+        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
+        assert (result.getAnomalyGrade() > 0);
+        assert (result.isExpectedValuesPresent());
+        // relative index may not be 0 because of normalization having changed the
+        // values
+        if (method == RCF || method == PREVIOUS) {
+            assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-3);
+        } else {
+            // possible errors
+            assertEquals(result.getExpectedValuesList()[0][0], fixedData[0], fixedData[0] / 2);
+        }
+        // the gap is 1000 + 113 which is about 9 times 113
+        // but only the first three entries are allowed in with shinglesize 4,
+        // after which the imputation is 100% and
+        // only at most 76% imputed tuples are allowed in the forest
+        // an additional one arise from the actual input
+        assertEquals(forest.getForest().getTotalUpdates(), count + 4);
+        // triggerring consecutive anomalies -- this should fail
+        assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() == 0);
+    }
+
+    @ParameterizedTest
+    @EnumSource(ImputationMethod.class)
+    void testImputeDifference(ImputationMethod method) {
+        int baseDimensions = 1;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        System.out.println(seed);
+
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE).fillIn(method)
+                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).useImputedFraction(0.76)
+                .fillValues(new double[] { 1.0 }).differencing(true).build();
+
+        double[] fixedData = new double[] { 1.0 };
+        double[] newData = new double[] { 10.0 };
+        Random random = new Random();
+        int count = 0;
+        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
+            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
+            ++count;
+        }
+
+        // note every will have an update
+        assertEquals(forest.getForest().getTotalUpdates(), count);
+        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
+        assert (result.getAnomalyGrade() > 0);
+        assert (result.isExpectedValuesPresent());
+        // the other impute methods generate too much noise
+        if (method == RCF || method == PREVIOUS) {
+            assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-3);
+        }
+
+        // the gap is 1000 + 113 which is about 9 times 113
+        // but only the first three entries are allowed in with shinglesize 4,
+        // after which the imputation is 100% and
+        // only at most 76% imputed tuples are allowed in the forest
+        // an additional one arise from the actual input
+        assertEquals(forest.getForest().getTotalUpdates(), count + 4);
+        // triggerring consecutive anomalies (but differencing) -- this should fail
+        assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() == 0);
+    }
+
+    // streaming normalization does not seem to make sense with fill-in with 0 or
+    // fixed values (in actual data)
+    @ParameterizedTest
+    @EnumSource(value = ImputationMethod.class, names = { "PREVIOUS", "RCF" })
+    void testImputeDifferenceNormalized(ImputationMethod method) {
+        int baseDimensions = 1;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        System.out.println(seed);
+
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.STREAMING_IMPUTE).fillIn(method)
+                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).useImputedFraction(0.76)
+                .fillValues(new double[] { 1.0 }).differencing(true).normalizeValues(true).build();
+
+        double[] fixedData = new double[] { 1.0 };
+        double[] newData = new double[] { 10.0 };
+        Random random = new Random();
+        int count = 0;
+        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
+            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
+            ++count;
+        }
+
+        // note every will have an update
+        assertEquals(forest.getForest().getTotalUpdates(), count);
+        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
+        assert (result.getAnomalyGrade() > 0);
+        assert (result.isExpectedValuesPresent());
+        // the other impute methods generate too much noise
+        if (method == RCF || method == PREVIOUS) {
+            assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-3);
+        }
+
+        // the gap is 1000 + 113 which is about 9 times 113
+        // but only the first three entries are allowed in with shinglesize 4,
+        // after which the imputation is 100% and
+        // only at most 76% imputed tuples are allowed in the forest
+        // an additional one arise from the actual input
+        assertEquals(forest.getForest().getTotalUpdates(), count + 4);
+        // triggerring consecutive anomalies -- but streaming normalization is in effect
+        // with differencing!
+        assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() > 0);
+    }
+
 }
