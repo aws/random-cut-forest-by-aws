@@ -41,7 +41,7 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         thresholder.setMinimumScores(state.getMinimumScores());
         thresholder.setAbsoluteScoreFraction(state.getAbsoluteScoreFraction());
         thresholder.setUpperZfactor(state.getUpperZfactor());
-        thresholder.setZFactor(state.getZFactor());
+        thresholder.setZfactor(state.getZFactor());
         return thresholder;
     }
 

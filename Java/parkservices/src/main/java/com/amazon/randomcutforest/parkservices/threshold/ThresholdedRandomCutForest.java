@@ -129,6 +129,10 @@ public class ThresholdedRandomCutForest {
     // this parameter is used in imputing missing values in the input
     protected int valuesSeen = 0;
 
+    // this parameter is used as a clock if imputing missing values in the input
+    // this is different from valuesSeen in STREAMING_IMPUTE
+    protected int internalTimeStamp = 0;
+
     // the input corresponds to timestamp data and this statistic helps align input
     protected Deviation timeStampDeviation;
 
@@ -205,7 +209,6 @@ public class ThresholdedRandomCutForest {
             inputLength = builder.dimensions / builder.shingleSize;
             this.imputationMethod = builder.fillin;
             numberOfImputed = builder.shingleSize;
-            checkArgument(!builder.normalizeTime, " time values are used in imputation");
             builder.internalShinglingEnabled = Optional.of(false);
             if (this.imputationMethod == FIXED_VALUES) {
                 checkArgument(!normalizeValues,
@@ -244,14 +247,16 @@ public class ThresholdedRandomCutForest {
             startNormalization = builder.startNormalization.orElse(number);
             checkArgument(startNormalization >= forest.getShingleSize() + ((differencing) ? 1 : 0),
                     " use startNormalization() with n at least" + (forest.getShingleSize() + ((differencing) ? 1 : 0)));
+            stopNormalization = builder.stopNormalization.orElse(DEFAULT_STOP_NORMALIZATION);
+            checkArgument(startNormalization <= stopNormalization, "normalization stops before start");
             initialValues = new double[startNormalization][];
             initialTimeStamps = new long[startNormalization];
         }
 
         BasicThresholder basic = new BasicThresholder(builder.anomalyRate);
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
-            basic.setLowerThreshold(1.1);
-            basic.setHorizon(0.75);
+            basic.setLowerThreshold(BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED);
+            basic.setHorizon(BasicThresholder.DEFAULT_HORIZON_ONED);
         }
         thresholder = basic;
     }
@@ -348,6 +353,7 @@ public class ThresholdedRandomCutForest {
                     double[] newPart = impute(imputationMethod, baseDimension, lastShingledPoint);
                     shiftLeft(lastShingledPoint, baseDimension);
                     copyAtEnd(lastShingledPoint, newPart);
+                    ++internalTimeStamp;
                     numberOfImputed = Math.min(numberOfImputed + 1, forest.getShingleSize());
                     if (numberOfImputed < useImputedFraction * forest.getShingleSize()) {
                         forest.update(lastShingledPoint);
@@ -485,6 +491,7 @@ public class ThresholdedRandomCutForest {
             // update state
             updateDeviation(input, timestamp);
             ++valuesSeen;
+            ++internalTimeStamp;
         }
 
         updateState(inputPoint, timestamp);
@@ -796,7 +803,6 @@ public class ThresholdedRandomCutForest {
         DiVector attribution = forest.getAnomalyAttribution(point);
         double score = attribution.getHighLowSum();
         result.setRcfScore(score);
-        long internalTimeStamp = forest.getTotalUpdates();
         result.setTotalUpdates(internalTimeStamp);
         result.setTimestamp(inputTimeStamp);
         result.setForestSize(forest.getNumberOfTrees());
@@ -850,7 +856,8 @@ public class ThresholdedRandomCutForest {
         boolean reasonableForecast = (internalTimeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED)
                 && (shingleSize * baseDimensions >= 4);
 
-        if (reasonableForecast && lastAnomalyPoint != null && lastExpectedPoint != null && gap <= shingleSize) {
+        if (reasonableForecast && lastAnomalyPoint != null && lastExpectedPoint != null && gap > 0
+                && gap <= shingleSize) {
             double correctedScore = applyBasicCorrector(point, gap, shingleSize, baseDimensions);
             // we know we are looking previous anomalies
             if (thresholder.getAnomalyGrade(correctedScore, true) == 0) {
@@ -1071,11 +1078,14 @@ public class ThresholdedRandomCutForest {
             return result;
         }
         int dimension = forest.getDimensions();
-        if (fillin == PREVIOUS || forest.getTotalUpdates() < MINIMUM_OBSERVATIONS_FOR_EXPECTED || dimension < 4
-                || baseDimension >= 3) {
+        if (fillin == PREVIOUS) {
             if (!differencing) {
                 System.arraycopy(lastShingledPoint, dimension - baseDimension, result, 0, baseDimension);
             }
+            return result;
+        }
+        if (forest.getTotalUpdates() < MINIMUM_OBSERVATIONS_FOR_EXPECTED || dimension < 4 || baseDimension >= 3) {
+            System.arraycopy(lastShingledPoint, dimension - baseDimension, result, 0, baseDimension);
             return result;
         }
         int[] positions = new int[baseDimension];
@@ -1135,6 +1145,17 @@ public class ThresholdedRandomCutForest {
 
     public double[] getLastShingledInput() {
         return copyIfNotnull(lastShingledInput);
+    }
+
+    public void setZfactor(double factor) {
+        BasicThresholder t = (BasicThresholder) thresholder;
+        t.setZfactor(factor);
+        triggerFactor = Math.max(factor, triggerFactor);
+    }
+
+    public void setLowerThreshold(double lower) {
+        BasicThresholder t = (BasicThresholder) thresholder;
+        t.setLowerThreshold(lower);
     }
 
     public void setLastShingledInput(double[] point) {
@@ -1205,8 +1226,11 @@ public class ThresholdedRandomCutForest {
                 checkArgument(shingleSize > 1, "imputation with shingle size 1 is not meaningful");
                 internalShinglingEnabled.ifPresent(x -> checkArgument(x, " non-internal shingling requires "
                         + " full shingles : for these there is nothing to imputer "));
-            } else if (!internalShinglingEnabled.isPresent()) {
-                internalShinglingEnabled = Optional.of(false);
+                checkArgument(!normalizeTime, " time values are used in imputation");
+            } else {
+                if (!internalShinglingEnabled.isPresent()) {
+                    internalShinglingEnabled = Optional.of(false);
+                }
                 if (useImputedFraction.isPresent()) {
                     throw new IllegalArgumentException(" imputation infeasible");
                 }

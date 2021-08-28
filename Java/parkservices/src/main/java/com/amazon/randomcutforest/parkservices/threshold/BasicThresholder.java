@@ -102,10 +102,11 @@ public class BasicThresholder implements IThresholder {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
         scores.forEach(s -> update(s, s));
-        primaryDeviation.setDiscount(1 - futureAnomalyRate);
+        primaryDeviation.setDiscount(futureAnomalyRate);
+        secondaryDeviation.setDiscount(futureAnomalyRate);
     }
 
-    protected boolean isDeviationReady() {
+    public boolean isDeviationReady() {
         if (count < minimumScores) {
             return false;
         }
@@ -205,6 +206,31 @@ public class BasicThresholder implements IThresholder {
 
     public Deviation getSecondaryDeviation() {
         return secondaryDeviation;
+    }
+
+    public void setZfactor(double factor) {
+        zFactor = Math.max(factor, DEFAULT_Z_FACTOR);
+        upperZfactor = Math.max(upperZfactor, 2 * zFactor);
+    }
+
+    public void setUpperZfactor(double factor) {
+        upperZfactor = Math.max(factor, 2 * zFactor);
+    }
+
+    public void setLowerThreshold(double lower) {
+        lowerThreshold = lower;
+        initialThreshold = Math.max(initialThreshold, lowerThreshold);
+        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+    }
+
+    public void setInitialThreshold(double initial) {
+        initialThreshold = Math.max(initial, lowerThreshold);
+        upperThreshold = Math.max(upperThreshold, initial);
+    }
+
+    public void setHorizon(double horizon) {
+        checkArgument(horizon >= 0 && horizon <= 1, "incorrect horizon parameter");
+        this.horizon = horizon;
     }
 
 }
