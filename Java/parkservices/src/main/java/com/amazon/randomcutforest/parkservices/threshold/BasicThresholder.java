@@ -24,7 +24,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class BasicThresholder implements IThresholder {
+public class BasicThresholder {
 
     public static double DEFAULT_ELASTICITY = 0.01;
     public static double DEFAULT_HORIZON = 0.5;
@@ -151,7 +151,10 @@ public class BasicThresholder implements IThresholder {
     }
 
     protected double longTermDeviation() {
-        return (horizon * primaryDeviation.getDeviation() + (1 - horizon) * secondaryDeviation.getDeviation());
+        double a = primaryDeviation.getDeviation();
+        double b = secondaryDeviation.getDeviation();
+        // the following is a convex combination that allows control of the behavior
+        return (horizon * a + (1 - horizon) * b);
     }
 
     public double getAnomalyGrade(double score, boolean previous, double factor) {
@@ -182,11 +185,6 @@ public class BasicThresholder implements IThresholder {
 
     public double getAnomalyGrade(double score, boolean previous) {
         return getAnomalyGrade(score, previous, zFactor);
-    }
-
-    public double getConfidenceScore(double score) {
-        // please change
-        return 0;
     }
 
     protected void updatePrimary(double score) {
@@ -226,6 +224,11 @@ public class BasicThresholder implements IThresholder {
     public void setInitialThreshold(double initial) {
         initialThreshold = Math.max(initial, lowerThreshold);
         upperThreshold = Math.max(upperThreshold, initial);
+    }
+
+    public void setUpperThreshold(double upper) {
+        upperThreshold = Math.max(upper, initialThreshold);
+        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
     }
 
     public void setHorizon(double horizon) {

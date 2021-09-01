@@ -31,6 +31,10 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON_ONED;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -39,6 +43,7 @@ import java.util.Random;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.DynamicScoringRandomCutForest;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -72,7 +77,7 @@ public class ThresholdedRandomCutForest {
 
     public static boolean DEFAULT_DIFFERENCING = false;
 
-    public static double DEFAULT_REPEAT_ANOMALY_Z_FACTOR = 3.0;
+    public static double DEFAULT_REPEAT_ANOMALY_Z_FACTOR = 3.5;
 
     public static double DEFAULT_IGNORE_SIMILAR_FACTOR = 0.3;
 
@@ -189,7 +194,7 @@ public class ThresholdedRandomCutForest {
     protected int lastReset;
 
     protected RandomCutForest forest;
-    protected IThresholder thresholder;
+    protected BasicThresholder thresholder;
 
     public ThresholdedRandomCutForest(Builder<?> builder) {
         int inputLength;
@@ -255,13 +260,16 @@ public class ThresholdedRandomCutForest {
 
         BasicThresholder basic = new BasicThresholder(builder.anomalyRate);
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
-            basic.setLowerThreshold(BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED);
-            basic.setHorizon(BasicThresholder.DEFAULT_HORIZON_ONED);
+            basic.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
+            basic.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON_ONED));
+        } else {
+            basic.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
+            basic.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON));
         }
         thresholder = basic;
     }
 
-    public ThresholdedRandomCutForest(RandomCutForest forest, IThresholder thresholder, Deviation deviation,
+    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder, Deviation deviation,
             Deviation[] deviations, long[] initialTimeStamps, double[][] initialValues) {
         this.forest = forest;
         this.thresholder = thresholder;
@@ -507,7 +515,7 @@ public class ThresholdedRandomCutForest {
         return forest;
     }
 
-    public IThresholder getThresholder() {
+    public BasicThresholder getThresholder() {
         return thresholder;
     }
 
@@ -1148,14 +1156,20 @@ public class ThresholdedRandomCutForest {
     }
 
     public void setZfactor(double factor) {
-        BasicThresholder t = (BasicThresholder) thresholder;
-        t.setZfactor(factor);
+        thresholder.setZfactor(factor);
         triggerFactor = Math.max(factor, triggerFactor);
     }
 
     public void setLowerThreshold(double lower) {
-        BasicThresholder t = (BasicThresholder) thresholder;
-        t.setLowerThreshold(lower);
+        thresholder.setLowerThreshold(lower);
+    }
+
+    public void setHorizon(double horizon) {
+        thresholder.setHorizon(horizon);
+    }
+
+    public void setInitialThreshold(double initial) {
+        thresholder.setInitialThreshold(initial);
     }
 
     public void setLastShingledInput(double[] point) {
@@ -1189,6 +1203,8 @@ public class ThresholdedRandomCutForest {
         protected Optional<Integer> stopNormalization = Optional.empty();
         protected int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         protected Optional<Double> timeDecay = Optional.empty();
+        protected Optional<Double> horizon = Optional.empty();
+        protected Optional<Double> lowerThreshold = Optional.empty();
         protected Optional<Long> randomSeed = Optional.empty();
         protected boolean compact = DEFAULT_COMPACT;
         protected boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
@@ -1243,7 +1259,7 @@ public class ThresholdedRandomCutForest {
         }
 
         protected RandomCutForest buildForest() {
-            RandomCutForest.Builder<?> builder = new RandomCutForest.Builder<>().dimensions(dimensions)
+            RandomCutForest.Builder builder = new DynamicScoringRandomCutForest.Builder().dimensions(dimensions)
                     .sampleSize(sampleSize).numberOfTrees(numberOfTrees).compact(compact)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).centerOfMassEnabled(centerOfMassEnabled)
                     .parallelExecutionEnabled(parallelExecutionEnabled).precision(precision)
