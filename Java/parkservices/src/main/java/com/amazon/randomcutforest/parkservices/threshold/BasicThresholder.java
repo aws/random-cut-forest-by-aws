@@ -206,26 +206,64 @@ public class BasicThresholder {
         return secondaryDeviation;
     }
 
+    /**
+     * allows the Z-factor to be set subject to not being lower than
+     * DEFAULT_Z_FACTOR it maintains the invariant that the upper_factor is at least
+     * twice the z-factor
+     *
+     * while increasing; increase upper first and while decreasing decrease the
+     * z-factor first (change default if required)
+     * 
+     * @param factor new z-factor
+     */
     public void setZfactor(double factor) {
         zFactor = Math.max(factor, DEFAULT_Z_FACTOR);
         upperZfactor = Math.max(upperZfactor, 2 * zFactor);
     }
 
+    /**
+     * upodates the upper Z-factor subject to invariant that it is never lower than
+     * 2*z-factor
+     * 
+     * @param factor new upper-Zfactor
+     */
     public void setUpperZfactor(double factor) {
         upperZfactor = Math.max(factor, 2 * zFactor);
     }
 
+    /**
+     * sets the lower threshold -- however maintains the invariant that lower
+     * threshold LTE initial threshold LTE upper threshold as well as 2 * lower
+     * threshold LTE upper threshold
+     *
+     * while increasing increase from the largest to smallest while decreasing
+     * decrease from the smallest to largest
+     * 
+     * @param lower new lower threshold
+     */
     public void setLowerThreshold(double lower) {
         lowerThreshold = lower;
         initialThreshold = Math.max(initialThreshold, lowerThreshold);
         upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
     }
 
+    /**
+     * sets initial threshold subject to lower threshold LTE initial threshold LTE
+     * upper threshold
+     * 
+     * @param initial
+     */
     public void setInitialThreshold(double initial) {
         initialThreshold = Math.max(initial, lowerThreshold);
         upperThreshold = Math.max(upperThreshold, initial);
     }
 
+    /**
+     * sets upper threshold subject to lower threshold LTE initial threshold LTE
+     * upper threshold as well as 2 * lower threshold LTE upper threshold
+     * 
+     * @param upper
+     */
     public void setUpperThreshold(double upper) {
         upperThreshold = Math.max(upper, initialThreshold);
         upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);

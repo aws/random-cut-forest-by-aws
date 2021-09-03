@@ -418,19 +418,45 @@ public class ThresholdedRandomCutForest {
     }
 
     /**
-     * the function is used with normalization (in time or in values), we store the
-     * initial few values where RCF would return a 0 score anyways. We then use the
-     * statistics of this overall group to normalize data. A fully streaming
-     * normalization would have large variations in the initial segment.
+     * takes a (potentially differenced) input and prepares an input for RCF
+     * 
+     * @param input     potentially differenced input
+     * @param timestamp timestamp of input
+     * @return (normalized, if set) )ime augmented/imputed tuple (imputation will
+     *         change state of forest)
+     */
+    protected double[] getScaledInput(double[] input, long timestamp) {
+        double[] scaledInput = (normalizeValues) ? applyNormalization(input) : input;
+
+        if (forestMode == ForestMode.TIME_AUGMENTED) {
+            scaledInput = augmentTime(scaledInput, timestamp);
+        } else if (forestMode == ForestMode.STREAMING_IMPUTE) {
+            scaledInput = applyImpute(scaledInput, timestamp);
+        }
+        return scaledInput;
+    }
+
+    /**
+     * stores initial data for normalization
+     * 
+     * @param inputPoint input data
+     * @param timestamp  timestamp
+     */
+    void storeInitial(double[] inputPoint, long timestamp) {
+        initialTimeStamps[valuesSeen] = timestamp;
+        initialValues[valuesSeen] = Arrays.copyOf(inputPoint, inputPoint.length);
+        ++valuesSeen;
+    }
+
+    /**
+     * an execute once block which first computes the multipliers for normalization
+     * and then processes each of the stored inputs
      */
     void dischargeInitial() {
-        if (initialTimeStamps != null) {
-            for (int i = 0; i < initialTimeStamps.length - 1; i++) {
-                timeStampDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
-            }
-
+        for (int i = 0; i < initialTimeStamps.length - 1; i++) {
+            timeStampDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
         }
-        if (initialValues != null && normalizeValues) {
+        if (normalizeValues) {
             if (differencing) {
                 for (int i = 0; i < initialValues.length - 1; i++) {
                     for (int j = 0; j < initialValues[i].length; j++) {
@@ -443,6 +469,16 @@ public class ThresholdedRandomCutForest {
                         deviationList[j].update(initialValues[i][j]);
                     }
                 }
+            }
+        }
+        for (int i = 0; i < valuesSeen; i++) {
+            double[] input = (differencing) ? applyDifferencing(initialValues[i]) : initialValues[i];
+            double[] scaledInput = getScaledInput(input, initialTimeStamps[i]);
+            updateState(initialValues[i], initialTimeStamps[i]);
+            // update forest
+            if (forestMode != ForestMode.STREAMING_IMPUTE
+                    || numberOfImputed < useImputedFraction * forest.getShingleSize()) {
+                forest.update(scaledInput);
             }
         }
     }
@@ -462,45 +498,26 @@ public class ThresholdedRandomCutForest {
         }
         if (normalizeTime || normalizeValues) {
             if (valuesSeen < startNormalization) {
-                initialTimeStamps[valuesSeen] = timestamp;
-                initialValues[valuesSeen] = Arrays.copyOf(inputPoint, inputPoint.length);
-                ++valuesSeen;
+                storeInitial(inputPoint, timestamp);
                 return new AnomalyDescriptor();
-            } else {
-                if (valuesSeen == startNormalization) {
-                    dischargeInitial();
-                    for (int i = 0; i < valuesSeen; i++) {
-                        continuousProcess(initialValues[i], initialTimeStamps[i], false);
-                    }
-                }
+            } else if (valuesSeen == startNormalization) {
+                dischargeInitial();
             }
         }
-        return continuousProcess(inputPoint, timestamp, true);
-    }
 
-    protected AnomalyDescriptor continuousProcess(double[] inputPoint, long timestamp, boolean getResult) {
         double[] input = (differencing) ? applyDifferencing(inputPoint) : inputPoint;
+        double[] scaledInput = getScaledInput(input, timestamp);
 
-        double[] scaledInput = (normalizeValues) ? applyNormalization(input) : input;
+        // the following handles both external and internal shingling
+        double[] point = forest.transformToShingledPoint(scaledInput);
 
-        if (forestMode == ForestMode.TIME_AUGMENTED) {
-            scaledInput = augmentTime(scaledInput, timestamp);
-        } else if (forestMode == ForestMode.STREAMING_IMPUTE) {
-            scaledInput = applyImpute(scaledInput, timestamp);
-        }
+        // score anomalies
+        AnomalyDescriptor result = getAnomalyDescription(point, timestamp, inputPoint);
 
-        AnomalyDescriptor result = null;
-        if (getResult) {
-            // the following handles both external and internal shingling
-            double[] point = forest.transformToShingledPoint(scaledInput);
-
-            result = getAnomalyDescription(point, timestamp, inputPoint);
-
-            // update state
-            updateDeviation(input, timestamp);
-            ++valuesSeen;
-            ++internalTimeStamp;
-        }
+        // update state
+        updateDeviation(input, timestamp);
+        ++valuesSeen;
+        ++internalTimeStamp;
 
         updateState(inputPoint, timestamp);
         // update forest
