@@ -191,8 +191,10 @@ public class AttributionExamplesFunctionalTest {
         double[] queryTwo = new double[30];
         queryTwo[1] = 1;
         double originalScoreTwo = newForest.getAnomalyScore(queryTwo);
-        DiVector originalAttrTwo = newForest.getDynamicAttribution(queryTwo, 0, CommonUtils::defaultScoreSeenFunction,
-                CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
+        // testing approximation with precision 0 (no approximation)
+        DiVector originalAttrTwo = newForest.getApproximateDynamicAttribution(queryTwo, 0, true, 0,
+                CommonUtils::defaultScoreSeenFunction, CommonUtils::defaultScoreUnseenFunction,
+                CommonUtils::defaultDampFunction);
 
         originalAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
         assertTrue(originalScoreTwo > 3.0);

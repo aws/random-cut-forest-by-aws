@@ -63,4 +63,7 @@ public class ThresholdedRandomCutForestState {
     private boolean differencing;
     private int lastRelativeIndex;
     private int lastReset;
+    private int startNormalization;
+    private long[] initialTimeStamps;
+    private double[][] initialValues;
 }

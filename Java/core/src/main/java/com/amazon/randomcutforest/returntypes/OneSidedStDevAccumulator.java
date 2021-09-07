@@ -125,12 +125,7 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
         if (valuesAccepted >= minValuesAccepted) {
             // note that using the last seen value in the deviation dampens its effect
 
-            double mean = sumConvergeVal / valuesAccepted;
-            double stdev = sumSqConvergeVal / valuesAccepted - mean * mean;
-
-            stdev = stdev < 0 ? 0 : Math.sqrt(stdev);
-
-            if (sign * (value - mean) > ALPHA * stdev) {
+            if (sign * (value - getMean()) > ALPHA * getDeviation()) {
                 witnesses++;
             }
         }
@@ -174,4 +169,36 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
      * @param result The new result to add to the accumulated value.
      */
     protected abstract void accumulateValue(R result);
+
+    /**
+     * Return the number of witnesses
+     */
+    public int getWitnesses() {
+        return witnesses;
+    }
+
+    /**
+     * @return the mean of the values
+     */
+    public double getMean() {
+        return (valuesAccepted == 0) ? 0 : sumConvergeVal / valuesAccepted;
+    }
+
+    /**
+     * it is possible that valuesAccepted is not large hence applying Bessel
+     * correction
+     * 
+     * @return the standard deviation of the accepted values
+     */
+    public double getDeviation() {
+        if (valuesAccepted <= 1) {
+            return 0;
+        }
+
+        double mean = sumConvergeVal / valuesAccepted;
+        double stdev = sumSqConvergeVal / valuesAccepted - mean * mean;
+
+        stdev = stdev < 0 ? 0 : Math.sqrt(valuesAccepted * stdev / (valuesAccepted - 1));
+        return stdev;
+    }
 }

@@ -24,14 +24,26 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class BasicThresholder implements IThresholder {
+public class BasicThresholder {
+
+    public static double DEFAULT_ELASTICITY = 0.01;
+    public static double DEFAULT_HORIZON = 0.5;
+    public static double DEFAULT_HORIZON_ONED = 0.75;
+    public static int DEFAULT_MINIMUM_SCORES = 10;
+    public static double DEFAULT_ABSOLUTE_SCORE_FRACTION = 0.5;
+    public static double DEFAULT_UPPER_THRESHOLD = 2.0;
+    public static double DEFAULT_LOWER_THRESHOLD = 1.0;
+    public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
+    public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
+    public static double DEFAULT_Z_FACTOR = 2.5;
+    public static double DEFAULT_UPPER_FACTOR = 5.0;
 
     // a parameter to make high score regions a contiguous region as opposed to
     // collection of points in and out of the region for example the scores
     // can be 1.0, 0.99, 1.0, 0.99 and the thresholds which depend on all scores
     // seen
     // before can be 0.99, 1.0, 0.99, 1.0 .. this parameter smooths the comparison
-    protected double elasticity = 0.01;
+    protected double elasticity = DEFAULT_ELASTICITY;
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
@@ -41,33 +53,33 @@ public class BasicThresholder implements IThresholder {
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
-    protected double horizon = 0.5;
+    protected double horizon = DEFAULT_HORIZON;
 
     // below these many observations, deviation is not useful
-    protected int minimumScores = 10;
+    protected int minimumScores = DEFAULT_MINIMUM_SCORES;
 
     protected Deviation primaryDeviation;
 
     protected Deviation secondaryDeviation;
 
     // fraction of the grade that comes from absolute scores in the long run
-    protected double absoluteScoreFraction = 0.5;
+    protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
 
     // the upper threshold of scores above which points are anomalies
-    protected double upperThreshold = 2.0;
+    protected double upperThreshold = DEFAULT_UPPER_THRESHOLD;
     // the upper threshold of scores above which points are likely anomalies
-    protected double lowerThreshold = 1.0;
+    protected double lowerThreshold = DEFAULT_LOWER_THRESHOLD;
     // initial absolute threshold used to determine anomalies before sufficient
     // values are seen
-    protected double initialThreshold = 1.5;
+    protected double initialThreshold = DEFAULT_INITIAL_THRESHOLD;
     // used to determine the surprise coefficient above which we can call a
     // potential
     // anomaly
-    protected double zFactor = 2.5;
+    protected double zFactor = DEFAULT_Z_FACTOR;
     // an upper bound of zFactor and triggerFactor beyond which the point is
     // mathematically anomalous
     // is useful in determining grade
-    protected double upperZfactor = 5.0;
+    protected double upperZfactor = DEFAULT_UPPER_FACTOR;
 
     public BasicThresholder(double discount) {
         primaryDeviation = new Deviation(discount);
@@ -90,10 +102,11 @@ public class BasicThresholder implements IThresholder {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
         scores.forEach(s -> update(s, s));
-        primaryDeviation.setDiscount(1 - futureAnomalyRate);
+        primaryDeviation.setDiscount(futureAnomalyRate);
+        secondaryDeviation.setDiscount(futureAnomalyRate);
     }
 
-    protected boolean isDeviationReady() {
+    public boolean isDeviationReady() {
         if (count < minimumScores) {
             return false;
         }
@@ -138,7 +151,10 @@ public class BasicThresholder implements IThresholder {
     }
 
     protected double longTermDeviation() {
-        return (horizon * primaryDeviation.getDeviation() + (1 - horizon) * secondaryDeviation.getDeviation());
+        double a = primaryDeviation.getDeviation();
+        double b = secondaryDeviation.getDeviation();
+        // the following is a convex combination that allows control of the behavior
+        return (horizon * a + (1 - horizon) * b);
     }
 
     public double getAnomalyGrade(double score, boolean previous, double factor) {
@@ -171,11 +187,6 @@ public class BasicThresholder implements IThresholder {
         return getAnomalyGrade(score, previous, zFactor);
     }
 
-    public double getConfidenceScore(double score) {
-        // please change
-        return 0;
-    }
-
     protected void updatePrimary(double score) {
         primaryDeviation.update(score);
         ++count;
@@ -193,6 +204,74 @@ public class BasicThresholder implements IThresholder {
 
     public Deviation getSecondaryDeviation() {
         return secondaryDeviation;
+    }
+
+    /**
+     * allows the Z-factor to be set subject to not being lower than
+     * DEFAULT_Z_FACTOR it maintains the invariant that the upper_factor is at least
+     * twice the z-factor
+     *
+     * while increasing; increase upper first and while decreasing decrease the
+     * z-factor first (change default if required)
+     * 
+     * @param factor new z-factor
+     */
+    public void setZfactor(double factor) {
+        zFactor = Math.max(factor, DEFAULT_Z_FACTOR);
+        upperZfactor = Math.max(upperZfactor, 2 * zFactor);
+    }
+
+    /**
+     * upodates the upper Z-factor subject to invariant that it is never lower than
+     * 2*z-factor
+     * 
+     * @param factor new upper-Zfactor
+     */
+    public void setUpperZfactor(double factor) {
+        upperZfactor = Math.max(factor, 2 * zFactor);
+    }
+
+    /**
+     * sets the lower threshold -- however maintains the invariant that lower
+     * threshold LTE initial threshold LTE upper threshold as well as 2 * lower
+     * threshold LTE upper threshold
+     *
+     * while increasing increase from the largest to smallest while decreasing
+     * decrease from the smallest to largest
+     * 
+     * @param lower new lower threshold
+     */
+    public void setLowerThreshold(double lower) {
+        lowerThreshold = lower;
+        initialThreshold = Math.max(initialThreshold, lowerThreshold);
+        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+    }
+
+    /**
+     * sets initial threshold subject to lower threshold LTE initial threshold LTE
+     * upper threshold
+     * 
+     * @param initial
+     */
+    public void setInitialThreshold(double initial) {
+        initialThreshold = Math.max(initial, lowerThreshold);
+        upperThreshold = Math.max(upperThreshold, initial);
+    }
+
+    /**
+     * sets upper threshold subject to lower threshold LTE initial threshold LTE
+     * upper threshold as well as 2 * lower threshold LTE upper threshold
+     * 
+     * @param upper
+     */
+    public void setUpperThreshold(double upper) {
+        upperThreshold = Math.max(upper, initialThreshold);
+        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+    }
+
+    public void setHorizon(double horizon) {
+        checkArgument(horizon >= 0 && horizon <= 1, "incorrect horizon parameter");
+        this.horizon = horizon;
     }
 
 }

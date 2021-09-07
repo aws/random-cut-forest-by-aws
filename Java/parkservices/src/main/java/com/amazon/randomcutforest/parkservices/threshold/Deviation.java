@@ -52,7 +52,7 @@ public class Deviation {
     }
 
     public void update(double score) {
-        double factor = Math.min(1 - discount, 1 - 1.0 / (count + 2));
+        double factor = (discount == 0) ? 1 : Math.min(1 - discount, 1 - 1.0 / (count + 2));
         sum = sum * factor + score;
         sumSquared = sumSquared * factor + score * score;
         weight = weight * factor + 1.0;
