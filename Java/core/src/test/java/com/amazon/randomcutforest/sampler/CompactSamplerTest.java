@@ -48,7 +48,7 @@ import com.amazon.randomcutforest.config.Config;
 
 public class CompactSamplerTest {
 
-    private static int sampleSize = 101;
+    private static int sampleSize = 256;
     private static double lambda = 0.01;
     private static long seed = 42L;
 
@@ -57,11 +57,11 @@ public class CompactSamplerTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             Random random1 = spy(new Random(seed));
             CompactSampler sampler1 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random1)
-                    .initialAcceptFraction(0.01).storeSequenceIndexesEnabled(false).build();
+                    .initialAcceptFraction(0.1).storeSequenceIndexesEnabled(false).build();
 
             Random random2 = spy(new Random(seed));
             CompactSampler sampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random2)
-                    .initialAcceptFraction(0.01).storeSequenceIndexesEnabled(true).build();
+                    .initialAcceptFraction(0.1).storeSequenceIndexesEnabled(true).build();
             return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2));
         }
     }
@@ -216,10 +216,17 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testAcceptPoint(Random random, CompactSampler sampler) {
         // The sampler should accept all samples until the sampler is full
-        for (int i = 0; i < sampleSize; i++) {
+        for (int i = 0; i < sampleSize * sampler.initialAcceptFraction; i++) {
             assertTrue(sampler.acceptPoint(i));
             assertNotNull(sampler.acceptPointState);
             sampler.addPoint(i);
+        }
+
+        for (int i = 0; i < sampleSize * 10; i++) {
+            if (sampler.acceptPoint(i)) {
+                sampler.addPoint(i);
+            }
+            ;
         }
 
         assertThrows(IllegalStateException.class, () -> sampler.addPoint(sampleSize));
@@ -230,7 +237,7 @@ public class CompactSamplerTest {
         // the new weight is smaller than the evicted weight
 
         int numAccepted = 0;
-        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+        for (int i = 10 * sampleSize; i < 12 * sampleSize; i++) {
             if (sampler.acceptPoint(i)) {
                 numAccepted++;
                 assertTrue(sampler.getEvictedPoint().isPresent());
@@ -247,24 +254,25 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testUpdate(Random random, CompactSampler compactSampler) {
         CompactSampler sampler = spy(compactSampler);
-        for (int i = 0; i < sampleSize; i++) {
+        for (int i = 0; i < sampleSize * sampler.initialAcceptFraction; i++) {
             assertTrue(sampler.update(i, i));
         }
 
+        int num = (int) Math.ceil(sampleSize * sampler.initialAcceptFraction);
         // all points should be added to the sampler until the sampler is full
-        assertEquals(sampleSize, sampler.size());
-        verify(sampler, times(sampleSize)).addPoint(any());
+        assertEquals(num, sampler.size());
+        verify(sampler, times(num)).addPoint(any());
 
         reset(sampler);
 
         int numSampled = 0;
-        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+        for (int i = num; i < 2 * sampleSize; i++) {
             if (sampler.update(i, i)) {
                 numSampled++;
             }
         }
         assertTrue(numSampled > 0, "no new values were sampled");
-        assertTrue(numSampled < sampleSize, "all values were sampled");
+        assertTrue(numSampled < 2 * sampleSize - num, "all values were sampled");
 
         verify(sampler, times(numSampled)).addPoint(any());
     }
@@ -273,7 +281,7 @@ public class CompactSamplerTest {
     @ArgumentsSource(SamplerProvider.class)
     public void testGetScore(Random random, CompactSampler sampler) {
         when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
-                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.0);
+                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.3);
 
         sampler.update(1, 101);
         sampler.update(2, 102);

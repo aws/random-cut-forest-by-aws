@@ -67,6 +67,34 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     protected final double initialAcceptFraction;
 
     /**
+     * a function that computes the probability of admittance of a new value when
+     * the sampler is not full Note that a value can always be admitted if it has a
+     * weight smaller than some sampled value
+     *
+     * this function provides a mechanism for different trees to smoothly diverge --
+     * most previous versions corresponded to initialFraction = 1, and the samplers
+     * only diverge after all of them store all the first sampleSize points. In
+     * contrast the method (which can be changed in a subclass) admits the first
+     * initialFraction * sampleSize number of points and then becomes a monotonic
+     * decreasing function.
+     *
+     * This function is supposed to be a parallel to the outputAfter() setting in
+     * the forest which controls how scores are emitted
+     * 
+     * @param currentSize the current size of the sampler
+     * @return the probability of admitting the next point
+     */
+    protected double compute_fraction(int currentSize) {
+        if (currentSize < initialAcceptFraction * capacity) {
+            return 1.0;
+        } else if (initialAcceptFraction >= 1.0) {
+            return 0;
+        } else {
+            return 1 - (1.0 * currentSize / capacity - initialAcceptFraction) / (1 - initialAcceptFraction);
+        }
+    }
+
+    /**
      * The number of points in the sample when full.
      */
     protected final int capacity;
