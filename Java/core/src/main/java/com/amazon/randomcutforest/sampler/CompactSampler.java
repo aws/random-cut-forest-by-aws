@@ -150,8 +150,7 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
         float weight = computeWeight(sequenceIndex);
-        double a = random.nextDouble();
-        boolean initial = (size < capacity && a < compute_fraction(size));
+        boolean initial = (size < capacity && random.nextDouble() < initialAcceptProbability(size));
         if (initial || (weight < this.weight[0])) {
             acceptPointState = new AcceptPointState(sequenceIndex, weight);
             if (!initial) {

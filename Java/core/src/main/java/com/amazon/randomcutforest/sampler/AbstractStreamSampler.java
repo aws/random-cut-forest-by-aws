@@ -84,7 +84,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      * @param currentSize the current size of the sampler
      * @return the probability of admitting the next point
      */
-    protected double compute_fraction(int currentSize) {
+    protected double initialAcceptProbability(int currentSize) {
         if (currentSize < initialAcceptFraction * capacity) {
             return 1.0;
         } else if (initialAcceptFraction >= 1.0) {

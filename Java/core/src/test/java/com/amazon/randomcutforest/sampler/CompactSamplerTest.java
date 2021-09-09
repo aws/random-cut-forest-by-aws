@@ -226,7 +226,6 @@ public class CompactSamplerTest {
             if (sampler.acceptPoint(i)) {
                 sampler.addPoint(i);
             }
-            ;
         }
 
         assertThrows(IllegalStateException.class, () -> sampler.addPoint(sampleSize));
