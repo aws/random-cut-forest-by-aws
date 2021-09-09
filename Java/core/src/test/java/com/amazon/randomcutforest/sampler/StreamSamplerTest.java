@@ -17,10 +17,8 @@ package com.amazon.randomcutforest.sampler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 
-import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Stream;
 
@@ -67,45 +65,6 @@ public class StreamSamplerTest {
         assertFalse(sampler.isFull());
         assertEquals(sampleSize, sampler.getCapacity());
         assertEquals(0, sampler.size());
-    }
-
-    @ParameterizedTest
-    @ArgumentsSource(SamplerProvider.class)
-    public void testIsReadyIsFull(Random random, IStreamSampler<Integer> sampler) {
-        int i;
-        for (i = 1; i < sampleSize / 4; i++) {
-            assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), i));
-            assertFalse(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        for (i = sampleSize / 4; i < sampleSize; i++) {
-            assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), i));
-            assertTrue(sampler.isReady());
-            assertFalse(sampler.isFull());
-            assertEquals(i, sampler.size());
-            assertFalse(sampler.getEvictedPoint().isPresent());
-        }
-
-        assertTrue(sampler.update((int) Math.ceil(Math.random() * 100), sampleSize));
-        assertTrue(sampler.isReady());
-        assertTrue(sampler.isFull());
-        assertEquals(i, sampler.size());
-        assertFalse(sampler.getEvictedPoint().isPresent());
-
-        Optional<ISampled<double[]>> evicted;
-        for (i = sampleSize + 1; i < 2 * sampleSize; i++) {
-            // Either the sampling and the evicted point are both null or both non-null
-            assertTrue(
-                    sampler.update((int) Math.ceil(Math.random() * 100), i) == sampler.getEvictedPoint().isPresent());
-
-            assertTrue(sampler.isReady());
-            assertTrue(sampler.isFull());
-            assertEquals(sampleSize, sampler.size());
-
-        }
     }
 
     /**

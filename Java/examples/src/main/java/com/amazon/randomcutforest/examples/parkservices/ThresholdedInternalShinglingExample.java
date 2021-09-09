@@ -54,7 +54,7 @@ public class ThresholdedInternalShinglingExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 4;
+        int baseDimensions = 2;
 
         long count = 0;
 
@@ -62,13 +62,10 @@ public class ThresholdedInternalShinglingExample implements Example {
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                 .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).setMode(ForestMode.STANDARD)
-                .build();
+                .outputAfter(32).initialAcceptFraction(0.125).build();
 
-        long seed = 0;
-        new Random().nextLong();
-        long newSeed = 0;
-        new Random().nextLong();
-        Random noise = new Random(newSeed);
+        long seed = new Random().nextLong();
+        Random noise = new Random();
 
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
@@ -97,10 +94,12 @@ public class ThresholdedInternalShinglingExample implements Example {
                     System.out.print(result.getCurrentValues()[i] + ", ");
                 }
                 System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
-
+                if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
+                    System.out.print(-result.getRelativeIndex() + " steps ago, ");
+                }
                 if (result.isExpectedValuesPresent()) {
                     if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
-                        System.out.print(-result.getRelativeIndex() + " steps ago, instead of ");
+                        System.out.print("instead of ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getOldValues()[i] + ", ");
                         }
@@ -123,6 +122,8 @@ public class ThresholdedInternalShinglingExample implements Example {
                             }
                         }
                     }
+                } else {
+                    System.out.print("insufficient data to provide expected values");
                 }
                 System.out.println();
             }

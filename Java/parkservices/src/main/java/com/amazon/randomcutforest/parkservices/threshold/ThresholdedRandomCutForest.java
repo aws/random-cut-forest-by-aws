@@ -733,10 +733,7 @@ public class ThresholdedRandomCutForest {
                     base);
             reference = oldValues;
             result.setOldValues(oldValues);
-            result.setRelativeIndex(index);
             result.setOldTimeStamp(previousTimeStamps[shingleSize - 1 + result.getRelativeIndex()]);
-        } else {
-            result.setRelativeIndex(0);
         }
 
         if (forestMode == ForestMode.TIME_AUGMENTED) {
@@ -961,6 +958,7 @@ public class ThresholdedRandomCutForest {
             }
         }
 
+        result.setRelativeIndex(index);
         result.setExpectedValuesPresent(reasonableForecast);
         if (reasonableForecast) {
             addExpectedAndUpdateState(inputPoint, point, newPoint, result, index);

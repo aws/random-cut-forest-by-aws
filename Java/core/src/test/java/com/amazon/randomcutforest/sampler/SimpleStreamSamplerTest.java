@@ -52,7 +52,7 @@ public class SimpleStreamSamplerTest {
         seed = 42L;
         random = spy(new Random(seed));
         sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize).timeDecay(lambda).random(random)
-                .initialAcceptFraction(0.01).build();
+                .initialAcceptFraction(0.1).build();
     }
 
     @Test
@@ -112,19 +112,27 @@ public class SimpleStreamSamplerTest {
     @Test
     public void testAcceptPoint() {
         // The sampler should accept all samples until the sampler is full
-        for (int i = 0; i < sampleSize; i++) {
+        for (int i = 0; i < sampleSize * sampler.initialAcceptFraction; i++) {
             assertTrue(sampler.acceptPoint(i));
             assertNotNull(sampler.acceptPointState);
             sampler.addPoint(new double[] { Math.random() });
         }
 
-        assertEquals(sampler.getSample().size(), sampleSize);
+        int num = (int) Math.ceil(sampleSize * sampler.initialAcceptFraction);
+        assertEquals(sampler.getSample().size(), num);
+
+        for (int i = 0; i < sampleSize * 10; i++) {
+            if (sampler.acceptPoint(i)) {
+                sampler.addPoint(new double[] { Math.random() });
+            }
+            ;
+        }
 
         // In subsequent calls to sample, either the result is empty or else
         // the new weight is smaller than the evicted weight
 
         int numAccepted = 0;
-        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+        for (int i = 10 * sampleSize; i < 12 * sampleSize; i++) {
             if (sampler.acceptPoint(i)) {
                 numAccepted++;
                 assertTrue(sampler.getEvictedPoint().isPresent());
@@ -144,24 +152,25 @@ public class SimpleStreamSamplerTest {
     @Test
     public void testUpdate() {
         SimpleStreamSampler<double[]> samplerSpy = spy(sampler);
-        for (int i = 0; i < sampleSize; i++) {
+        for (int i = 0; i < sampleSize * sampler.initialAcceptFraction; i++) {
             assertTrue(samplerSpy.update(new double[] { i + 0.0 }, i));
         }
 
+        int num = (int) Math.ceil(sampleSize * sampler.initialAcceptFraction);
         // all points should be added to the sampler until the sampler is full
-        assertEquals(sampleSize, samplerSpy.size());
-        verify(samplerSpy, times(sampleSize)).addPoint(any(double[].class));
+        assertEquals(num, samplerSpy.size());
+        verify(samplerSpy, times(num)).addPoint(any(double[].class));
 
         reset(samplerSpy);
 
         int numSampled = 0;
-        for (int i = sampleSize; i < 2 * sampleSize; i++) {
+        for (int i = num; i < 2 * sampleSize; i++) {
             if (samplerSpy.update(new double[] { i + 0.0 }, i)) {
                 numSampled++;
             }
         }
         assertTrue(numSampled > 0, "no new values were sampled");
-        assertTrue(numSampled < sampleSize, "all values were sampled");
+        assertTrue(numSampled < 2 * sampleSize - num, "all values were sampled");
 
         verify(samplerSpy, times(numSampled)).addPoint(any(double[].class));
     }
@@ -169,7 +178,7 @@ public class SimpleStreamSamplerTest {
     @Test
     public void testGetScore() {
         when(random.nextDouble()).thenReturn(0.0).thenReturn(0.25).thenReturn(0.0).thenReturn(0.75).thenReturn(0.0)
-                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.0);
+                .thenReturn(0.50).thenReturn(0.5).thenReturn(0.1).thenReturn(1.3);
 
         sampler.update(new double[] { 1.0 }, 101);
         sampler.update(new double[] { 2.0 }, 102);
