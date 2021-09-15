@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.threshold;
+package com.amazon.randomcutforest.parkservices.statistics;
 
 /**
  * This class maintains a simple discounted statistics. Setters are avoided
@@ -76,7 +76,7 @@ public class Deviation {
         return discount;
     }
 
-    protected void setDiscount(double discount) {
+    public void setDiscount(double discount) {
         this.discount = discount;
     }
 
@@ -94,5 +94,9 @@ public class Deviation {
 
     public int getCount() {
         return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
     }
 }

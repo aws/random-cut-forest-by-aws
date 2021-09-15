@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.threshold;
+package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
@@ -28,12 +28,12 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON_ONED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED_ONED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED;
 
 import java.util.Arrays;
@@ -48,7 +48,9 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.preprocessor.BasicPreprocessor;
+import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
 /**
@@ -61,21 +63,9 @@ public class ThresholdedRandomCutForest {
 
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
 
-    public static double DEFAULT_NORMALIZATION_PRECISION = 1e-3;
-
-    public static int DEFAULT_START_NORMALIZATION = 10;
-
-    public static int DEFAULT_STOP_NORMALIZATION = Integer.MAX_VALUE;
-
-    public static int DEFAULT_CLIP_NORMALIZATION = 10;
-
     public static double DEFAULT_USE_IMPUTED_FRACTION = 0.5;
 
     public static int DEFAULT_NUMBER_OF_MAX_ATTRIBUTORS = 2;
-
-    public static boolean DEFAULT_NORMALIZATION = false;
-
-    public static boolean DEFAULT_DIFFERENCING = false;
 
     public static double DEFAULT_REPEAT_ANOMALY_Z_FACTOR = 3.5;
 
@@ -131,356 +121,78 @@ public class ThresholdedRandomCutForest {
     // answers would be error prone as this parameter is raised.
     protected int numberOfAttributors = DEFAULT_NUMBER_OF_MAX_ATTRIBUTORS;
 
-    // this parameter is used in imputing missing values in the input
-    protected int valuesSeen = 0;
-
-    // this parameter is used as a clock if imputing missing values in the input
-    // this is different from valuesSeen in STREAMING_IMPUTE
-    protected int internalTimeStamp = 0;
-
-    // the input corresponds to timestamp data and this statistic helps align input
-    protected Deviation timeStampDeviation;
-
-    // can be used to normalize data
-    protected Deviation[] deviationList;
-
-    // for possible normalization
-    protected boolean normalizeValues = DEFAULT_NORMALIZATION;
-
-    // for possible martingale transforms
-    protected boolean differencing = DEFAULT_DIFFERENCING;
-
-    // recording the last seen timestamp
-    protected long[] previousTimeStamps;
-
-    // normalize time difference;
-    protected boolean normalizeTime = DEFAULT_NORMALIZATION;
-
-    // fraction of data that should be actual input before they are added to RCF
-    protected double useImputedFraction = DEFAULT_USE_IMPUTED_FRACTION;
-
-    // number of imputed values in stored shingle
-    protected int numberOfImputed;
-
-    // particular strategy for impute
-    protected ImputationMethod imputationMethod = PREVIOUS;
-
     // forestMode of operation
     protected ForestMode forestMode = ForestMode.STANDARD;
 
-    // for FILL_VALUES
-    protected double[] defaultFill;
-
-    // last point
-    protected double[] lastShingledPoint;
-
-    // last shingled values (without normalization/change or augmentation by time)
-    protected double[] lastShingledInput;
-
-    // initial values used for normalization
-    protected double[][] initialValues;
-    protected long[] initialTimeStamps;
-
-    // initial values after which to start normalization
-    protected int startNormalization = DEFAULT_START_NORMALIZATION;
-
-    // sequence number to stop normalization at
-    protected int stopNormalization = DEFAULT_STOP_NORMALIZATION;
-
-    // used in normalization
-    protected double clipFactor = DEFAULT_CLIP_NORMALIZATION;
-
-    // used for confidence
-    protected int lastReset;
+    protected TransformMethod transformMethod;
 
     protected RandomCutForest forest;
     protected BasicThresholder thresholder;
+    protected BasicPreprocessor preprocessor;
 
     public ThresholdedRandomCutForest(Builder<?> builder) {
-        int inputLength;
+
         forestMode = builder.forestMode;
-        previousTimeStamps = new long[builder.shingleSize];
-        lastShingledInput = new double[builder.dimensions];
-        this.differencing = builder.differencing;
-        this.normalizeValues = builder.normalizeValues;
+        transformMethod = builder.transformMethod;
+        BasicPreprocessor.Builder<?> preprocessorBuilder = BasicPreprocessor.builder().shingleSize(builder.shingleSize)
+                .transformMethod(builder.transformMethod).setMode(builder.forestMode);
 
         if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
-            inputLength = builder.dimensions / builder.shingleSize;
+            preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
             builder.dimensions += builder.shingleSize;
-            normalizeTime = builder.normalizeTime;
+            preprocessorBuilder.normalizeTime(builder.normalizeTime);
             // force internal shingling for this option
             builder.internalShinglingEnabled = Optional.of(true);
         } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
-            inputLength = builder.dimensions / builder.shingleSize;
-            this.imputationMethod = builder.fillin;
-            numberOfImputed = builder.shingleSize;
-            builder.internalShinglingEnabled = Optional.of(false);
-            if (this.imputationMethod == FIXED_VALUES) {
-                checkArgument(!normalizeValues,
-                        "normalization and filling with fixed values in actuals are unusual; not supported");
-                int baseDimension = builder.dimensions / builder.shingleSize;
-                // shingling will be performed in this layer and not in forest
-                // so that we control admittance of imputed shingles
-                checkArgument(builder.fillValues != null && builder.fillValues.length == baseDimension,
-                        " the number of values should match the shingled input");
-                this.defaultFill = Arrays.copyOf(builder.fillValues, builder.fillValues.length);
-            } else if (imputationMethod == ZERO) {
-                checkArgument(!normalizeValues,
-                        "normalization and filling with zero values in actuals are unusual; not supported");
+            preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
+            preprocessorBuilder.fillIn(builder.fillin);
+            if (builder.fillValues != null) {
+                preprocessorBuilder.fillValues(builder.fillValues);
             }
-            this.useImputedFraction = builder.useImputedFraction.orElse(0.5);
+            builder.internalShinglingEnabled = Optional.of(false);
+            preprocessorBuilder.useImputedFraction(builder.useImputedFraction.orElse(0.5));
         } else {
             boolean smallInput = builder.internalShinglingEnabled.orElse(DEFAULT_INTERNAL_SHINGLING_ENABLED);
-            inputLength = (smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions;
+            preprocessorBuilder
+                    .inputLength((smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions);
         }
 
-        lastShingledPoint = new double[builder.dimensions];
-        double discount = builder.timeDecay
-                .orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * builder.sampleSize));
-
-        if (this.normalizeValues) {
-            deviationList = new Deviation[inputLength];
-            for (int i = 0; i < inputLength; i++) {
-                deviationList[i] = new Deviation(discount);
-            }
-        }
-        timeStampDeviation = new Deviation(discount);
+        preprocessorBuilder.timeDecay(
+                builder.timeDecay.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * builder.sampleSize)));
+        preprocessorBuilder.dimensions(builder.dimensions);
+        preprocessorBuilder
+                .stopNormalization(builder.stopNormalization.orElse(BasicPreprocessor.DEFAULT_STOP_NORMALIZATION));
+        preprocessorBuilder
+                .startNormalization(builder.startNormalization.orElse(BasicPreprocessor.DEFAULT_START_NORMALIZATION));
         forest = builder.buildForest();
 
-        if (normalizeTime || normalizeValues) {
-            int number = forest.getOutputAfter() + forest.getShingleSize() - 1 + ((differencing) ? 1 : 0);
-            startNormalization = builder.startNormalization.orElse(number);
-            checkArgument(startNormalization >= forest.getShingleSize() + ((differencing) ? 1 : 0),
-                    " use startNormalization() with n at least" + (forest.getShingleSize() + ((differencing) ? 1 : 0)));
-            stopNormalization = builder.stopNormalization.orElse(DEFAULT_STOP_NORMALIZATION);
-            checkArgument(startNormalization <= stopNormalization, "normalization stops before start");
-            initialValues = new double[startNormalization][];
-            initialTimeStamps = new long[startNormalization];
-        }
-
-        BasicThresholder basic = new BasicThresholder(builder.anomalyRate);
+        BasicThresholder basic = new BasicThresholder(builder.anomalyRate, builder.adjustThreshold);
+        // multiple (not extremely well correlated) dimensions typically reduce scores
+        // normalization reduces scores
         if (forest.getDimensions() / forest.getShingleSize() == 1) {
-            basic.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
+            if (builder.transformMethod != TransformMethod.NORMALIZE) {
+                basic.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
+            } else {
+                basic.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED_ONED));
+            }
             basic.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON_ONED));
         } else {
-            basic.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
+            if (builder.transformMethod != TransformMethod.NORMALIZE) {
+                basic.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
+            } else {
+                basic.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
+            }
             basic.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON));
         }
         thresholder = basic;
+        preprocessor = preprocessorBuilder.build();
     }
 
-    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder, Deviation deviation,
-            Deviation[] deviations, long[] initialTimeStamps, double[][] initialValues) {
+    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder,
+            BasicPreprocessor preprocessor) {
         this.forest = forest;
         this.thresholder = thresholder;
-        this.timeStampDeviation = deviation;
-        this.deviationList = deviations;
-        if (initialTimeStamps != null) {
-            checkArgument(initialValues == null || initialTimeStamps.length == initialValues.length, "incorrect input");
-            startNormalization = initialTimeStamps.length;
-            this.initialTimeStamps = Arrays.copyOf(initialTimeStamps, startNormalization);
-        }
-        if (initialValues != null) {
-            this.initialValues = new double[initialValues.length][];
-            for (int i = 0; i < startNormalization; i++) {
-                this.initialValues[i] = Arrays.copyOf(initialValues[i], initialValues[i].length);
-            }
-        }
-    }
-
-    /**
-     * applies differencing to input (if desired) uses the state of last shingled
-     * input
-     * 
-     * @param inputPoint input point
-     * @return a differenced version of the input
-     */
-    protected double[] applyDifferencing(double[] inputPoint) {
-        double[] input = new double[inputPoint.length];
-        for (int i = 0; i < inputPoint.length; i++) {
-            input[i] = (valuesSeen <= 1) ? 0
-                    : inputPoint[i] - lastShingledInput[lastShingledInput.length - inputPoint.length + i];
-        }
-        return input;
-    }
-
-    /**
-     * applies normalization to input points
-     * 
-     * @param input the input tuple (potentially differenced)
-     * @return either a normalized tuple or a copy of input
-     */
-    protected double[] applyNormalization(double[] input) {
-        checkArgument(input.length == deviationList.length, " mismatch in length");
-        double[] normalized = new double[input.length];
-        for (int i = 0; i < input.length; i++) {
-            normalized[i] = normalize(input[i], deviationList[i]);
-        }
-        return normalized;
-    }
-
-    /**
-     * augments (potentially normalized) input with time (which is always
-     * differenced)
-     * 
-     * @param normalized (potentially normalized) input point
-     * @param timestamp  timestamp of current point
-     * @return a tuple with one exta field
-     */
-    public double[] augmentTime(double[] normalized, long timestamp) {
-        double[] scaledInput = new double[normalized.length + 1];
-        System.arraycopy(normalized, 0, scaledInput, 0, normalized.length);
-        if (valuesSeen <= 1) {
-            scaledInput[normalized.length] = 0;
-        } else {
-            double timeshift = timestamp - previousTimeStamps[forest.getShingleSize() - 1];
-            scaledInput[normalized.length] = (normalizeTime) ? normalize(timeshift, timeStampDeviation) : timeshift;
-        }
-        return scaledInput;
-    }
-
-    /**
-     * performs imputation if deried; based on the timestamp estimates the number of
-     * discrete gaps the intended use case is small gaps -- for large gaps, one
-     * should use time augmentation
-     * 
-     * @param input     (potentially scaled) input, which is ready for the forest
-     * @param timestamp current timestamp
-     * @return the most recent shingle (after applying the current input)
-     */
-    protected double[] applyImpute(double[] input, long timestamp) {
-        int shingleSize = forest.getShingleSize();
-        int dimension = forest.getDimensions();
-        int baseDimension = dimension / shingleSize;
-        if (valuesSeen > 1) {
-            int gap = (int) Math
-                    .floor((timestamp - previousTimeStamps[shingleSize - 1]) / timeStampDeviation.getMean());
-            if (gap >= 1.5) {
-                checkArgument(input.length == baseDimension, "error in length");
-                for (int i = 0; i < gap - 1; i++) {
-                    double[] newPart = impute(imputationMethod, baseDimension, lastShingledPoint);
-                    shiftLeft(lastShingledPoint, baseDimension);
-                    copyAtEnd(lastShingledPoint, newPart);
-                    ++internalTimeStamp;
-                    numberOfImputed = Math.min(numberOfImputed + 1, forest.getShingleSize());
-                    if (numberOfImputed < useImputedFraction * forest.getShingleSize()) {
-                        forest.update(lastShingledPoint);
-                    }
-                }
-            }
-        }
-
-        shiftLeft(lastShingledPoint, baseDimension);
-        copyAtEnd(lastShingledPoint, input);
-        numberOfImputed = Math.max(0, numberOfImputed - 1);
-        return Arrays.copyOf(lastShingledPoint, dimension);
-    }
-
-    /**
-     * updates statistics based on (potentially differenced) input
-     * 
-     * @param input     (potentially differenced) input
-     * @param timeStamp current timestamp
-     */
-    protected void updateDeviation(double[] input, long timeStamp) {
-        if (valuesSeen > 0) {
-            timeStampDeviation.update(timeStamp - previousTimeStamps[forest.getShingleSize() - 1]);
-        }
-        if (!differencing || valuesSeen > 0) {
-            if (normalizeValues && valuesSeen < stopNormalization) {
-                for (int i = 0; i < input.length; i++) {
-                    deviationList[i].update(normalize(input[i], deviationList[i]));
-                }
-            }
-        }
-    }
-
-    /**
-     * updates the state
-     * 
-     * @param inputPoint input actuals
-     * @param timeStamp  current stamp
-     */
-    protected void updateState(double[] inputPoint, long timeStamp) {
-        int shingleSize = forest.getShingleSize();
-
-        for (int i = 0; i < shingleSize - 1; i++) {
-            previousTimeStamps[i] = previousTimeStamps[i + 1];
-        }
-        previousTimeStamps[shingleSize - 1] = timeStamp;
-
-        if (inputPoint.length == lastShingledInput.length) {
-            lastShingledInput = Arrays.copyOf(inputPoint, inputPoint.length);
-        } else {
-            shiftLeft(lastShingledInput, inputPoint.length);
-            copyAtEnd(lastShingledInput, inputPoint);
-        }
-    }
-
-    /**
-     * takes a (potentially differenced) input and prepares an input for RCF
-     * 
-     * @param input     potentially differenced input
-     * @param timestamp timestamp of input
-     * @return (normalized, if set) )ime augmented/imputed tuple (imputation will
-     *         change state of forest)
-     */
-    protected double[] getScaledInput(double[] input, long timestamp) {
-        double[] scaledInput = (normalizeValues) ? applyNormalization(input) : input;
-
-        if (forestMode == ForestMode.TIME_AUGMENTED) {
-            scaledInput = augmentTime(scaledInput, timestamp);
-        } else if (forestMode == ForestMode.STREAMING_IMPUTE) {
-            scaledInput = applyImpute(scaledInput, timestamp);
-        }
-        return scaledInput;
-    }
-
-    /**
-     * stores initial data for normalization
-     * 
-     * @param inputPoint input data
-     * @param timestamp  timestamp
-     */
-    void storeInitial(double[] inputPoint, long timestamp) {
-        initialTimeStamps[valuesSeen] = timestamp;
-        initialValues[valuesSeen] = Arrays.copyOf(inputPoint, inputPoint.length);
-        ++valuesSeen;
-    }
-
-    /**
-     * an execute once block which first computes the multipliers for normalization
-     * and then processes each of the stored inputs
-     */
-    void dischargeInitial() {
-        for (int i = 0; i < initialTimeStamps.length - 1; i++) {
-            timeStampDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
-        }
-        if (normalizeValues) {
-            if (differencing) {
-                for (int i = 0; i < initialValues.length - 1; i++) {
-                    for (int j = 0; j < initialValues[i].length; j++) {
-                        deviationList[j].update(initialValues[i + 1][j] - initialValues[i][j]);
-                    }
-                }
-            } else {
-                for (int i = 0; i < initialValues.length; i++) {
-                    for (int j = 0; j < initialValues[i].length; j++) {
-                        deviationList[j].update(initialValues[i][j]);
-                    }
-                }
-            }
-        }
-        for (int i = 0; i < valuesSeen; i++) {
-            double[] input = (differencing) ? applyDifferencing(initialValues[i]) : initialValues[i];
-            double[] scaledInput = getScaledInput(input, initialTimeStamps[i]);
-            updateState(initialValues[i], initialTimeStamps[i]);
-            // update forest
-            if (forestMode != ForestMode.STREAMING_IMPUTE
-                    || numberOfImputed < useImputedFraction * forest.getShingleSize()) {
-                forest.update(scaledInput);
-            }
-        }
+        this.preprocessor = preprocessor;
     }
 
     /**
@@ -492,21 +204,12 @@ public class ThresholdedRandomCutForest {
      * @return anomalydescriptor for the current input point
      */
     public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
-        if (forestMode == ForestMode.STREAMING_IMPUTE) {
-            checkArgument(valuesSeen == 0 || timestamp > previousTimeStamps[forest.getShingleSize() - 1],
-                    "incorrect order of time");
-        }
-        if (normalizeTime || normalizeValues) {
-            if (valuesSeen < startNormalization) {
-                storeInitial(inputPoint, timestamp);
-                return new AnomalyDescriptor();
-            } else if (valuesSeen == startNormalization) {
-                dischargeInitial();
-            }
-        }
 
-        double[] input = (differencing) ? applyDifferencing(inputPoint) : inputPoint;
-        double[] scaledInput = getScaledInput(input, timestamp);
+        double[] scaledInput = preprocessor.preProcess(inputPoint, timestamp, forest);
+
+        if (scaledInput == null) {
+            return new AnomalyDescriptor();
+        }
 
         // the following handles both external and internal shingling
         double[] point = forest.transformToShingledPoint(scaledInput);
@@ -515,17 +218,10 @@ public class ThresholdedRandomCutForest {
         AnomalyDescriptor result = getAnomalyDescription(point, timestamp, inputPoint);
 
         // update state
-        updateDeviation(input, timestamp);
-        ++valuesSeen;
-        ++internalTimeStamp;
+        preprocessor.postProcess(inputPoint, timestamp, forest, scaledInput);
 
-        updateState(inputPoint, timestamp);
-        // update forest
-        if (forestMode != ForestMode.STREAMING_IMPUTE
-                || numberOfImputed < useImputedFraction * forest.getShingleSize()) {
-            forest.update(scaledInput);
-        }
         return result;
+
     }
 
     public RandomCutForest getForest() {
@@ -716,6 +412,7 @@ public class ThresholdedRandomCutForest {
         int baseDimensions = forest.getDimensions() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
         int adjustTime = (forestMode == ForestMode.TIME_AUGMENTED) ? 1 : 0;
+        int base = baseDimensions - adjustTime;
         double[] reference = inputPoint;
         double[] newPoint = expected;
 
@@ -727,24 +424,31 @@ public class ThresholdedRandomCutForest {
             int[] likelyMissingIndices = largestFeatures(result.getAttribution(), startPosition, baseDimensions,
                     numberOfAttributors);
             newPoint = forest.imputeMissingValues(point, likelyMissingIndices.length, likelyMissingIndices);
-            int base = baseDimensions - adjustTime;
-            double[] oldValues = new double[base];
-            System.arraycopy(lastShingledInput, (shingleSize - 1 + result.getRelativeIndex()) * base, oldValues, 0,
-                    base);
-            reference = oldValues;
-            result.setOldValues(oldValues);
-            result.setOldTimeStamp(previousTimeStamps[shingleSize - 1 + result.getRelativeIndex()]);
+            // preprocessor is not updated yet; note index is less than 0
+            reference = preprocessor.getShingledInput(shingleSize + index);
+            result.setOldValues(reference);
+            result.setOldTimeStamp(preprocessor.getTimeStamp(shingleSize - 1 + index));
         }
+
+        double[] differenceBase = preprocessor.getShingledInput(shingleSize - 1 + index);
 
         if (forestMode == ForestMode.TIME_AUGMENTED) {
-            result.setExpectedTimeStamp(inverseMapTime(newPoint[startPosition + baseDimensions - 1],
-                    result.getRelativeIndex(), normalizeTime));
+            long expectedStamp = preprocessor.inverseMapTime(newPoint[startPosition + baseDimensions - 1],
+                    result.getRelativeIndex());
+            result.setExpectedTimeStamp(expectedStamp);
         }
 
-        double[] values = new double[baseDimensions - adjustTime];
-        for (int i = 0; i < baseDimensions - adjustTime; i++) {
-            values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
-                    : denormalize(newPoint[startPosition + i], normalizeValues, differencing, deviationList, i);
+        double[] values = new double[reference.length];
+        if (reference.length == base) {
+            for (int i = 0; i < reference.length; i++) {
+                values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
+                        : preprocessor.inverseTransform(newPoint[startPosition + i], i, differenceBase[i]);
+            }
+        } else {
+            for (int i = 0; i < reference.length; i++) {
+                values[i] = (point[i] == newPoint[i]) ? reference[i]
+                        : preprocessor.inverseTransform(newPoint[i], i, differenceBase[i]);
+            }
         }
         result.setExpectedValues(0, values, 1.0);
         lastExpectedPoint = Arrays.copyOf(newPoint, newPoint.length);
@@ -768,7 +472,8 @@ public class ThresholdedRandomCutForest {
                     point.length - gap * baseDimensions);
         }
         if (lastRelativeIndex == 0) { // is is possible to fix other cases, but is more complicated
-            if (differencing) {
+            if (transformMethod == TransformMethod.DIFFERENCE
+                    || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
                 // this works for time augmentation since time is always differenced
                 for (int y = 0; y < baseDimensions; y++) {
                     correctedPoint[point.length - gap * baseDimensions
@@ -825,6 +530,7 @@ public class ThresholdedRandomCutForest {
         DiVector attribution = forest.getAnomalyAttribution(point);
         double score = attribution.getHighLowSum();
         result.setRcfScore(score);
+        int internalTimeStamp = preprocessor.getInternalTimeStamp();
         result.setTotalUpdates(internalTimeStamp);
         result.setTimestamp(inputTimeStamp);
         result.setForestSize(forest.getNumberOfTrees());
@@ -838,6 +544,8 @@ public class ThresholdedRandomCutForest {
             double[] currentValues = Arrays.copyOf(inputPoint, inputPoint.length);
             result.setCurrentValues(currentValues);
         }
+
+        result.setThreshold(thresholder.threshold());
 
         /**
          * We first check if the score is high enough to be considered as a candidate
@@ -989,185 +697,12 @@ public class ThresholdedRandomCutForest {
         lastAnomalyPoint = copyIfNotnull(point);
     }
 
-    public Deviation getTimeStampDeviation() {
-        return timeStampDeviation;
-    }
-
     public void setLastExpectedPoint(double[] point) {
         lastExpectedPoint = copyIfNotnull(point);
     }
 
     protected double[] copyIfNotnull(double[] array) {
         return array == null ? null : Arrays.copyOf(array, array.length);
-    }
-
-    /**
-     * maps a value shifted to the current mean or to a relative space
-     * 
-     * @param value     input value of dimension
-     * @param deviation statistic
-     * @return the normalized value
-     */
-    protected double normalize(double value, Deviation deviation) {
-        if (deviation.getCount() < 2) {
-            return 0;
-        }
-        if (value - deviation.getMean() >= 2 * clipFactor
-                * (deviation.getDeviation() + DEFAULT_NORMALIZATION_PRECISION)) {
-            return clipFactor;
-        }
-        if (value - deviation.getMean() < -2 * clipFactor
-                * (deviation.getDeviation() + DEFAULT_NORMALIZATION_PRECISION)) {
-            return -clipFactor;
-        } else {
-            // deviation cannot be 0
-            return (value - deviation.getMean()) / (2 * (deviation.getDeviation() + DEFAULT_NORMALIZATION_PRECISION));
-        }
-    }
-
-    /**
-     * inverse of above map
-     * 
-     * @param gap        observed value
-     * @param normalize  (flag indicating normalization
-     * @param difference are values
-     * @param deviations statistic of attribute
-     * @param index      attribute number
-     * @return potential value
-     */
-    protected double denormalize(double gap, boolean normalize, boolean difference, Deviation[] deviations, int index) {
-        int base = lastShingledInput.length / forest.getShingleSize();
-        int position = (forest.getShingleSize() - 1) * base;
-        if (normalize) {
-            double value = deviations[index].getMean()
-                    + 2 * gap * (deviations[index].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-            return (difference) ? value + lastShingledInput[position + index] : value;
-        } else {
-            return (difference) ? gap + lastShingledInput[position + index] : gap;
-        }
-    }
-
-    /**
-     * maps the time back. The returned value is an approximation for
-     * relativePosition less than 0 which corresponds to an anomaly in the past.
-     * Since the state of the statistic is now changed based on more recent values
-     * 
-     * @param gap              estimated value
-     * @param relativePosition how far back in the shingle
-     * @param normalize        the flag that determines normalization
-     * @return transform of the time value to original input space
-     */
-    protected long inverseMapTime(double gap, int relativePosition, boolean normalize) {
-        // note this ocrresponds to differencing being always on
-        checkArgument(forest.getShingleSize() + relativePosition >= 0, " error");
-        int shingleSize = forest.getShingleSize();
-        if (normalize) {
-            return (long) Math.floor(previousTimeStamps[shingleSize - 1 + relativePosition]
-                    + timeStampDeviation.getMean() + 2 * gap * timeStampDeviation.getDeviation());
-        } else {
-            return (long) Math
-                    .floor(gap + previousTimeStamps[shingleSize - 1 + relativePosition] + timeStampDeviation.getMean());
-        }
-    }
-
-    /**
-     * determines the next point to fed to the model for a missing value
-     * 
-     * @param fillin            strategy of imputation
-     * @param baseDimension     number of values to imput
-     * @param lastShingledPoint last full entry seen by model
-     * @return an array of baseDimension values corresponding to plausible next
-     *         input
-     */
-
-    protected double[] impute(ImputationMethod fillin, int baseDimension, double[] lastShingledPoint) {
-        double[] result = new double[baseDimension];
-        if (fillin == ImputationMethod.ZERO) {
-            if (differencing) {
-                System.arraycopy(lastShingledPoint, lastShingledPoint.length - baseDimension, result, 0, baseDimension);
-                for (int i = 0; i < baseDimension; i++) {
-                    result[i] = -result[i]; // subtraction from 0
-                }
-            }
-            return result;
-        }
-        if (fillin == FIXED_VALUES) {
-            System.arraycopy(defaultFill, 0, result, 0, baseDimension);
-            if (differencing) {
-                for (int i = 0; i < baseDimension; i++) {
-                    result[i] -= lastShingledPoint[i]; // subtraction from 0
-                }
-            }
-            return result;
-        }
-        int dimension = forest.getDimensions();
-        if (fillin == PREVIOUS) {
-            if (!differencing) {
-                System.arraycopy(lastShingledPoint, dimension - baseDimension, result, 0, baseDimension);
-            }
-            return result;
-        }
-        if (forest.getTotalUpdates() < MINIMUM_OBSERVATIONS_FOR_EXPECTED || dimension < 4 || baseDimension >= 3) {
-            System.arraycopy(lastShingledPoint, dimension - baseDimension, result, 0, baseDimension);
-            return result;
-        }
-        int[] positions = new int[baseDimension];
-        double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
-        shiftLeft(temp, baseDimension);
-        for (int y = 0; y < baseDimension; y++) {
-            positions[y] = dimension - baseDimension + y;
-        }
-        double[] newPoint = forest.imputeMissingValues(temp, baseDimension, positions);
-        System.arraycopy(newPoint, dimension - baseDimension, result, 0, baseDimension);
-        return result;
-    }
-
-    protected void shiftLeft(double[] array, int baseDimension) {
-        for (int i = 0; i < array.length - baseDimension; i++) {
-            array[i] = array[i + baseDimension];
-        }
-    }
-
-    protected long[] getInitialTimeStamps() {
-        return (initialTimeStamps == null) ? null : Arrays.copyOf(initialTimeStamps, initialTimeStamps.length);
-    }
-
-    protected double[][] getInitialValues() {
-        if (initialValues == null) {
-            return null;
-        } else {
-            double[][] result = new double[initialValues.length][];
-            for (int i = 0; i < initialValues.length; i++) {
-                result[i] = copyIfNotnull(initialValues[i]);
-            }
-            return result;
-        }
-
-    }
-
-    protected long[] getPreviousTimeStamps() {
-        return (previousTimeStamps == null) ? null : Arrays.copyOf(previousTimeStamps, previousTimeStamps.length);
-    }
-
-    protected void setPreviousTimeStamps(long[] values) {
-        previousTimeStamps = (values == null) ? null : Arrays.copyOf(values, values.length);
-    }
-
-    protected void copyAtEnd(double[] array, double[] small) {
-        checkArgument(array.length > small.length, " incorrect operation ");
-        System.arraycopy(small, 0, array, array.length - small.length, small.length);
-    }
-
-    public double[] getLastShingledPoint() {
-        return copyIfNotnull(lastShingledPoint);
-    }
-
-    public void setLastShingledPoint(double[] point) {
-        lastShingledPoint = copyIfNotnull(point);
-    }
-
-    public double[] getLastShingledInput() {
-        return copyIfNotnull(lastShingledInput);
     }
 
     public void setZfactor(double factor) {
@@ -1185,18 +720,6 @@ public class ThresholdedRandomCutForest {
 
     public void setInitialThreshold(double initial) {
         thresholder.setInitialThreshold(initial);
-    }
-
-    public void setLastShingledInput(double[] point) {
-        lastShingledInput = copyIfNotnull(point);
-    }
-
-    public double[] getDefaultFill() {
-        return copyIfNotnull(defaultFill);
-    }
-
-    public void setDefaultFill(double[] values) {
-        defaultFill = copyIfNotnull(values);
     }
 
     /**
@@ -1232,21 +755,22 @@ public class ThresholdedRandomCutForest {
         protected Optional<Boolean> internalShinglingEnabled = Optional.empty();
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
         protected double anomalyRate = 0.01;
+        protected TransformMethod transformMethod = TransformMethod.NONE;
         protected ImputationMethod fillin = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
         protected boolean normalizeTime = false;
         protected boolean normalizeValues = false;
         protected double[] fillValues = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
-        protected boolean differencing = false;
+        protected boolean adjustThreshold = false;
 
         void validate() {
             if (forestMode == ForestMode.TIME_AUGMENTED) {
                 if (internalShinglingEnabled.isPresent()) {
                     checkArgument(shingleSize == 1 || internalShinglingEnabled.get(),
                             " shingle size has to be 1 or " + "internal shingling must turned on");
-                    checkArgument(!differencing || internalShinglingEnabled.get(),
-                            " internal shingling must turned on for differencing");
+                    checkArgument(transformMethod == TransformMethod.NONE || internalShinglingEnabled.get(),
+                            " internal shingling must turned on for transforms");
                 } else {
                     internalShinglingEnabled = Optional.of(true);
                 }
@@ -1410,18 +934,18 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T differencing(boolean differencing) {
-            this.differencing = differencing;
-            return (T) this;
-        }
-
-        public T normalizeValues(boolean normalizeValues) {
-            this.normalizeValues = normalizeValues;
+        public T transformMethod(TransformMethod method) {
+            this.transformMethod = method;
             return (T) this;
         }
 
         public T setMode(ForestMode forestMode) {
             this.forestMode = forestMode;
+            return (T) this;
+        }
+
+        public T adjustThreshold(boolean adjustThreshold) {
+            this.adjustThreshold = adjustThreshold;
             return (T) this;
         }
 

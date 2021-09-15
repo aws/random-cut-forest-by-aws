@@ -22,6 +22,8 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+
 @Getter
 @Setter
 public class BasicThresholder {
@@ -34,9 +36,13 @@ public class BasicThresholder {
     public static double DEFAULT_UPPER_THRESHOLD = 2.0;
     public static double DEFAULT_LOWER_THRESHOLD = 1.0;
     public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
+    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
+    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED_ONED = 0.9;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 2.5;
     public static double DEFAULT_UPPER_FACTOR = 5.0;
+    public static boolean DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD = false;
+    public static double DEFAULT_THRESHOLD_STEP = 0.1;
 
     // a parameter to make high score regions a contiguous region as opposed to
     // collection of points in and out of the region for example the scores
@@ -62,6 +68,12 @@ public class BasicThresholder {
 
     protected Deviation secondaryDeviation;
 
+    protected Deviation thresholdDeviation;
+
+    protected boolean autoThreshold = DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD;
+
+    protected double absoluteThreshold;
+
     // fraction of the grade that comes from absolute scores in the long run
     protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
 
@@ -81,14 +93,22 @@ public class BasicThresholder {
     // is useful in determining grade
     protected double upperZfactor = DEFAULT_UPPER_FACTOR;
 
-    public BasicThresholder(double discount) {
+    public BasicThresholder(double discount, boolean adjust) {
         primaryDeviation = new Deviation(discount);
         secondaryDeviation = new Deviation(discount);
+        // a longer horizon to adjust
+        thresholdDeviation = new Deviation(discount / 2);
+        autoThreshold = adjust;
     }
 
-    public BasicThresholder(Deviation primary, Deviation secondary) {
+    public BasicThresholder(double discount) {
+        this(discount, false);
+    }
+
+    public BasicThresholder(Deviation primary, Deviation secondary, Deviation threshold) {
         this.primaryDeviation = primary;
         this.secondaryDeviation = secondary;
+        this.thresholdDeviation = threshold;
     }
 
     /**
@@ -101,9 +121,11 @@ public class BasicThresholder {
     public BasicThresholder(List<Double> scores, double futureAnomalyRate) {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
+        this.thresholdDeviation = new Deviation(0);
         scores.forEach(s -> update(s, s));
         primaryDeviation.setDiscount(futureAnomalyRate);
         secondaryDeviation.setDiscount(futureAnomalyRate);
+        thresholdDeviation.setDiscount(futureAnomalyRate / 2);
     }
 
     public boolean isDeviationReady() {
@@ -112,11 +134,11 @@ public class BasicThresholder {
         }
 
         if (horizon == 0) {
-            return secondaryDeviation.count >= minimumScores;
+            return secondaryDeviation.getCount() >= minimumScores;
         } else if (horizon == 1) {
-            return primaryDeviation.count >= minimumScores;
+            return primaryDeviation.getCount() >= minimumScores;
         } else {
-            return secondaryDeviation.count >= minimumScores && primaryDeviation.count >= minimumScores;
+            return secondaryDeviation.getCount() >= minimumScores && primaryDeviation.getCount() >= minimumScores;
         }
     }
 
@@ -144,6 +166,10 @@ public class BasicThresholder {
                     + (1 - intermediateTermFraction()) * initialThreshold);
         }
 
+    }
+
+    public double threshold() {
+        return longTermThreshold(zFactor);
     }
 
     protected double longTermThreshold(double factor) {
@@ -187,14 +213,31 @@ public class BasicThresholder {
         return getAnomalyGrade(score, previous, zFactor);
     }
 
+    protected void updateThreshold(double score) {
+        double gap = (score > lowerThreshold) ? 1.0 : 0;
+        thresholdDeviation.update(gap);
+        if (autoThreshold && thresholdDeviation.getCount() > minimumScores) {
+            // note the rate is set at half the anomaly rate
+            if (thresholdDeviation.getMean() > thresholdDeviation.getDiscount()) {
+                setLowerThreshold(lowerThreshold + DEFAULT_THRESHOLD_STEP, autoThreshold);
+                thresholdDeviation.setCount(0);
+            } else if (thresholdDeviation.getMean() < thresholdDeviation.getDiscount() / 4) {
+                setLowerThreshold(lowerThreshold - DEFAULT_THRESHOLD_STEP, autoThreshold);
+                thresholdDeviation.setCount(0);
+            }
+        }
+    }
+
     protected void updatePrimary(double score) {
         primaryDeviation.update(score);
+        updateThreshold(score);
         ++count;
     }
 
     public void update(double primary, double secondary) {
         primaryDeviation.update(primary);
         secondaryDeviation.update(secondary);
+        updateThreshold(primary);
         ++count;
     }
 
@@ -241,17 +284,23 @@ public class BasicThresholder {
      * 
      * @param lower new lower threshold
      */
-    public void setLowerThreshold(double lower) {
-        lowerThreshold = lower;
+    public void setLowerThreshold(double lower, boolean adjust) {
+        lowerThreshold = Math.max(lower, absoluteThreshold);
+        autoThreshold = adjust;
         initialThreshold = Math.max(initialThreshold, lowerThreshold);
         upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+    }
+
+    public void setAbsoluteThreshold(double value) {
+        absoluteThreshold = value;
+        setLowerThreshold(absoluteThreshold, autoThreshold);
     }
 
     /**
      * sets initial threshold subject to lower threshold LTE initial threshold LTE
      * upper threshold
      * 
-     * @param initial
+     * @param initial new initial threshold
      */
     public void setInitialThreshold(double initial) {
         initialThreshold = Math.max(initial, lowerThreshold);
@@ -262,7 +311,7 @@ public class BasicThresholder {
      * sets upper threshold subject to lower threshold LTE initial threshold LTE
      * upper threshold as well as 2 * lower threshold LTE upper threshold
      * 
-     * @param upper
+     * @param upper new upper threshold
      */
     public void setUpperThreshold(double upper) {
         upperThreshold = Math.max(upper, initialThreshold);

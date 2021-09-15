@@ -102,6 +102,8 @@ public class AnomalyDescriptor {
     // likelihood values for the list
     double[] likelihoodOfValues;
 
+    double threshold;
+
     public void setCurrentValues(double[] currentValues) {
         this.currentValues = Arrays.copyOf(currentValues, currentValues.length);
     }
