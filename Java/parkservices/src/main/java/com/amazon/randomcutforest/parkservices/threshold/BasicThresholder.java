@@ -291,6 +291,12 @@ public class BasicThresholder {
         upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
     }
 
+    /**
+     * the absolute threshhold below which the lower threshold can not go note
+     * setLowerThreshold() in the builder will set this value
+     * 
+     * @param value absolute lower bound of lowerThreshold
+     */
     public void setAbsoluteThreshold(double value) {
         absoluteThreshold = value;
         setLowerThreshold(absoluteThreshold, autoThreshold);

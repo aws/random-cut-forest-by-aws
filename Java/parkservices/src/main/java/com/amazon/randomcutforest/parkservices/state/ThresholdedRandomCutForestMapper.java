@@ -59,6 +59,7 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
         tForest.setForestMode(state.getForestMode());
         tForest.setLastRelativeIndex(state.getLastRelativeIndex());
+        tForest.setTransformMethod(state.getTransformMethod());
         return tForest;
     }
 
@@ -93,6 +94,7 @@ public class ThresholdedRandomCutForestMapper
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
         state.setForestMode(model.getForestMode());
+        state.setTransformMethod(model.getTransformMethod());
         state.setLastRelativeIndex(model.getLastRelativeIndex());
 
         return state;

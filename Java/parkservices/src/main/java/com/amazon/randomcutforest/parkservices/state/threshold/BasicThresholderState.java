@@ -48,6 +48,8 @@ public class BasicThresholderState {
 
     private double lowerThreshold;
 
+    private double absoluteThreshold;
+
     private boolean autoThreshold;
 
     private double initialThreshold;

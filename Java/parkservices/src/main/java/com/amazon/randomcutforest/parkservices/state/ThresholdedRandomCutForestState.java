@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.state.Version.V2_1;
 import lombok.Data;
 
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.BasicPreprocessorState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -47,6 +48,7 @@ public class ThresholdedRandomCutForestState {
     private long randomSeed;
 
     private ForestMode forestMode;
+    private TransformMethod transformMethod;
     private int lastRelativeIndex;
     private int lastReset;
 

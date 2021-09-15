@@ -34,6 +34,7 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         Deviation secondaryDeviation = deviationMapper.toModel(state.getSecondaryDeviationState());
         Deviation thresholdDeviation = deviationMapper.toModel(state.getThresholdDeviationState());
         BasicThresholder thresholder = new BasicThresholder(primaryDeviation, secondaryDeviation, thresholdDeviation);
+        thresholder.setAbsoluteThreshold(state.getAbsoluteThreshold());
         thresholder.setLowerThreshold(state.getLowerThreshold(), state.isAutoThreshold());
         thresholder.setUpperThreshold(state.getUpperThreshold());
         thresholder.setInitialThreshold(state.getInitialThreshold());
@@ -56,6 +57,7 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         state.setUpperZfactor(model.getUpperZfactor());
         state.setUpperThreshold(model.getUpperThreshold());
         state.setLowerThreshold(model.getLowerThreshold());
+        state.setAbsoluteThreshold(model.getAbsoluteThreshold());
         state.setInitialThreshold(model.getInitialThreshold());
         state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
         state.setElasticity(model.getElasticity());
