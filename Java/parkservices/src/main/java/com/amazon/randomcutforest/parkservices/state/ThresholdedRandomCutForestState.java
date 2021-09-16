@@ -47,9 +47,16 @@ public class ThresholdedRandomCutForestState {
 
     private long randomSeed;
 
-    private ForestMode forestMode;
-    private TransformMethod transformMethod;
+    private String forestMode;
+    private String transformMethod;
     private int lastRelativeIndex;
     private int lastReset;
 
+    public TransformMethod getTransformMethodEnumValue() {
+        return TransformMethod.valueOf(transformMethod);
+    }
+
+    public ForestMode getForestModeEnumValue() {
+        return ForestMode.valueOf(forestMode);
+    }
 }

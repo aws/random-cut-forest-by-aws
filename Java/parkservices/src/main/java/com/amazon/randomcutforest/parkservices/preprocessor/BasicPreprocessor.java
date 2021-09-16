@@ -102,7 +102,7 @@ public class BasicPreprocessor {
     // last point
     protected double[] lastShingledPoint;
 
-    protected TransformMethod transformMethod = TransformMethod.NONE;
+    protected TransformMethod transformMethod;
 
     protected int shingleSize;
 

@@ -40,11 +40,11 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
             }
         }
         BasicPreprocessor.Builder<?> preprocessorBuilder = new BasicPreprocessor.Builder<>()
-                .setMode(state.getForestMode()).shingleSize(state.getShingleSize()).dimensions(state.getDimensions())
-                .fillIn(state.getImputationMethod()).fillValues(state.getDefaultFill())
-                .inputLength(state.getInputLength()).transformMethod(state.getTransformMethod())
-                .startNormalization(state.getStartNormalization()).useImputedFraction(state.getUseImputedFraction())
-                .timeDeviation(timeStampDeviation);
+                .setMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
+                .dimensions(state.getDimensions()).fillIn(state.getImputationMethodEnumValue())
+                .fillValues(state.getDefaultFill()).inputLength(state.getInputLength())
+                .transformMethod(state.getTransformMethodEnumValue()).startNormalization(state.getStartNormalization())
+                .useImputedFraction(state.getUseImputedFraction()).timeDeviation(timeStampDeviation);
 
         if (deviations != null) {
             preprocessorBuilder.deviations(deviations);
@@ -71,9 +71,9 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
         state.setInputLength(model.getInputLength());
         state.setClipFactor(model.getClipFactor());
         state.setDefaultFill(model.getDefaultFill());
-        state.setImputationMethod(model.getImputationMethod());
-        state.setTransformMethod(model.getTransformMethod());
-        state.setForestMode(model.getMode());
+        state.setImputationMethod(model.getImputationMethod().name());
+        state.setTransformMethod(model.getTransformMethod().name());
+        state.setForestMode(model.getMode().name());
         state.setInitialTimeStamps(model.getInitialTimeStamps());
         state.setInitialValues(model.getInitialValues());
         state.setUseImputedFraction(model.getUseImputedFraction());

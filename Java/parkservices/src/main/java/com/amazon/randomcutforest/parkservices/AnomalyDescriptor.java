@@ -54,7 +54,7 @@ public class AnomalyDescriptor {
     long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
-    double confidence;
+    double dataConfidence;
 
     // number of trees in the forest
     int forestSize;

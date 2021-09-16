@@ -29,10 +29,10 @@ public class BasicPreprocessorState {
 
     private String version = V2_1;
     private double useImputedFraction;
-    private ImputationMethod imputationMethod;
-    private ForestMode forestMode;
+    private String imputationMethod;
+    private String forestMode;
 
-    private TransformMethod transformMethod;
+    private String transformMethod;
     private double[] lastShingledPoint;
     private double[] lastShingledInput;
     private double[] defaultFill;
@@ -51,5 +51,17 @@ public class BasicPreprocessorState {
     private int internalTimeStamp;
     private DeviationState timeStampDeviationState;
     private DeviationState[] deviationStates;
+
+    public TransformMethod getTransformMethodEnumValue() {
+        return TransformMethod.valueOf(transformMethod);
+    }
+
+    public ForestMode getForestModeEnumValue() {
+        return ForestMode.valueOf(forestMode);
+    }
+
+    public ImputationMethod getImputationMethodEnumValue() {
+        return ImputationMethod.valueOf(imputationMethod);
+    }
 
 }

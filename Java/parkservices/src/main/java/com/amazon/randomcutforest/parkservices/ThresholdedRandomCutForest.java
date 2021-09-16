@@ -37,6 +37,7 @@ import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -124,7 +125,7 @@ public class ThresholdedRandomCutForest {
     // forestMode of operation
     protected ForestMode forestMode = ForestMode.STANDARD;
 
-    protected TransformMethod transformMethod;
+    protected TransformMethod transformMethod = TransformMethod.NONE;
 
     protected RandomCutForest forest;
     protected BasicThresholder thresholder;
@@ -193,6 +194,16 @@ public class ThresholdedRandomCutForest {
         this.forest = forest;
         this.thresholder = thresholder;
         this.preprocessor = preprocessor;
+    }
+
+    public ThresholdedRandomCutForest(RandomCutForest forest, double futureAnomalyRate, List<Double> values) {
+        this.forest = forest;
+        this.thresholder = new BasicThresholder(values, futureAnomalyRate);
+        int dimensions = forest.getDimensions();
+        int inputLength = (forest.isInternalShinglingEnabled()) ? dimensions / forest.getShingleSize()
+                : forest.getDimensions();
+        this.preprocessor = new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
+                .dimensions(dimensions).shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
     }
 
     /**
@@ -527,14 +538,14 @@ public class ThresholdedRandomCutForest {
      */
     protected AnomalyDescriptor getAnomalyDescription(double[] point, long inputTimeStamp, double[] inputPoint) {
         AnomalyDescriptor result = new AnomalyDescriptor();
-        DiVector attribution = forest.getAnomalyAttribution(point);
-        double score = attribution.getHighLowSum();
+        // DiVector attribution = forest.getAnomalyAttribution(point);
+        double score = forest.getAnomalyScore(point);
         result.setRcfScore(score);
         int internalTimeStamp = preprocessor.getInternalTimeStamp();
         result.setTotalUpdates(internalTimeStamp);
         result.setTimestamp(inputTimeStamp);
         result.setForestSize(forest.getNumberOfTrees());
-        result.setAttribution(attribution);
+        result.setDataConfidence(computeDataConfidence());
         int shingleSize = forest.getShingleSize();
         int baseDimensions = forest.getDimensions() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
@@ -609,6 +620,8 @@ public class ThresholdedRandomCutForest {
          * available.
          */
 
+        DiVector attribution = forest.getAnomalyAttribution(point);
+
         double[] newPoint = null;
         double newScore = score;
         DiVector newAttribution = null;
@@ -666,6 +679,7 @@ public class ThresholdedRandomCutForest {
             }
         }
 
+        result.setAttribution(attribution);
         result.setRelativeIndex(index);
         result.setExpectedValuesPresent(reasonableForecast);
         if (reasonableForecast) {
@@ -711,7 +725,7 @@ public class ThresholdedRandomCutForest {
     }
 
     public void setLowerThreshold(double lower) {
-        thresholder.setLowerThreshold(lower);
+        thresholder.setAbsoluteThreshold(lower);
     }
 
     public void setHorizon(double horizon) {
@@ -720,6 +734,19 @@ public class ThresholdedRandomCutForest {
 
     public void setInitialThreshold(double initial) {
         thresholder.setInitialThreshold(initial);
+    }
+
+    double computeDataConfidence() {
+        long total = preprocessor.getValuesSeen();
+        double lambda = forest.getTimeDecay();
+        double totalExponent = total * lambda;
+        if (totalExponent >= 1000) {
+            return 1.;
+        } else {
+            double eTotal = Math.exp(totalExponent);
+            double confidence = (eTotal - Math.exp(lambda * Math.min(total, forest.getSampleSize()))) / (eTotal - 1);
+            return Math.max(0, confidence);
+        }
     }
 
     /**

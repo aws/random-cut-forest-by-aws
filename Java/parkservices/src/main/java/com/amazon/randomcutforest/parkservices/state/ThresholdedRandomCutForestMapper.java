@@ -57,9 +57,9 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastAnomalyAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
         tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
-        tForest.setForestMode(state.getForestMode());
+        tForest.setForestMode(state.getForestModeEnumValue());
         tForest.setLastRelativeIndex(state.getLastRelativeIndex());
-        tForest.setTransformMethod(state.getTransformMethod());
+        tForest.setTransformMethod(state.getTransformMethodEnumValue());
         return tForest;
     }
 
@@ -93,8 +93,8 @@ public class ThresholdedRandomCutForestMapper
         state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
         state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
         state.setNumberOfAttributors(model.getNumberOfAttributors());
-        state.setForestMode(model.getForestMode());
-        state.setTransformMethod(model.getTransformMethod());
+        state.setForestMode(model.getForestMode().name());
+        state.setTransformMethod(model.getTransformMethod().name());
         state.setLastRelativeIndex(model.getLastRelativeIndex());
 
         return state;
