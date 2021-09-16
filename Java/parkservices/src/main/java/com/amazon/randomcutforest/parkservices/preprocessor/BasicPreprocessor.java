@@ -113,6 +113,28 @@ public class BasicPreprocessor {
     protected ForestMode mode;
 
     public BasicPreprocessor(Builder<?> builder) {
+        checkArgument(builder.transformMethod != null, "transform required");
+        checkArgument(builder.forestMode != null, " forest mode is required");
+        checkArgument(builder.inputLength > 0, "incorrect input length");
+        checkArgument(builder.shingleSize > 0, "incorrect shingle size");
+        checkArgument(builder.dimensions > 0, "incorrect dimensions");
+        checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0,
+                " shingle size should divide the dimensions");
+        checkArgument(builder.forestMode == ForestMode.TIME_AUGMENTED || builder.inputLength == builder.dimensions
+                || builder.inputLength * builder.shingleSize == builder.dimensions, "incorrect inputsize");
+        checkArgument(
+                builder.forestMode != ForestMode.TIME_AUGMENTED
+                        || (builder.inputLength + 1) * builder.shingleSize == builder.dimensions,
+                "incorrect inputsize");
+        checkArgument(!builder.normalizeTime || builder.forestMode == ForestMode.TIME_AUGMENTED,
+                "normalized time is of no use unless augmented");
+        checkArgument(builder.startNormalization <= builder.stopNormalization, "incorrect normalization paramters");
+        checkArgument(builder.startNormalization > 0 || !builder.normalizeTime, " start of normalization cannot be 0");
+        checkArgument(
+                builder.startNormalization > 0 || !(builder.transformMethod == TransformMethod.NORMALIZE
+                        || builder.transformMethod == TransformMethod.NORMALIZE_DIFFERENCE),
+                " start of normalization cannot be 0 for these transformations");
+
         inputLength = builder.inputLength;
         dimension = builder.dimensions;
         shingleSize = builder.shingleSize;
@@ -121,7 +143,6 @@ public class BasicPreprocessor {
         this.transformMethod = builder.transformMethod;
         this.startNormalization = builder.startNormalization;
         this.stopNormalization = builder.stopNormalization;
-        checkArgument(startNormalization <= stopNormalization, "incorrect normalization paramters");
         this.normalizeTime = builder.normalizeTime;
         previousTimeStamps = new long[shingleSize];
         lastShingledInput = new double[shingleSize * inputLength];

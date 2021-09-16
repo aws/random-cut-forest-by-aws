@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.parkservices.statistics;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 /**
  * This class maintains a simple discounted statistics. Setters are avoided
  * except for discount rate which is useful as initialization from raw scores
@@ -36,6 +38,7 @@ public class Deviation {
     }
 
     public Deviation(double discount) {
+        checkArgument(0 <= discount && discount < 1, "incorrect discount parameter");
         this.discount = discount;
     }
 

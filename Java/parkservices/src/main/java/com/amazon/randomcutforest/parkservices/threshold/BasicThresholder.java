@@ -122,7 +122,9 @@ public class BasicThresholder {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
         this.thresholdDeviation = new Deviation(0);
-        scores.forEach(s -> update(s, s));
+        if (scores != null) {
+            scores.forEach(s -> update(s, s));
+        }
         primaryDeviation.setDiscount(futureAnomalyRate);
         secondaryDeviation.setDiscount(futureAnomalyRate);
         thresholdDeviation.setDiscount(futureAnomalyRate / 2);
