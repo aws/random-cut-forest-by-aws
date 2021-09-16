@@ -16,14 +16,22 @@
 package com.amazon.randomcutforest.parkservices.state;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Random;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
@@ -33,7 +41,7 @@ import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 public class ThresholdedRandomCutForestMapperTest {
 
     @Test
-    public void testRoundTripStandard() {
+    public void testRoundTripStandardShingleSizeOne() {
         int dimensions = 10;
         for (int trials = 0; trials < 10; trials++) {
 
@@ -47,7 +55,7 @@ public class ThresholdedRandomCutForestMapperTest {
                     .internalShinglingEnabled(true).anomalyRate(0.01).build();
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).anomalyRate(0.01)
-                    .setMode(ForestMode.STANDARD).internalShinglingEnabled(false).build();
+                    .setForestMode(ForestMode.STANDARD).internalShinglingEnabled(false).build();
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
@@ -252,8 +260,64 @@ public class ThresholdedRandomCutForestMapperTest {
         }
     }
 
-    @Test
-    public void testRoundTripTimeAugmented() {
+    @ParameterizedTest
+    @EnumSource(value = TransformMethod.class)
+    public void testRoundTripStandard(TransformMethod method) {
+        int sampleSize = 256;
+        int baseDimensions = 1;
+        int shingleSize = 8;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = 0;
+        new Random().nextLong();
+
+        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
+                .boundingBoxCacheFraction(0).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true).build();
+
+        double value = 0.75 + 0.5 * new Random().nextDouble();
+        first.setLowerThreshold(value);
+        second.setLowerThreshold(value);
+
+        Random r = new Random();
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
+                seed, baseDimensions);
+
+        for (double[] point : dataWithKeys.data) {
+            AnomalyDescriptor firstResult = first.process(point, 0L);
+            AnomalyDescriptor secondResult = second.process(point, 0L);
+
+            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            if (firstResult.getAnomalyGrade() > 0) {
+                assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
+                assert (firstResult.getRcfScore() >= value);
+            }
+
+        }
+
+        // serialize + deserialize
+        ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+        ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+
+        MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(100, 50, 100, 5, seed,
+                baseDimensions);
+
+        // update re-instantiated forest
+        for (double[] point : testData.data) {
+            AnomalyDescriptor firstResult = first.process(point, 0L);
+            AnomalyDescriptor secondResult = second.process(point, 0L);
+            AnomalyDescriptor thirdResult = third.process(point, 0L);
+            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TransformMethod.class)
+    public void testRoundTripTimeAugmented(TransformMethod method) {
         int sampleSize = 256;
         int baseDimensions = 1;
         int shingleSize = 8;
@@ -263,12 +327,12 @@ public class ThresholdedRandomCutForestMapperTest {
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .anomalyRate(0.01).adjustThreshold(true).build();
+                .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .anomalyRate(0.01).adjustThreshold(true).build();
+                .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).build();
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
@@ -293,7 +357,7 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
         ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
 
-        MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(1000, 50, 100, 5, seed,
+        MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(100, 50, 100, 5, seed,
                 baseDimensions);
 
         // update re-instantiated forest
@@ -309,8 +373,9 @@ public class ThresholdedRandomCutForestMapperTest {
         }
     }
 
-    @Test
-    public void testRoundTripTimeAugmentedNormalize() {
+    @ParameterizedTest
+    @EnumSource(value = TransformMethod.class)
+    public void testRoundTripTimeAugmentedNormalize(TransformMethod method) {
         int sampleSize = 256;
         int baseDimensions = 2;
         int shingleSize = 4;
@@ -318,12 +383,13 @@ public class ThresholdedRandomCutForestMapperTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true)
-                .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.TIME_AUGMENTED)
+                .normalizeTime(true).transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).build();
+                .setForestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
+                .transformMethod(method).shingleSize(shingleSize).anomalyRate(0.01).build();
 
         Random r = new Random();
         long count = 0;
@@ -357,4 +423,71 @@ public class ThresholdedRandomCutForestMapperTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("args")
+    public void testRoundTripImputeDifference(TransformMethod transformMethod, ImputationMethod imputationMethod) {
+        int sampleSize = 256;
+        int baseDimensions = 1;
+        int shingleSize = 8;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+
+        ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .internalShinglingEnabled(true).shingleSize(shingleSize).transformMethod(TransformMethod.NONE)
+                .fillIn(imputationMethod).fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .setForestMode(ForestMode.STREAMING_IMPUTE).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .transformMethod(TransformMethod.NONE).fillIn(imputationMethod).fillValues(new double[] { 1.0 })
+                .anomalyRate(0.01).build();
+
+        Random r = new Random();
+        long count = 0;
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
+                seed, baseDimensions);
+
+        for (double[] point : dataWithKeys.data) {
+            if (r.nextDouble() > 0.1) {
+                long stamp = 1000 * count + r.nextInt(10) - 5;
+                AnomalyDescriptor firstResult = first.process(point, stamp);
+                AnomalyDescriptor secondResult = second.process(point, stamp);
+                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            }
+            ++count;
+        }
+        ;
+
+        assertThrows(IllegalArgumentException.class, () -> first.process(dataWithKeys.data[0], 0));
+        // serialize + deserialize
+        ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+        ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+
+        MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(100, 50, 100, 5, seed,
+                baseDimensions);
+
+        // update re-instantiated forest
+        for (double[] point : testData.data) {
+            long stamp = 1000 * count + r.nextInt(10) - 5;
+            AnomalyDescriptor firstResult = first.process(point, stamp);
+            // AnomalyDescriptor secondResult = second.process(point, stamp);
+            AnomalyDescriptor thirdResult = third.process(point, stamp);
+            // assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            ++count;
+        }
+    }
+
+    static Stream<Arguments> args() {
+        return transformMethodStream().flatMap(
+                classParameter -> imputationMethod().map(testParameter -> Arguments.of(classParameter, testParameter)));
+    }
+
+    static Stream<ImputationMethod> imputationMethod() {
+        return Stream.of(ImputationMethod.values());
+    }
+
+    static Stream<TransformMethod> transformMethodStream() {
+        return Stream.of(TransformMethod.values());
+    }
 }

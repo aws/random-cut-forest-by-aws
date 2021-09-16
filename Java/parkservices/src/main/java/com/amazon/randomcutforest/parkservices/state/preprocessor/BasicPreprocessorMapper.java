@@ -40,7 +40,7 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
             }
         }
         BasicPreprocessor.Builder<?> preprocessorBuilder = new BasicPreprocessor.Builder<>()
-                .setMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
+                .setForestMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
                 .dimensions(state.getDimensions()).fillIn(state.getImputationMethodEnumValue())
                 .fillValues(state.getDefaultFill()).inputLength(state.getInputLength())
                 .transformMethod(state.getTransformMethodEnumValue()).startNormalization(state.getStartNormalization())
@@ -95,6 +95,7 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
                 deviationStates[i] = deviationMapper.toState(list[i]);
             }
         }
+        state.setDeviationStates(deviationStates);
         return state;
     }
 

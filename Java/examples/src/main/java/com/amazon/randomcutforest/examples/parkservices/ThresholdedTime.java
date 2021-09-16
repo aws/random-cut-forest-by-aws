@@ -61,7 +61,7 @@ public class ThresholdedTime implements Example {
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
-                .setMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).build();
+                .setForestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).build();
 
         long seed = new Random().nextLong();
 

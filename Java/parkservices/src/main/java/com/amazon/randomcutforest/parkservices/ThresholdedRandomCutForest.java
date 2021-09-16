@@ -44,7 +44,6 @@ import java.util.Random;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.DynamicScoringRandomCutForest;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -136,7 +135,7 @@ public class ThresholdedRandomCutForest {
         forestMode = builder.forestMode;
         transformMethod = builder.transformMethod;
         BasicPreprocessor.Builder<?> preprocessorBuilder = BasicPreprocessor.builder().shingleSize(builder.shingleSize)
-                .transformMethod(builder.transformMethod).setMode(builder.forestMode);
+                .transformMethod(builder.transformMethod).setForestMode(builder.forestMode);
 
         if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
             preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
@@ -825,7 +824,7 @@ public class ThresholdedRandomCutForest {
         }
 
         protected RandomCutForest buildForest() {
-            RandomCutForest.Builder builder = new DynamicScoringRandomCutForest.Builder().dimensions(dimensions)
+            RandomCutForest.Builder builder = new RandomCutForest.Builder().dimensions(dimensions)
                     .sampleSize(sampleSize).numberOfTrees(numberOfTrees).compact(compact)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).centerOfMassEnabled(centerOfMassEnabled)
                     .parallelExecutionEnabled(parallelExecutionEnabled).precision(precision)
@@ -966,7 +965,7 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T setMode(ForestMode forestMode) {
+        public T setForestMode(ForestMode forestMode) {
             this.forestMode = forestMode;
             return (T) this;
         }

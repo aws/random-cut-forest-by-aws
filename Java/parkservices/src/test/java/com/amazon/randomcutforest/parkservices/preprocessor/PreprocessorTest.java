@@ -28,74 +28,74 @@ public class PreprocessorTest {
     @Test
     void constructorTest() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().build();
+            new BasicPreprocessor.Builder<>().transformMethod(null).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).build();
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(null).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.STANDARD)
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
                     .build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.STANDARD)
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
                     .inputLength(10).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.STANDARD)
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
                     .inputLength(10).dimensions(12).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.STANDARD)
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
                     .inputLength(12).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.TIME_AUGMENTED)
-                    .inputLength(12).dimensions(12).build();
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(12).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.TIME_AUGMENTED)
-                    .inputLength(12).dimensions(13).build();
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(14).build();
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(14).build();
         });
         assertDoesNotThrow(() -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
         assertDoesNotThrow(() -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
-                    .setMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
 
         // external shingling in STANDARD mode
         assertDoesNotThrow(() -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
 
         // internal shingling
         assertDoesNotThrow(() -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
+                    .setForestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setMode(ForestMode.STANDARD)
+            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
                     .inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
-                    .setMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
+                    .setForestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
             new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setMode(ForestMode.STANDARD).inputLength(5).dimensions(12).build();
+                    .setForestMode(ForestMode.STANDARD).inputLength(5).dimensions(12).build();
         });
     }
 

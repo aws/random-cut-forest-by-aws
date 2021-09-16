@@ -661,11 +661,6 @@ public class BasicPreprocessor {
             return (T) this;
         }
 
-        public T anomalyRate(double anomalyRate) {
-            this.anomalyRate = anomalyRate;
-            return (T) this;
-        }
-
         public T fillIn(ImputationMethod imputationMethod) {
             this.fillin = imputationMethod;
             return (T) this;
@@ -687,7 +682,7 @@ public class BasicPreprocessor {
             return (T) this;
         }
 
-        public T setMode(ForestMode forestMode) {
+        public T setForestMode(ForestMode forestMode) {
             this.forestMode = forestMode;
             return (T) this;
         }
