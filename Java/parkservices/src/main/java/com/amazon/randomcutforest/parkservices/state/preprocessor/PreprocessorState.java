@@ -25,7 +25,7 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
 @Data
-public class BasicPreprocessorState {
+public class PreprocessorState {
 
     private String version = V2_1;
     private double useImputedFraction;
@@ -33,6 +33,7 @@ public class BasicPreprocessorState {
     private String forestMode;
 
     private String transformMethod;
+    private double[] weights;
     private double[] lastShingledPoint;
     private double[] lastShingledInput;
     private double[] defaultFill;
@@ -49,6 +50,7 @@ public class BasicPreprocessorState {
     private long[] previousTimeStamps;
     private int valuesSeen;
     private int internalTimeStamp;
+    private DeviationState dataQualityState;
     private DeviationState timeStampDeviationState;
     private DeviationState[] deviationStates;
 

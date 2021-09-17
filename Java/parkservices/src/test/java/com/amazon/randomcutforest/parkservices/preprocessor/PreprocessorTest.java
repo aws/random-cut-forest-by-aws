@@ -28,74 +28,73 @@ public class PreprocessorTest {
     @Test
     void constructorTest() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(null).build();
+            new Preprocessor.Builder<>().transformMethod(null).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(null).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(null).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
-                    .build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(10).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(10).dimensions(12).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(12).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(12).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.TIME_AUGMENTED)
+                    .inputLength(12).dimensions(12).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.TIME_AUGMENTED)
+                    .inputLength(12).dimensions(13).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(13).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(14).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(12).dimensions(14).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
 
         // external shingling in STANDARD mode
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
 
         // internal shingling
         assertDoesNotThrow(() -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).setForestMode(ForestMode.STANDARD)
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
-                    .setForestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
+                    .forestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
-                    .setForestMode(ForestMode.STANDARD).inputLength(5).dimensions(12).build();
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.STANDARD).inputLength(5).dimensions(12).build();
         });
     }
 

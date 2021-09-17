@@ -20,8 +20,9 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
-import com.amazon.randomcutforest.parkservices.preprocessor.BasicPreprocessor;
-import com.amazon.randomcutforest.parkservices.state.preprocessor.BasicPreprocessorMapper;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
+import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.state.IStateMapper;
@@ -38,11 +39,11 @@ public class ThresholdedRandomCutForestMapper
 
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
         BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
-        BasicPreprocessorMapper preprocessorMapper = new BasicPreprocessorMapper();
+        PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
-        BasicPreprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorState());
+        Preprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorStates()[0]);
         ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, preprocessor);
 
         tForest.setIgnoreSimilar(state.isIgnoreSimilar());
@@ -78,9 +79,8 @@ public class ThresholdedRandomCutForestMapper
         BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
         state.setThresholderState(thresholderMapper.toState(model.getThresholder()));
 
-        BasicPreprocessorMapper preprocessorMapper = new BasicPreprocessorMapper();
-        state.setPreprocessorState(preprocessorMapper.toState(model.getPreprocessor()));
-
+        PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
+        state.setPreprocessorStates(new PreprocessorState[] { preprocessorMapper.toState(model.getPreprocessor()) });
         state.setTriggerFactor(model.getTriggerFactor());
         state.setInHighScoreRegion(model.isInHighScoreRegion());
         state.setLastScore(model.getLastScore());

@@ -49,7 +49,7 @@ import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.preprocessor.BasicPreprocessor;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
@@ -128,14 +128,14 @@ public class ThresholdedRandomCutForest {
 
     protected RandomCutForest forest;
     protected BasicThresholder thresholder;
-    protected BasicPreprocessor preprocessor;
+    protected Preprocessor preprocessor;
 
     public ThresholdedRandomCutForest(Builder<?> builder) {
 
         forestMode = builder.forestMode;
         transformMethod = builder.transformMethod;
-        BasicPreprocessor.Builder<?> preprocessorBuilder = BasicPreprocessor.builder().shingleSize(builder.shingleSize)
-                .transformMethod(builder.transformMethod).setForestMode(builder.forestMode);
+        Preprocessor.Builder<?> preprocessorBuilder = Preprocessor.builder().shingleSize(builder.shingleSize)
+                .transformMethod(builder.transformMethod).forestMode(builder.forestMode);
 
         if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
             preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
@@ -145,7 +145,7 @@ public class ThresholdedRandomCutForest {
             builder.internalShinglingEnabled = Optional.of(true);
         } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
             preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
-            preprocessorBuilder.fillIn(builder.fillin);
+            preprocessorBuilder.imputationMethod(builder.imputationMethod);
             if (builder.fillValues != null) {
                 preprocessorBuilder.fillValues(builder.fillValues);
             }
@@ -157,13 +157,14 @@ public class ThresholdedRandomCutForest {
                     .inputLength((smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions);
         }
 
+        preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.timeDecay(
                 builder.timeDecay.orElse(1.0 / (DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY * builder.sampleSize)));
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder
-                .stopNormalization(builder.stopNormalization.orElse(BasicPreprocessor.DEFAULT_STOP_NORMALIZATION));
+                .stopNormalization(builder.stopNormalization.orElse(Preprocessor.DEFAULT_STOP_NORMALIZATION));
         preprocessorBuilder
-                .startNormalization(builder.startNormalization.orElse(BasicPreprocessor.DEFAULT_START_NORMALIZATION));
+                .startNormalization(builder.startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION));
         forest = builder.buildForest();
 
         BasicThresholder basic = new BasicThresholder(builder.anomalyRate, builder.adjustThreshold);
@@ -188,21 +189,24 @@ public class ThresholdedRandomCutForest {
         preprocessor = preprocessorBuilder.build();
     }
 
-    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder,
-            BasicPreprocessor preprocessor) {
+    // for mappers
+    public ThresholdedRandomCutForest(RandomCutForest forest, BasicThresholder thresholder, Preprocessor preprocessor) {
         this.forest = forest;
         this.thresholder = thresholder;
         this.preprocessor = preprocessor;
     }
 
+    // for conversion from other thresholding models
     public ThresholdedRandomCutForest(RandomCutForest forest, double futureAnomalyRate, List<Double> values) {
         this.forest = forest;
         this.thresholder = new BasicThresholder(values, futureAnomalyRate);
         int dimensions = forest.getDimensions();
         int inputLength = (forest.isInternalShinglingEnabled()) ? dimensions / forest.getShingleSize()
                 : forest.getDimensions();
-        this.preprocessor = new BasicPreprocessor.Builder<>().transformMethod(TransformMethod.NONE)
-                .dimensions(dimensions).shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
+        this.preprocessor = new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).dimensions(dimensions)
+                .shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
+        preprocessor.setValuesSeen((int) forest.getTotalUpdates());
+        preprocessor.getDataQuality().update(1.0);
     }
 
     /**
@@ -739,11 +743,14 @@ public class ThresholdedRandomCutForest {
         long total = preprocessor.getValuesSeen();
         double lambda = forest.getTimeDecay();
         double totalExponent = total * lambda;
-        if (totalExponent >= 1000) {
-            return 1.;
+        if (totalExponent == 0) {
+            return 0.0;
+        } else if (totalExponent >= 20) {
+            return Math.min(1.0, preprocessor.getDataQuality().getMean());
         } else {
             double eTotal = Math.exp(totalExponent);
-            double confidence = (eTotal - Math.exp(lambda * Math.min(total, forest.getSampleSize()))) / (eTotal - 1);
+            double confidence = preprocessor.getDataQuality().getMean()
+                    * (eTotal - Math.exp(lambda * Math.min(total, forest.getOutputAfter()))) / (eTotal - 1);
             return Math.max(0, confidence);
         }
     }
@@ -782,11 +789,12 @@ public class ThresholdedRandomCutForest {
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
         protected double anomalyRate = 0.01;
         protected TransformMethod transformMethod = TransformMethod.NONE;
-        protected ImputationMethod fillin = PREVIOUS;
+        protected ImputationMethod imputationMethod = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
         protected boolean normalizeTime = false;
         protected boolean normalizeValues = false;
         protected double[] fillValues = null;
+        protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected boolean adjustThreshold = false;
 
@@ -944,14 +952,20 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T fillIn(ImputationMethod imputationMethod) {
-            this.fillin = imputationMethod;
+        public T imputationMethod(ImputationMethod imputationMethod) {
+            this.imputationMethod = imputationMethod;
             return (T) this;
         }
 
         public T fillValues(double[] values) {
             // values cannot be a null
             this.fillValues = Arrays.copyOf(values, values.length);
+            return (T) this;
+        }
+
+        public T weights(double[] values) {
+            // values cannot be a null
+            this.weights = Arrays.copyOf(values, values.length);
             return (T) this;
         }
 

@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.parkservices.state.preprocessor;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.parkservices.preprocessor.BasicPreprocessor;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
@@ -26,12 +26,13 @@ import com.amazon.randomcutforest.state.IStateMapper;
 
 @Getter
 @Setter
-public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, BasicPreprocessorState> {
+public class PreprocessorMapper implements IStateMapper<Preprocessor, PreprocessorState> {
 
     @Override
-    public BasicPreprocessor toModel(BasicPreprocessorState state, long seed) {
+    public Preprocessor toModel(PreprocessorState state, long seed) {
         DeviationMapper deviationMapper = new DeviationMapper();
         Deviation timeStampDeviation = deviationMapper.toModel(state.getTimeStampDeviationState());
+        Deviation dataQuality = deviationMapper.toModel(state.getDataQualityState());
         Deviation[] deviations = null;
         if (state.getDeviationStates() != null) {
             deviations = new Deviation[state.getDeviationStates().length];
@@ -39,18 +40,19 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
                 deviations[i] = deviationMapper.toModel(state.getDeviationStates()[i]);
             }
         }
-        BasicPreprocessor.Builder<?> preprocessorBuilder = new BasicPreprocessor.Builder<>()
-                .setForestMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
-                .dimensions(state.getDimensions()).fillIn(state.getImputationMethodEnumValue())
-                .fillValues(state.getDefaultFill()).inputLength(state.getInputLength())
+        Preprocessor.Builder<?> preprocessorBuilder = new Preprocessor.Builder<>()
+                .forestMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
+                .dimensions(state.getDimensions()).imputationMethod(state.getImputationMethodEnumValue())
+                .fillValues(state.getDefaultFill()).inputLength(state.getInputLength()).weights(state.getWeights())
                 .transformMethod(state.getTransformMethodEnumValue()).startNormalization(state.getStartNormalization())
-                .useImputedFraction(state.getUseImputedFraction()).timeDeviation(timeStampDeviation);
+                .useImputedFraction(state.getUseImputedFraction()).timeDeviation(timeStampDeviation)
+                .dataQuality(dataQuality);
 
         if (deviations != null) {
             preprocessorBuilder.deviations(deviations);
         }
 
-        BasicPreprocessor preprocessor = preprocessorBuilder.build();
+        Preprocessor preprocessor = preprocessorBuilder.build();
         preprocessor.setInitialValues(state.getInitialValues());
         preprocessor.setInitialTimeStamps(state.getInitialTimeStamps());
         preprocessor.setClipFactor(state.getClipFactor());
@@ -64,8 +66,8 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
     }
 
     @Override
-    public BasicPreprocessorState toState(BasicPreprocessor model) {
-        BasicPreprocessorState state = new BasicPreprocessorState();
+    public PreprocessorState toState(Preprocessor model) {
+        PreprocessorState state = new PreprocessorState();
         state.setShingleSize(model.getShingleSize());
         state.setDimensions(model.getDimension());
         state.setInputLength(model.getInputLength());
@@ -73,6 +75,7 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
         state.setDefaultFill(model.getDefaultFill());
         state.setImputationMethod(model.getImputationMethod().name());
         state.setTransformMethod(model.getTransformMethod().name());
+        state.setWeights(model.getWeights());
         state.setForestMode(model.getMode().name());
         state.setInitialTimeStamps(model.getInitialTimeStamps());
         state.setInitialValues(model.getInitialValues());
@@ -87,6 +90,7 @@ public class BasicPreprocessorMapper implements IStateMapper<BasicPreprocessor, 
         state.setInternalTimeStamp(model.getInternalTimeStamp());
         DeviationMapper deviationMapper = new DeviationMapper();
         state.setTimeStampDeviationState(deviationMapper.toState(model.getTimeStampDeviation()));
+        state.setDataQualityState(deviationMapper.toState(model.getDataQuality()));
         DeviationState[] deviationStates = null;
         if (model.getDeviationList() != null) {
             Deviation[] list = model.getDeviationList();

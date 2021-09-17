@@ -15,16 +15,12 @@
 
 package com.amazon.randomcutforest.parkservices.state.threshold;
 
-import static com.amazon.randomcutforest.state.Version.V2_1;
-
 import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
 @Data
 public class BasicThresholderState {
-
-    private String version = V2_1;
 
     private long randomseed;
 

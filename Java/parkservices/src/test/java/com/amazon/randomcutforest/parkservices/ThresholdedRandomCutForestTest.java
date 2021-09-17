@@ -161,7 +161,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                     .build();
         });
@@ -170,7 +170,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 0.0, 17.0 }).normalizeTime(true).internalShinglingEnabled(true)
                     .shingleSize(shingleSize).anomalyRate(0.01).build();
         });
@@ -179,7 +179,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 2.0 }).internalShinglingEnabled(true).shingleSize(shingleSize)
                     .anomalyRate(0.01).normalizeTime(true).build();
         });
@@ -187,7 +187,7 @@ public class ThresholdedRandomCutForestTest {
         assertDoesNotThrow(() -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(ImputationMethod.FIXED_VALUES)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 2.0 }).internalShinglingEnabled(true).shingleSize(shingleSize)
                     .anomalyRate(0.01).build();
         });
@@ -205,7 +205,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(method).normalizeTime(true)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
                     .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
         });
 
@@ -216,13 +216,13 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(newDimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).fillIn(method).normalizeTime(true)
+                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
                     .internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01).build();
         });
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(newDimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
-                .fillIn(method).internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01)
+                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 0 }).build();
 
         double[] fixedData = new double[] { 1.0 };
@@ -269,7 +269,7 @@ public class ThresholdedRandomCutForestTest {
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
-                .fillIn(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
+                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(TransformMethod.SUBTRACT_MA)
                 .build();
 
@@ -314,7 +314,7 @@ public class ThresholdedRandomCutForestTest {
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
-                .fillIn(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
+                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE).build();
 
         double[] fixedData = new double[] { 1.0 };
@@ -354,7 +354,7 @@ public class ThresholdedRandomCutForestTest {
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
-                .fillIn(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
+                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE_DIFFERENCE)
                 .build();
 
@@ -362,7 +362,7 @@ public class ThresholdedRandomCutForestTest {
         double[] newData = new double[] { 10.0 };
         Random random = new Random();
         int count = 0;
-        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
+        for (int i = 0; i < 2000 + new Random().nextInt(100); i++) {
             forest.process(fixedData, (long) count * 113 + random.nextInt(10));
             ++count;
         }

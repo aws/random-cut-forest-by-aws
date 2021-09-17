@@ -43,7 +43,7 @@ public class ThresholdedRandomCutForestMapperTest {
     @Test
     public void testRoundTripStandardShingleSizeOne() {
         int dimensions = 10;
-        for (int trials = 0; trials < 10; trials++) {
+        for (int trials = 0; trials < 1; trials++) {
 
             long seed = new Random().nextLong();
             RandomCutForest.Builder<?> builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
@@ -59,11 +59,12 @@ public class ThresholdedRandomCutForestMapperTest {
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(1000); i++) {
+            for (int i = 0; i < 2000 + new Random().nextInt(1000); i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 AnomalyDescriptor secondResult = second.process(point, 0L);
 
+                assertEquals(firstResult.getDataConfidence(), secondResult.getDataConfidence(), 1e-10);
                 assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
                 assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
                 forest.update(point);
@@ -83,6 +84,7 @@ public class ThresholdedRandomCutForestMapperTest {
                 assertEquals(score, firstResult.getRcfScore(), 1e-10);
                 assertEquals(score, secondResult.getRcfScore(), 1e-10);
                 assertEquals(score, thirdResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getDataConfidence(), secondResult.getDataConfidence(), 1e-10);
                 forest.update(point);
             }
         }
@@ -116,6 +118,7 @@ public class ThresholdedRandomCutForestMapperTest {
             RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
 
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(copyForest, 0.01, null);
+
             //
             for (int i = 0; i < new Random().nextInt(1000); i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
@@ -141,6 +144,7 @@ public class ThresholdedRandomCutForestMapperTest {
                 assertEquals(score, firstResult.getRcfScore(), 1e-10);
                 assertEquals(score, secondResult.getRcfScore(), 1e-10);
                 assertEquals(score, thirdResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
                 forest.update(point);
             }
         }
@@ -197,6 +201,7 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(score, firstResult.getRcfScore(), 1e-4);
             assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
             assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
             forest.update(point);
         }
     }
@@ -256,6 +261,7 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(score, firstResult.getRcfScore(), 1e-4);
             assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
             assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
             forest.update(point);
         }
     }
@@ -273,10 +279,11 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
                 .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
-                .boundingBoxCacheFraction(0).build();
+                .boundingBoxCacheFraction(0).weights(new double[] { 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true).build();
+                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
+                .weights(new double[] { 1.0 }).build();
 
         double value = 0.75 + 0.5 * new Random().nextDouble();
         first.setLowerThreshold(value);
@@ -328,11 +335,11 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).build();
+                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).build();
+                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
@@ -385,11 +392,12 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.TIME_AUGMENTED)
                 .normalizeTime(true).transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .anomalyRate(0.01).build();
+                .anomalyRate(0.01).weights(new double[] { 1.0, 2.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setForestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
-                .transformMethod(method).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .transformMethod(method).shingleSize(shingleSize).anomalyRate(0.01).weights(new double[] { 1.0, 2.0 })
+                .build();
 
         Random r = new Random();
         long count = 0;
@@ -435,12 +443,12 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).transformMethod(TransformMethod.NONE)
-                .fillIn(imputationMethod).fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
+                .imputationMethod(imputationMethod).fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .setForestMode(ForestMode.STREAMING_IMPUTE).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(TransformMethod.NONE).fillIn(imputationMethod).fillValues(new double[] { 1.0 })
-                .anomalyRate(0.01).build();
+                .transformMethod(TransformMethod.NONE).imputationMethod(imputationMethod)
+                .fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
 
         Random r = new Random();
         long count = 0;

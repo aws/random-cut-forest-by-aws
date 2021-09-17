@@ -29,6 +29,10 @@ public enum TransformMethod {
      */
     NONE,
     /**
+     * standard column normalization using fixed weights
+     */
+    WEIGHTED,
+    /**
      * subtract a moving average -- the average would be computed using the same
      * discount factor as the time decay of the RCF samplers.
      */
