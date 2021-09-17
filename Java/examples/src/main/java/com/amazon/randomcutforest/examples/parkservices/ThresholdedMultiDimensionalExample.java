@@ -59,7 +59,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .precision(precision).anomalyRate(0.01).setForestMode(ForestMode.STANDARD).build();
+                .precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD).build();
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);

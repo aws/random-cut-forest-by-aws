@@ -55,7 +55,7 @@ public class ThresholdedRandomCutForestMapperTest {
                     .internalShinglingEnabled(true).anomalyRate(0.01).build();
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).anomalyRate(0.01)
-                    .setForestMode(ForestMode.STANDARD).internalShinglingEnabled(false).build();
+                    .forestMode(ForestMode.STANDARD).internalShinglingEnabled(false).build();
             RandomCutForest forest = builder.build();
 
             Random r = new Random();
@@ -334,11 +334,11 @@ public class ThresholdedRandomCutForestMapperTest {
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
                 .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
                 .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
 
         first.setLowerThreshold(value);
@@ -390,12 +390,12 @@ public class ThresholdedRandomCutForestMapperTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.TIME_AUGMENTED)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.TIME_AUGMENTED)
                 .normalizeTime(true).transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize)
                 .anomalyRate(0.01).weights(new double[] { 1.0, 2.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
+                .forestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
                 .transformMethod(method).shingleSize(shingleSize).anomalyRate(0.01).weights(new double[] { 1.0, 2.0 })
                 .build();
 
@@ -441,12 +441,12 @@ public class ThresholdedRandomCutForestMapperTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .internalShinglingEnabled(true).shingleSize(shingleSize).transformMethod(TransformMethod.NONE)
                 .imputationMethod(imputationMethod).fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.STREAMING_IMPUTE).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .forestMode(ForestMode.STREAMING_IMPUTE).internalShinglingEnabled(true).shingleSize(shingleSize)
                 .transformMethod(TransformMethod.NONE).imputationMethod(imputationMethod)
                 .fillValues(new double[] { 1.0 }).anomalyRate(0.01).build();
 

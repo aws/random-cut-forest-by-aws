@@ -87,7 +87,7 @@ public class ShingledMultiDimDataWithKeys {
             double[] newChange = new double[baseDimension];
             boolean used = false;
             for (int j = 0; j < baseDimension; j++) {
-                data[i][j] = amp[j] * Math.cos(2 * PI * (i + phase[j]) / period) + +slope[j] * i
+                data[i][j] = amp[j] * Math.cos(2 * PI * (i + phase[j]) / period) + slope[j] * i
                         + noise * noiseprg.nextDouble();
                 if (flag && noiseprg.nextDouble() < 0.3) {
                     double factor = 5 * (1 + noiseprg.nextDouble());

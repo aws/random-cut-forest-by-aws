@@ -979,7 +979,7 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T setForestMode(ForestMode forestMode) {
+        public T forestMode(ForestMode forestMode) {
             this.forestMode = forestMode;
             return (T) this;
         }

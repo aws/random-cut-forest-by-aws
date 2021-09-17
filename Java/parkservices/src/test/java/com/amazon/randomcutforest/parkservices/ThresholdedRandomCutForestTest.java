@@ -49,25 +49,25 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
         assertThrows(IllegalArgumentException.class,
                 () -> ThresholdedRandomCutForest.builder().compact(true).sampleSize(sampleSize).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.TIME_AUGMENTED)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.TIME_AUGMENTED)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
 
         // have to enable internal shingling or keep it unspecified
         assertDoesNotThrow(
                 () -> ThresholdedRandomCutForest.builder().compact(true).sampleSize(sampleSize).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.TIME_AUGMENTED)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.TIME_AUGMENTED)
                         .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build());
 
         // imputefraction not allowed
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).sampleSize(sampleSize)
                         .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                        .setForestMode(ForestMode.TIME_AUGMENTED).useImputedFraction(0.5).internalShinglingEnabled(true)
+                        .forestMode(ForestMode.TIME_AUGMENTED).useImputedFraction(0.5).internalShinglingEnabled(true)
                         .shingleSize(shingleSize).anomalyRate(0.01).build());
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).sampleSize(sampleSize)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).shingleSize(shingleSize).anomalyRate(0.01)
+                .forestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .build();
         assertNotNull(forest.getPreprocessor().getInitialTimeStamps());
     }
@@ -81,7 +81,7 @@ public class ThresholdedRandomCutForestTest {
         assertDoesNotThrow(() -> {
             ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(false).shingleSize(shingleSize)
+                    .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(false).shingleSize(shingleSize)
                     .anomalyRate(0.01).build();
             assertEquals(forest.getForest().getDimensions(), dimensions + 1);
 
@@ -89,7 +89,7 @@ public class ThresholdedRandomCutForestTest {
 
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                .setForestMode(ForestMode.TIME_AUGMENTED).shingleSize(shingleSize).anomalyRate(0.01).build();
+                .forestMode(ForestMode.TIME_AUGMENTED).shingleSize(shingleSize).anomalyRate(0.01).build();
         assertTrue(forest.getForest().isInternalShinglingEnabled()); // default on
 
     }
@@ -104,11 +104,11 @@ public class ThresholdedRandomCutForestTest {
         // have to enable internal shingling or keep it unfixed
         assertThrows(IllegalArgumentException.class,
                 () -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                         .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build());
 
         assertDoesNotThrow(() -> new ThresholdedRandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .shingleSize(shingleSize).anomalyRate(0.01).build());
     }
 
@@ -122,26 +122,25 @@ public class ThresholdedRandomCutForestTest {
         // have to enable internal shingling or keep it unfixed
         assertThrows(IllegalArgumentException.class,
                 () -> ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                        .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STANDARD)
+                        .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STANDARD)
                         .useImputedFraction(0.5).internalShinglingEnabled(false).shingleSize(shingleSize)
                         .anomalyRate(0.01).build());
 
         assertDoesNotThrow(() -> {
             ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions).precision(Precision.FLOAT_32)
-                    .randomSeed(seed).setForestMode(ForestMode.STANDARD).internalShinglingEnabled(false)
+                    .randomSeed(seed).forestMode(ForestMode.STANDARD).internalShinglingEnabled(false)
                     .shingleSize(shingleSize).anomalyRate(0.01).build();
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
+                    .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
                     .transformMethod(NORMALIZE).startNormalization(111).stopNormalization(100).build();
         });
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STANDARD)
-                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(NORMALIZE).startNormalization(111)
-                .stopNormalization(111).build();
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STANDARD).shingleSize(shingleSize)
+                .anomalyRate(0.01).transformMethod(NORMALIZE).startNormalization(111).stopNormalization(111).build();
 
         assertFalse(forest.getForest().isInternalShinglingEnabled()); // left to false
         assertEquals(forest.getPreprocessor().getInitialValues().length, 111);
@@ -161,7 +160,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .normalizeTime(true).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                     .build();
         });
@@ -170,7 +169,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 0.0, 17.0 }).normalizeTime(true).internalShinglingEnabled(true)
                     .shingleSize(shingleSize).anomalyRate(0.01).build();
         });
@@ -179,7 +178,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 2.0 }).internalShinglingEnabled(true).shingleSize(shingleSize)
                     .anomalyRate(0.01).normalizeTime(true).build();
         });
@@ -187,7 +186,7 @@ public class ThresholdedRandomCutForestTest {
         assertDoesNotThrow(() -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(ImputationMethod.FIXED_VALUES)
                     .fillValues(new double[] { 2.0 }).internalShinglingEnabled(true).shingleSize(shingleSize)
                     .anomalyRate(0.01).build();
         });
@@ -205,7 +204,7 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
                     .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
         });
 
@@ -216,12 +215,12 @@ public class ThresholdedRandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(newDimensions).precision(Precision.FLOAT_32).randomSeed(seed)
-                    .setForestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).imputationMethod(method).normalizeTime(true)
                     .internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01).build();
         });
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(newDimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .imputationMethod(method).internalShinglingEnabled(true).shingleSize(newShingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 0 }).build();
 
@@ -268,7 +267,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(TransformMethod.SUBTRACT_MA)
                 .build();
@@ -313,7 +312,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE).build();
 
@@ -353,7 +352,7 @@ public class ThresholdedRandomCutForestTest {
         long seed = new Random().nextLong();
 
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).setForestMode(ForestMode.STREAMING_IMPUTE)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE_DIFFERENCE)
                 .build();

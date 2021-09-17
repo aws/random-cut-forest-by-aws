@@ -60,7 +60,7 @@ public class Thresholded1DGaussianMix implements Example {
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
-                .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).setForestMode(ForestMode.TIME_AUGMENTED)
+                .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.TIME_AUGMENTED)
                 .build();
 
         long seed = new Random().nextLong();
