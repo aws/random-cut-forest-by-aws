@@ -35,7 +35,7 @@ public class BasicThresholderTest {
 
         Random random = new Random();
         for (int i = 0; i < 100; i++) {
-            basicThresholder.setLowerThreshold(1 + random.nextDouble());
+            basicThresholder.setLowerThreshold(1 + random.nextDouble(), false);
         }
         assert (basicThresholder.getLowerThreshold() * 2 < basicThresholder.getUpperThreshold() + 1e-10);
     }
@@ -46,7 +46,7 @@ public class BasicThresholderTest {
 
         Random random = new Random();
         for (int i = 0; i < 100; i++) {
-            basicThresholder.setLowerThreshold(1 + random.nextDouble());
+            basicThresholder.setLowerThreshold(1 + random.nextDouble(), false);
         }
         assert (basicThresholder.getLowerThreshold() < basicThresholder.getInitialThreshold() + 1e-10);
         for (int i = 0; i < 100; i++) {

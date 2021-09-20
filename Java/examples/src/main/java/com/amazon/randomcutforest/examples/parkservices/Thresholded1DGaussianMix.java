@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.examples.parkservices;
 
-import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.config.ForestMode;
@@ -24,22 +23,22 @@ import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
-public class ThresholdedMultiDimensionalExample implements Example {
+public class Thresholded1DGaussianMix implements Example {
 
     public static void main(String[] args) throws Exception {
-        new ThresholdedMultiDimensionalExample().run();
+        new Thresholded1DGaussianMix().run();
     }
 
     @Override
     public String command() {
-        return "Thresholded_Multi_Dim_example";
+        return "Thresholded_1D_Gaussian_example";
     }
 
     @Override
     public String description() {
-        return "Thresholded Multi Dimensional Example";
+        return "Thresholded one dimensional gassian mixture Example";
     }
 
     @Override
@@ -54,33 +53,42 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 4;
+        int baseDimensions = 1;
+
+        int count = 0;
 
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD).build();
+        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.TIME_AUGMENTED)
+                .build();
 
         long seed = new Random().nextLong();
+
+        System.out.println("Anomalies would correspond to a run, based on a change of state.");
+        System.out.println("Each change is normal <-> anomaly;  so after the second change the data is normal");
         System.out.println("seed = " + seed);
-        // change the last argument seed for a different run
-        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(dataSize, 50,
-                shingleSize, baseDimensions, seed);
+        NormalMixtureTestData normalMixtureTestData = new NormalMixtureTestData(10, 1.0, 50, 2.0, 0.01, 0.1);
+        MultiDimDataWithKey dataWithKeys = normalMixtureTestData.generateTestDataWithKey(dataSize, 1, 0);
+
         int keyCounter = 0;
-        int count = 0;
         for (double[] point : dataWithKeys.data) {
 
-            AnomalyDescriptor result = forest.process(point, 0L);
+            AnomalyDescriptor result = forest.process(point, count);
 
             if (keyCounter < dataWithKeys.changeIndices.length
-                    && count + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (count + shingleSize - 1) + " CHANGE "
-                        + Arrays.toString(dataWithKeys.changes[keyCounter]));
+                    && result.getTimestamp() == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println("timestamp " + (result.getTimestamp()) + " CHANGE");
+                ++keyCounter;
+            }
+
+            if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println("timestamp " + (count) + " CHANGE ");
                 ++keyCounter;
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("timestamp " + (count + shingleSize - 1) + " RESULT value ");
+                System.out.print("timestamp " + (count) + " RESULT value ");
                 for (int i = 0; i < baseDimensions; i++) {
                     System.out.print(result.getCurrentValues()[i] + ", ");
                 }
@@ -116,7 +124,5 @@ public class ThresholdedMultiDimensionalExample implements Example {
             }
             ++count;
         }
-
     }
-
 }

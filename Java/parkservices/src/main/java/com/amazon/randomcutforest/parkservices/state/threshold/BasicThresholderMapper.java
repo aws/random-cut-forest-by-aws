@@ -13,13 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.threshold.state;
+package com.amazon.randomcutforest.parkservices.state.threshold;
 
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
-import com.amazon.randomcutforest.parkservices.threshold.Deviation;
 import com.amazon.randomcutforest.state.IStateMapper;
 
 @Getter
@@ -31,8 +32,10 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         DeviationMapper deviationMapper = new DeviationMapper();
         Deviation primaryDeviation = deviationMapper.toModel(state.getPrimaryDeviationState());
         Deviation secondaryDeviation = deviationMapper.toModel(state.getSecondaryDeviationState());
-        BasicThresholder thresholder = new BasicThresholder(primaryDeviation, secondaryDeviation);
-        thresholder.setLowerThreshold(state.getLowerThreshold());
+        Deviation thresholdDeviation = deviationMapper.toModel(state.getThresholdDeviationState());
+        BasicThresholder thresholder = new BasicThresholder(primaryDeviation, secondaryDeviation, thresholdDeviation);
+        thresholder.setAbsoluteThreshold(state.getAbsoluteThreshold());
+        thresholder.setLowerThreshold(state.getLowerThreshold(), state.isAutoThreshold());
         thresholder.setUpperThreshold(state.getUpperThreshold());
         thresholder.setInitialThreshold(state.getInitialThreshold());
         thresholder.setElasticity(state.getElasticity());
@@ -54,13 +57,16 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         state.setUpperZfactor(model.getUpperZfactor());
         state.setUpperThreshold(model.getUpperThreshold());
         state.setLowerThreshold(model.getLowerThreshold());
+        state.setAbsoluteThreshold(model.getAbsoluteThreshold());
         state.setInitialThreshold(model.getInitialThreshold());
         state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
         state.setElasticity(model.getElasticity());
         state.setCount(model.getCount());
+        state.setAutoThreshold(model.isAutoThreshold());
         state.setMinimumScores(model.getMinimumScores());
         state.setPrimaryDeviationState(deviationMapper.toState(model.getPrimaryDeviation()));
         state.setSecondaryDeviationState(deviationMapper.toState(model.getSecondaryDeviation()));
+        state.setThresholdDeviationState(deviationMapper.toState(model.getThresholdDeviation()));
         state.setHorizon(model.getHorizon());
         return state;
     }

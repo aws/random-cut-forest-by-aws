@@ -54,7 +54,7 @@ public class AnomalyDescriptor {
     long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
-    double confidence;
+    double dataConfidence;
 
     // number of trees in the forest
     int forestSize;
@@ -101,6 +101,8 @@ public class AnomalyDescriptor {
 
     // likelihood values for the list
     double[] likelihoodOfValues;
+
+    double threshold;
 
     public void setCurrentValues(double[] currentValues) {
         this.currentValues = Arrays.copyOf(currentValues, currentValues.length);

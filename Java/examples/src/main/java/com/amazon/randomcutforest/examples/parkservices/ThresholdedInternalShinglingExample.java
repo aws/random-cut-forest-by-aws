@@ -22,7 +22,7 @@ import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.threshold.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
@@ -46,7 +46,7 @@ public class ThresholdedInternalShinglingExample implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int shingleSize = 4;
+        int shingleSize = 8;
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
@@ -54,15 +54,15 @@ public class ThresholdedInternalShinglingExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 2;
+        int baseDimensions = 1;
 
         long count = 0;
 
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).setMode(ForestMode.STANDARD)
-                .outputAfter(32).initialAcceptFraction(0.125).build();
+                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                .outputAfter(32).initialAcceptFraction(0.125).adjustThreshold(true).build();
 
         long seed = new Random().nextLong();
         Random noise = new Random();
@@ -127,6 +127,7 @@ public class ThresholdedInternalShinglingExample implements Example {
                 }
                 System.out.println();
             }
+
             ++count;
         }
 
