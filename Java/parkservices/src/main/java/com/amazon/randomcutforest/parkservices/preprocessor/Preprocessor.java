@@ -160,7 +160,11 @@ public class Preprocessor {
         this.normalizeTime = builder.normalizeTime;
         this.weights = copyIfNotnull(builder.weights);
         previousTimeStamps = new long[shingleSize];
-        lastShingledInput = new double[shingleSize * inputLength];
+        if (inputLength == dimension) {
+            lastShingledInput = new double[dimension];
+        } else {
+            lastShingledInput = new double[shingleSize * inputLength];
+        }
         double discount = builder.timeDecay;
         dataQuality = builder.dataQuality.orElse(new Deviation(discount));
 

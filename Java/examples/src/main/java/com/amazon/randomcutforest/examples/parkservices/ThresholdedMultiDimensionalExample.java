@@ -54,7 +54,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 4;
+        int baseDimensions = 2;
 
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
@@ -81,7 +81,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
             if (result.getAnomalyGrade() != 0) {
                 System.out.print("timestamp " + (count + shingleSize - 1) + " RESULT value ");
-                for (int i = 0; i < baseDimensions; i++) {
+                for (int i = (shingleSize - 1) * baseDimensions; i < shingleSize * baseDimensions; i++) {
                     System.out.print(result.getCurrentValues()[i] + ", ");
                 }
                 System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
@@ -104,10 +104,11 @@ public class ThresholdedMultiDimensionalExample implements Example {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print(
-                                        "( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i])
-                                                + " ) ");
+                            if (result.getCurrentValues()[(shingleSize - 1) * baseDimensions
+                                    + i] != result.getExpectedValuesList()[0][i]) {
+                                System.out
+                                        .print("( " + (result.getCurrentValues()[(shingleSize - 1) * baseDimensions + i]
+                                                - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     }
