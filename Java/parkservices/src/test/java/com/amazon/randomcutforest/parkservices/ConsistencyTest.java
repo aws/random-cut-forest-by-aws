@@ -15,17 +15,20 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
-import org.junit.jupiter.api.Test;
 
-import java.util.Random;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+@Tag("functional")
 public class ConsistencyTest {
 
     @Test
@@ -36,7 +39,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 1;
+        int numTrials = 10;
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -68,7 +71,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 1;
+        int numTrials = 10;
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -122,7 +125,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 1;
+        int numTrials = 10;
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -147,6 +150,10 @@ public class ConsistencyTest {
                 first.process(dataWithKeys.data[j], 0L);
             }
 
+            int scoreDiff = 0;
+            int gradeDiff = 0;
+            int anomalyDiff = 0;
+
             for (int j = 0; j < shingledData.length; j++) {
                 // validate eaulity of points
                 for (int y = 0; y < baseDimensions; y++) {
@@ -156,13 +163,26 @@ public class ConsistencyTest {
 
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
                 ++count;
-
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
-                // the internal external would not have exact floating point inequality, but
-                // would be very close
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-2);
-                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-2);
+                // the internal external would not have exact floating point inequality (because
+                // the
+                // order of arithmetic, etc. are different, because the tree cuts will
+                // eventually be different) but the numbers will be
+                // would be close -- however much of the computation depends on floating point
+                // precision and the results can be slightly different
+                if (Math.abs(firstResult.getRcfScore() - secondResult.getRcfScore()) > 0.005) {
+                    ++scoreDiff;
+                }
+                if (firstResult.getAnomalyGrade() > 0 != secondResult.getAnomalyGrade() > 0) {
+                    ++anomalyDiff;
+                }
+                if (Math.abs(firstResult.getAnomalyGrade() - secondResult.getAnomalyGrade()) > 0.005) {
+                    ++gradeDiff;
+                }
             }
+            assertTrue(anomalyDiff < 2); // extremely unlikely; but can happen in a blue moon
+            assertTrue(gradeDiff < length * 0.0001); // unlikely, but does happen
+            assertTrue(scoreDiff < length * 0.001);
         }
     }
 
