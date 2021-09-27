@@ -181,8 +181,8 @@ public class ConsistencyTest {
                 }
             }
             assertTrue(anomalyDiff < 2); // extremely unlikely; but can happen in a blue moon
-            assertTrue(gradeDiff < length * 0.0001); // unlikely, but does happen
-            assertTrue(scoreDiff < length * 0.001);
+            assertTrue(gradeDiff < length * 0.001); // unlikely, but does happen
+            assertTrue(scoreDiff < length * 0.005);
         }
     }
 
