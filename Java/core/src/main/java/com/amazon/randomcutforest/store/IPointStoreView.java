@@ -35,6 +35,10 @@ public interface IPointStoreView<Point> {
 
     boolean isInternalRotationEnabled();
 
+    boolean isInternalShinglingEnabled();
+
+    int getShingleSize();
+
     int[] transformIndices(int[] indexList);
 
     /**

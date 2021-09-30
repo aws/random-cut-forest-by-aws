@@ -73,9 +73,9 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
         state.setShingleSize(model.getShingleSize());
         state.setDirectLocationMap(model.isDirectLocationMap());
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
+        state.setLastTimeStamp(model.getNextSequenceIndex());
         if (model.isInternalShinglingEnabled()) {
             state.setInternalShingle(model.getInternalShingle());
-            state.setLastTimeStamp(model.getNextSequenceIndex());
             state.setRotationEnabled(model.isInternalRotationEnabled());
         }
         state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());

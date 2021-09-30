@@ -39,7 +39,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
+        int numTrials = 1; // just once since testing exact equality
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -71,7 +71,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
+        int numTrials = 1; // just once since testing exact equality
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
