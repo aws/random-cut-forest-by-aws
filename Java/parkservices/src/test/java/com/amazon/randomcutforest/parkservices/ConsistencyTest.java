@@ -125,8 +125,8 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
-        int length = 400 * sampleSize;
+        int numTrials = 1; // test is exact equality, reducing the number of trials
+        int length = 4000 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
             ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
@@ -136,6 +136,10 @@ public class ConsistencyTest {
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                     .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build();
+
+            ThresholdedRandomCutForest third = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .internalShinglingEnabled(false).shingleSize(1).anomalyRate(0.01).build();
 
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length, 50, 100, 5,
                     seed + i, baseDimensions);
@@ -150,10 +154,6 @@ public class ConsistencyTest {
                 first.process(dataWithKeys.data[j], 0L);
             }
 
-            int scoreDiff = 0;
-            int gradeDiff = 0;
-            int anomalyDiff = 0;
-
             for (int j = 0; j < shingledData.length; j++) {
                 // validate eaulity of points
                 for (int y = 0; y < baseDimensions; y++) {
@@ -164,25 +164,15 @@ public class ConsistencyTest {
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
                 ++count;
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
-                // the internal external would not have exact floating point inequality (because
-                // the
-                // order of arithmetic, etc. are different, because the tree cuts will
-                // eventually be different) but the numbers will be
-                // would be close -- however much of the computation depends on floating point
-                // precision and the results can be slightly different
-                if (Math.abs(firstResult.getRcfScore() - secondResult.getRcfScore()) > 0.005) {
-                    ++scoreDiff;
-                }
-                if (firstResult.getAnomalyGrade() > 0 != secondResult.getAnomalyGrade() > 0) {
-                    ++anomalyDiff;
-                }
-                if (Math.abs(firstResult.getAnomalyGrade() - secondResult.getAnomalyGrade()) > 0.005) {
-                    ++gradeDiff;
-                }
+                AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
+
+                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
+                assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+                // grades will not match between first and third because the thresholder has
+                // wrong info
+                // about shinglesize
             }
-            assertTrue(anomalyDiff < 2); // extremely unlikely; but can happen in a blue moon
-            assertTrue(gradeDiff < length * 0.001); // unlikely, but does happen
-            assertTrue(scoreDiff < length * 0.005);
         }
     }
 
