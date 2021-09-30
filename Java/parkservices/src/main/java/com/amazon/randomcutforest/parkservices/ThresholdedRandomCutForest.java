@@ -452,16 +452,16 @@ public class ThresholdedRandomCutForest {
             result.setExpectedTimeStamp(expectedStamp);
         }
 
-        double[] values = new double[reference.length];
+        double[] values = new double[base];
         if (reference.length == base) {
-            for (int i = 0; i < reference.length; i++) {
+            for (int i = 0; i < base; i++) {
                 values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[i]
                         : preprocessor.inverseTransform(newPoint[startPosition + i], i, differenceBase[i]);
             }
         } else {
-            for (int i = 0; i < reference.length; i++) {
-                values[i] = (point[i] == newPoint[i]) ? reference[i]
-                        : preprocessor.inverseTransform(newPoint[i], i, differenceBase[i]);
+            for (int i = 0; i < base; i++) {
+                values[i] = (point[startPosition + i] == newPoint[startPosition + i]) ? reference[startPosition + i]
+                        : preprocessor.inverseTransform(newPoint[startPosition + i], i, differenceBase[i]);
             }
         }
         result.setExpectedValues(0, values, 1.0);
