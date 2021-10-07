@@ -24,23 +24,37 @@ public class ShingledMultiDimDataWithKeys {
 
     public static MultiDimDataWithKey generateShingledDataWithKey(int size, int period, int shingleSize,
             int baseDimension, long seed) {
-        double[][] answer = new double[size][];
+
         int entryIndex = 0;
         boolean filledShingleAtleastOnce = false;
         double[][] history = new double[shingleSize][];
         int count = 0;
         MultiDimDataWithKey dataWithKeys = getMultiDimData(size + shingleSize - 1, period, 100, 5, seed, baseDimension);
+        double[][] answer = generateShingledData(dataWithKeys.data, shingleSize, baseDimension, false);
+        return new MultiDimDataWithKey(answer, dataWithKeys.changeIndices, dataWithKeys.changes);
+    }
+
+    public static double[][] generateShingledData(double[][] data, int shingleSize, int baseDimension,
+            boolean rotation) {
+        int size = data.length - shingleSize + 1;
+        double[][] answer = new double[size][];
+        int entryIndex = 0;
+        boolean filledShingleAtleastOnce = false;
+        double[][] history = new double[shingleSize][];
+        int count = 0;
+
         for (int j = 0; j < size + shingleSize - 1; ++j) { // we stream here ....
-            history[entryIndex] = dataWithKeys.data[j];
+            history[entryIndex] = data[j];
             entryIndex = (entryIndex + 1) % shingleSize;
             if (entryIndex == 0) {
                 filledShingleAtleastOnce = true;
             }
             if (filledShingleAtleastOnce) {
-                answer[count++] = getShinglePoint(history, entryIndex, shingleSize, baseDimension);
+                int position = (rotation) ? 0 : entryIndex;
+                answer[count++] = getShinglePoint(history, position, shingleSize, baseDimension);
             }
         }
-        return new MultiDimDataWithKey(answer, dataWithKeys.changeIndices, dataWithKeys.changes);
+        return answer;
     }
 
     private static double[] getShinglePoint(double[][] recentPointsSeen, int indexOfOldestPoint, int shingleLength,
