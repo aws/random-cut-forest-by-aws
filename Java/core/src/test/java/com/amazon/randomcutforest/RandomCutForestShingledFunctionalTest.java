@@ -17,16 +17,20 @@ package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Random;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
@@ -48,44 +52,57 @@ public class RandomCutForestShingledFunctionalTest {
     private static double transitionToBaseProbability;
     private static int dataSize;
 
-    /*
-     * @BeforeAll public static void oneTimeSetUp() { numberOfTrees = 100;
-     * sampleSize = 256; dimensions = 2; randomSeed = 123; shingleSize = 3;
-     * 
-     * shingleBuilder = new ShingleBuilder(dimensions, shingleSize);
-     * 
-     * forest =
-     * RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
-     * .dimensions(shingleBuilder.getShingledPointSize()).randomSeed(randomSeed).
-     * centerOfMassEnabled(true) .storeSequenceIndexesEnabled(true).build();
-     * 
-     * dataSize = 10_000;
-     * 
-     * baseMu = 0.0; baseSigma = 1.0; anomalyMu = 5.0; anomalySigma = 1.5;
-     * transitionToAnomalyProbability = 0.01; transitionToBaseProbability = 0.4;
-     * 
-     * NormalMixtureTestData generator = new NormalMixtureTestData(baseMu,
-     * baseSigma, anomalyMu, anomalySigma, transitionToAnomalyProbability,
-     * transitionToBaseProbability); double[][] data =
-     * generator.generateTestData(dataSize, dimensions);
-     * 
-     * for (int i = 0; i < dataSize; i++) { shingleBuilder.addPoint(data[i]); if
-     * (shingleBuilder.isFull()) { forest.update(shingleBuilder.getShingle()); } } }
-     * 
-     * @Test public void testExtrapolateBasic() { double[] result =
-     * forest.extrapolateBasic(shingleBuilder.getShingle(), 4, dimensions, false);
-     * assertEquals(4 * dimensions, result.length);
-     * 
-     * result = forest.extrapolateBasic(shingleBuilder.getShingle(), 4, dimensions,
-     * true, 2); assertEquals(4 * dimensions, result.length);
-     * 
-     * result = forest.extrapolateBasic(shingleBuilder, 4); assertEquals(4 *
-     * dimensions, result.length);
-     * 
-     * // use a block size which is too big
-     * assertThrows(IllegalArgumentException.class, () ->
-     * forest.extrapolateBasic(shingleBuilder.getShingle(), 4, 4, true, 2)); }
-     */
+    @BeforeAll
+    public static void oneTimeSetUp() {
+        numberOfTrees = 100;
+        sampleSize = 256;
+        dimensions = 2;
+        randomSeed = 123;
+        shingleSize = 3;
+
+        shingleBuilder = new ShingleBuilder(dimensions, shingleSize);
+
+        forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .dimensions(shingleBuilder.getShingledPointSize()).randomSeed(randomSeed).centerOfMassEnabled(true)
+                .storeSequenceIndexesEnabled(true).build();
+
+        dataSize = 10_000;
+
+        baseMu = 0.0;
+        baseSigma = 1.0;
+        anomalyMu = 5.0;
+        anomalySigma = 1.5;
+        transitionToAnomalyProbability = 0.01;
+        transitionToBaseProbability = 0.4;
+
+        NormalMixtureTestData generator = new NormalMixtureTestData(baseMu, baseSigma, anomalyMu, anomalySigma,
+                transitionToAnomalyProbability, transitionToBaseProbability);
+        double[][] data = generator.generateTestData(dataSize, dimensions);
+
+        for (int i = 0; i < dataSize; i++) {
+            shingleBuilder.addPoint(data[i]);
+            if (shingleBuilder.isFull()) {
+                forest.update(shingleBuilder.getShingle());
+            }
+        }
+    }
+
+    @Test
+    public void testExtrapolateBasic() {
+        double[] result = forest.extrapolateBasic(shingleBuilder.getShingle(), 4, dimensions, false);
+        assertEquals(4 * dimensions, result.length);
+
+        result = forest.extrapolateBasic(shingleBuilder.getShingle(), 4, dimensions, true, 2);
+        assertEquals(4 * dimensions, result.length);
+
+        result = forest.extrapolateBasic(shingleBuilder, 4);
+        assertEquals(4 * dimensions, result.length);
+
+        // use a block size which is too big
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.extrapolateBasic(shingleBuilder.getShingle(), 4, 4, true, 2));
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
     public void InternalShinglingTest(boolean rotation) {
