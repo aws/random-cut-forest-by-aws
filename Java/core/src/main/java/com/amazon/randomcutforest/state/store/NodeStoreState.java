@@ -19,8 +19,6 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.config.Precision;
-
 @Data
 public class NodeStoreState {
 
@@ -47,7 +45,4 @@ public class NodeStoreState {
     private int[] leafMass;
     private int[] leafPointIndex;
 
-    public Precision getPrecisionEnumValue() {
-        return Precision.valueOf(precision);
-    }
 }

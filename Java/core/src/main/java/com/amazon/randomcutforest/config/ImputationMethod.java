@@ -33,8 +33,16 @@ public enum ImputationMethod {
      */
     PREVIOUS,
     /**
+     * linear interpolation
+     */
+    LINEAR,
+    /**
      * use the RCF imputation; but would often require a minimum number of
-     * observations and would use PREVIOUS till that point
+     * observations and would use a default (often LINEAR) till that point
      */
     RCF;
+
+    public static ImputationMethod getImputationMethodEnumValue(String imputationMethod) {
+        return ImputationMethod.valueOf(imputationMethod);
+    }
 }

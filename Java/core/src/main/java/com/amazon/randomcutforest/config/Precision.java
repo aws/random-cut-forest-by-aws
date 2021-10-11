@@ -27,4 +27,8 @@ public enum Precision {
      * Double-precision (64 bit) floating point numbers.
      */
     FLOAT_64;
+
+    public static Precision getPrecisionEnumValue(String precision) {
+        return Precision.valueOf(precision);
+    }
 }

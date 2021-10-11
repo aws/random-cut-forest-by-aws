@@ -39,4 +39,8 @@ public enum ForestMode {
      */
     STREAMING_IMPUTE;
 
+    public static ForestMode getForestModeEnumValue(String forestMode) {
+        return ForestMode.valueOf(forestMode);
+    }
+
 }

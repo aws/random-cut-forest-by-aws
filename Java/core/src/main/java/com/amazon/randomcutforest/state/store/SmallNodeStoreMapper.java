@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.config.Precision.getPrecisionEnumValue;
 
 import java.util.Arrays;
 
@@ -49,7 +50,8 @@ public class SmallNodeStoreMapper implements IStateMapper<SmallNodeStore, NodeSt
 
     @Override
     public SmallNodeStore toModel(NodeStoreState state, long seed) {
-        checkState(state.getPrecisionEnumValue() == Precision.FLOAT_32, " incorrect invocation of SmallNodeStore");
+        checkState(getPrecisionEnumValue(state.getPrecision()) == Precision.FLOAT_32,
+                " incorrect invocation of SmallNodeStore");
         int capacity = state.getCapacity();
         short[] cutDimension = ArrayPacking.unpackShorts(state.getCutDimension(), state.isCompressed());
         float[] cutValue = ArrayPacking.unpackFloats(state.getCutValueData());

@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.config.Precision.getPrecisionEnumValue;
 
 import java.util.Arrays;
 
@@ -41,7 +42,8 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
     public PointStoreDouble toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getPointData(), "pointData must not be null");
-        checkArgument(state.getPrecisionEnumValue() == Precision.FLOAT_64, "precision must be " + Precision.FLOAT_64);
+        checkArgument(getPrecisionEnumValue(state.getPrecision()) == Precision.FLOAT_64,
+                "precision must be " + Precision.FLOAT_64);
         int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
         double[] store = ArrayPacking.unpackDoubles(state.getPointData(), state.getCurrentStoreCapacity() * dimensions);

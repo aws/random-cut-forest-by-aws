@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
+import static com.amazon.randomcutforest.config.ForestMode.getForestModeEnumValue;
+import static com.amazon.randomcutforest.config.TransformMethod.getTransformMethodEnumValue;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -58,9 +61,9 @@ public class ThresholdedRandomCutForestMapper
         tForest.setLastAnomalyAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
         tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
         tForest.setLastExpectedPoint(state.getLastExpectedPoint());
-        tForest.setForestMode(state.getForestModeEnumValue());
+        tForest.setForestMode(getForestModeEnumValue(state.getForestMode()));
         tForest.setLastRelativeIndex(state.getLastRelativeIndex());
-        tForest.setTransformMethod(state.getTransformMethodEnumValue());
+        tForest.setTransformMethod(getTransformMethodEnumValue(state.getTransformMethod()));
         return tForest;
     }
 

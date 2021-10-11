@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.config.Precision.getPrecisionEnumValue;
 import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 import java.util.Arrays;
@@ -53,7 +54,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         int capacity = state.getCapacity();
         int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
         double[] cutValue;
-        if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
+        if (getPrecisionEnumValue(state.getPrecision()) == Precision.FLOAT_32) {
             cutValue = CommonUtils.toDoubleArray(ArrayPacking.unpackFloats(state.getCutValueData()));
         } else {
             cutValue = ArrayPacking.unpackDoubles(state.getCutValueData());
@@ -107,7 +108,7 @@ public class NodeStoreMapper implements IStateMapper<NodeStore, NodeStoreState> 
         }
 
         state.setCutDimension(ArrayPacking.pack(model.getCutDimension(), state.isCompressed()));
-        if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
+        if (getPrecisionEnumValue(state.getPrecision()) == Precision.FLOAT_32) {
             state.setCutValueData(ArrayPacking.pack(CommonUtils.toFloatArray(model.getCutValue())));
         } else {
             state.setCutValueData(ArrayPacking.pack(model.getCutValue(), model.getCutValue().length));

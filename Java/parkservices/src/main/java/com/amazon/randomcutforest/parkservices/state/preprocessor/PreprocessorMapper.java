@@ -15,6 +15,10 @@
 
 package com.amazon.randomcutforest.parkservices.state.preprocessor;
 
+import static com.amazon.randomcutforest.config.ForestMode.getForestModeEnumValue;
+import static com.amazon.randomcutforest.config.ImputationMethod.getImputationMethodEnumValue;
+import static com.amazon.randomcutforest.config.TransformMethod.getTransformMethodEnumValue;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -41,12 +45,13 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
             }
         }
         Preprocessor.Builder<?> preprocessorBuilder = new Preprocessor.Builder<>()
-                .forestMode(state.getForestModeEnumValue()).shingleSize(state.getShingleSize())
-                .dimensions(state.getDimensions()).imputationMethod(state.getImputationMethodEnumValue())
+                .forestMode(getForestModeEnumValue(state.getForestMode())).shingleSize(state.getShingleSize())
+                .dimensions(state.getDimensions())
+                .imputationMethod(getImputationMethodEnumValue(state.getImputationMethod()))
                 .fillValues(state.getDefaultFill()).inputLength(state.getInputLength()).weights(state.getWeights())
-                .transformMethod(state.getTransformMethodEnumValue()).startNormalization(state.getStartNormalization())
-                .useImputedFraction(state.getUseImputedFraction()).timeDeviation(timeStampDeviation)
-                .dataQuality(dataQuality);
+                .transformMethod(getTransformMethodEnumValue(state.getTransformMethod()))
+                .startNormalization(state.getStartNormalization()).useImputedFraction(state.getUseImputedFraction())
+                .timeDeviation(timeStampDeviation).dataQuality(dataQuality);
 
         if (deviations != null) {
             preprocessorBuilder.deviations(deviations);

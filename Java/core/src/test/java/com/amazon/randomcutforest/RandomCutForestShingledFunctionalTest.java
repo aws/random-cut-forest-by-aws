@@ -143,7 +143,7 @@ public class RandomCutForestShingledFunctionalTest {
             }
 
             for (int j = 0; j < shingledData.length; j++) {
-                // validate eaulity of points
+                // validate equality of points
                 for (int y = 0; y < baseDimensions; y++) {
                     int position = (rotation) ? (count % shingleSize) : shingleSize - 1;
                     assertEquals(dataWithKeys.data[count][y], shingledData[j][position * baseDimensions + y], 1e-10);
