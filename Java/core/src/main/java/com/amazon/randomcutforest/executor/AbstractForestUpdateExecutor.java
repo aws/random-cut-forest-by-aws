@@ -22,6 +22,7 @@ import java.util.List;
 import lombok.Getter;
 
 import com.amazon.randomcutforest.ComponentList;
+import com.amazon.randomcutforest.store.IPointStore;
 
 /**
  * The class transforms input points into the form expected by internal models,
@@ -59,7 +60,12 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      * @param point The point used to update the forest.
      */
     public void update(double[] point) {
-        update(point, updateCoordinator.getTotalUpdates());
+        long internalSequenceNumber = updateCoordinator.getTotalUpdates();
+        IPointStore<?> store = updateCoordinator.getStore();
+        if (store != null && store.isInternalShinglingEnabled()) {
+            internalSequenceNumber -= store.getShingleSize() - 1;
+        }
+        update(point, internalSequenceNumber);
     }
 
     public void update(double[] point, long sequenceNumber) {

@@ -178,18 +178,6 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
         return location;
     }
 
-    void verifyAndMakeSpace(int amount) {
-        if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
-            // try compaction and then resizing
-            compact();
-            if (startOfFreeSegment > currentStoreCapacity * dimensions - amount) {
-                checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
-                resizeStore();
-                checkState(startOfFreeSegment + amount <= currentStoreCapacity * dimensions, "out of space");
-            }
-        }
-    }
-
     /**
      * Add a point to the point store and return the index of the stored point.
      *
@@ -207,10 +195,10 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                 "point.length must be equal to dimensions");
 
         double[] tempPoint = point;
+        nextSequenceIndex++;
         if (internalShinglingEnabled) {
             // rotation is supported via the output and input is unchanged
             tempPoint = constructShingleInPlace(internalShingle, point, false);
-            nextSequenceIndex++;
             if (nextSequenceIndex < shingleSize) {
                 return INFEASIBLE_POINTSTORE_INDEX;
             }
@@ -221,7 +209,18 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
             // point has to be written, otherwise we need to write the full shingle
             int amountToWrite = checkShingleAlignment(startOfFreeSegment, tempPoint) ? baseDimension : dimensions;
 
-            verifyAndMakeSpace(amountToWrite);
+            if (startOfFreeSegment > currentStoreCapacity * dimensions - amountToWrite) {
+                // try compaction and then resizing
+                compact();
+                // the compaction can change the array contents
+                amountToWrite = checkShingleAlignment(startOfFreeSegment, tempPoint) ? baseDimension : dimensions;
+                if (startOfFreeSegment > currentStoreCapacity * dimensions - amountToWrite) {
+                    checkState(dynamicResizingEnabled, " out of store, enable dynamic resizing ");
+                    resizeStore();
+                    checkState(startOfFreeSegment + amountToWrite <= currentStoreCapacity * dimensions, "out of space");
+                }
+            }
+
             nextIndex = takeIndex();
 
             locationList[nextIndex] = startOfFreeSegment - dimensions + amountToWrite;

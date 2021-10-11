@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.parkservices.state.ThresholdedRandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
@@ -39,7 +41,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
+        int numTrials = 1; // just once since testing exact equality
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -71,7 +73,7 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
+        int numTrials = 1; // just once since testing exact equality
         int length = 400 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
@@ -125,8 +127,9 @@ public class ConsistencyTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
-        int numTrials = 10;
-        int length = 400 * sampleSize;
+        int numTrials = 1; // test is exact equality, reducing the number of trials
+        int length = 2000 * sampleSize;
+        int testLength = length;
         for (int i = 0; i < numTrials; i++) {
 
             ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
@@ -137,10 +140,14 @@ public class ConsistencyTest {
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                     .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build();
 
-            MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length, 50, 100, 5,
-                    seed + i, baseDimensions);
+            ThresholdedRandomCutForest third = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .internalShinglingEnabled(false).shingleSize(1).anomalyRate(0.01).build();
 
-            double[][] shingledData = generateShingledData(dataWithKeys.data, shingleSize, baseDimensions);
+            MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length + testLength, 50,
+                    100, 5, seed + i, baseDimensions);
+
+            double[][] shingledData = generateShingledData(dataWithKeys.data, shingleSize, baseDimensions, false);
 
             assertEquals(shingledData.length, dataWithKeys.data.length - shingleSize + 1);
 
@@ -150,11 +157,7 @@ public class ConsistencyTest {
                 first.process(dataWithKeys.data[j], 0L);
             }
 
-            int scoreDiff = 0;
-            int gradeDiff = 0;
-            int anomalyDiff = 0;
-
-            for (int j = 0; j < shingledData.length; j++) {
+            for (int j = 0; j < length; j++) {
                 // validate eaulity of points
                 for (int y = 0; y < baseDimensions; y++) {
                     assertEquals(dataWithKeys.data[count][y], shingledData[j][(shingleSize - 1) * baseDimensions + y],
@@ -164,59 +167,41 @@ public class ConsistencyTest {
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
                 ++count;
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
-                // the internal external would not have exact floating point inequality (because
-                // the
-                // order of arithmetic, etc. are different, because the tree cuts will
-                // eventually be different) but the numbers will be
-                // would be close -- however much of the computation depends on floating point
-                // precision and the results can be slightly different
-                if (Math.abs(firstResult.getRcfScore() - secondResult.getRcfScore()) > 0.005) {
-                    ++scoreDiff;
-                }
-                if (firstResult.getAnomalyGrade() > 0 != secondResult.getAnomalyGrade() > 0) {
-                    ++anomalyDiff;
-                }
-                if (Math.abs(firstResult.getAnomalyGrade() - secondResult.getAnomalyGrade()) > 0.005) {
-                    ++gradeDiff;
-                }
+                AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
+
+                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
+                assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+                // grades will not match between first and third because the thresholder has
+                // wrong info
+                // about shinglesize
             }
-            assertTrue(anomalyDiff < 2); // extremely unlikely; but can happen in a blue moon
-            assertTrue(gradeDiff < length * 0.001); // unlikely, but does happen
-            assertTrue(scoreDiff < length * 0.005);
+            ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+            ThresholdedRandomCutForest fourth = mapper.toModel(mapper.toState(second));
+            for (int j = length; j < shingledData.length; j++) {
+                // validate eaulity of points
+                for (int y = 0; y < baseDimensions; y++) {
+                    assertEquals(dataWithKeys.data[count][y], shingledData[j][(shingleSize - 1) * baseDimensions + y],
+                            1e-10);
+                }
+
+                AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
+                ++count;
+                AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
+                AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
+                AnomalyDescriptor fourthResult = fourth.process(shingledData[j], 0L);
+
+                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
+                assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+                // grades will not match between first and third because the thresholder has
+                // wrong info
+                // about shinglesize
+                assertEquals(firstResult.getRcfScore(), fourthResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), fourthResult.getAnomalyGrade(), 1e-10);
+
+            }
         }
     }
 
-    double[][] generateShingledData(double[][] data, int shingleSize, int baseDimension) {
-        int size = data.length - shingleSize + 1;
-        double[][] answer = new double[size][];
-        int entryIndex = 0;
-        boolean filledShingleAtleastOnce = false;
-        double[][] history = new double[shingleSize][];
-        int count = 0;
-
-        for (int j = 0; j < size + shingleSize - 1; ++j) { // we stream here ....
-            history[entryIndex] = data[j];
-            entryIndex = (entryIndex + 1) % shingleSize;
-            if (entryIndex == 0) {
-                filledShingleAtleastOnce = true;
-            }
-            if (filledShingleAtleastOnce) {
-                answer[count++] = getShinglePoint(history, entryIndex, shingleSize, baseDimension);
-            }
-        }
-        return answer;
-    }
-
-    private static double[] getShinglePoint(double[][] recentPointsSeen, int indexOfOldestPoint, int shingleLength,
-            int baseDimension) {
-        double[] shingledPoint = new double[shingleLength * baseDimension];
-        int count = 0;
-        for (int j = 0; j < shingleLength; ++j) {
-            double[] point = recentPointsSeen[(j + indexOfOldestPoint) % shingleLength];
-            for (int i = 0; i < baseDimension; i++) {
-                shingledPoint[count++] = point[i];
-            }
-        }
-        return shingledPoint;
-    }
 }

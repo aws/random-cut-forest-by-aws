@@ -257,4 +257,27 @@ public class PointStoreDoubleTest {
         store.add(new double[] { -6 * shinglesize }, 6 * shinglesize - 1);
         store.compact();
     }
+
+    @Test
+    void CompactionTest() {
+        int shinglesize = 2;
+        PointStoreDouble store = new PointStoreDouble.Builder().capacity(6).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(6).directLocationEnabled(false).internalShinglingEnabled(true)
+                .build();
+
+        store.add(new double[] { 0 }, 0L);
+        for (int i = 0; i < 5; i++) {
+            store.add(new double[] { i + 1 }, 0L);
+        }
+        int finalIndex = store.add(new double[] { 4 + 2 }, 0L);
+        assertArrayEquals(store.get(finalIndex), new double[] { 5, 6 });
+        store.decrementRefCount(1);
+        store.decrementRefCount(2);
+        int index = store.add(new double[] { 7 }, 0L);
+        assertArrayEquals(store.get(index), new double[] { 6, 7 });
+        store.decrementRefCount(index);
+        assertTrue(store.size() < store.capacity);
+        index = store.add(new double[] { 8 }, 0L);
+        assertArrayEquals(store.get(index), new double[] { 7, 8 });
+    }
 }

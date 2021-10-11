@@ -262,4 +262,26 @@ public class PointStoreFloatTest {
         store.compact();
     }
 
+    @Test
+    void CompactionTest() {
+        int shinglesize = 2;
+        PointStoreFloat store = new PointStoreFloat.Builder().capacity(6).dimensions(shinglesize)
+                .shingleSize(shinglesize).indexCapacity(6).directLocationEnabled(false).internalShinglingEnabled(true)
+                .build();
+
+        store.add(new double[] { 0 }, 0L);
+        for (int i = 0; i < 5; i++) {
+            store.add(new double[] { i + 1 }, 0L);
+        }
+        int finalIndex = store.add(new double[] { 4 + 2 }, 0L);
+        assertArrayEquals(store.get(finalIndex), new float[] { 5, 6 });
+        store.decrementRefCount(1);
+        store.decrementRefCount(2);
+        int index = store.add(new double[] { 7 }, 0L);
+        assertArrayEquals(store.get(index), new float[] { 6, 7 });
+        store.decrementRefCount(index);
+        assertTrue(store.size() < store.capacity);
+        index = store.add(new double[] { 8 }, 0L);
+        assertArrayEquals(store.get(index), new float[] { 7, 8 });
+    }
 }
