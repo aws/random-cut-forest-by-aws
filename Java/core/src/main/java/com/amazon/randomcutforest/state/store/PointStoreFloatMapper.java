@@ -42,7 +42,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getPointData(), "pointData must not be null");
-        checkArgument(state.getPrecisionEnumValue() == Precision.FLOAT_32, "precision must be " + Precision.FLOAT_32);
+        checkArgument(Precision.valueOf(state.getPrecision()) == Precision.FLOAT_32,
+                "precision must be " + Precision.FLOAT_32);
         int indexCapacity = state.getIndexCapacity();
         int dimensions = state.getDimensions();
         float[] store = ArrayPacking.unpackFloats(state.getPointData(), state.getCurrentStoreCapacity() * dimensions);

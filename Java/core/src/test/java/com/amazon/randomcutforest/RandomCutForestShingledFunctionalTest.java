@@ -111,6 +111,7 @@ public class RandomCutForestShingledFunctionalTest {
         int shingleSize = 2;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
+        System.out.println(seed);
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
         int length = 4000 * sampleSize;
@@ -143,7 +144,7 @@ public class RandomCutForestShingledFunctionalTest {
             }
 
             for (int j = 0; j < shingledData.length; j++) {
-                // validate eaulity of points
+                // validate equality of points
                 for (int y = 0; y < baseDimensions; y++) {
                     int position = (rotation) ? (count % shingleSize) : shingleSize - 1;
                     assertEquals(dataWithKeys.data[count][y], shingledData[j][position * baseDimensions + y], 1e-10);

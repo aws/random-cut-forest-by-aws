@@ -43,8 +43,9 @@ public class CompactRandomCutTreeFloatMapper implements
 
         INodeStore nodeStore;
 
-        if (AbstractCompactRandomCutTree.canUseSmallNodeStore(state.getNodeStoreState().getPrecisionEnumValue(),
-                state.getMaxSize(), state.getDimensions())) {
+        if (AbstractCompactRandomCutTree.canUseSmallNodeStore(
+                Precision.valueOf(state.getNodeStoreState().getPrecision()), state.getMaxSize(),
+                state.getDimensions())) {
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
             nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());

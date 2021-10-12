@@ -68,8 +68,8 @@ public class ConsistencyTest {
     @Test
     public void ExternalShinglingTest() {
         int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 8;
+        int baseDimensions = 1;
+        int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
@@ -122,8 +122,8 @@ public class ConsistencyTest {
     @Test
     public void MixedShinglingTest() {
         int sampleSize = 256;
-        int baseDimensions = 2;
-        int shingleSize = 8;
+        int baseDimensions = 1;
+        int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
@@ -158,7 +158,7 @@ public class ConsistencyTest {
             }
 
             for (int j = 0; j < length; j++) {
-                // validate eaulity of points
+                // validate equality of points
                 for (int y = 0; y < baseDimensions; y++) {
                     assertEquals(dataWithKeys.data[count][y], shingledData[j][(shingleSize - 1) * baseDimensions + y],
                             1e-10);

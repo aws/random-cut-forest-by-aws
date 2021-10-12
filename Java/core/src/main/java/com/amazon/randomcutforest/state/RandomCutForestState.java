@@ -21,7 +21,6 @@ import java.util.List;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
@@ -81,7 +80,4 @@ public class RandomCutForestState {
 
     private boolean saveCoordinatorStateEnabled;
 
-    public Precision getPrecisionEnumValue() {
-        return Precision.valueOf(precision);
-    }
 }

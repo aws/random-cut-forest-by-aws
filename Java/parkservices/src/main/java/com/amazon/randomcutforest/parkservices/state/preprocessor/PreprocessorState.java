@@ -19,9 +19,6 @@ import static com.amazon.randomcutforest.state.Version.V2_1;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
 @Data
@@ -53,17 +50,5 @@ public class PreprocessorState {
     private DeviationState dataQualityState;
     private DeviationState timeStampDeviationState;
     private DeviationState[] deviationStates;
-
-    public TransformMethod getTransformMethodEnumValue() {
-        return TransformMethod.valueOf(transformMethod);
-    }
-
-    public ForestMode getForestModeEnumValue() {
-        return ForestMode.valueOf(forestMode);
-    }
-
-    public ImputationMethod getImputationMethodEnumValue() {
-        return ImputationMethod.valueOf(imputationMethod);
-    }
 
 }

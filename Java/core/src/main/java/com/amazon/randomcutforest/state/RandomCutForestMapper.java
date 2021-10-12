@@ -271,7 +271,7 @@ public class RandomCutForestMapper
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
         if (state.isCompact()) {
-            if (state.getPrecisionEnumValue() == Precision.FLOAT_32) {
+            if (Precision.valueOf(state.getPrecision()) == Precision.FLOAT_32) {
                 return singlePrecisionForest(builder, state, null, null, null);
             } else {
                 return doublePrecisionForest(builder, state, null, null, null);
