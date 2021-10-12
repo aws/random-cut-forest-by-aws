@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.state.tree;
 
-import static com.amazon.randomcutforest.config.Precision.getPrecisionEnumValue;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -46,7 +44,7 @@ public class CompactRandomCutTreeFloatMapper implements
         INodeStore nodeStore;
 
         if (AbstractCompactRandomCutTree.canUseSmallNodeStore(
-                getPrecisionEnumValue(state.getNodeStoreState().getPrecision()), state.getMaxSize(),
+                Precision.valueOf(state.getNodeStoreState().getPrecision()), state.getMaxSize(),
                 state.getDimensions())) {
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
             nodeStoreMapper.setPartialTreeStateEnabled(state.isPartialTreeState());

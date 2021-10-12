@@ -17,7 +17,6 @@ package com.amazon.randomcutforest.state;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.config.Precision.getPrecisionEnumValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -272,7 +271,7 @@ public class RandomCutForestMapper
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
         if (state.isCompact()) {
-            if (getPrecisionEnumValue(state.getPrecision()) == Precision.FLOAT_32) {
+            if (Precision.valueOf(state.getPrecision()) == Precision.FLOAT_32) {
                 return singlePrecisionForest(builder, state, null, null, null);
             } else {
                 return doublePrecisionForest(builder, state, null, null, null);

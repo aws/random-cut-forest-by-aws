@@ -111,6 +111,7 @@ public class RandomCutForestShingledFunctionalTest {
         int shingleSize = 2;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
+        System.out.println(seed);
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
         int length = 4000 * sampleSize;

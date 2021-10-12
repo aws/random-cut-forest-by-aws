@@ -50,8 +50,4 @@ public enum TransformMethod {
      * subtract MA)
      */
     NORMALIZE_DIFFERENCE;
-
-    public static TransformMethod getTransformMethodEnumValue(String transformMethod) {
-        return TransformMethod.valueOf(transformMethod);
-    }
 }
