@@ -15,14 +15,13 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.List;
-
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import java.util.List;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Getter
 @Setter
@@ -36,8 +35,7 @@ public class BasicThresholder {
     public static double DEFAULT_UPPER_THRESHOLD = 2.0;
     public static double DEFAULT_LOWER_THRESHOLD = 1.0;
     public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
-    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
-    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED_ONED = 0.9;
+    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.9;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 2.5;
     public static double DEFAULT_UPPER_FACTOR = 5.0;

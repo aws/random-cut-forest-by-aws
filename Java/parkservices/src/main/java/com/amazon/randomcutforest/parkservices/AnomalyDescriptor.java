@@ -15,14 +15,13 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.Arrays;
-
+import com.amazon.randomcutforest.returntypes.DiVector;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Getter
 @Setter
@@ -59,11 +58,6 @@ public class AnomalyDescriptor {
     // number of trees in the forest
     int forestSize;
 
-    // flag indicating of expected values are present -- one reason for them not
-    // being present
-    // is that forecasting can requires more values than anomaly detection,
-    boolean expectedValuesPresent;
-
     // flag indicating if the anomaly is the start of an anomaly or part of a run of
     // anomalies
     boolean startOfAnomaly;
@@ -82,9 +76,9 @@ public class AnomalyDescriptor {
     // a flattened version denoting the basic contribution of each input variable
     // (not shingled) for the
     // time slice indicated by relativeIndex
-    double[] currentTimeAttribution;
+    double[] relevantAttribution;
 
-    // when time is appended
+    // when time is appended for the anomalous time slice
     double timeAttribution;
 
     // current values
@@ -102,10 +96,16 @@ public class AnomalyDescriptor {
     // likelihood values for the list
     double[] likelihoodOfValues;
 
+    // the threshold used in inference
     double threshold;
 
+    //the below are information used by the RCF these can be useful as explanations of normal points as well
+    //internal to RCF, used for passing information in a streaming manner
+    double [] expectedRCFPoint;
+    double [] rcfPoint;
+
     public void setCurrentValues(double[] currentValues) {
-        this.currentValues = Arrays.copyOf(currentValues, currentValues.length);
+        this.currentValues = copyIfNotnull(currentValues);
     }
 
     public void setAttribution(DiVector attribution) {
@@ -113,11 +113,23 @@ public class AnomalyDescriptor {
     }
 
     public void setOldValues(double[] values) {
-        this.oldValues = Arrays.copyOf(values, values.length);
+        oldValues = copyIfNotnull(values);
     }
 
-    public void setCurrentTimeAttribution(double[] values) {
-        this.currentTimeAttribution = Arrays.copyOf(values, values.length);
+    public void setExpectedRCFPoint(double [] point){
+        expectedRCFPoint = copyIfNotnull(point);
+    }
+
+    public boolean isExpectedValuesPresent(){
+        return expectedValuesList != null;
+    }
+
+    public void setRCFPoint(double [] point){
+        rcfPoint = copyIfNotnull(point);
+    }
+
+    public void setRelevantAttribution(double[] values) {
+        this.relevantAttribution = copyIfNotnull(values);
     }
 
     public void setExpectedValues(int position, double[] values, double likelihood) {
@@ -130,5 +142,9 @@ public class AnomalyDescriptor {
         }
         expectedValuesList[position] = Arrays.copyOf(values, values.length);
         likelihoodOfValues[position] = likelihood;
+    }
+
+    protected double[] copyIfNotnull(double[] array) {
+        return array == null ? null : Arrays.copyOf(array, array.length);
     }
 }
