@@ -15,20 +15,19 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Random;
-
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.state.ThresholdedRandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+import java.util.Random;
+
+import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("functional")
 public class ConsistencyTest {
@@ -37,7 +36,7 @@ public class ConsistencyTest {
     public void InternalShinglingTest() {
         int sampleSize = 256;
         int baseDimensions = 2;
-        int shingleSize = 8;
+        int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
 
