@@ -45,7 +45,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         }
         Preprocessor.Builder<?> preprocessorBuilder = new Preprocessor.Builder<>()
                 .forestMode(ForestMode.valueOf(state.getForestMode())).shingleSize(state.getShingleSize())
-                .dimensions(state.getDimensions())
+                .dimensions(state.getDimensions()).normalizeTime(state.isNormalizeTime())
                 .imputationMethod(ImputationMethod.valueOf(state.getImputationMethod()))
                 .fillValues(state.getDefaultFill()).inputLength(state.getInputLength()).weights(state.getWeights())
                 .transformMethod(TransformMethod.valueOf(state.getTransformMethod()))

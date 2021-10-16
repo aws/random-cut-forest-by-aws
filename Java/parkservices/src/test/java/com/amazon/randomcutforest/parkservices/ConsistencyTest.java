@@ -15,19 +15,20 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.parkservices.state.ThresholdedRandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
-import java.util.Random;
-
-import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("functional")
 public class ConsistencyTest {
@@ -127,20 +128,21 @@ public class ConsistencyTest {
         long seed = new Random().nextLong();
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
+        int numberOfTrees = 30; // and using fewer trees to speed up test
         int length = 2000 * sampleSize;
         int testLength = length;
         for (int i = 0; i < numTrials; i++) {
 
             ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
                     .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
 
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
                     .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build();
 
             ThresholdedRandomCutForest third = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
                     .internalShinglingEnabled(false).shingleSize(1).anomalyRate(0.01).build();
 
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length + testLength, 50,

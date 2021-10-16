@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.parkservices.state;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Random;
 import java.util.stream.Stream;
@@ -465,8 +464,6 @@ public class ThresholdedRandomCutForestMapperTest {
             ++count;
         }
         ;
-
-        assertThrows(IllegalArgumentException.class, () -> first.process(dataWithKeys.data[0], 0));
         // serialize + deserialize
         ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
         ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));

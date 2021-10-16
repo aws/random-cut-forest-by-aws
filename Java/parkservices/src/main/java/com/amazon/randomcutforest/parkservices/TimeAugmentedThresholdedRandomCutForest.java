@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
-import lombok.Getter;
-import lombok.Setter;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
@@ -62,7 +63,8 @@ public class TimeAugmentedThresholdedRandomCutForest extends ThresholdedRandomCu
             forest.setBoundingBoxCacheFraction(1.0);
         }
 
-        double[] scaledInput = preprocessor.preProcess(inputPoint, timestamp, forest);
+        double[] scaledInput = preprocessor.preProcess(inputPoint, timestamp, forest, lastAnomalyTimeStamp,
+                lastExpectedPoint);
         if (scaledInput == null) {
             return new AnomalyDescriptor();
         }
@@ -74,7 +76,7 @@ public class TimeAugmentedThresholdedRandomCutForest extends ThresholdedRandomCu
         AnomalyDescriptor description = getAnomalyDescription(point, timestamp, inputPoint);
 
         // add expected value, update state
-        AnomalyDescriptor result = preprocessor.postProcess(description, inputPoint, timestamp, forest, point,scaledInput);
+        AnomalyDescriptor result = preprocessor.postProcess(description, inputPoint, timestamp, forest);
         if (ifZero) { // turn caching off
             forest.setBoundingBoxCacheFraction(0);
         }
@@ -94,14 +96,14 @@ public class TimeAugmentedThresholdedRandomCutForest extends ThresholdedRandomCu
      * @return the score of the corrected point
      */
     @Override
-    double [] applyBasicCorrector(double[] point, int gap, int shingleSize, int baseDimensions) {
-        double[] correctedPoint = super.applyBasicCorrector(point,gap,shingleSize,baseDimensions);
-        if (lastRelativeIndex == 0 &&  transformMethod != TransformMethod.DIFFERENCE
-                    && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE) {
-                // definitely correct the time dimension which is always differenced
-                // this applies to the non-differenced cases
-                correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
-                        - lastExpectedPoint[point.length - 1];
+    double[] applyBasicCorrector(double[] point, int gap, int shingleSize, int baseDimensions) {
+        double[] correctedPoint = super.applyBasicCorrector(point, gap, shingleSize, baseDimensions);
+        if (lastRelativeIndex == 0 && transformMethod != TransformMethod.DIFFERENCE
+                && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE) {
+            // definitely correct the time dimension which is always differenced
+            // this applies to the non-differenced cases
+            correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
+                    - lastExpectedPoint[point.length - 1];
 
         }
         return correctedPoint;

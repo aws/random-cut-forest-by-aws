@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.returntypes.DiVector;
 
 @Getter
 @Setter
@@ -99,10 +100,11 @@ public class AnomalyDescriptor {
     // the threshold used in inference
     double threshold;
 
-    //the below are information used by the RCF these can be useful as explanations of normal points as well
-    //internal to RCF, used for passing information in a streaming manner
-    double [] expectedRCFPoint;
-    double [] rcfPoint;
+    // the below are information used by the RCF these can be useful as explanations
+    // of normal points as well
+    // internal to RCF, used for passing information in a streaming manner
+    double[] expectedRCFPoint;
+    double[] rcfPoint;
 
     public void setCurrentValues(double[] currentValues) {
         this.currentValues = copyIfNotnull(currentValues);
@@ -116,15 +118,15 @@ public class AnomalyDescriptor {
         oldValues = copyIfNotnull(values);
     }
 
-    public void setExpectedRCFPoint(double [] point){
+    public void setExpectedRCFPoint(double[] point) {
         expectedRCFPoint = copyIfNotnull(point);
     }
 
-    public boolean isExpectedValuesPresent(){
+    public boolean isExpectedValuesPresent() {
         return expectedValuesList != null;
     }
 
-    public void setRCFPoint(double [] point){
+    public void setRCFPoint(double[] point) {
         rcfPoint = copyIfNotnull(point);
     }
 

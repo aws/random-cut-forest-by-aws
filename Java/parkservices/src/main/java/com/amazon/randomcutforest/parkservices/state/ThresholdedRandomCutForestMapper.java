@@ -22,6 +22,7 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.TimeAugmentedThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
@@ -46,7 +47,9 @@ public class ThresholdedRandomCutForestMapper
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
         Preprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorStates()[0]);
-        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, preprocessor);
+        ThresholdedRandomCutForest tForest = (preprocessor.getMode() == ForestMode.TIME_AUGMENTED)
+                ? new TimeAugmentedThresholdedRandomCutForest(forest, thresholder, preprocessor)
+                : new ThresholdedRandomCutForest(forest, thresholder, preprocessor);
 
         tForest.setIgnoreSimilar(state.isIgnoreSimilar());
         tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());

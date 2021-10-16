@@ -15,6 +15,19 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
+import static com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest.DEFAULT_USE_IMPUTED_FRACTION;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -23,18 +36,6 @@ import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
-import static com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest.DEFAULT_USE_IMPUTED_FRACTION;
 
 @Getter
 @Setter
@@ -150,9 +151,9 @@ public class Preprocessor {
                 " start of normalization cannot be 0 for these transformations");
         checkArgument(
                 builder.transformMethod != TransformMethod.WEIGHTED
-                        || builder.weights != null && builder.weights.length == builder.inputLength,
+                        || builder.weights != null && builder.weights.length >= builder.inputLength,
                 " incorrect weights");
-        checkArgument(builder.weights == null || builder.weights.length == builder.inputLength, " incorrect weights");
+        checkArgument(builder.weights == null || builder.weights.length >= builder.inputLength, " incorrect weights");
         inputLength = builder.inputLength;
         dimension = builder.dimensions;
         shingleSize = builder.shingleSize;
@@ -165,10 +166,15 @@ public class Preprocessor {
         this.weights = new double[inputLength + 1];
         Arrays.fill(weights, 1);
         if (builder.weights != null) {
-            System.arraycopy(builder.weights, 0, weights, 0, inputLength);
+            if (builder.weights.length == inputLength) {
+                System.arraycopy(builder.weights, 0, weights, 0, inputLength);
+                weights[inputLength] = builder.weightTime;
+            } else {
+                System.arraycopy(builder.weights, 0, weights, 0, inputLength + 1);
+            }
+        } else {
+            weights[inputLength] = builder.weightTime;
         }
-
-        this.weights[inputLength] = builder.weightTime;
         previousTimeStamps = new long[shingleSize];
         if (inputLength == dimension) {
             lastShingledInput = new double[dimension];
@@ -210,39 +216,51 @@ public class Preprocessor {
     }
 
     /**
-     * A core function of the preprocessor. It can augment time values (with
-     * normalization) or impute missing values on the fly using the forest.
-     *
-     * @param inputPoint the actual input
-     * @param timestamp  timestamp of the point
-     * @param forest     RCF
-     * @return a scaled/normalized tuple that can be used for anomaly detection
+     * A generic preprocessing call
+     * 
+     * @param inputPoint           the actual input
+     * @param timestamp            the timestamp of the corresponding input
+     * @param forest               the RCF in use
+     * @param lastAnomalyTimeStamp the timestamp of the last anomaly, useful in
+     *                             imputation and in future can be used in
+     *                             transformations
+     * @param lastExpectedValue    the expected value (in the space of the RCF
+     *                             shingle)
+     * @return a shingled/unshingled transformed point (based on configurations) to
+     *         be used in scoring
      */
-    public double[] preProcess(double[] inputPoint, long timestamp, RandomCutForest forest) {
+    public double[] preProcess(double[] inputPoint, long timestamp, RandomCutForest forest, long lastAnomalyTimeStamp,
+            double[] lastExpectedValue) {
         lastActualInternal = internalTimeStamp;
-        lastInputTimeStamp = previousTimeStamps[shingleSize-1];
+        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         return getScaledInput(inputPoint, timestamp);
     }
 
     /**
-     * an extended option useful for imputation; to be redefine there
+     * adds information of expected point to the result descriptor (provided it is
+     * marked anomalous) Note that is uses relativeIndex; that is, it can determine
+     * that the anomaly occurred in the past (but within the shingle) and not at the
+     * current point -- even though the detection has triggered now While this may
+     * appear to be improper, information theoretically we may have a situation
+     * where an anomaly is only discoverable after the "horse has bolted" -- suppose
+     * that we see a random mixture of the triples { 1, 2, 3} and {2, 4, 5}
+     * correpsonding to "slow weeks" and "busy weeks". For example 1, 2, 3, 1, 2, 3,
+     * 2, 4, 5, 1, 2, 3, 2, 4, 5, ... etc. If we see { 2, 2, X } (at positions 0 and
+     * 1 (mod 3)) and are yet to see X, then we can infer that the pattern is
+     * anomalous -- but we cannot determine which of the 2's are to blame. If it
+     * were the first 2, then the detection is late. If X = 3 then we know it is the
+     * first 2 in that unfinished triple; and if X = 5 then it is the second 2. In a
+     * sense we are only truly wiser once the bolted horse has returned! But if we
+     * were to say that the anomaly was always at the seocnd 2 then that appears to
+     * be suboptimal -- one natural path can be based on the ratio of the triples {
+     * 1, 2, 3} and {2, 4, 5} seen before. Even better, we can attempt to estimate a
+     * dynamic time dependent ratio -- and that is what RCF would do.
+     *
+     * @param result the description of the current point
      */
-    public double[] preProcess(double[] inputPoint, long timestamp, RandomCutForest forest,long lastAnomalyTimeStamp, double[] lastExpectedValue) {
-        return preProcess(inputPoint, timestamp,forest);
-    }
-
-    /**
-     * used in streaming impute
-     * @param index relative index in a shingle
-     * @return corrected index for the actual point in a shingle
-     */
-    public int verifyActual(int index){
-        return index;
-    }
-
-    void addRelevantAttribution(AnomalyDescriptor result) {
-        int base = dimension/shingleSize;
-        int startPosition = (shingleSize - 1 + result.getRelativeIndex())*base;
+    protected void addRelevantAttribution(AnomalyDescriptor result) {
+        int base = dimension / shingleSize;
+        int startPosition = (shingleSize - 1 + result.getRelativeIndex()) * base;
         DiVector attribution = result.getAttribution();
         if (mode == ForestMode.TIME_AUGMENTED) {
             --base;
@@ -258,9 +276,21 @@ public class Preprocessor {
         }
     }
 
-    public AnomalyDescriptor postProcess(AnomalyDescriptor result, double[] inputPoint, long timestamp, RandomCutForest forest, double[] point, double[] scaledInput) {
+    /**
+     * a generic postprocessor which updates all the state
+     * 
+     * @param result     the descriptor of the evaluation on the current point
+     * @param inputPoint the current input point
+     * @param timestamp  the timestamp of the current input
+     * @param forest     the resident RCF
+     * @return the descriptor (mutated and augmented appropriately)
+     */
+    public AnomalyDescriptor postProcess(AnomalyDescriptor result, double[] inputPoint, long timestamp,
+            RandomCutForest forest) {
 
-        if (result.getAnomalyGrade()>0) {
+        double[] point = result.getRcfPoint();
+        checkArgument(point != null, " should not be postprocessing");
+        if (result.getAnomalyGrade() > 0) {
             double[] reference = inputPoint;
             double[] newPoint = result.getExpectedRCFPoint();
 
@@ -272,23 +302,33 @@ public class Preprocessor {
                     result.setOldValues(reference);
                     result.setOldTimeStamp(getTimeStamp(shingleSize - 1 + index));
                 }
-                double[] values = getExpectedValue(index, reference, point,
-                        newPoint);
+                if (mode == ForestMode.TIME_AUGMENTED) {
+                    int endPosition = (shingleSize - 1 + index + 1) * dimension / shingleSize;
+                    double timeGap = (newPoint[endPosition - 1] - point[endPosition - 1]);
+                    long expectedTimestamp = (timeGap == 0) ? getTimeStamp(shingleSize - 1 + index)
+                            : inverseMapTime(timeGap, index);
+                    result.setExpectedTimeStamp(expectedTimestamp);
+                }
+                double[] values = getExpectedValue(index, reference, point, newPoint);
                 result.setExpectedValues(0, values, 1.0);
             }
 
             addRelevantAttribution(result);
         }
 
+        dataQuality.update(1.0);
+        updateState(inputPoint, point, timestamp);
         if (timeStampDeviation != null) {
             timeStampDeviation.update(timestamp - previousTimeStamps[shingleSize - 1]);
         }
         ++valuesSeen;
-        updateState(inputPoint, scaledInput, timestamp);
-        if (forest.isInternalShinglingEnabled()){
-                forest.update(scaledInput);
-            } else {
-            forest.update(lastShingledPoint);
+        if (forest.isInternalShinglingEnabled()) {
+            int length = inputLength + ((mode == ForestMode.TIME_AUGMENTED) ? 1 : 0);
+            double[] scaledInput = new double[length];
+            System.arraycopy(point, point.length - length, scaledInput, 0, length);
+            forest.update(scaledInput);
+        } else {
+            forest.update(point);
         }
         return result;
     }
@@ -329,11 +369,26 @@ public class Preprocessor {
         return values;
     }
 
-    public double[] getExpectedValue(int relativeBlockIndex, double[] reference,
-            double[] point, double[] newPoint) {
-        int base = dimension/shingleSize;
-        int startPosition = (shingleSize - 1 + relativeBlockIndex)*base;
-        if (mode == ForestMode.TIME_AUGMENTED){
+    /**
+     * produces the expected value given location of the anomaly -- being aware that
+     * the nearest anomaly may be behind us in time.
+     * 
+     * @param relativeBlockIndex the relative index of the anomaly
+     * @param reference          the reference input (so that we do not generate
+     *                           arbitrary rounding errors of transformations which
+     *                           can be indistinguishable from true expected values)
+     * @param point              the point (in the RCF shingled space)
+     * @param newPoint           the expected point (in the RCF shingled space) --
+     *                           where only the most egregiously offending entries
+     *                           corresponding to the shingleSize - 1 +
+     *                           relativeBlockIndex are changed.
+     * @return the set of values (in the input space) that would have produced
+     *         newPoint
+     */
+    public double[] getExpectedValue(int relativeBlockIndex, double[] reference, double[] point, double[] newPoint) {
+        int base = dimension / shingleSize;
+        int startPosition = (shingleSize - 1 + relativeBlockIndex) * base;
+        if (mode == ForestMode.TIME_AUGMENTED) {
             --base;
         }
         double[] values = new double[base];
@@ -395,20 +450,33 @@ public class Preprocessor {
                 || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE);
     }
 
+    /**
+     * updates the varios shingles
+     * 
+     * @param inputPoint  the input point
+     * @param scaledPoint the scaled/transformed point which is used in the RCF
+     */
 
-
-    protected void updateShingle(double[] inputPoint,double [] scaledPoint) {
+    protected void updateShingle(double[] inputPoint, double[] scaledPoint) {
         if (inputPoint.length == lastShingledInput.length) {
             lastShingledInput = Arrays.copyOf(inputPoint, inputPoint.length);
-            lastShingledPoint = Arrays.copyOf(scaledPoint,scaledPoint.length);
         } else {
             shiftLeft(lastShingledInput, inputPoint.length);
             copyAtEnd(lastShingledInput, inputPoint);
-            shiftLeft(lastShingledPoint, inputPoint.length);
-            copyAtEnd(lastShingledPoint,scaledPoint);
+        }
+        if (scaledPoint.length == lastShingledPoint.length) {
+            lastShingledPoint = Arrays.copyOf(scaledPoint, scaledPoint.length);
+        } else {
+            shiftLeft(lastShingledPoint, scaledPoint.length);
+            copyAtEnd(lastShingledPoint, scaledPoint);
         }
     }
 
+    /**
+     * updates timestamps
+     * 
+     * @param timestamp the timestamp of the current input
+     */
     protected void updateTimestamps(long timestamp) {
         for (int i = 0; i < shingleSize - 1; i++) {
             previousTimeStamps[i] = previousTimeStamps[i + 1];
@@ -417,6 +485,12 @@ public class Preprocessor {
         ++internalTimeStamp;
     }
 
+    /**
+     * updates deviations which are used in some of the transformations (and would
+     * be null for others)
+     * 
+     * @param inputPoint the input point
+     */
     void updateDeviation(double[] inputPoint) {
         for (int i = 0; i < inputPoint.length; i++) {
             double value = inputPoint[i];
@@ -428,7 +502,8 @@ public class Preprocessor {
     }
 
     /**
-     * updates the state
+     * updates the state, correspoding to timestamps, the deviations, and the
+     * shingles
      *
      * @param inputPoint input actuals
      * @param timestamp  current stamp
@@ -438,10 +513,8 @@ public class Preprocessor {
         if (deviationList != null) {
             updateDeviation(inputPoint);
         }
-        updateShingle(inputPoint,scaledInput);
+        updateShingle(inputPoint, scaledInput);
     }
-
-
 
     /**
      * copies at the end for a shingle
@@ -454,10 +527,12 @@ public class Preprocessor {
         System.arraycopy(small, 0, array, array.length - small.length, small.length);
     }
 
+    // an utility function
     protected double[] copyIfNotnull(double[] array) {
         return array == null ? null : Arrays.copyOf(array, array.length);
     }
 
+    // left shifting used for the shingles
     protected void shiftLeft(double[] array, int baseDimension) {
         for (int i = 0; i < array.length - baseDimension; i++) {
             array[i] = array[i + baseDimension];
@@ -557,7 +632,19 @@ public class Preprocessor {
 
     // mapper
     public void setPreviousTimeStamps(long[] values) {
-        previousTimeStamps = (values == null) ? null : Arrays.copyOf(values, values.length);
+        if (values == null) {
+            numberOfImputed = shingleSize;
+            previousTimeStamps = null;
+        } else {
+            checkArgument(values.length == shingleSize, " incorrect length ");
+            previousTimeStamps = Arrays.copyOf(values, values.length);
+            numberOfImputed = 0;
+            for (int i = 0; i < previousTimeStamps.length - 1; i++) {
+                if (previousTimeStamps[i] == previousTimeStamps[i + 1]) {
+                    ++numberOfImputed;
+                }
+            }
+        }
     }
 
     // mapper

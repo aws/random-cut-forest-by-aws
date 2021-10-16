@@ -15,16 +15,17 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.Arrays;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Getter
 @Setter
@@ -71,10 +72,9 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         }
 
         lastActualInternal = internalTimeStamp;
-        lastInputTimeStamp = previousTimeStamps[shingleSize-1];
+        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         return getScaledInput(inputPoint, timestamp, null, 0);
     }
-
 
     /**
      * maps the time back. The returned value is an approximation for
@@ -141,6 +141,12 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         ++valuesSeen;
     }
 
+    /**
+     * a modification for the deviations that use differencing, the normalization
+     * requires initial segments
+     * 
+     * @param inputPoint the input point
+     */
     @Override
     void updateDeviation(double[] inputPoint) {
         for (int i = 0; i < inputPoint.length; i++) {

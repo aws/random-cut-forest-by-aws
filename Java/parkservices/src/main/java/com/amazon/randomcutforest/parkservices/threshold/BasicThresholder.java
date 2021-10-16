@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.List;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 
 @Getter
 @Setter
