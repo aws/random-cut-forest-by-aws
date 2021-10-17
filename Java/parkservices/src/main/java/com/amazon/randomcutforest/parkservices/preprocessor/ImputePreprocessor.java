@@ -158,25 +158,16 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             addRelevantAttribution(result);
         }
 
-        if (gap > 0) {
-            // if the linear interpolation did not produce an anomaly then accept those
-            if (result.getAnomalyGrade() > 0) {
-                applyTransductiveImpute(imputationMethod, inputPoint, timestamp, timeStampDeviation.getMean(), forest,
-                        tempLastAnomalyTimeStamp, tempLastExpectedValue);
-            } else {
-                applyTransductiveImpute(LINEAR, inputPoint, timestamp, timeStampDeviation.getMean(), forest,
-                        tempLastAnomalyTimeStamp, tempLastExpectedValue);
-            }
+        // if the linear interpolation did not produce an anomaly then accept those
+        if (result.getAnomalyGrade() > 0) {
+            applyTransductiveImpute(imputationMethod, inputPoint, timestamp, timeStampDeviation.getMean(), null, forest,
+                    tempLastAnomalyTimeStamp, tempLastExpectedValue);
+        } else {
+            applyTransductiveImpute(LINEAR, inputPoint, timestamp, timeStampDeviation.getMean(), null, forest,
+                    tempLastAnomalyTimeStamp, tempLastExpectedValue);
         }
 
-        updateState(inputPoint, point, timestamp);
-        if (timeStampDeviation != null) {
-            timeStampDeviation.update(timestamp - lastInputTimeStamp);
-        }
         ++valuesSeen;
-        if (updateAllowed()) {
-            forest.update(lastShingledPoint);
-        }
         return result;
     }
 
@@ -236,17 +227,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
             lastActualInternal = internalTimeStamp;
             ImputationMethod method = (imputationMethod == RCF) ? DEFAULT_RCF_IMPUTATION_FOR_INITIAL : imputationMethod;
-            applyTransductiveImpute(method, initialValues[i], initialTimeStamps[i], timeFactor, forest, 0, null);
-            double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], factors, timeFactor);
-            if (internalTimeStamp > 0) {
-                timeStampDeviation.update(initialTimeStamps[i] - lastInputTimeStamp);
-            }
-            updateState(initialValues[i], scaledInput, initialTimeStamps[i]);
-            // update forest
-            if (updateAllowed()) {
-                forest.update(lastShingledPoint);
-            }
-
+            applyTransductiveImpute(method, initialValues[i], initialTimeStamps[i], timeFactor, factors, forest, 0,
+                    null);
         }
 
         initialTimeStamps = null;
@@ -280,61 +262,44 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         }
     }
 
-    /**
-     * applies a imputation (which is cognizant of the last actual value)
-     * 
-     * @param method               the imputation method of choice (unless defaults
-     *                             apply)
-     * @param input                the input point
-     * @param timestamp            timestamp of the current input
-     * @param averageGap           the average gap between points
-     * @param forest               the resident RCF
-     * @param lastAnomalyTimeStamp time stamp of the last anomaly
-     * @param lastExpectedValue    the expected value, which should be used in the
-     *                             extension
-     */
+    // TODO : use lastAnomalyStamp and lastExpectedValue
     protected void applyTransductiveImpute(ImputationMethod method, double[] input, long timestamp, double averageGap,
-            RandomCutForest forest, long lastAnomalyTimeStamp, double[] lastExpectedValue) {
-        checkArgument(shingleSize > 1, "imputation is not meaningful with shingle size 1");
-        int baseDimension = dimension / shingleSize;
-        checkArgument(input.length == baseDimension, "error in length");
-        int numberToImpute = determineGap(timestamp, averageGap) - 1;
-        if (numberToImpute > 0) {
-            if (lastAnomalyTimeStamp == lastActualInternal - 1 && lastExpectedValue != null) {
-                // we choose to not use the last anomaly in further interpolation
-                // we switch the input sequence
-                checkArgument(lastExpectedValue.length == dimension, "incorrect expected point length");
-                lastShingledPoint = Arrays.copyOf(lastExpectedValue, dimension);
-                for (int i = 0; i < baseDimension; i++) {
-                    lastShingledInput[dimension - baseDimension + i] = inverseTransform(
-                            lastExpectedValue[dimension - baseDimension + i], i, -1);
-                }
-            }
-
-            double step = 1.0 / (numberToImpute + 1);
-            // the last impute corresponds to the current observed value
-            for (int i = 0; i < numberToImpute; i++) {
-                double[] previous = new double[baseDimension];
-                double[] result = null;
-                System.arraycopy(lastShingledInput, (shingleSize - 1) * inputLength, previous, 0, baseDimension);
-                if (method == RCF) {
-                    if (useDefault(forest, numberToImpute)) {
-                        result = impute(step * (i + 1), previous, input, DEFAULT_RCF_IMPUTATION_FOR_LOW_DATA);
+            double[] factors, RandomCutForest forest, long lastAnomalyTimeStamp, double[] lastExpectedValue) {
+        double[] previous = new double[inputLength];
+        if (internalTimeStamp > 0) {
+            System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
+            int numberToImpute = determineGap(timestamp, averageGap) - 1;
+            if (numberToImpute > 0) {
+                double step = 1.0 / (numberToImpute + 1);
+                // the last impute corresponds to the current observed value
+                for (int i = 0; i < numberToImpute; i++) {
+                    double[] result = null;
+                    if (method == RCF) {
+                        if (useDefault(forest, numberToImpute)) {
+                            result = impute(step * (i + 1), previous, input, DEFAULT_RCF_IMPUTATION_FOR_LOW_DATA);
+                        } else {
+                            result = imputeRCF(forest);
+                        }
                     } else {
-                        result = imputeRCF(forest);
+                        result = impute(step * (i + 1), previous, input, method);
                     }
-                } else {
-                    result = impute(step * (i + 1), previous, input, method);
-                }
-                // System.out.println("IMPUTE " + internalTimeStamp);
-                double[] scaledInput = getScaledInput(result, 0L);
-                updateShingle(result, scaledInput);
-                updateTimestamps(timestamp);
-                numberOfImputed = numberOfImputed + 1;
-                if (updateAllowed()) {
-                    forest.update(lastShingledPoint);
+                    // System.out.println("IMPUTE " + internalTimeStamp);
+                    double[] scaledInput = transformValues(result, factors);
+                    updateShingle(result, scaledInput);
+                    updateTimestamps(timestamp);
+                    numberOfImputed = numberOfImputed + 1;
+                    if (updateAllowed()) {
+                        forest.update(lastShingledPoint);
+                    }
                 }
             }
+        }
+        double[] scaledInput = transformValues(input, factors);
+        timeStampDeviation.update(timestamp - lastInputTimeStamp);
+        updateState(input, scaledInput, timestamp);
+        // update forest
+        if (updateAllowed()) {
+            forest.update(lastShingledPoint);
         }
     }
 
@@ -397,6 +362,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @return the next input (can be multidimensional) -- this is likely to be
      *         noisy for low shingle sizes
      */
+    // TODO extend to imputation with the last known value as well
     protected double[] imputeRCF(RandomCutForest forest) {
         int baseDimension = inputLength;
         int dimension = forest.getDimensions();
