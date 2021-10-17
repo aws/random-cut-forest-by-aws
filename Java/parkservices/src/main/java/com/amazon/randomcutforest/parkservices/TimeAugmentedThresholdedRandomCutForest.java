@@ -49,42 +49,6 @@ public class TimeAugmentedThresholdedRandomCutForest extends ThresholdedRandomCu
     }
 
     /**
-     * a single call that prepreprocesses data, compute score/grade and updates
-     * state
-     *
-     * @param inputPoint current input point
-     * @param timestamp  time stamp of input
-     * @return anomalydescriptor for the current input point
-     */
-    public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
-
-        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
-        if (ifZero) { // turn caching on temporarily
-            forest.setBoundingBoxCacheFraction(1.0);
-        }
-
-        double[] scaledInput = preprocessor.preProcess(inputPoint, timestamp, forest, lastAnomalyTimeStamp,
-                lastExpectedPoint);
-        if (scaledInput == null) {
-            return new AnomalyDescriptor();
-        }
-
-        // only internal shingling
-        double[] point = forest.transformToShingledPoint(scaledInput);
-
-        // score anomalies
-        AnomalyDescriptor description = getAnomalyDescription(point, timestamp, inputPoint);
-
-        // add expected value, update state
-        AnomalyDescriptor result = preprocessor.postProcess(description, inputPoint, timestamp, forest);
-        if (ifZero) { // turn caching off
-            forest.setBoundingBoxCacheFraction(0);
-        }
-        return result;
-
-    }
-
-    /**
      * a first stage corrector that attempts to fix the after effects of a previous
      * anomaly which may be in the shingle, or just preceding the shingle
      * 

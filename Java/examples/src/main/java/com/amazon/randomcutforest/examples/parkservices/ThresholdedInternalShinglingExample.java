@@ -101,9 +101,9 @@ public class ThresholdedInternalShinglingExample implements Example {
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("timestamp " + count + " RESULT value ");
+                System.out.print("timestamp " + count + " RESULT value " + result.getInternalTimeStamp() + " ");
                 for (int i = 0; i < baseDimensions; i++) {
-                    System.out.print(result.getCurrentValues()[i] + ", ");
+                    System.out.print(result.getCurrentInput()[i] + ", ");
                 }
                 System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
                 if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
@@ -127,10 +127,9 @@ public class ThresholdedInternalShinglingExample implements Example {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print(
-                                        "( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i])
-                                                + " ) ");
+                            if (result.getCurrentInput()[i] != result.getExpectedValuesList()[0][i]) {
+                                System.out.print("( "
+                                        + (result.getCurrentInput()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     }

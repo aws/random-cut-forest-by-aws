@@ -77,8 +77,8 @@ public class Thresholded1DGaussianMix implements Example {
             AnomalyDescriptor result = forest.process(point, count);
 
             if (keyCounter < dataWithKeys.changeIndices.length
-                    && result.getTimestamp() == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (result.getTimestamp()) + " CHANGE");
+                    && result.getInternalTimeStamp() == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println("timestamp " + (result.getInputTimestamp()) + " CHANGE");
                 ++keyCounter;
             }
 
@@ -90,7 +90,7 @@ public class Thresholded1DGaussianMix implements Example {
             if (result.getAnomalyGrade() != 0) {
                 System.out.print("timestamp " + (count) + " RESULT value ");
                 for (int i = 0; i < baseDimensions; i++) {
-                    System.out.print(result.getCurrentValues()[i] + ", ");
+                    System.out.print(result.getCurrentInput()[i] + ", ");
                 }
                 System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
 
@@ -112,10 +112,9 @@ public class Thresholded1DGaussianMix implements Example {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print(
-                                        "( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i])
-                                                + " ) ");
+                            if (result.getCurrentInput()[i] != result.getExpectedValuesList()[0][i]) {
+                                System.out.print("( "
+                                        + (result.getCurrentInput()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     }

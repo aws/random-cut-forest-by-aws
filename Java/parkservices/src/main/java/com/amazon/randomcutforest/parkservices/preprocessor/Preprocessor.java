@@ -215,6 +215,10 @@ public class Preprocessor {
         }
     }
 
+    public int determineNumberOfImputes(long timestamp) {
+        return 0;
+    }
+
     /**
      * A generic preprocessing call
      * 
@@ -229,11 +233,40 @@ public class Preprocessor {
      * @return a shingled/unshingled transformed point (based on configurations) to
      *         be used in scoring
      */
-    public double[] preProcess(double[] inputPoint, long timestamp, RandomCutForest forest, long lastAnomalyTimeStamp,
-            double[] lastExpectedValue) {
+    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp, RandomCutForest forest,
+            long lastAnomalyTimeStamp, double[] lastExpectedValue) {
         lastActualInternal = internalTimeStamp;
         lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
-        return getScaledInput(inputPoint, timestamp);
+        double[] scaledInput = getScaledInput(inputPoint, timestamp, null, 0);
+
+        if (scaledInput == null) {
+            return null;
+        }
+
+        AnomalyDescriptor result = new AnomalyDescriptor();
+        double[] point;
+        if (forest.isInternalShinglingEnabled()) {
+            point = forest.transformToShingledPoint(scaledInput);
+        } else {
+            int dimension = forest.getDimensions();
+            if (scaledInput.length == dimension) {
+                point = scaledInput;
+            } else {
+                point = new double[dimension];
+                System.arraycopy(getLastShingledPoint(), scaledInput.length, point, 0, dimension - scaledInput.length);
+                System.arraycopy(scaledInput, 0, point, dimension - scaledInput.length, scaledInput.length);
+            }
+        }
+        result.setRCFPoint(point);
+        result.setCurrentInput(inputPoint);
+        result.setInputTimestamp(timestamp);
+        result.setNumberOfTrees(forest.getNumberOfTrees());
+        result.setTotalUpdates(forest.getTotalUpdates());
+        result.setLastAnomalyInternalTimestamp(lastAnomalyTimeStamp);
+        result.setLastExpectedPoint(lastExpectedValue);
+        result.setInternalTimeStamp(internalTimeStamp); // no impute
+        result.setNumberOfImputes(0);
+        return result;
     }
 
     /**
@@ -279,16 +312,15 @@ public class Preprocessor {
     /**
      * a generic postprocessor which updates all the state
      * 
-     * @param result     the descriptor of the evaluation on the current point
-     * @param inputPoint the current input point
-     * @param timestamp  the timestamp of the current input
-     * @param forest     the resident RCF
+     * @param result the descriptor of the evaluation on the current point
+     * @param forest the resident RCF
      * @return the descriptor (mutated and augmented appropriately)
      */
-    public AnomalyDescriptor postProcess(AnomalyDescriptor result, double[] inputPoint, long timestamp,
-            RandomCutForest forest) {
+    public AnomalyDescriptor postProcess(AnomalyDescriptor result, RandomCutForest forest) {
 
-        double[] point = result.getRcfPoint();
+        double[] inputPoint = result.getCurrentInput();
+        long timestamp = result.getInputTimestamp();
+        double[] point = result.getRCFPoint();
         checkArgument(point != null, " should not be postprocessing");
         if (result.getAnomalyGrade() > 0) {
             double[] reference = inputPoint;
@@ -345,12 +377,16 @@ public class Preprocessor {
     public long inverseMapTime(double gap, int relativePosition) {
         // note this ocrresponds to differencing being always on
         checkArgument(shingleSize + relativePosition >= 0, " error");
+        double factor = weights[inputLength];
+        if (factor == 0) {
+            return 0;
+        }
         if (normalizeTime) {
             return (long) Math.floor(previousTimeStamps[shingleSize - 1 + relativePosition]
-                    + timeStampDeviation.getMean() + 2 * gap * timeStampDeviation.getDeviation());
+                    + timeStampDeviation.getMean() + 2 * gap * timeStampDeviation.getDeviation() / factor);
         } else {
-            return (long) Math
-                    .floor(gap + previousTimeStamps[shingleSize - 1 + relativePosition] + timeStampDeviation.getMean());
+            return (long) Math.floor(gap / factor + previousTimeStamps[shingleSize - 1 + relativePosition]
+                    + timeStampDeviation.getMean());
         }
     }
 
@@ -414,27 +450,42 @@ public class Preprocessor {
     protected double inverseTransform(double value, int index, int relativeBlockIndex) {
         if (transformMethod == TransformMethod.NONE) {
             return value;
-        } else if (transformMethod == TransformMethod.WEIGHTED) {
-            return (weights[index] == 0) ? 0 : value / weights[index];
-        } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
-            return (weights[index] == 0) ? 0 : (value + deviationList[index].getMean()) / weights[index];
         }
-        double[] difference = getShingledInput(shingleSize - 1 + relativeBlockIndex);
-        checkArgument(transformMethod == TransformMethod.DIFFERENCE, "incorrect configuration");
-        return (weights[index] == 0) ? 0 : (value + difference[index]) / weights[index];
+        if (!requireInitialSegment(false, transformMethod)) {
+            if (transformMethod == TransformMethod.WEIGHTED) {
+                return (weights[index] == 0) ? 0 : value / weights[index];
+            } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
+                return (weights[index] == 0) ? 0 : (value + deviationList[index].getMean()) / weights[index];
+            }
+            double[] difference = getShingledInput(shingleSize - 1 + relativeBlockIndex);
+            checkArgument(transformMethod == TransformMethod.DIFFERENCE, "incorrect configuration");
+            return (weights[index] == 0) ? 0 : (value + difference[index]) / weights[index];
+        } else {
+            if (transformMethod == TransformMethod.NORMALIZE) {
+                double newValue = deviationList[index].getMean()
+                        + 2 * value * (deviationList[index].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
+                return (weights[index] == 0) ? 0 : newValue / weights[index];
+            }
+            checkArgument(transformMethod == TransformMethod.NORMALIZE_DIFFERENCE, "incorrect configuration");
+            double[] difference = getShingledInput(shingleSize - 1 + relativeBlockIndex);
+            double newValue = difference[index] + deviationList[index].getMean()
+                    + +2 * value * (deviationList[index].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
+            return (weights[index] == 0) ? 0 : newValue / weights[index];
+        }
     }
 
     /**
      * given an input produces a scaled transform to be used in the forest
-     * 
+     *
      * @param input     the actual input seen
      * @param timestamp timestamp of said input
      * @return a scaled/transformed input which can be used in the forest
      */
-    protected double[] getScaledInput(double[] input, long timestamp) {
-        double[] scaledInput = transformValues(input);
+    protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
+            double defaultTimeFactor) {
+        double[] scaledInput = transformValues(input, defaultFactors);
         if (mode == ForestMode.TIME_AUGMENTED) {
-            scaledInput = augmentTime(scaledInput, timestamp);
+            scaledInput = augmentTime(scaledInput, timestamp, defaultTimeFactor);
         }
         return scaledInput;
     }
@@ -494,7 +545,8 @@ public class Preprocessor {
     void updateDeviation(double[] inputPoint) {
         for (int i = 0; i < inputPoint.length; i++) {
             double value = inputPoint[i];
-            if (transformMethod == TransformMethod.DIFFERENCE) {
+            if (transformMethod == TransformMethod.DIFFERENCE
+                    || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
                 value -= lastShingledInput[lastShingledInput.length - inputLength + i];
             }
             deviationList[i].update(value);
@@ -540,28 +592,57 @@ public class Preprocessor {
     }
 
     /**
-     * applies transformations if desired
+     * maps a value shifted to the current mean or to a relative space
      *
-     * @param inputPoint input point
-     * @return a differenced version of the input
+     * @param value     input value of dimension
+     * @param deviation statistic
+     * @return the normalized value
      */
-    protected double[] transformValues(double[] inputPoint) {
+    protected double normalize(double value, Deviation deviation, double factor) {
+        double currentFactor = (factor != 0) ? factor : deviation.getDeviation();
+        if (value - deviation.getMean() >= 2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+            return clipFactor;
+        }
+        if (value - deviation.getMean() < -2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+            return -clipFactor;
+        } else {
+            // deviation cannot be 0
+            return (value - deviation.getMean()) / (2 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
+        }
+    }
+
+    protected double[] transformValues(double[] inputPoint, double[] factors) {
         if (transformMethod == TransformMethod.NONE) {
             return inputPoint;
         }
         double[] input = new double[inputPoint.length];
-        if (transformMethod == TransformMethod.WEIGHTED) {
-            for (int i = 0; i < inputPoint.length; i++) {
-                input[i] = inputPoint[i] * weights[i];
+        if (!requireInitialSegment(false, transformMethod)) {
+            if (transformMethod == TransformMethod.WEIGHTED) {
+                for (int i = 0; i < inputPoint.length; i++) {
+                    input[i] = inputPoint[i] * weights[i];
+                }
+            } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
+                for (int i = 0; i < inputPoint.length; i++) {
+                    input[i] = (internalTimeStamp == 0) ? 0 : weights[i] * (inputPoint[i] - deviationList[i].getMean());
+                }
+            } else if (transformMethod == TransformMethod.DIFFERENCE) {
+                for (int i = 0; i < input.length; i++) {
+                    input[i] = (internalTimeStamp == 0) ? 0
+                            : weights[i]
+                                    * (inputPoint[i] - lastShingledInput[lastShingledInput.length - inputLength + i]);
+                }
             }
-        } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
-            for (int i = 0; i < inputPoint.length; i++) {
-                input[i] = (internalTimeStamp == 0) ? 0 : weights[i] * (inputPoint[i] - deviationList[i].getMean());
-            }
-        } else if (transformMethod == TransformMethod.DIFFERENCE) {
+        }
+
+        if (transformMethod == TransformMethod.NORMALIZE) {
             for (int i = 0; i < input.length; i++) {
-                input[i] = (internalTimeStamp == 0) ? 0
-                        : weights[i] * (inputPoint[i] - lastShingledInput[lastShingledInput.length - inputLength + i]);
+                input[i] = weights[i] * normalize(inputPoint[i], deviationList[i], (factors == null) ? 0 : factors[i]);
+            }
+        } else if (transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
+            for (int i = 0; i < input.length; i++) {
+                double value = (internalTimeStamp == 0) ? 0
+                        : inputPoint[i] - lastShingledInput[lastShingledInput.length - inputLength + i];
+                input[i] = weights[i] * normalize(value, deviationList[i], (factors == null) ? 0 : factors[i]);
             }
         }
         return input;
@@ -573,16 +654,18 @@ public class Preprocessor {
      *
      * @param normalized (potentially normalized) input point
      * @param timestamp  timestamp of current point
+     * @param timeFactor a factor used in normalizing time
      * @return a tuple with one exta field
      */
-    protected double[] augmentTime(double[] normalized, long timestamp) {
+    protected double[] augmentTime(double[] normalized, long timestamp, double timeFactor) {
         double[] scaledInput = new double[normalized.length + 1];
         System.arraycopy(normalized, 0, scaledInput, 0, normalized.length);
         if (valuesSeen <= 1) {
             scaledInput[normalized.length] = 0;
         } else {
             double timeshift = timestamp - previousTimeStamps[shingleSize - 1];
-            scaledInput[normalized.length] = weights[inputLength] * timeshift;
+            scaledInput[normalized.length] = weights[inputLength]
+                    * ((normalizeTime) ? normalize(timeshift, timeStampDeviation, timeFactor) : timeshift);
         }
         return scaledInput;
     }

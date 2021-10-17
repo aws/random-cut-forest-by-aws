@@ -58,21 +58,14 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         numberOfImputed = shingleSize;
     }
 
-    /**
-     * given an input produces a scaled transform to be used in the forest
-     *
-     * @param input     the actual input seen
-     * @param timestamp timestamp of said input
-     * @return a scaled/transformed input which has the same length os input
-     */
-    protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
-            double defaultTimeFactor) {
-        checkArgument(valuesSeen == 0 || timestamp >= previousTimeStamps[shingleSize - 1], "incorrect order of time");
-        return transformValues(input, defaultFactors);
+    @Override
+    public int determineNumberOfImputes(long timestamp) {
+        return determineGap(timestamp, timeStampDeviation.getMean()) - 1;
     }
 
-    public double[] preProcess(double[] inputPoint, long timestamp, RandomCutForest forest, long lastAnomalyTimeStamp,
-            double[] lastExpectedValue) {
+    @Override
+    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp, RandomCutForest forest,
+            long lastAnomalyTimeStamp, double[] lastExpectedValue) {
 
         if (valuesSeen < startNormalization) {
             storeInitial(inputPoint, timestamp);
@@ -88,7 +81,23 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         checkArgument(timestamp > lastInputTimeStamp, "incorrect ordering of time");
 
-        return getImputedShingle(inputPoint, timestamp, timeStampDeviation.getMean(), forest);
+        double[] point = getImputedShingle(inputPoint, timestamp, timeStampDeviation.getMean(), forest);
+
+        if (point == null) {
+            return null;
+        }
+
+        AnomalyDescriptor result = new AnomalyDescriptor();
+        result.setRCFPoint(point);
+        result.setCurrentInput(inputPoint);
+        result.setInputTimestamp(timestamp);
+        result.setNumberOfTrees(forest.getNumberOfTrees());
+        result.setTotalUpdates(forest.getTotalUpdates());
+        result.setLastAnomalyInternalTimestamp(lastAnomalyTimeStamp);
+        result.setLastExpectedPoint(lastExpectedValue);
+        result.setNumberOfImputes(determineNumberOfImputes(timestamp));
+        result.setInternalTimeStamp(internalTimeStamp + result.getNumberOfImputes());
+        return result;
     }
 
     /**
@@ -125,17 +134,17 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     /**
      * The postprocessing now has to handle imputation while changing the state
      * 
-     * @param result     the descriptor of the evaluation on the current point
-     * @param inputPoint the current input point
-     * @param timestamp  the timestamp of the current input
-     * @param forest     the resident RCF
+     * @param result the descriptor of the evaluation on the current point
+     * @param forest the resident RCF
      * @return
      */
     @Override
-    public AnomalyDescriptor postProcess(AnomalyDescriptor result, double[] inputPoint, long timestamp,
-            RandomCutForest forest) {
+    public AnomalyDescriptor postProcess(AnomalyDescriptor result, RandomCutForest forest) {
 
-        double[] point = result.getRcfPoint();
+        double[] inputPoint = result.getCurrentInput();
+        long timestamp = result.getInputTimestamp();
+        double[] point = result.getRCFPoint();
+        checkArgument(point != null, " should not be postprocessing");
 
         int gap = determineGap(timestamp, timeStampDeviation.getMean()) - 1;
         if (result.getAnomalyGrade() > 0) {

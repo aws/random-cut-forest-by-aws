@@ -26,7 +26,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 
 @Getter
 @Setter
-public class AnomalyDescriptor {
+public class AnomalyDescriptor extends RCFComputeDescriptor {
 
     public static int NUMBER_OF_EXPECTED_VALUES = 1;
 
@@ -40,24 +40,11 @@ public class AnomalyDescriptor {
     // information
     DiVector attribution;
 
-    // sequence index (the number of updates to RCF) -- it is possible in imputation
-    // that
-    // the number of updates more than the input tuples seen by the overall program
-    long totalUpdates;
-
-    // timestamp (basically a sequence index, but can be scaled and jittered as in
-    // the example);
-    // kept as long for potential future use
-    long timestamp;
-
     // if the anomaly is due to timestamp when it is augmented only for current time
     long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
     double dataConfidence;
-
-    // number of trees in the forest
-    int forestSize;
 
     // flag indicating if the anomaly is the start of an anomaly or part of a run of
     // anomalies
@@ -82,9 +69,6 @@ public class AnomalyDescriptor {
     // when time is appended for the anomalous time slice
     double timeAttribution;
 
-    // current values
-    double[] currentValues;
-
     // the values being replaced; may correspond to past
     double[] oldValues;
 
@@ -100,16 +84,6 @@ public class AnomalyDescriptor {
     // the threshold used in inference
     double threshold;
 
-    // the below are information used by the RCF these can be useful as explanations
-    // of normal points as well
-    // internal to RCF, used for passing information in a streaming manner
-    double[] expectedRCFPoint;
-    double[] rcfPoint;
-
-    public void setCurrentValues(double[] currentValues) {
-        this.currentValues = copyIfNotnull(currentValues);
-    }
-
     public void setAttribution(DiVector attribution) {
         this.attribution = new DiVector(attribution);
     }
@@ -118,16 +92,8 @@ public class AnomalyDescriptor {
         oldValues = copyIfNotnull(values);
     }
 
-    public void setExpectedRCFPoint(double[] point) {
-        expectedRCFPoint = copyIfNotnull(point);
-    }
-
     public boolean isExpectedValuesPresent() {
         return expectedValuesList != null;
-    }
-
-    public void setRCFPoint(double[] point) {
-        rcfPoint = copyIfNotnull(point);
     }
 
     public void setRelevantAttribution(double[] values) {
@@ -146,7 +112,4 @@ public class AnomalyDescriptor {
         likelihoodOfValues[position] = likelihood;
     }
 
-    protected double[] copyIfNotnull(double[] array) {
-        return array == null ? null : Arrays.copyOf(array, array.length);
-    }
 }
