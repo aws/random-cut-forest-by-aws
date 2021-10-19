@@ -36,30 +36,34 @@ public class InitialSegmentPreprocessor extends Preprocessor {
     }
 
     /**
-     * A core function of the preprocessor. It can augment time values (with
-     * normalization) or impute missing values on the fly using the forest.
-     *
-     * @param inputPoint the actual input
-     * @param timestamp  timestamp of the point
-     * @param forest     RCF
-     * @return a scaled/normalized tuple that can be used for anomaly detection
+     * an extension of the basic proeprocessor where the inital values are stored
+     * for potential normalization
+     * 
+     * @param description description of the computation for the cirrent point
+     * @param forest      the resident RCF
+     * @return the description where the RCFPoint (map of the input point to the RCF
+     *         space) is added
      */
+
     @Override
-    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp, RandomCutForest forest,
-            long lastAnomalyTimeStamp, double[] lastExpectedValue) {
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, RandomCutForest forest) {
+        lastActualInternal = internalTimeStamp;
+        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
+        double[] inputPoint = description.getCurrentInput();
+        long timestamp = description.getInputTimestamp();
 
         if (valuesSeen < startNormalization) {
             storeInitial(inputPoint, timestamp);
-            return null;
+            return description;
         } else if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
         }
 
-        return super.preProcess(inputPoint, timestamp, forest, lastAnomalyTimeStamp, lastExpectedValue);
+        return super.preProcess(description, forest);
     }
 
     /**
-     * stores initial data for normalization
+     * stores initial data for normalizdation
      *
      * @param inputPoint input data
      * @param timestamp  timestamp

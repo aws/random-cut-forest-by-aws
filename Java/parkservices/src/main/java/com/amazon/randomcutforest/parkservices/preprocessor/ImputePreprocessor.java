@@ -18,9 +18,9 @@ package com.amazon.randomcutforest.parkservices.preprocessor;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.LINEAR;
+import static com.amazon.randomcutforest.config.ImputationMethod.NEXT;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
-import static com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest.MINIMUM_OBSERVATIONS_FOR_EXPECTED;
 
 import java.util.Arrays;
 
@@ -37,9 +37,6 @@ import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 @Getter
 @Setter
 public class ImputePreprocessor extends InitialSegmentPreprocessor {
-
-    public ImputationMethod DEFAULT_RCF_IMPUTATION_FOR_LOW_DATA = PREVIOUS;
-    public ImputationMethod DEFAULT_RCF_IMPUTATION_FOR_INITIAL = LINEAR;
 
     ThresholdedRandomCutForest thresholdedRandomCutForest;
 
@@ -58,46 +55,57 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         numberOfImputed = shingleSize;
     }
 
-    @Override
-    public int determineNumberOfImputes(long timestamp) {
+    /**
+     * a function to determine the number of missing values
+     * 
+     * @param timestamp the timestamp of the next point
+     * @return the number of missing values
+     */
+    protected int determineNumberOfImputes(long timestamp) {
         return determineGap(timestamp, timeStampDeviation.getMean()) - 1;
     }
 
+    /**
+     * an extension of the basec preprocessing
+     * 
+     * @param description description of the computation for the cirrent point
+     * @param forest      the resident RCF
+     * @return adds the RCFPoint as well as number of imputed points; it also saves
+     *         the last anomaly point and the last anomaly timestamp for later use
+     */
     @Override
-    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp, RandomCutForest forest,
-            long lastAnomalyTimeStamp, double[] lastExpectedValue) {
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, RandomCutForest forest) {
+        lastActualInternal = internalTimeStamp;
+        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
+        double[] inputPoint = description.getCurrentInput();
+        long timestamp = description.getInputTimestamp();
 
         if (valuesSeen < startNormalization) {
             storeInitial(inputPoint, timestamp);
-            return null;
+            return description;
         } else if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
         }
 
-        tempLastAnomalyTimeStamp = lastAnomalyTimeStamp;
-        tempLastExpectedValue = (lastExpectedValue == null) ? null
-                : Arrays.copyOf(lastExpectedValue, lastExpectedValue.length);
+        tempLastAnomalyTimeStamp = description.getLastAnomalyInternalTimestamp();
+        double[] lastExpectedPoint = description.getLastExpectedPoint();
+        tempLastExpectedValue = (lastExpectedPoint == null) ? null
+                : Arrays.copyOf(lastExpectedPoint, lastExpectedPoint.length);
         lastActualInternal = internalTimeStamp;
         lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         checkArgument(timestamp > lastInputTimeStamp, "incorrect ordering of time");
 
-        double[] point = getImputedShingle(inputPoint, timestamp, timeStampDeviation.getMean(), forest);
+        // genertate next tuple without changing the forest
+        double[] point = generateShingle(inputPoint, timestamp, timeStampDeviation.getMean(), null, false, forest);
 
         if (point == null) {
-            return null;
+            return description;
         }
 
-        AnomalyDescriptor result = new AnomalyDescriptor();
-        result.setRCFPoint(point);
-        result.setCurrentInput(inputPoint);
-        result.setInputTimestamp(timestamp);
-        result.setNumberOfTrees(forest.getNumberOfTrees());
-        result.setTotalUpdates(forest.getTotalUpdates());
-        result.setLastAnomalyInternalTimestamp(lastAnomalyTimeStamp);
-        result.setLastExpectedPoint(lastExpectedValue);
-        result.setNumberOfImputes(determineNumberOfImputes(timestamp));
-        result.setInternalTimeStamp(internalTimeStamp + result.getNumberOfImputes());
-        return result;
+        description.setRCFPoint(point);
+        description.setNumberOfImputes(determineNumberOfImputes(timestamp));
+        description.setInternalTimeStamp(internalTimeStamp + description.getNumberOfImputes());
+        return description;
     }
 
     /**
@@ -128,7 +136,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     protected boolean updateAllowed() {
         double fraction = numberOfImputed * 1.0 / (shingleSize);
         dataQuality.update(1 - fraction);
-        return (fraction < useImputedFraction && valuesSeen >= shingleSize);
+        return (fraction < useImputedFraction && internalTimeStamp >= shingleSize);
     }
 
     /**
@@ -136,64 +144,28 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * 
      * @param result the descriptor of the evaluation on the current point
      * @param forest the resident RCF
-     * @return
+     * @return the description with the explanation added and state updated
      */
     @Override
     public AnomalyDescriptor postProcess(AnomalyDescriptor result, RandomCutForest forest) {
 
-        double[] inputPoint = result.getCurrentInput();
-        long timestamp = result.getInputTimestamp();
         double[] point = result.getRCFPoint();
-        checkArgument(point != null, " should not be postprocessing");
+        if (point == null) {
+            return result;
+        }
 
-        int gap = determineGap(timestamp, timeStampDeviation.getMean()) - 1;
-        if (result.getAnomalyGrade() > 0) {
-            double[] reference = inputPoint;
-            double[] newPoint = result.getExpectedRCFPoint();
-
-            int index = Math.min(result.getRelativeIndex() + gap, 0);
-            result.setRelativeIndex(index);
-
-            if (newPoint != null) {
-                if (index < 0 && result.isStartOfAnomaly()) {
-                    reference = getShingledInput(shingleSize + index);
-                    result.setOldValues(reference);
-                    result.setOldTimeStamp(getTimeStamp(shingleSize - 1 + index));
-                }
-                double[] values = getExpectedValue(index, reference, point, newPoint);
-                result.setExpectedValues(0, values, 1.0);
-            }
-
+        if (result.getAnomalyGrade() > 0 && numberOfImputed == 0) {
+            // we cannot predict expected value easily if there are gaps in the shingle
             addRelevantAttribution(result);
         }
 
-        // if the linear interpolation did not produce an anomaly then accept those
-        if (result.getAnomalyGrade() > 0) {
-            applyTransductiveImpute(imputationMethod, inputPoint, timestamp, timeStampDeviation.getMean(), null, forest,
-                    tempLastAnomalyTimeStamp, tempLastExpectedValue);
-        } else {
-            applyTransductiveImpute(LINEAR, inputPoint, timestamp, timeStampDeviation.getMean(), null, forest,
-                    tempLastAnomalyTimeStamp, tempLastExpectedValue);
-        }
+        double[] inputPoint = result.getCurrentInput();
+        long timestamp = result.getInputTimestamp();
 
+        // generate shingles and commit the results
+        generateShingle(inputPoint, timestamp, timeStampDeviation.getMean(), null, true, forest);
         ++valuesSeen;
         return result;
-    }
-
-    /**
-     * a simplified version of getting the expected values in the original space
-     * 
-     * @param base          the input dimension
-     * @param startPosition the starting position in the shingle
-     * @param newPoint      the shingle with the expected values
-     * @return the values (at startposition) which would have produced newPoint
-     */
-    protected double[] getExpectedValue(int base, int startPosition, double[] newPoint) {
-        double[] values = new double[base];
-        for (int i = 0; i < base; i++) {
-            values[i] = inverseTransform(newPoint[startPosition + i], i, 0);
-        }
-        return values;
     }
 
     /**
@@ -235,23 +207,12 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             // initial imputation
             lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
             lastActualInternal = internalTimeStamp;
-            ImputationMethod method = (imputationMethod == RCF) ? DEFAULT_RCF_IMPUTATION_FOR_INITIAL : imputationMethod;
-            applyTransductiveImpute(method, initialValues[i], initialTimeStamps[i], timeFactor, factors, forest, 0,
-                    null);
+            // generate shingles and commit them
+            generateShingle(initialValues[i], initialTimeStamps[i], timeFactor, factors, true, forest);
         }
 
         initialTimeStamps = null;
         initialValues = null;
-    }
-
-    // a function to determine if a default strategy should be used -- instead of
-    // RCF
-    // note the condition in the end -- those tuples should probably not be in the
-    // forest as well
-    // there is little value in imputing those
-    protected boolean useDefault(RandomCutForest forest, int numberToImpute) {
-        return (forest.getTotalUpdates() < MINIMUM_OBSERVATIONS_FOR_EXPECTED || dimension < 4
-                || numberToImpute > shingleSize * useImputedFraction);
     }
 
     /**
@@ -263,7 +224,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @return the number of positions till timestamp
      */
     protected int determineGap(long timestamp, double averageGap) {
-        if (internalTimeStamp == 1) {
+        if (internalTimeStamp <= 1) {
             return 1;
         } else {
             double gap = (timestamp - lastInputTimeStamp) / averageGap;
@@ -271,118 +232,90 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         }
     }
 
-    // TODO : use lastAnomalyStamp and lastExpectedValue
-    protected void applyTransductiveImpute(ImputationMethod method, double[] input, long timestamp, double averageGap,
-            double[] factors, RandomCutForest forest, long lastAnomalyTimeStamp, double[] lastExpectedValue) {
-        double[] previous = new double[inputLength];
+    /**
+     * a single function that constructs the next shingle, with the option of
+     * committing them to the forest However the shingle needs to be genrated before
+     * we process a point; and can only be committed once the point has been scored.
+     * Having the same deterministic transformation is essential
+     * 
+     * @param input        the input point
+     * @param timestamp    the input timestamp
+     * @param averageGap   the gap in timestamps
+     * @param factors      the factors in normalization (not in use after initial
+     *                     segment)
+     * @param changeForest boolean determining if we commit to the forest or not
+     * @param forest       the resident RCF
+     * @return the next shingle
+     */
+    protected double[] generateShingle(double[] input, long timestamp, double averageGap, double[] factors,
+            boolean changeForest, RandomCutForest forest) {
+        double[] tempShingle = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
         if (internalTimeStamp > 0) {
+            double[] previous = new double[inputLength];
             System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
             int numberToImpute = determineGap(timestamp, averageGap) - 1;
             if (numberToImpute > 0) {
                 double step = 1.0 / (numberToImpute + 1);
                 // the last impute corresponds to the current observed value
                 for (int i = 0; i < numberToImpute; i++) {
-                    double[] result = null;
-                    if (method == RCF) {
-                        if (useDefault(forest, numberToImpute)) {
-                            result = impute(step * (i + 1), previous, input, DEFAULT_RCF_IMPUTATION_FOR_LOW_DATA);
-                        } else {
-                            result = imputeRCF(forest);
+                    double[] result = impute(step * (i + 1), previous, input, imputationMethod);
+                    double[] scaledInput = transformValues(result, factors);
+                    if (changeForest) {
+                        updateShingle(result, scaledInput);
+                        updateTimestamps(timestamp);
+                        numberOfImputed = numberOfImputed + 1;
+                        if (updateAllowed()) {
+                            forest.update(lastShingledPoint);
                         }
                     } else {
-                        result = impute(step * (i + 1), previous, input, method);
-                    }
-                    // System.out.println("IMPUTE " + internalTimeStamp);
-                    double[] scaledInput = transformValues(result, factors);
-                    updateShingle(result, scaledInput);
-                    updateTimestamps(timestamp);
-                    numberOfImputed = numberOfImputed + 1;
-                    if (updateAllowed()) {
-                        forest.update(lastShingledPoint);
+                        shiftLeft(tempShingle, inputLength);
+                        copyAtEnd(tempShingle, transformValues(result, null));
                     }
                 }
             }
         }
         double[] scaledInput = transformValues(input, factors);
-        timeStampDeviation.update(timestamp - lastInputTimeStamp);
-        updateState(input, scaledInput, timestamp);
-        // update forest
-        if (updateAllowed()) {
-            forest.update(lastShingledPoint);
-        }
-    }
-
-    /**
-     * a linear interpolator which is used to score a point but NOT to add to the
-     * forest
-     * 
-     * @param input      input point
-     * @param timestamp  timestamp of the input point
-     * @param averageGap the average gap seen so far
-     * @param forest     the resident RCF
-     * @return a shingle corresponding to the input point -- the forest is not
-     *         updated, but \ this shingle is needed for scoring
-     */
-
-    protected double[] getImputedShingle(double[] input, long timestamp, double averageGap, RandomCutForest forest) {
-        int baseDimension = dimension / shingleSize;
-        double[] tempShingle = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
-        double[] transformedInput = transformValues(input, null);
-        int numberToImpute = determineGap(timestamp, averageGap) - 1;
-        double step = 1.0 / (numberToImpute + 1);
-        double[] previous = new double[baseDimension];
-        System.arraycopy(lastShingledPoint, lastShingledPoint.length - inputLength, previous, 0, baseDimension);
-        double[] result = new double[baseDimension];
-        for (int i = 0; i < numberToImpute + 1; i++) {
-            for (int z = 0; z < input.length; z++) {
-                result[z] = (1 - step) * previous[z] + step * transformedInput[z];
+        if (changeForest) {
+            timeStampDeviation.update(timestamp - lastInputTimeStamp);
+            updateState(input, scaledInput, timestamp);
+            if (updateAllowed()) {
+                forest.update(lastShingledPoint);
             }
+            // current shingle
+            tempShingle = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
+        } else {
             shiftLeft(tempShingle, inputLength);
-            copyAtEnd(tempShingle, result);
+            copyAtEnd(tempShingle, transformValues(input, null));
         }
         return tempShingle;
     }
 
     /**
-     * a simple impute function based on the methods
+     * a simple function that performs a single step imputation in the input space
+     * the function has to be deterministic since it is run twice, first at scoring
+     * and then at committing to the RCF
+     * 
+     * @param stepFraction the interpolant fraction
+     * @param previous     the previous input point
+     * @param input        the current input point
+     * @param method       the inputation method of choice
+     * @return the imputed/interpolated result
      */
-
     protected double[] impute(double stepFraction, double[] previous, double[] input, ImputationMethod method) {
         int baseDimension = input.length;
         double[] result = new double[baseDimension];
 
         if (method == FIXED_VALUES) {
             System.arraycopy(defaultFill, 0, result, 0, baseDimension);
-        } else if (method == LINEAR) {
+        } else if (method == LINEAR || method == RCF) {
             for (int z = 0; z < input.length; z++) {
                 result[z] = previous[z] + stepFraction * (input[z] - previous[z]);
             }
         } else if (method == PREVIOUS) {
             System.arraycopy(previous, 0, result, 0, baseDimension);
+        } else if (method == NEXT) {
+            System.arraycopy(input, 0, result, 0, baseDimension);
         }
         return result;
     }
-
-    /**
-     * using extrapolation via the RCF -- note that it is independent of the input
-     * point
-     * 
-     * @param forest the resident RCF
-     * @return the next input (can be multidimensional) -- this is likely to be
-     *         noisy for low shingle sizes
-     */
-    // TODO extend to imputation with the last known value as well
-    protected double[] imputeRCF(RandomCutForest forest) {
-        int baseDimension = inputLength;
-        int dimension = forest.getDimensions();
-        int[] positions = new int[baseDimension];
-        double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
-        shiftLeft(temp, baseDimension);
-        for (int y = 0; y < baseDimension; y++) {
-            positions[y] = dimension - baseDimension + y;
-        }
-        double[] newPoint = forest.imputeMissingValues(temp, baseDimension, positions);
-        return getExpectedValue(baseDimension, dimension - baseDimension, newPoint);
-    }
-
 }

@@ -20,6 +20,10 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * a basic class that is used to store the internal state of the streaming
+ * processing in ThresholdedRandomCutForest and others.
+ */
 @Getter
 @Setter
 public class RCFComputeDescriptor {

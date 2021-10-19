@@ -221,7 +221,7 @@ public class ThresholdedRandomCutForest {
      * 
      * @param inputPoint current input point
      * @param timestamp  time stamp of input
-     * @return anomalydescriptor for the current input point
+     * @return anomaly descriptor for the current input point
      */
     public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
 
@@ -230,22 +230,27 @@ public class ThresholdedRandomCutForest {
             forest.setBoundingBoxCacheFraction(1.0);
         }
 
-        AnomalyDescriptor description = preprocessor.preProcess(inputPoint, timestamp, forest, lastAnomalyTimeStamp,
-                lastExpectedPoint);
+        AnomalyDescriptor description = new AnomalyDescriptor();
+        description.setCurrentInput(inputPoint);
+        description.setInputTimestamp(timestamp);
+        description.setNumberOfTrees(forest.getNumberOfTrees());
+        description.setTotalUpdates(forest.getTotalUpdates());
+        description.setLastAnomalyInternalTimestamp(lastAnomalyTimeStamp);
+        description.setLastExpectedPoint(lastExpectedPoint);
 
-        if (description == null) {
-            return new AnomalyDescriptor();
-        }
+        // preprocess
+        preprocessor.preProcess(description, forest);
 
         // score anomalies
         addAnomalyDescription(description);
 
-        // add expected value, update state
-        AnomalyDescriptor result = preprocessor.postProcess(description, forest);
+        // add explanation
+        preprocessor.postProcess(description, forest);
+
         if (ifZero) { // turn caching off
             forest.setBoundingBoxCacheFraction(0);
         }
-        return result;
+        return description;
 
     }
 
@@ -450,12 +455,27 @@ public class ThresholdedRandomCutForest {
                             + y] += lastAnomalyPoint[point.length - baseDimensions + y]
                                     - lastExpectedPoint[point.length - baseDimensions + y];
                 }
+            } else if (forestMode == ForestMode.TIME_AUGMENTED) {
+                // definitely correct the time dimension which is always differenced
+                // this applies to the non-differenced cases
+                correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
+                        - lastExpectedPoint[point.length - 1];
+
             }
         }
         return correctedPoint;
     }
 
-    protected void addAnomalyDescription(AnomalyDescriptor result) {
+    /**
+     * the core of the predictor-corrector thresholding for shingled data points. It
+     * uses a simple threshold provided by the basic thresholder. It first checks if
+     * obvious effects of the present; and absent such, for repeated breaches, how
+     * critical is the new current information
+     * 
+     * @param result returns the augmented description
+     * @return
+     */
+    protected AnomalyDescriptor addAnomalyDescription(AnomalyDescriptor result) {
         double[] point = result.getRCFPoint();
         double score = forest.getAnomalyScore(point);
         result.setRcfScore(score);
@@ -478,7 +498,7 @@ public class ThresholdedRandomCutForest {
             inHighScoreRegion = false;
             result.setInHighScoreRegion(inHighScoreRegion);
             update(score, score, false);
-            return;
+            return result;
         }
 
         // the score is now high enough to be considered an anomaly
@@ -520,7 +540,7 @@ public class ThresholdedRandomCutForest {
                 update(score, correctedScore, false);
                 result.setExpectedRCFPoint(correctedPoint);
                 result.setAnomalyGrade(0);
-                return;
+                return result;
             }
         }
 
@@ -537,14 +557,6 @@ public class ThresholdedRandomCutForest {
         double[] newPoint = null;
         double newScore = score;
         DiVector newAttribution = null;
-        if (reasonableForecast) {
-            newPoint = getExpectedPoint(attribution, startPosition, baseDimensions, point);
-            if (newPoint != null) {
-                newAttribution = forest.getAnomalyAttribution(newPoint);
-                newScore = forest.getAnomalyScore(newPoint);
-                result.setExpectedRCFPoint(newPoint);
-            }
-        }
 
         /**
          * we now find the time slice, relative to the current time, which is indicative
@@ -575,6 +587,14 @@ public class ThresholdedRandomCutForest {
             /**
              * we again check if the new input produces an anomaly/not on its own
              */
+            if (reasonableForecast) {
+                newPoint = getExpectedPoint(attribution, startPosition, baseDimensions, point);
+                if (newPoint != null) {
+                    newAttribution = forest.getAnomalyAttribution(newPoint);
+                    newScore = forest.getAnomalyScore(newPoint);
+                    result.setExpectedRCFPoint(newPoint);
+                }
+            }
             if (trigger(attribution, gap, baseDimensions, newAttribution, previousIsPotentialAnomaly)
                     && score > newScore) {
                 result.setAnomalyGrade(thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly));
@@ -588,13 +608,13 @@ public class ThresholdedRandomCutForest {
                 // previousIsPotentialAnomaly is true now, but not calling it anomaly either
                 update(score, newScore, true);
                 result.setAnomalyGrade(0);
-                return;
+                return result;
             }
         }
 
         result.setAttribution(attribution);
         result.setRelativeIndex(index);
-        if (index < 0 && result.isStartOfAnomaly() && reasonableForecast) {
+        if (reasonableForecast) {
             // anomaly in the past and detected late; repositioning the computation
             // index 0 is current time
             startPosition = shingleSize * baseDimensions + (result.getRelativeIndex() - 1) * baseDimensions;
@@ -603,6 +623,7 @@ public class ThresholdedRandomCutForest {
         result.setExpectedRCFPoint(newPoint);
         lastExpectedPoint = (newPoint != null) ? Arrays.copyOf(newPoint, newPoint.length)
                 : Arrays.copyOf(point, point.length);
+        return result;
     }
 
     public DiVector getLastAnomalyAttribution() {
@@ -739,9 +760,6 @@ public class ThresholdedRandomCutForest {
 
         public ThresholdedRandomCutForest build() {
             validate();
-            if (forestMode == ForestMode.TIME_AUGMENTED) {
-                return new TimeAugmentedThresholdedRandomCutForest(this);
-            }
             return new ThresholdedRandomCutForest(this);
         }
 

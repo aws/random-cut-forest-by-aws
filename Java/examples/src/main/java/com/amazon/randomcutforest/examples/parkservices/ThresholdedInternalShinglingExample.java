@@ -64,14 +64,22 @@ public class ThresholdedInternalShinglingExample implements Example {
         TransformMethod transformMethod = TransformMethod.NONE;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
-                .forestMode(ForestMode.TIME_AUGMENTED).weightTime(0).transformMethod(transformMethod)
-                .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).build();
-        ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                 .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
                 .weightTime(0).transformMethod(transformMethod).normalizeTime(true).outputAfter(32)
                 .initialAcceptFraction(0.125).build();
+        ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                .forestMode(ForestMode.TIME_AUGMENTED).weightTime(0).transformMethod(transformMethod)
+                .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).build();
+
+        // ensuring that the parameters are the same; otherwise the grades/scores cannot
+        // be the same
+        // weighTime has to be 0
+        forest.setLowerThreshold(1.1);
+        second.setLowerThreshold(1.1);
+        forest.setHorizon(0.75);
+        second.setHorizon(0.75);
 
         long seed = new Random().nextLong();
         Random noise = new Random(0);
@@ -93,6 +101,7 @@ public class ThresholdedInternalShinglingExample implements Example {
             AnomalyDescriptor result = forest.process(point, timestamp);
             AnomalyDescriptor test = second.process(point, timestamp);
             checkArgument(Math.abs(result.getRcfScore() - test.getRcfScore()) < 1e-10, " error");
+            checkArgument(Math.abs(result.getAnomalyGrade() - test.getAnomalyGrade()) < 1e-10, " error");
 
             if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
                 System.out
