@@ -64,8 +64,8 @@ public class ThresholdedRandomCutForestMapperTest {
                 AnomalyDescriptor secondResult = second.process(point, 0L);
 
                 assertEquals(firstResult.getDataConfidence(), secondResult.getDataConfidence(), 1e-10);
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-                assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-10);
                 forest.update(point);
             }
 
@@ -80,9 +80,9 @@ public class ThresholdedRandomCutForestMapperTest {
                 AnomalyDescriptor secondResult = second.process(point, 0L);
                 AnomalyDescriptor thirdResult = third.process(point, 0L);
                 double score = forest.getAnomalyScore(point);
-                assertEquals(score, firstResult.getRcfScore(), 1e-10);
-                assertEquals(score, secondResult.getRcfScore(), 1e-10);
-                assertEquals(score, thirdResult.getRcfScore(), 1e-10);
+                assertEquals(score, firstResult.getRCFScore(), 1e-10);
+                assertEquals(score, secondResult.getRCFScore(), 1e-10);
+                assertEquals(score, thirdResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getDataConfidence(), secondResult.getDataConfidence(), 1e-10);
                 forest.update(point);
             }
@@ -124,8 +124,8 @@ public class ThresholdedRandomCutForestMapperTest {
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 AnomalyDescriptor secondResult = second.process(point, 0L);
 
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-                assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-10);
                 forest.update(point);
             }
 
@@ -140,9 +140,9 @@ public class ThresholdedRandomCutForestMapperTest {
                 AnomalyDescriptor secondResult = second.process(point, 0L);
                 AnomalyDescriptor thirdResult = third.process(point, 0L);
                 double score = forest.getAnomalyScore(point);
-                assertEquals(score, firstResult.getRcfScore(), 1e-10);
-                assertEquals(score, secondResult.getRcfScore(), 1e-10);
-                assertEquals(score, thirdResult.getRcfScore(), 1e-10);
+                assertEquals(score, firstResult.getRCFScore(), 1e-10);
+                assertEquals(score, secondResult.getRCFScore(), 1e-10);
+                assertEquals(score, thirdResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
                 forest.update(point);
             }
@@ -180,8 +180,8 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, 0L);
             AnomalyDescriptor secondResult = second.process(point, 0L);
 
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-4);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-4);
             forest.update(point);
         }
 
@@ -197,9 +197,9 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor secondResult = second.process(point, 0L);
             AnomalyDescriptor thirdResult = third.process(point, 0L);
             double score = forest.getAnomalyScore(point);
-            assertEquals(score, firstResult.getRcfScore(), 1e-4);
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(score, firstResult.getRCFScore(), 1e-4);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
             forest.update(point);
         }
@@ -235,11 +235,11 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, 0L);
             AnomalyDescriptor secondResult = second.process(point, 0L);
 
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-4);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-4);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRcfScore() >= value);
+                assert (firstResult.getRCFScore() >= value);
             }
             forest.update(point);
         }
@@ -257,9 +257,9 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor secondResult = second.process(point, 0L);
             AnomalyDescriptor thirdResult = third.process(point, 0L);
             double score = forest.getAnomalyScore(point);
-            assertEquals(score, firstResult.getRcfScore(), 1e-4);
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(score, firstResult.getRCFScore(), 1e-4);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
             forest.update(point);
         }
@@ -296,10 +296,10 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, 0L);
             AnomalyDescriptor secondResult = second.process(point, 0L);
 
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRcfScore() >= value);
+                assert (firstResult.getRCFScore() >= value);
             }
 
         }
@@ -316,8 +316,8 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, 0L);
             AnomalyDescriptor secondResult = second.process(point, 0L);
             AnomalyDescriptor thirdResult = third.process(point, 0L);
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
         }
     }
 
@@ -352,10 +352,10 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, stamp);
             AnomalyDescriptor secondResult = second.process(point, stamp);
             ++count;
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRcfScore() >= value);
+                assert (firstResult.getRCFScore() >= value);
             }
         }
 
@@ -372,8 +372,8 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, 0L);
             AnomalyDescriptor secondResult = second.process(point, 0L);
             AnomalyDescriptor thirdResult = third.process(point, 0L);
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-10);
             ++count;
         }
@@ -408,7 +408,7 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, stamp);
             AnomalyDescriptor secondResult = second.process(point, stamp);
             ++count;
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
         }
 
         // serialize + deserialize
@@ -424,8 +424,8 @@ public class ThresholdedRandomCutForestMapperTest {
             AnomalyDescriptor firstResult = first.process(point, stamp);
             AnomalyDescriptor secondResult = second.process(point, stamp);
             AnomalyDescriptor thirdResult = third.process(point, stamp);
-            assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             ++count;
         }
     }
@@ -459,7 +459,7 @@ public class ThresholdedRandomCutForestMapperTest {
                 long stamp = 1000 * count + r.nextInt(10) - 5;
                 AnomalyDescriptor firstResult = first.process(point, stamp);
                 AnomalyDescriptor secondResult = second.process(point, stamp);
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             }
             ++count;
         }
@@ -478,7 +478,7 @@ public class ThresholdedRandomCutForestMapperTest {
             // AnomalyDescriptor secondResult = second.process(point, stamp);
             AnomalyDescriptor thirdResult = third.process(point, stamp);
             // assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
-            assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             ++count;
         }
     }

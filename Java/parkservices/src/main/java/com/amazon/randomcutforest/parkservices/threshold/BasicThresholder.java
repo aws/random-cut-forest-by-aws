@@ -92,6 +92,8 @@ public class BasicThresholder {
     // is useful in determining grade
     protected double upperZfactor = DEFAULT_UPPER_FACTOR;
 
+    protected boolean inPotentialAnomaly;
+
     public BasicThresholder(double discount, boolean adjust) {
         primaryDeviation = new Deviation(discount);
         secondaryDeviation = new Deviation(discount);
@@ -240,6 +242,25 @@ public class BasicThresholder {
         secondaryDeviation.update(secondary);
         updateThreshold(primary);
         ++count;
+    }
+
+    /**
+     * The core update mechanism for thresholding, note that the score is used in
+     * the primary statistic in thresholder (which maintains two) and the secondary
+     * statistic is the score difference Since RandomCutForests are stochastic data
+     * structures, scores from individual trees follow a trajectory not unlike
+     * martingales. The differencing eliminates the effect or a run of high/low
+     * scores.
+     *
+     * @param score       typically the score produced by the forest
+     * @param secondScore either the score or a corrected score which simulates
+     *                    "what if the past anomalies were not present"
+     * @param lastScore   a potential additive discount (not used currently)
+     * @param flag        a flag to indicate if the last point was potential anomaly
+     */
+    public void update(double score, double secondScore, double lastScore, boolean flag) {
+        update(score, secondScore - lastScore);
+        inPotentialAnomaly = flag;
     }
 
     public Deviation getPrimaryDeviation() {

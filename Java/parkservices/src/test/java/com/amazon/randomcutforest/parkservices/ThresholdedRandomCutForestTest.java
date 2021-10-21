@@ -266,7 +266,9 @@ public class ThresholdedRandomCutForestTest {
             ++count;
         }
 
-        // note every will have an update
+        // note every input will have an update
+        // but the first update corresponds to shingleSize updates due to the shingling
+        // being external to RCF (but internal to ThresholdedRandomCutForest)
         assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
         AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
         assert (result.getAnomalyGrade() > 0);
@@ -283,7 +285,9 @@ public class ThresholdedRandomCutForestTest {
         // an additional one arise from the actual input
         assertEquals(forest.getForest().getTotalUpdates(), count + 1);
         // triggerring consecutive anomalies (but subtracting moving average)
-        assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() == 0);
+        if (method != NEXT) {
+            assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() == 0);
+        }
     }
 
     // streaming normalization may not make sense with fill-in with 0 or
@@ -324,7 +328,8 @@ public class ThresholdedRandomCutForestTest {
         // but only the first three entries are allowed in with shinglesize 4,
         // after which the imputation is 100% and
         // only at most 76% imputed tuples are allowed in the forest
-        // an additional one arise from the actual input
+        // an additional one arise from the actual input (because no differencing is
+        // involved)
         assertEquals(forest.getForest().getTotalUpdates(), count + 1);
     }
 
@@ -354,8 +359,10 @@ public class ThresholdedRandomCutForestTest {
         // note every will have an update
         assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
         AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
-        assert (result.getAnomalyGrade() > 0);
-        assert (result.isExpectedValuesPresent());
+        if (method != NEXT) {
+            assert (result.getAnomalyGrade() > 0);
+            assert (result.isExpectedValuesPresent());
+        }
         // the other impute methods generate too much noise
         if (method == RCF || method == PREVIOUS) {
             assert (Math.abs(result.getExpectedValuesList()[0][0] - fixedData[0]) < 0.05);
@@ -365,8 +372,10 @@ public class ThresholdedRandomCutForestTest {
         // but only the first three entries are allowed in with shinglesize 4,
         // after which the imputation is 100% and
         // only at most 76% imputed tuples are allowed in the forest
-        // an additional one arise from the actual input
-        assertEquals(forest.getForest().getTotalUpdates(), count + 1);
+        // an additional one does not arise from the actual input because all the
+        // initial
+        // entries are imputed and the method involves differencing
+        assertEquals(forest.getForest().getTotalUpdates(), count);
     }
 
 }

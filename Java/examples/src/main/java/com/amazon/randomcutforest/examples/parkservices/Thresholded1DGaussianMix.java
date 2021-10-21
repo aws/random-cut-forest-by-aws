@@ -92,20 +92,20 @@ public class Thresholded1DGaussianMix implements Example {
                 for (int i = 0; i < baseDimensions; i++) {
                     System.out.print(result.getCurrentInput()[i] + ", ");
                 }
-                System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
+                System.out.print("score " + result.getRCFScore() + ", grade " + result.getAnomalyGrade() + ", ");
 
                 if (result.isExpectedValuesPresent()) {
                     if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
                         System.out.print(-result.getRelativeIndex() + " steps ago, instead of ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.getOldValues()[i] + ", ");
+                            System.out.print(result.getPastValues()[i] + ", ");
                         }
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getOldValues()[i] != result.getExpectedValuesList()[0][i]) {
+                            if (result.getPastValues()[i] != result.getExpectedValuesList()[0][i]) {
                                 System.out.print("( "
-                                        + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
+                                        + (result.getPastValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     } else {

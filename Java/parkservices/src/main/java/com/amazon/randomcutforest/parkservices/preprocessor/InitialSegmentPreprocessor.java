@@ -23,6 +23,7 @@ import lombok.Setter;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
+import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 
 @Getter
@@ -36,21 +37,20 @@ public class InitialSegmentPreprocessor extends Preprocessor {
     }
 
     /**
-     * an extension of the basic proeprocessor where the inital values are stored
-     * for potential normalization
+     * a modified preprocessing block which buffers the initial number of points
+     * (startNormalization) and then switches to streaming transformation
      * 
-     * @param description description of the computation for the cirrent point
-     * @param forest      the resident RCF
-     * @return the description where the RCFPoint (map of the input point to the RCF
-     *         space) is added
+     * @param inputPoint            the input point
+     * @param timestamp             the time stamp of the input point
+     * @param lastAnomalyDescriptor the descriptor of the last anomaly
+     * @param forest                RCF
+     * @return an AnomalyDescriptor object to be used in anomaly detection
      */
-
     @Override
-    public AnomalyDescriptor preProcess(AnomalyDescriptor description, RandomCutForest forest) {
-        lastActualInternal = internalTimeStamp;
-        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
-        double[] inputPoint = description.getCurrentInput();
-        long timestamp = description.getInputTimestamp();
+    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp,
+            IRCFComputeDescriptor lastAnomalyDescriptor, RandomCutForest forest) {
+
+        AnomalyDescriptor description = initialSetup(inputPoint, timestamp, lastAnomalyDescriptor, forest);
 
         if (valuesSeen < startNormalization) {
             storeInitial(inputPoint, timestamp);
@@ -59,11 +59,11 @@ public class InitialSegmentPreprocessor extends Preprocessor {
             dischargeInitial(forest);
         }
 
-        return super.preProcess(description, forest);
+        return super.preProcess(inputPoint, timestamp, lastAnomalyDescriptor, forest);
     }
 
     /**
-     * stores initial data for normalizdation
+     * stores initial data for normalization
      *
      * @param inputPoint input data
      * @param timestamp  timestamp
@@ -74,16 +74,8 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         ++valuesSeen;
     }
 
-    /**
-     * an execute once block which first computes the multipliers for normalization
-     * and then processes each of the stored inputs
-     */
-    protected void dischargeInitial(RandomCutForest forest) {
-        Deviation tempTimeDeviation = new Deviation();
-        for (int i = 0; i < initialTimeStamps.length - 1; i++) {
-            tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
-        }
-        double timeFactor = tempTimeDeviation.getDeviation();
+    // computes the normalization factors
+    protected double[] getFactors() {
         double[] factors = null;
         if (requireInitialSegment(false, transformMethod)) {
             Deviation[] tempList = new Deviation[inputLength];
@@ -106,7 +98,20 @@ public class InitialSegmentPreprocessor extends Preprocessor {
                 factors[j] = tempList[j].getDeviation();
             }
         }
+        return factors;
+    }
 
+    /**
+     * a block which executes once; it first computes the multipliers for
+     * normalization and then processes each of the stored inputs
+     */
+    protected void dischargeInitial(RandomCutForest forest) {
+        Deviation tempTimeDeviation = new Deviation();
+        for (int i = 0; i < initialTimeStamps.length - 1; i++) {
+            tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
+        }
+        double timeFactor = tempTimeDeviation.getDeviation();
+        double[] factors = getFactors();
         for (int i = 0; i < valuesSeen; i++) {
             double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], factors, timeFactor);
             if (internalTimeStamp > 0) {

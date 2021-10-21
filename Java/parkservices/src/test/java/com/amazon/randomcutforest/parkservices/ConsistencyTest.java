@@ -59,7 +59,7 @@ public class ConsistencyTest {
             for (double[] point : dataWithKeys.data) {
 
                 AnomalyDescriptor firstResult = first.process(point, 0L);
-                assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
+                assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-10);
                 forest.update(point);
             }
         }
@@ -103,9 +103,9 @@ public class ConsistencyTest {
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 AnomalyDescriptor secondResult = second.process(point, 0L);
 
-                assertEquals(firstResult.getRcfScore(), forest.getAnomalyScore(point), 1e-10);
-                assertEquals(firstResult.getRcfScore(), copyForest.getAnomalyScore(point), 1e-10);
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-10);
+                assertEquals(firstResult.getRCFScore(), copyForest.getAnomalyScore(point), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
 
                 if ((firstResult.getAnomalyGrade() > 0) != (secondResult.getAnomalyGrade() > 0)) {
                     ++gradeDifference;
@@ -170,9 +170,9 @@ public class ConsistencyTest {
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
                 AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
 
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
-                assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
                 // grades will not match between first and third because the thresholder has
                 // wrong info
                 // about shinglesize
@@ -192,13 +192,13 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
                 AnomalyDescriptor fourthResult = fourth.process(shingledData[j], 0L);
 
-                assertEquals(firstResult.getRcfScore(), secondResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
-                assertEquals(firstResult.getRcfScore(), thirdResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
                 // grades will not match between first and third because the thresholder has
                 // wrong info
                 // about shinglesize
-                assertEquals(firstResult.getRcfScore(), fourthResult.getRcfScore(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), fourthResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), fourthResult.getAnomalyGrade(), 1e-10);
 
             }

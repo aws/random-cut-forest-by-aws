@@ -42,7 +42,7 @@ public enum ImputationMethod {
     LINEAR,
     /**
      * use the RCF imputation; but would often require a minimum number of
-     * observations and currently defaults to LINEAR
+     * observations and would use defaults (often LINEAR) till that point
      */
     RCF;
 }
