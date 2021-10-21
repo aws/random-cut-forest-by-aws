@@ -282,6 +282,10 @@ public class PredictorCorrector {
         result.setRCFPoint(point);
         long internalTimeStamp = result.getInternalTimeStamp();
 
+        if (score == 0) {
+            return result;
+        }
+
         int shingleSize = result.getShingleSize();
         int baseDimensions = result.getDimension() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
