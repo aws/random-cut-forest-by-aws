@@ -39,27 +39,26 @@ public class InitialSegmentPreprocessor extends Preprocessor {
     /**
      * a modified preprocessing block which buffers the initial number of points
      * (startNormalization) and then switches to streaming transformation
-     * 
-     * @param inputPoint            the input point
-     * @param timestamp             the time stamp of the input point
+     *
+     * @param description           the description of the input point
      * @param lastAnomalyDescriptor the descriptor of the last anomaly
      * @param forest                RCF
      * @return an AnomalyDescriptor object to be used in anomaly detection
      */
     @Override
-    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp,
-            IRCFComputeDescriptor lastAnomalyDescriptor, RandomCutForest forest) {
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+            RandomCutForest forest) {
 
-        AnomalyDescriptor description = initialSetup(inputPoint, timestamp, lastAnomalyDescriptor, forest);
+        initialSetup(description, lastAnomalyDescriptor, forest);
 
         if (valuesSeen < startNormalization) {
-            storeInitial(inputPoint, timestamp);
+            storeInitial(description.getCurrentInput(), description.getInputTimestamp());
             return description;
         } else if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
         }
 
-        return super.preProcess(inputPoint, timestamp, lastAnomalyDescriptor, forest);
+        return super.preProcess(description, lastAnomalyDescriptor, forest);
     }
 
     /**

@@ -74,21 +74,20 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * preprocessor that can buffer the initial input as well as impute missing
      * values on the fly note that the forest should not be updated before the point
      * has been scored
-     * 
-     * @param inputPoint            the input point
-     * @param timestamp             the time stamp of the input point
+     *
+     * @param description           description of the input
      * @param lastAnomalyDescriptor the descriptor of the last anomaly
      * @param forest                RCF
      * @return an AnomalyDescriptor used in anomaly detection
      */
     @Override
-    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp,
-            IRCFComputeDescriptor lastAnomalyDescriptor, RandomCutForest forest) {
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+            RandomCutForest forest) {
 
-        AnomalyDescriptor description = initialSetup(inputPoint, timestamp, lastAnomalyDescriptor, forest);
+        initialSetup(description, lastAnomalyDescriptor, forest);
 
         if (valuesSeen < startNormalization) {
-            storeInitial(inputPoint, timestamp);
+            storeInitial(description.getCurrentInput(), description.getInputTimestamp());
             return description;
         } else if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
@@ -100,7 +99,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 : Arrays.copyOf(lastExpectedPoint, lastExpectedPoint.length);
         lastActualInternal = internalTimeStamp;
         lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
-        checkArgument(timestamp > lastInputTimeStamp, "incorrect ordering of time");
+        checkArgument(description.getInputTimestamp() > lastInputTimeStamp, "incorrect ordering of time");
 
         // generate next tuple without changing the forest, these get modified in the
         // transform
@@ -110,8 +109,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         double[] savedShingle = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
         int savedNumberOfImputed = numberOfImputed;
 
-        double[] point = generateShingle(description, inputPoint, timestamp, timeStampDeviation.getMean(), null, false,
-                forest);
+        double[] point = generateShingle(description, timeStampDeviation.getMean(), null, false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -215,7 +213,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         double[] inputPoint = result.getCurrentInput();
         long timestamp = result.getInputTimestamp();
 
-        generateShingle(result, inputPoint, timestamp, timeStampDeviation.getMean(), null, true, forest);
+        generateShingle(result, timeStampDeviation.getMean(), null, true, forest);
         ++valuesSeen;
         return result;
     }
@@ -238,7 +236,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
             lastActualInternal = internalTimeStamp;
             // generate shingles and commit them
-            generateShingle(null, initialValues[i], initialTimeStamps[i], timeFactor, factors, true, forest);
+            generateShingle(new AnomalyDescriptor(initialValues[i], initialTimeStamps[i]), timeFactor, factors, true,
+                    forest);
         }
 
         initialTimeStamps = null;
@@ -267,9 +266,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * committing them to the forest However the shingle needs to be generated
      * before we process a point; and can only be committed once the point has been
      * scored. Having the same deterministic transformation is essential
-     * 
-     * @param input        the input point
-     * @param timestamp    the input timestamp
+     *
+     * @param descriptor   description of the current point
      * @param averageGap   the gap in timestamps
      * @param factors      the factors in normalization (not in use after initial
      *                     segment)
@@ -277,8 +275,10 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @param forest       the resident RCF
      * @return the next shingle
      */
-    protected double[] generateShingle(AnomalyDescriptor descriptor, double[] input, long timestamp, double averageGap,
-            double[] factors, boolean changeForest, RandomCutForest forest) {
+    protected double[] generateShingle(AnomalyDescriptor descriptor, double averageGap, double[] factors,
+            boolean changeForest, RandomCutForest forest) {
+        double[] input = descriptor.getCurrentInput();
+        long timestamp = descriptor.getInputTimestamp();
         if (internalTimeStamp > 0) {
             double[] previous = new double[inputLength];
             System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);

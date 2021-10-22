@@ -33,13 +33,13 @@ import com.amazon.randomcutforest.returntypes.DiVector;
  */
 @Getter
 @Setter
-public class RCFComputeDescriptor implements IRCFComputeDescriptor {
+public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor {
 
-    ForestMode forestMode;
+    ForestMode forestMode = ForestMode.STANDARD;
 
-    TransformMethod transformMethod;
+    TransformMethod transformMethod = TransformMethod.NONE;
 
-    ImputationMethod imputationMethod;
+    ImputationMethod imputationMethod = ImputationMethod.PREVIOUS;
 
     // the most important of the forest
     int shingleSize;
@@ -67,11 +67,8 @@ public class RCFComputeDescriptor implements IRCFComputeDescriptor {
     // number of trees in the forest
     int numberOfTrees;
 
-    // current values
-    double[] currentInput;
-
-    // input timestamp
-    long inputTimestamp;
+    // current missing values, if any
+    int[] missingValues;
 
     // potential number of imputes before processing current point
     int numberOfNewImputes;
@@ -104,15 +101,23 @@ public class RCFComputeDescriptor implements IRCFComputeDescriptor {
 
     double[][] imputedPoints;
 
-    public RCFComputeDescriptor(ForestMode forestMode, TransformMethod transformMethod,
-            ImputationMethod imputationMethod) {
+    public RCFComputeDescriptor(double[] input, long inputTimeStamp) {
+        super(input, inputTimeStamp);
+    }
+
+    public RCFComputeDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
+            TransformMethod transformMethod) {
+        super(input, inputTimeStamp);
+        this.forestMode = forestMode;
+        this.transformMethod = transformMethod;
+    }
+
+    public RCFComputeDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
+            TransformMethod transformMethod, ImputationMethod imputationMethod) {
+        super(input, inputTimeStamp);
         this.forestMode = forestMode;
         this.transformMethod = transformMethod;
         this.imputationMethod = imputationMethod;
-    }
-
-    public RCFComputeDescriptor(ForestMode forestMode, TransformMethod transformMethod) {
-        this(forestMode, transformMethod, ImputationMethod.PREVIOUS);
     }
 
     public void setCurrentInput(double[] currentValues) {
@@ -155,8 +160,12 @@ public class RCFComputeDescriptor implements IRCFComputeDescriptor {
         return (attribution == null) ? null : new DiVector(attribution);
     }
 
-    protected double[] copyIfNotnull(double[] array) {
-        return array == null ? null : Arrays.copyOf(array, array.length);
+    public int[] getMissingValues() {
+        return (missingValues == null) ? null : Arrays.copyOf(missingValues, missingValues.length);
+    }
+
+    public void setMissingValues(int[] values) {
+        missingValues = (values == null) ? null : Arrays.copyOf(values, values.length);
     }
 
     public void setImputedPoint(int index, double[] impute) {
@@ -171,16 +180,15 @@ public class RCFComputeDescriptor implements IRCFComputeDescriptor {
 
     // an explicit copy operation to control the stored state
     public RCFComputeDescriptor copyOf() {
-        RCFComputeDescriptor answer = new RCFComputeDescriptor(forestMode, transformMethod, imputationMethod);
+        RCFComputeDescriptor answer = new RCFComputeDescriptor(currentInput, inputTimestamp, forestMode,
+                transformMethod, imputationMethod);
         answer.setShingleSize(shingleSize);
         answer.setDimension(dimension);
         answer.setInputLength(inputLength);
         answer.setReasonableForecast(reasonableForecast);
         answer.setAttribution(attribution);
-        answer.setCurrentInput(currentInput);
         answer.setRCFPoint(RCFPoint);
         answer.setRCFScore(RCFScore);
-        answer.setInputTimestamp(inputTimestamp);
         answer.setInternalTimeStamp(internalTimeStamp);
         answer.setExpectedRCFPoint(expectedRCFPoint);
         answer.setNumberOfTrees(numberOfTrees);

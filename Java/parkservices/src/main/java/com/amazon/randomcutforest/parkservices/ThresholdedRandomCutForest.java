@@ -115,7 +115,7 @@ public class ThresholdedRandomCutForest {
 
         preprocessor = preprocessorBuilder.build();
         predictorCorrector = new PredictorCorrector(new BasicThresholder(builder.anomalyRate, builder.adjustThreshold));
-        lastAnomalyDescriptor = new RCFComputeDescriptor(builder.forestMode, builder.transformMethod,
+        lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
         // multiple (not extremely well correlated) dimensions typically reduce scores
@@ -162,7 +162,7 @@ public class ThresholdedRandomCutForest {
                 .shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
         preprocessor.setValuesSeen((int) forest.getTotalUpdates());
         preprocessor.getDataQuality().update(1.0);
-        this.lastAnomalyDescriptor = new RCFComputeDescriptor(ForestMode.STANDARD, TransformMethod.NONE);
+        this.lastAnomalyDescriptor = new RCFComputeDescriptor(null, forest.getTotalUpdates());
     }
 
     /**
@@ -180,7 +180,9 @@ public class ThresholdedRandomCutForest {
             forest.setBoundingBoxCacheFraction(1.0);
         }
 
-        AnomalyDescriptor description = preprocessor.preProcess(inputPoint, timestamp, lastAnomalyDescriptor, forest);
+        AnomalyDescriptor description = new AnomalyDescriptor(inputPoint, timestamp);
+
+        preprocessor.preProcess(description, lastAnomalyDescriptor, forest);
 
         // score anomalies
         predictorCorrector.addAnomalyDescription(description, lastAnomalyDescriptor, forest);

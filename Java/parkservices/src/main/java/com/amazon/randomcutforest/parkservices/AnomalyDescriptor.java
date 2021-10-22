@@ -22,10 +22,6 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.TransformMethod;
-
 @Getter
 @Setter
 public class AnomalyDescriptor extends RCFComputeDescriptor {
@@ -73,13 +69,8 @@ public class AnomalyDescriptor extends RCFComputeDescriptor {
     // the threshold used in inference
     double threshold;
 
-    public AnomalyDescriptor(ForestMode forestMode, TransformMethod transformMethod,
-            ImputationMethod imputationMethod) {
-        super(forestMode, transformMethod, imputationMethod);
-    }
-
-    public AnomalyDescriptor(ForestMode forestMode, TransformMethod transformMethod) {
-        this(forestMode, transformMethod, ImputationMethod.PREVIOUS);
+    public AnomalyDescriptor(double[] input, long inputTimeStamp) {
+        super(input, inputTimeStamp);
     }
 
     public void setPastValues(double[] values) {

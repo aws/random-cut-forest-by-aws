@@ -53,7 +53,7 @@ public class ThresholdedRandomCutForestMapper
         ForestMode forestMode = ForestMode.valueOf(state.getForestMode());
         TransformMethod transformMethod = TransformMethod.valueOf(state.getTransformMethod());
 
-        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(forestMode, transformMethod);
+        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
         descriptor.setRCFScore(state.getLastAnomalyScore());
         descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
         descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));

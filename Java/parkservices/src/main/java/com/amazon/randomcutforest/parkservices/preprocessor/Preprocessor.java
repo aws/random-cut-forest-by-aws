@@ -251,20 +251,19 @@ public class Preprocessor {
 
     /**
      * sets up the AnomalyDescriptor object
-     * 
-     * @param inputPoint            the input point
-     * @param timestamp             the timestamp of the input point
+     *
+     * @param description           description of the input point
      * @param lastAnomalyDescriptor the descriptor of the last anomaly
      * @param forest                the RCF
      * @return the descriptor to be used for anomaly scoring
      */
-    AnomalyDescriptor initialSetup(double[] inputPoint, long timestamp, IRCFComputeDescriptor lastAnomalyDescriptor,
+    AnomalyDescriptor initialSetup(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
         lastActualInternal = internalTimeStamp;
         lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
-        AnomalyDescriptor description = new AnomalyDescriptor(mode, transformMethod, imputationMethod);
-        description.setCurrentInput(inputPoint);
-        description.setInputTimestamp(timestamp);
+        description.setForestMode(mode);
+        description.setTransformMethod(transformMethod);
+        description.setImputationMethod(imputationMethod);
         description.setNumberOfTrees(forest.getNumberOfTrees());
         description.setTotalUpdates(forest.getTotalUpdates());
         description.setLastAnomalyInternalTimestamp(lastAnomalyDescriptor.getInternalTimeStamp());
@@ -282,19 +281,20 @@ public class Preprocessor {
 
     /**
      * a generic preprocessing invoked by ThresholdedRandomCutForest
-     * 
-     * @param inputPoint            the input point
-     * @param timestamp             the time stamp of the input point
+     *
+     * @param description           description of the input point (so far)
      * @param lastAnomalyDescriptor the descriptor of the last anomaly
      * @param forest                RCF
      * @return the initialized AnomalyDescriptor with the actual RCF point filled in
      *         (could be a result of multiple transformations)
      */
-    public AnomalyDescriptor preProcess(double[] inputPoint, long timestamp,
-            IRCFComputeDescriptor lastAnomalyDescriptor, RandomCutForest forest) {
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+            RandomCutForest forest) {
 
-        AnomalyDescriptor description = initialSetup(inputPoint, timestamp, lastAnomalyDescriptor, forest);
+        initialSetup(description, lastAnomalyDescriptor, forest);
 
+        double[] inputPoint = description.getCurrentInput();
+        long timestamp = description.getInputTimestamp();
         double[] scaledInput = getScaledInput(inputPoint, timestamp, null, 0);
 
         if (scaledInput == null) {
