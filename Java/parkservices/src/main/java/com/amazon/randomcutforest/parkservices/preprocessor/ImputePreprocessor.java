@@ -61,16 +61,6 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     }
 
     /**
-     * a function to determine the number of missing values
-     * 
-     * @param timestamp the timestamp of the next point
-     * @return the number of missing values
-     */
-    protected int determineNumberOfImputes(long timestamp) {
-        return determineGap(timestamp, timeStampDeviation.getMean()) - 1;
-    }
-
-    /**
      * preprocessor that can buffer the initial input as well as impute missing
      * values on the fly note that the forest should not be updated before the point
      * has been scored
@@ -103,13 +93,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
 
         // generate next tuple without changing the forest, these get modified in the
         // transform
-        // a primary culprit is differencing, a secondary culprit is the numberofimputed
+        // a primary culprit is differencing, a secondary culprit is the numberOfImputed
         long[] savedTimestamps = Arrays.copyOf(previousTimeStamps, previousTimeStamps.length);
         double[] savedShingledInput = Arrays.copyOf(lastShingledInput, lastShingledInput.length);
         double[] savedShingle = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
         int savedNumberOfImputed = numberOfImputed;
 
-        double[] point = generateShingle(description, timeStampDeviation.getMean(), null, false, forest);
+        double[] point = generateShingle(description, timeStampDeviation.getMean(), false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -165,14 +155,14 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * to the forest (provided it is allowed by the number of imputes and the
      * transformation function)
      * 
-     * @param input     the input point
-     * @param timestamp the input timestamp (will be the most recent imestamp for
+     * @param input     the input point (can be imputed)
+     * @param timestamp the input timestamp (will be the most recent timestamp for
      *                  imputes)
      * @param forest    the resident RCF
+     * @param isImputed is the current input imputed
      */
-    void updateForest(boolean changeForest, double[] input, long timestamp, RandomCutForest forest, boolean isImputed,
-            double[] factors) {
-        double[] scaledInput = transformValues(input, factors);
+    void updateForest(boolean changeForest, double[] input, long timestamp, RandomCutForest forest, boolean isImputed) {
+        double[] scaledInput = transformValues(input, null);
         updateShingle(input, scaledInput);
         updateTimestamps(timestamp);
         if (isImputed) {
@@ -186,11 +176,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     /**
      * The postprocessing now has to handle imputation while changing the state;
      * note that the imputation is repeated to avoid storing potentially large
-     * number of transien shingles (which would noe be admitted to the forest
+     * number of transient shingles (which would noe be admitted to the forest
      * anyways unless there is at least one actual value in the shingle)
      * 
-     * @param result the descriptor of the evaluation on the current point
-     * @param forest the resident RCF
+     * @param result                the descriptor of the evaluation on the current
+     *                              point
+     * @param lastAnomalyDescriptor the descriptor of the last known anomaly
+     * @param forest                the resident RCF
      * @return the description with the explanation added and state updated
      */
     @Override
@@ -210,10 +202,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             addRelevantAttribution(result);
         }
 
-        double[] inputPoint = result.getCurrentInput();
-        long timestamp = result.getInputTimestamp();
-
-        generateShingle(result, timeStampDeviation.getMean(), null, true, forest);
+        generateShingle(result, timeStampDeviation.getMean(), true, forest);
         ++valuesSeen;
         return result;
     }
@@ -232,14 +221,33 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         double[] factors = getFactors();
         Arrays.fill(previousTimeStamps, initialTimeStamps[0]);
         for (int i = 0; i < valuesSeen; i++) {
-            // initial imputation
-            lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
-            lastActualInternal = internalTimeStamp;
-            // generate shingles and commit them
-            generateShingle(new AnomalyDescriptor(initialValues[i], initialTimeStamps[i]), timeFactor, factors, true,
-                    forest);
+            // initial imputation; not using the global dependency
+            long lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
+            if (internalTimeStamp > 0) {
+                double[] previous = new double[inputLength];
+                System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
+                int numberToImpute = determineGap(initialTimeStamps[i] - lastInputTimeStamp, timeFactor) - 1;
+                if (numberToImpute > 0) {
+                    double step = 1.0 / (numberToImpute + 1);
+                    // the last impute corresponds to the current observed value
+                    for (int j = 0; j < numberToImpute; j++) {
+                        double[] result = impute(step * (j + 1), previous, initialValues[i], DEFAULT_INITIAL);
+                        double[] scaledInput = transformValues(result, factors);
+                        updateShingle(result, scaledInput);
+                        updateTimestamps(initialTimeStamps[i]);
+                        numberOfImputed = numberOfImputed + 1;
+                        if (updateAllowed()) {
+                            forest.update(lastShingledPoint);
+                        }
+                    }
+                }
+            }
+            double[] scaledInput = transformValues(initialValues[i], factors);
+            updateState(initialValues[i], scaledInput, initialTimeStamps[i], lastInputTimeStamp);
+            if (updateAllowed()) {
+                forest.update(lastShingledPoint);
+            }
         }
-
         initialTimeStamps = null;
         initialValues = null;
     }
@@ -247,16 +255,16 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     /**
      * determines the gap between the last known timestamp and the current timestamp
      * 
-     * @param timestamp  current timestamp
-     * @param averageGap the average gap (often determined by
-     *                   timeStampDeviation.getMean()
+     * @param timestampGap current gap
+     * @param averageGap   the average gap (often determined by
+     *                     timeStampDeviation.getMean()
      * @return the number of positions till timestamp
      */
-    protected int determineGap(long timestamp, double averageGap) {
+    protected int determineGap(long timestampGap, double averageGap) {
         if (internalTimeStamp <= 1) {
             return 1;
         } else {
-            double gap = (timestamp - lastInputTimeStamp) / averageGap;
+            double gap = timestampGap / averageGap;
             return (gap >= 1.5) ? (int) Math.ceil(gap) : 1;
         }
     }
@@ -269,38 +277,38 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      *
      * @param descriptor   description of the current point
      * @param averageGap   the gap in timestamps
-     * @param factors      the factors in normalization (not in use after initial
-     *                     segment)
      * @param changeForest boolean determining if we commit to the forest or not
      * @param forest       the resident RCF
      * @return the next shingle
      */
-    protected double[] generateShingle(AnomalyDescriptor descriptor, double averageGap, double[] factors,
-            boolean changeForest, RandomCutForest forest) {
+    protected double[] generateShingle(AnomalyDescriptor descriptor, double averageGap, boolean changeForest,
+            RandomCutForest forest) {
         double[] input = descriptor.getCurrentInput();
         long timestamp = descriptor.getInputTimestamp();
         if (internalTimeStamp > 0) {
             double[] previous = new double[inputLength];
             System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
-            int numberToImpute = determineGap(timestamp, averageGap) - 1;
+            // using the global dependency
+            int numberToImpute = determineGap(timestamp - lastInputTimeStamp, averageGap) - 1;
             if (numberToImpute > 0) {
-                if (descriptor != null) {
-                    descriptor.setNumberOfNewImputes(numberToImpute);
-                }
+                descriptor.setNumberOfNewImputes(numberToImpute);
                 double step = 1.0 / (numberToImpute + 1);
                 // the last impute corresponds to the current observed value
                 for (int i = 0; i < numberToImpute; i++) {
-                    // use a default for RCF if trees are unusuable
-                    ImputationMethod method = imputationMethod;
-                    if (imputationMethod == RCF) { // use defaults -- but these defaults can be different
-                        if (descriptor == null) {
-                            method = DEFAULT_INITIAL;
+                    // use a default for RCF if trees are unusable, as reflected in the
+                    // isReasonableForecast()
+                    ImputationMethod method = descriptor.getImputationMethod();
+                    double[] result;
+                    if (method == RCF) {
+                        if (descriptor.isReasonableForecast()) {
+                            result = imputeRCF(forest);
                         } else {
-                            method = descriptor.isReasonableForecast() ? RCF : DEFAULT_DYNAMIC;
+                            result = impute(step * (i + 1), previous, input, DEFAULT_DYNAMIC);
                         }
+                    } else {
+                        result = impute(step * (i + 1), previous, input, method);
                     }
-                    double[] result = impute(step * (i + 1), previous, input, method, forest);
-                    updateForest(changeForest, result, timestamp, forest, true, factors);
+                    updateForest(changeForest, result, timestamp, forest, true);
                 }
             }
         }
@@ -310,7 +318,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 updateDeviation(input);
             }
         }
-        updateForest(changeForest, input, timestamp, forest, false, factors);
+        updateForest(changeForest, input, timestamp, forest, false);
         return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
     }
 
@@ -325,22 +333,11 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @param method       the imputation method of choice
      * @return the imputed/interpolated result
      */
-    protected double[] impute(double stepFraction, double[] previous, double[] input, ImputationMethod method,
-            RandomCutForest forest) {
+    protected double[] impute(double stepFraction, double[] previous, double[] input, ImputationMethod method) {
         int baseDimension = input.length;
         double[] result = new double[baseDimension];
 
-        if (method == RCF) {
-            double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
-            shiftLeft(temp, inputLength);
-            int startPosition = inputLength * (shingleSize - 1);
-            int[] missingIndices = new int[inputLength];
-            for (int i = 0; i < inputLength; i++) {
-                missingIndices[i] = startPosition + i;
-            }
-            double[] newPoint = forest.imputeMissingValues(temp, inputLength, missingIndices);
-            result = invert(inputLength, startPosition, 0, newPoint);
-        } else if (method == FIXED_VALUES) {
+        if (method == FIXED_VALUES) {
             System.arraycopy(defaultFill, 0, result, 0, baseDimension);
         } else if (method == LINEAR) {
             for (int z = 0; z < input.length; z++) {
@@ -352,5 +349,23 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             System.arraycopy(input, 0, result, 0, baseDimension);
         }
         return result;
+    }
+
+    /**
+     * uses the RCF to impute the next input tuple
+     * 
+     * @param forest RCF
+     * @return the next inout tuple predicted by the RCF
+     */
+    protected double[] imputeRCF(RandomCutForest forest) {
+        double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
+        shiftLeft(temp, inputLength);
+        int startPosition = inputLength * (shingleSize - 1);
+        int[] missingIndices = new int[inputLength];
+        for (int i = 0; i < inputLength; i++) {
+            missingIndices[i] = startPosition + i;
+        }
+        double[] newPoint = forest.imputeMissingValues(temp, inputLength, missingIndices);
+        return invert(inputLength, startPosition, 0, newPoint);
     }
 }

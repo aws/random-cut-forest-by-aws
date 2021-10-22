@@ -341,12 +341,9 @@ public class Preprocessor {
 
         double[] inputPoint = result.getCurrentInput();
         long timestamp = result.getInputTimestamp();
-        dataQuality.update(1.0);
-        if (timeStampDeviation != null) {
-            timeStampDeviation.update(timestamp - previousTimeStamps[shingleSize - 1]);
-        }
-        updateState(inputPoint, point, timestamp);
+        updateState(inputPoint, point, timestamp, previousTimeStamps[shingleSize - 1]);
         ++valuesSeen;
+        dataQuality.update(1.0);
         if (forest.isInternalShinglingEnabled()) {
             int length = inputLength + ((mode == ForestMode.TIME_AUGMENTED) ? 1 : 0);
             double[] scaledInput = new double[length];
@@ -619,13 +616,17 @@ public class Preprocessor {
     }
 
     /**
-     * updates the state, corresponding to the timestamp, the deviations, and the
-     * shingles
-     *
-     * @param inputPoint actual input
-     * @param timestamp  current stamp
+     * updates the state of the preprocessor
+     * 
+     * @param inputPoint  the actual input
+     * @param scaledInput the transformed input
+     * @param timestamp   the timestamp of the input
+     * @param previous    the previous timestamp
      */
-    protected void updateState(double[] inputPoint, double[] scaledInput, long timestamp) {
+    protected void updateState(double[] inputPoint, double[] scaledInput, long timestamp, long previous) {
+        if (timeStampDeviation != null) {
+            timeStampDeviation.update(timestamp - previous);
+        }
         updateTimestamps(timestamp);
         if (deviationList != null) {
             updateDeviation(inputPoint);

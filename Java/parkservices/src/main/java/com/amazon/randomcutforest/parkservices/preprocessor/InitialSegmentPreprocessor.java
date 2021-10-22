@@ -113,10 +113,8 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         double[] factors = getFactors();
         for (int i = 0; i < valuesSeen; i++) {
             double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], factors, timeFactor);
-            if (internalTimeStamp > 0) {
-                timeStampDeviation.update(initialTimeStamps[i] - previousTimeStamps[shingleSize - 1]);
-            }
-            updateState(initialValues[i], scaledInput, initialTimeStamps[i]);
+            updateState(initialValues[i], scaledInput, initialTimeStamps[i], previousTimeStamps[shingleSize - 1]);
+            dataQuality.update(1.0);
             forest.update(scaledInput);
         }
 
