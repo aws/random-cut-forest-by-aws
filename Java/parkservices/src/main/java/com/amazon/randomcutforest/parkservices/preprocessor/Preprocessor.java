@@ -38,7 +38,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 
 @Getter
 @Setter
-public class Preprocessor {
+public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
 
     // in case of normalization, uses this constant in denominator to ensure
     // smoothness near 0

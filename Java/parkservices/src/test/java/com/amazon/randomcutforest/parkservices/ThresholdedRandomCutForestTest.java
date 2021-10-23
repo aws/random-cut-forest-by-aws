@@ -39,6 +39,7 @@ import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 
 public class ThresholdedRandomCutForestTest {
 
@@ -71,7 +72,7 @@ public class ThresholdedRandomCutForestTest {
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).shingleSize(shingleSize).anomalyRate(0.01)
                 .build();
-        assertNotNull(forest.getPreprocessor().getInitialTimeStamps());
+        assertNotNull(((Preprocessor) forest.getPreprocessor()).getInitialTimeStamps());
     }
 
     @Test
@@ -145,10 +146,10 @@ public class ThresholdedRandomCutForestTest {
                 .anomalyRate(0.01).transformMethod(NORMALIZE).startNormalization(111).stopNormalization(111).build();
 
         assertFalse(forest.getForest().isInternalShinglingEnabled()); // left to false
-        assertEquals(forest.getPreprocessor().getInitialValues().length, 111);
-        assertEquals(forest.getPreprocessor().getInitialTimeStamps().length, 111);
-        assertEquals(forest.getPreprocessor().getStopNormalization(), 111);
-        assertEquals(forest.getPreprocessor().getStartNormalization(), 111);
+        assertEquals(((Preprocessor) forest.getPreprocessor()).getInitialValues().length, 111);
+        assertEquals(((Preprocessor) forest.getPreprocessor()).getInitialTimeStamps().length, 111);
+        assertEquals(((Preprocessor) forest.getPreprocessor()).getStopNormalization(), 111);
+        assertEquals(((Preprocessor) forest.getPreprocessor()).getStartNormalization(), 111);
     }
 
     @Test

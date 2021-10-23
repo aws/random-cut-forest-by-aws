@@ -271,8 +271,8 @@ public class PredictorCorrector {
      * @param lastAnomalyDescriptor state of the computation for the last anomaly
      * @return the anomaly descriptor result (which has plausibly mutated)
      */
-    protected AnomalyDescriptor addAnomalyDescription(AnomalyDescriptor result,
-            IRCFComputeDescriptor lastAnomalyDescriptor, RandomCutForest forest) {
+    protected AnomalyDescriptor detect(AnomalyDescriptor result, IRCFComputeDescriptor lastAnomalyDescriptor,
+            RandomCutForest forest) {
         double[] point = result.getRCFPoint();
         if (point == null) {
             return result;

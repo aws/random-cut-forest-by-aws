@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Function;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -46,6 +47,7 @@ import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 
@@ -69,7 +71,7 @@ public class ThresholdedRandomCutForest {
 
     protected PredictorCorrector predictorCorrector;
 
-    protected Preprocessor preprocessor;
+    protected IPreprocessor<AnomalyDescriptor> preprocessor;
 
     public ThresholdedRandomCutForest(Builder<?> builder) {
 
@@ -120,7 +122,8 @@ public class ThresholdedRandomCutForest {
 
         // multiple (not extremely well correlated) dimensions typically reduce scores
         // normalization reduces scores
-        if (preprocessor.getDimension() == preprocessor.getShingleSize()) {
+        if (builder.dimensions == builder.shingleSize
+                || (forestMode == ForestMode.TIME_AUGMENTED) && (builder.dimensions == 2 * builder.shingleSize)) {
             if (builder.transformMethod != TransformMethod.NORMALIZE) {
                 predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
             } else {
@@ -158,11 +161,37 @@ public class ThresholdedRandomCutForest {
         int dimensions = forest.getDimensions();
         int inputLength = (forest.isInternalShinglingEnabled()) ? dimensions / forest.getShingleSize()
                 : forest.getDimensions();
-        this.preprocessor = new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).dimensions(dimensions)
-                .shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
+        Preprocessor preprocessor = new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE)
+                .dimensions(dimensions).shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
         preprocessor.setValuesSeen((int) forest.getTotalUpdates());
         preprocessor.getDataQuality().update(1.0);
+        this.preprocessor = preprocessor;
         this.lastAnomalyDescriptor = new RCFComputeDescriptor(null, forest.getTotalUpdates());
+    }
+
+    /**
+     * an extensible function call that applies a preprocess, a core function and
+     * the postprocessing corresponding to the preprocess step. It manages the
+     * caching strategy of the forest since there are multiple calls to the forest
+     * 
+     * @param input        an abstract input (which may be mutated)
+     * @param preprocessor the preprocessor applied to the input
+     * @param core         the core function applied after preprocessing
+     * @param <T>          the type of the input
+     * @return the final result (switching caching off if needed)
+     */
+    public <T extends IRCFComputeDescriptor> T singleStepProcess(T input, IPreprocessor<T> preprocessor,
+            Function<T, T> core) {
+        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
+        if (ifZero) { // turn caching on temporarily
+            forest.setBoundingBoxCacheFraction(1.0);
+        }
+        T answer = preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
+                lastAnomalyDescriptor, forest);
+        if (ifZero) { // turn caching off
+            forest.setBoundingBoxCacheFraction(0);
+        }
+        return answer;
     }
 
     /**
@@ -175,30 +204,16 @@ public class ThresholdedRandomCutForest {
      */
     public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
 
-        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
-        if (ifZero) { // turn caching on temporarily
-            forest.setBoundingBoxCacheFraction(1.0);
-        }
+        Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
+                lastAnomalyDescriptor, forest);
 
-        AnomalyDescriptor description = new AnomalyDescriptor(inputPoint, timestamp);
-
-        preprocessor.preProcess(description, lastAnomalyDescriptor, forest);
-
-        // score anomalies
-        predictorCorrector.addAnomalyDescription(description, lastAnomalyDescriptor, forest);
-
-        // add explanation
-        preprocessor.postProcess(description, lastAnomalyDescriptor, forest);
-
-        if (ifZero) { // turn caching off
-            forest.setBoundingBoxCacheFraction(0);
-        }
+        AnomalyDescriptor description = singleStepProcess(new AnomalyDescriptor(inputPoint, timestamp), preprocessor,
+                function);
 
         if (description.getAnomalyGrade() > 0) {
             lastAnomalyDescriptor = description.copyOf();
         }
         return description;
-
     }
 
     public RandomCutForest getForest() {

@@ -67,10 +67,8 @@ public class ThresholdedRandomCutForestMapper
         predictorCorrector.setTriggerFactor(state.getTriggerFactor());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
 
-        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forestMode, transformMethod, forest,
-                predictorCorrector, preprocessor, descriptor);
-
-        return tForest;
+        return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
+                descriptor);
     }
 
     @Override
@@ -89,7 +87,8 @@ public class ThresholdedRandomCutForestMapper
         state.setThresholderState(thresholderMapper.toState(model.getThresholder()));
 
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
-        state.setPreprocessorStates(new PreprocessorState[] { preprocessorMapper.toState(model.getPreprocessor()) });
+        state.setPreprocessorStates(
+                new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
         state.setTriggerFactor(model.getPredictorCorrector().getTriggerFactor());
         state.setIgnoreSimilar(model.getPredictorCorrector().isIgnoreSimilar());
         state.setIgnoreSimilarFactor(model.getPredictorCorrector().getIgnoreSimilarFactor());
