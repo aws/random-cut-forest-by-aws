@@ -65,11 +65,11 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     // consequences
     public static boolean DEFAULT_DIFFERENCING = false;
 
-    // the fraction of datapoints that can be imputed in a shingle before the
+    // the fraction of data points that can be imputed in a shingle before the
     // shingle is admitted in a forest
     public static double DEFAULT_USE_IMPUTED_FRACTION = 0.5;
 
-    // minimum number of observations before usign a model to predict any expected
+    // minimum number of observations before using a model to predict any expected
     // behavior
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
 
@@ -145,12 +145,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
 
     // measures the data quality in imputed modes
     protected Deviation dataQuality;
-
-    // a transient variable for internal timestamp
-    protected int lastActualInternal;
-
-    // a transient variable for input timestamp
-    protected long lastInputTimeStamp;
 
     public Preprocessor(Builder<?> builder) {
         checkArgument(builder.transformMethod != null, "transform required");
@@ -255,8 +249,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      */
     AnomalyDescriptor initialSetup(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
-        lastActualInternal = internalTimeStamp;
-        lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         description.setForestMode(mode);
         description.setTransformMethod(transformMethod);
         description.setImputationMethod(imputationMethod);
@@ -489,13 +481,12 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     /**
      * inverts the values to the input space from the RCF space
      * 
-     * @param base               the number of baseDimensions (often inputlength,
+     * @param base               the number of baseDimensions (often inputLength,
      *                           unless time augmented)
      * @param startPosition      the position in the vector to invert
-     * @param relativeBlockIndex the relative blockIndex (related to the position,
-     *                           but slighlty different)
+     * @param relativeBlockIndex the relative blockIndex (related to the position)
      * @param newPoint           the vector
-     * @return the values [starposition, startposition + base -1] whoch would
+     * @return the values [startPosition, startPosition + base -1] which would
      *         (approximately) produce newPoint
      */
     protected double[] invert(int base, int startPosition, int relativeBlockIndex, double[] newPoint) {
@@ -732,9 +723,9 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         if (valuesSeen <= 1) {
             scaledInput[normalized.length] = 0;
         } else {
-            double timeshift = timestamp - previousTimeStamps[shingleSize - 1];
+            double timeShift = timestamp - previousTimeStamps[shingleSize - 1];
             scaledInput[normalized.length] = weights[inputLength]
-                    * ((normalizeTime) ? normalize(timeshift, timeStampDeviation, timeFactor) : timeshift);
+                    * ((normalizeTime) ? normalize(timeShift, timeStampDeviation, timeFactor) : timeShift);
         }
         return scaledInput;
     }
