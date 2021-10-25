@@ -21,6 +21,7 @@ import static com.amazon.randomcutforest.config.ImputationMethod.LINEAR;
 import static com.amazon.randomcutforest.config.ImputationMethod.NEXT;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
+import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
 import static com.amazon.randomcutforest.config.TransformMethod.DIFFERENCE;
 import static com.amazon.randomcutforest.config.TransformMethod.NORMALIZE_DIFFERENCE;
 
@@ -61,6 +62,100 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     }
 
     /**
+     * stores initial data for normalization
+     *
+     * @param inputPoint input data
+     * @param timestamp  timestamp
+     */
+    protected void storeInitial(double[] inputPoint, long timestamp, int[] missingValues) {
+        initialTimeStamps[valuesSeen] = timestamp;
+        checkArgument(inputPoint.length == inputLength, "incorrect length");
+        checkArgument(missingValues == null || missingValues.length <= inputLength, "unusual missing values list");
+        int length = inputLength + ((missingValues == null) ? 0 : missingValues.length);
+        double[] temp = new double[length];
+        System.arraycopy(inputPoint, 0, temp, 0, inputLength);
+        if (missingValues != null) {
+            for (int i = 0; i < length - inputLength; i++) {
+                temp[inputLength + i] = missingValues[i];
+            }
+        }
+        initialValues[valuesSeen] = temp;
+        ++valuesSeen;
+    }
+
+    /**
+     * prepare initial values which can have missing entries in individual tuples.
+     * We use a simple interpolation strategy. At some level, lack of data simply
+     * cannot be solved easily without data. This is run as one of the initial steps
+     * in dischargeInitial() If all the entries corresponding to some variable are
+     * missing -- there is no good starting point; we assume the value is 0, unless
+     * there is a defaultFill()
+     */
+    void prepareInitialInput() {
+        boolean[][] missing = new boolean[initialValues.length][inputLength];
+        for (int i = 0; i < initialValues.length; i++) {
+            Arrays.fill(missing[i], false);
+            int length = initialValues[i].length - inputLength;
+            for (int j = 0; j < length; j++) {
+                missing[i][(int) initialValues[i][inputLength + j]] = true;
+            }
+        }
+        boolean[] startingValuesSet = new boolean[inputLength];
+
+        if (imputationMethod == ZERO) {
+            for (int i = 0; i < initialValues.length - 1; i++) {
+                for (int j = 0; j < inputLength; j++) {
+                    initialValues[i][j] = (missing[i][j]) ? initialValues[i][j] : 0;
+                }
+            }
+        } else if (imputationMethod == FIXED_VALUES || defaultFill != null) {
+            for (int i = 0; i < initialValues.length - 1; i++) {
+                for (int j = 0; j < inputLength; j++) {
+                    initialValues[i][j] = (missing[i][j]) ? initialValues[i][j] : defaultFill[j];
+                }
+            }
+        } else { // no simple alternative other than linear interpolation
+            for (int j = 0; j < inputLength; j++) {
+                int next = 0;
+                while (next < initialValues.length && missing[next][j]) {
+                    ++next;
+                }
+                startingValuesSet[j] = (next < initialValues.length);
+                if (startingValuesSet[j]) {
+                    initialValues[0][j] = initialValues[next][j];
+                    missing[0][j] = false;
+                    // note if the first value si present then i==0
+                    int start = 0;
+                    while (start < initialValues.length - 1) {
+                        int end = start + 1;
+                        while (end < initialValues.length && missing[end][j]) {
+                            ++end;
+                        }
+                        if (end < initialValues.length && end > start + 1) {
+                            for (int y = start + 1; y < end; y++) { // linear interpolation
+                                double factor = (1.0 * initialTimeStamps[start] - initialTimeStamps[y])
+                                        / (initialTimeStamps[start] - initialTimeStamps[end]);
+                                initialValues[y][j] = factor * initialValues[start][j]
+                                        + (1 - factor) * initialValues[end][j];
+                            }
+                        }
+                        start = end;
+                    }
+                } else {
+                    // set 0; note there is no value in the entire column.
+                    for (int y = 0; y < initialValues.length; y++) {
+                        initialValues[y][j] = 0;
+                    }
+                }
+            }
+        }
+        // truncate to inputlength
+        for (int i = 0; i < initialValues.length; i++) {
+            initialValues[i] = Arrays.copyOf(initialValues[i], inputLength);
+        }
+    }
+
+    /**
      * preprocessor that can buffer the initial input as well as impute missing
      * values on the fly note that the forest should not be updated before the point
      * has been scored
@@ -77,7 +172,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         initialSetup(description, lastAnomalyDescriptor, forest);
 
         if (valuesSeen < startNormalization) {
-            storeInitial(description.getCurrentInput(), description.getInputTimestamp());
+            storeInitial(description.getCurrentInput(), description.getInputTimestamp(),
+                    description.getMissingValues());
             return description;
         } else if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
@@ -146,7 +242,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             return false;
         }
         dataQuality.update(1 - fraction);
-        return (fraction < useImputedFraction && internalTimeStamp >= shingleSize);
+        boolean anser = (fraction < useImputedFraction && internalTimeStamp >= shingleSize);
+        return anser;
     }
 
     /**
@@ -218,8 +315,10 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         }
         double timeFactor = tempTimeDeviation.getMean();
 
+        prepareInitialInput();
         double[] factors = getFactors();
         Arrays.fill(previousTimeStamps, initialTimeStamps[0]);
+        numberOfImputed = shingleSize;
         for (int i = 0; i < valuesSeen; i++) {
             // initial imputation; not using the global dependency
             long lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
@@ -231,7 +330,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                     double step = 1.0 / (numberToImpute + 1);
                     // the last impute corresponds to the current observed value
                     for (int j = 0; j < numberToImpute; j++) {
-                        double[] result = impute(step * (j + 1), previous, initialValues[i], DEFAULT_INITIAL);
+                        double[] result = basicImpute(step * (j + 1), previous, initialValues[i], DEFAULT_INITIAL);
                         double[] scaledInput = transformValues(result, factors);
                         updateShingle(result, scaledInput);
                         updateTimestamps(initialTimeStamps[i]);
@@ -285,45 +384,77 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             RandomCutForest forest) {
         double[] input = descriptor.getCurrentInput();
         long timestamp = descriptor.getInputTimestamp();
-        if (internalTimeStamp > 0) {
-            double[] previous = new double[inputLength];
-            System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
-            // using the global dependency
-            int numberToImpute = determineGap(timestamp - lastInputTimeStamp, averageGap) - 1;
-            if (numberToImpute > 0) {
-                descriptor.setNumberOfNewImputes(numberToImpute);
-                double step = 1.0 / (numberToImpute + 1);
-                // the last impute corresponds to the current observed value
-                for (int i = 0; i < numberToImpute; i++) {
-                    // use a default for RCF if trees are unusable, as reflected in the
-                    // isReasonableForecast()
-                    ImputationMethod method = descriptor.getImputationMethod();
-                    double[] result;
-                    if (method == RCF) {
-                        if (descriptor.isReasonableForecast()) {
-                            result = imputeRCF(forest);
-                        } else {
-                            result = impute(step * (i + 1), previous, input, DEFAULT_DYNAMIC);
-                        }
-                    } else {
-                        result = impute(step * (i + 1), previous, input, method);
-                    }
-                    updateForest(changeForest, result, timestamp, forest, true);
-                }
+        int[] missingValues = descriptor.getMissingValues();
+        checkArgument(missingValues == null || (imputationMethod != LINEAR && imputationMethod != NEXT),
+                " cannot perform imputation on most recent missing value");
+        /*
+         * Note only ZERO, FIXED_VALUES, PREVIOUS and RCF are reasonable options if
+         * missing values are present.
+         */
+
+        checkArgument(internalTimeStamp > 0, "imputation should have forced normalization");
+        // previous value should be defined
+        double[] previous = new double[inputLength];
+        System.arraycopy(lastShingledInput, lastShingledInput.length - inputLength, previous, 0, inputLength);
+        // using the global dependency
+        int numberToImpute = determineGap(timestamp - lastInputTimeStamp, averageGap) - 1;
+        if (numberToImpute > 0) {
+            descriptor.setNumberOfNewImputes(numberToImpute);
+            double step = 1.0 / (numberToImpute + 1);
+            // the last impute corresponds to the current observed value
+            for (int i = 0; i < numberToImpute; i++) {
+                double[] result = impute(false, descriptor, step * (i + 1), previous, forest);
+                updateForest(changeForest, result, timestamp, forest, true);
             }
         }
+        double[] newInput = (missingValues == null) ? input : impute(true, descriptor, 0, previous, forest);
+
+        double[] savedInputShingle = Arrays.copyOf(lastShingledInput, lastShingledInput.length);
+        updateForest(changeForest, newInput, timestamp, forest, false);
         if (changeForest) {
             timeStampDeviation.update(timestamp - lastInputTimeStamp);
             if (deviationList != null) {
-                updateDeviation(input);
+                updateDeviation(newInput, savedInputShingle);
             }
         }
-        updateForest(changeForest, input, timestamp, forest, false);
         return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
     }
 
     /**
-     * a simple function that performs a single step imputation in the input space
+     * The impute routine which predicts the completion of a partial input or
+     * predicts the entire input for that timestamp
+     * 
+     * @param isPartial    a boolean indicating if the input is partial
+     * @param descriptor   the state of the current evaluation (missingvalues cannot
+     *                     be null for partial tuples)
+     * @param stepFraction the (time) position of the point to inpute (can also be
+     *                     the final possibly incomplete point)
+     * @param previous     the last input
+     * @param forest       the RCF
+     * @return the imputed tuple for the time position
+     */
+    protected double[] impute(boolean isPartial, AnomalyDescriptor descriptor, double stepFraction, double[] previous,
+            RandomCutForest forest) {
+        double[] input = descriptor.getCurrentInput();
+        int[] missingValues = descriptor.getMissingValues();
+        // we will pass partialinput, which would be true for only one tuple
+        double[] partialInput = (isPartial) ? Arrays.copyOf(input, inputLength) : null;
+        // use a default for RCF if trees are unusable, as reflected in the
+        // isReasonableForecast()
+        ImputationMethod method = descriptor.getImputationMethod();
+        if (method == RCF) {
+            if (descriptor.isReasonableForecast()) {
+                return imputeRCF(forest, partialInput, missingValues);
+            } else {
+                return basicImpute(stepFraction, previous, partialInput, DEFAULT_DYNAMIC);
+            }
+        } else {
+            return basicImpute(stepFraction, previous, input, method);
+        }
+    }
+
+    /**
+     * a basic function that performs a single step imputation in the input space
      * the function has to be deterministic since it is run twice, first at scoring
      * and then at committing to the RCF
      * 
@@ -333,39 +464,50 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @param method       the imputation method of choice
      * @return the imputed/interpolated result
      */
-    protected double[] impute(double stepFraction, double[] previous, double[] input, ImputationMethod method) {
-        int baseDimension = input.length;
-        double[] result = new double[baseDimension];
-
+    protected double[] basicImpute(double stepFraction, double[] previous, double[] input, ImputationMethod method) {
+        double[] result = new double[inputLength];
         if (method == FIXED_VALUES) {
-            System.arraycopy(defaultFill, 0, result, 0, baseDimension);
+            System.arraycopy(defaultFill, 0, result, 0, inputLength);
         } else if (method == LINEAR) {
-            for (int z = 0; z < input.length; z++) {
+            for (int z = 0; z < inputLength; z++) {
                 result[z] = previous[z] + stepFraction * (input[z] - previous[z]);
             }
         } else if (method == PREVIOUS) {
-            System.arraycopy(previous, 0, result, 0, baseDimension);
+            System.arraycopy(previous, 0, result, 0, inputLength);
         } else if (method == NEXT) {
-            System.arraycopy(input, 0, result, 0, baseDimension);
+            System.arraycopy(input, 0, result, 0, inputLength);
         }
         return result;
     }
 
     /**
-     * uses the RCF to impute the next input tuple
+     * Uses RCF to inpute the missing values in the current input or impute the
+     * entire set of values for that timestep (based on partial input being null)
      * 
-     * @param forest RCF
-     * @return the next inout tuple predicted by the RCF
+     * @param forest        the RCF
+     * @param partialInput  the information availabel about the most recent point
+     * @param missingvalues the array indicating missing values for the partial
+     *                      input
+     * @return the potential completion of the partial tuple or the predicted
+     *         current value
      */
-    protected double[] imputeRCF(RandomCutForest forest) {
+    protected double[] imputeRCF(RandomCutForest forest, double[] partialInput, int[] missingvalues) {
         double[] temp = Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
         shiftLeft(temp, inputLength);
         int startPosition = inputLength * (shingleSize - 1);
-        int[] missingIndices = new int[inputLength];
-        for (int i = 0; i < inputLength; i++) {
-            missingIndices[i] = startPosition + i;
+        int[] missingIndices;
+        if (missingvalues == null) {
+            missingIndices = new int[inputLength];
+            for (int i = 0; i < inputLength; i++) {
+                missingIndices[i] = startPosition + i;
+            }
+        } else {
+            checkArgument(partialInput != null, "incorrect input");
+            missingIndices = Arrays.copyOf(missingvalues, missingvalues.length);
+            double[] scaledInput = transformValues(partialInput, null);
+            copyAtEnd(temp, scaledInput);
         }
-        double[] newPoint = forest.imputeMissingValues(temp, inputLength, missingIndices);
+        double[] newPoint = forest.imputeMissingValues(temp, missingIndices.length, missingIndices);
         return invert(inputLength, startPosition, 0, newPoint);
     }
 }

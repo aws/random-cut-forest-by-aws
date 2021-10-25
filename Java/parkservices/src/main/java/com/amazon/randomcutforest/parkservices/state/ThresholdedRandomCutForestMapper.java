@@ -20,6 +20,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
@@ -60,6 +61,10 @@ public class ThresholdedRandomCutForestMapper
         descriptor.setRCFPoint(state.getLastAnomalyPoint());
         descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
         descriptor.setRelativeIndex(state.getLastRelativeIndex());
+        descriptor.setForestMode(forestMode);
+        descriptor.setTransformMethod(transformMethod);
+        descriptor
+                .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
 
         PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder);
         predictorCorrector.setIgnoreSimilar(state.isIgnoreSimilar());

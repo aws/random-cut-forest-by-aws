@@ -15,10 +15,12 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.config.ImputationMethod.LINEAR;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.NEXT;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
+import static com.amazon.randomcutforest.config.ImputationMethod.ZERO;
+import static com.amazon.randomcutforest.config.TransformMethod.DIFFERENCE;
 import static com.amazon.randomcutforest.config.TransformMethod.NORMALIZE;
 import static com.amazon.randomcutforest.config.TransformMethod.NORMALIZE_DIFFERENCE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -30,10 +32,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -222,7 +227,7 @@ public class ThresholdedRandomCutForestTest {
         AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
         assert (result.getAnomalyGrade() > 0);
         assert (result.isExpectedValuesPresent());
-        if (method != NEXT) {
+        if (method != NEXT && method != ZERO && method != FIXED_VALUES) {
             assert (result.getRelativeIndex() == 0);
             assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-6);
         }
@@ -245,8 +250,8 @@ public class ThresholdedRandomCutForestTest {
     }
 
     @ParameterizedTest
-    @EnumSource(ImputationMethod.class)
-    void testImputeShift(ImputationMethod method) {
+    @MethodSource("args")
+    void testImpute(TransformMethod transformMethod, ImputationMethod method) {
         int baseDimensions = 1;
         int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
@@ -255,98 +260,7 @@ public class ThresholdedRandomCutForestTest {
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
                 .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
-                .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(TransformMethod.SUBTRACT_MA)
-                .build();
-
-        double[] fixedData = new double[] { 1.0 };
-        double[] newData = new double[] { 10.0 };
-        Random random = new Random();
-        int count = 0;
-        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
-            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
-            ++count;
-        }
-
-        // note every input will have an update
-        // but the first update corresponds to shingleSize updates due to the shingling
-        // being external to RCF (but internal to ThresholdedRandomCutForest)
-        assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
-        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
-        assert (result.getAnomalyGrade() > 0);
-        assert (result.isExpectedValuesPresent());
-        // the other impute methods generate too much noise
-        if (method == RCF || method == PREVIOUS) {
-            assertArrayEquals(result.getExpectedValuesList()[0], fixedData, 1e-3);
-        }
-
-        // the gap is 1000 + 113 which is about 9 times 113
-        // but only the first three entries are allowed in with shinglesize 4,
-        // after which the imputation is 100% and
-        // only at most 76% imputed tuples are allowed in the forest
-        // an additional one arise from the actual input
-        assertEquals(forest.getForest().getTotalUpdates(), count + 1);
-        // triggerring consecutive anomalies (but subtracting moving average)
-        if (method != NEXT) {
-            assert (forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade() == 0);
-        }
-    }
-
-    // streaming normalization may not make sense with fill-in with 0 or
-    // fixed values (in actual data)
-    @ParameterizedTest
-    @EnumSource(value = ImputationMethod.class)
-    void testImputeNormalize(ImputationMethod method) {
-        int baseDimensions = 1;
-        int shingleSize = 4;
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
-
-        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
-                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
-                .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE).build();
-
-        double[] fixedData = new double[] { 1.0 };
-        double[] newData = new double[] { 10.0 };
-        Random random = new Random();
-        int count = 0;
-        for (int i = 0; i < 200 + new Random().nextInt(100); i++) {
-            forest.process(fixedData, (long) count * 113 + random.nextInt(10));
-            ++count;
-        }
-
-        // note every input will have an update
-        assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
-        AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
-        assert (result.getAnomalyGrade() > 0);
-        assert (result.isExpectedValuesPresent());
-        // the other impute methods generate too much noise
-        if (method == RCF || method == LINEAR || method == PREVIOUS) {
-            assert (Math.abs(result.getExpectedValuesList()[0][0] - fixedData[0]) < 0.05);
-        }
-
-        // the gap is 1000 + 113 which is about 9 times 113
-        // but only the first three entries are allowed in with shinglesize 4,
-        // after which the imputation is 100% and
-        // only at most 76% imputed tuples are allowed in the forest
-        // an additional one arise from the actual input (because no differencing is
-        // involved)
-        assertEquals(forest.getForest().getTotalUpdates(), count + 1);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = ImputationMethod.class)
-    void testImputeNormalizedDifference(ImputationMethod method) {
-        int baseDimensions = 1;
-        int shingleSize = 4;
-        int dimensions = baseDimensions * shingleSize;
-        long seed = new Random().nextLong();
-
-        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STREAMING_IMPUTE)
-                .imputationMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01)
-                .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(NORMALIZE_DIFFERENCE)
-                .build();
+                .useImputedFraction(0.76).fillValues(new double[] { 1.0 }).transformMethod(transformMethod).build();
 
         double[] fixedData = new double[] { 1.0 };
         double[] newData = new double[] { 10.0 };
@@ -376,7 +290,23 @@ public class ThresholdedRandomCutForestTest {
         // an additional one does not arise from the actual input because all the
         // initial
         // entries are imputed and the method involves differencing
-        assertEquals(forest.getForest().getTotalUpdates(), count);
+        if (transformMethod != DIFFERENCE && transformMethod != NORMALIZE_DIFFERENCE) {
+            assertEquals(forest.getForest().getTotalUpdates(), count + 1);
+        } else {
+            assertEquals(forest.getForest().getTotalUpdates(), count);
+        }
     }
 
+    static Stream<Arguments> args() {
+        return transformMethodStream().flatMap(
+                classParameter -> imputationMethod().map(testParameter -> Arguments.of(classParameter, testParameter)));
+    }
+
+    static Stream<ImputationMethod> imputationMethod() {
+        return Stream.of(ImputationMethod.values());
+    }
+
+    static Stream<TransformMethod> transformMethodStream() {
+        return Stream.of(TransformMethod.values());
+    }
 }

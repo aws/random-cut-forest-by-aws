@@ -203,12 +203,33 @@ public class ThresholdedRandomCutForest {
      * @return anomaly descriptor for the current input point
      */
     public AnomalyDescriptor process(double[] inputPoint, long timestamp) {
+        return process(inputPoint, timestamp, null);
+    }
+
+    /**
+     * a single call that prepreprocesses data, compute score/grade and updates
+     * state when the current input has potentially missing values
+     *
+     * @param inputPoint    current input point
+     * @param timestamp     time stamp of input
+     * @param missingValues indices of the input which are missing/questionable
+     *                      values
+     * @return anomaly descriptor for the current input point
+     */
+    public AnomalyDescriptor process(double[] inputPoint, long timestamp, int[] missingValues) {
 
         Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
                 lastAnomalyDescriptor, forest);
 
-        AnomalyDescriptor description = singleStepProcess(new AnomalyDescriptor(inputPoint, timestamp), preprocessor,
-                function);
+        AnomalyDescriptor initial = new AnomalyDescriptor(inputPoint, timestamp);
+        if (missingValues != null) {
+            checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
+            for (int i = 0; i < missingValues.length; i++) {
+                checkArgument(missingValues[i] >= 0 && missingValues[i] < inputPoint.length, " incorrect positions ");
+            }
+            initial.setMissingValues(missingValues);
+        }
+        AnomalyDescriptor description = singleStepProcess(initial, preprocessor, function);
 
         if (description.getAnomalyGrade() > 0) {
             lastAnomalyDescriptor = description.copyOf();

@@ -172,10 +172,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
                 builder.startNormalization > 0 || !(builder.transformMethod == TransformMethod.NORMALIZE
                         || builder.transformMethod == TransformMethod.NORMALIZE_DIFFERENCE),
                 " start of normalization cannot be 0 for these transformations");
-        checkArgument(
-                builder.transformMethod != TransformMethod.WEIGHTED
-                        || builder.weights != null && builder.weights.length >= builder.inputLength,
-                " incorrect weights");
         checkArgument(builder.weights == null || builder.weights.length >= builder.inputLength, " incorrect weights");
         inputLength = builder.inputLength;
         dimension = builder.dimensions;
@@ -602,9 +598,10 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      * updates deviations which are used in some transformations (and would be null
      * for others)
      * 
-     * @param inputPoint the input point
+     * @param inputPoint        the input point
+     * @param lastShingledInput the last shingled input
      */
-    void updateDeviation(double[] inputPoint) {
+    void updateDeviation(double[] inputPoint, double[] lastShingledInput) {
         for (int i = 0; i < inputPoint.length; i++) {
             double value = inputPoint[i];
             if (transformMethod == TransformMethod.DIFFERENCE
@@ -629,7 +626,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         }
         updateTimestamps(timestamp);
         if (deviationList != null) {
-            updateDeviation(inputPoint);
+            updateDeviation(inputPoint, lastShingledInput);
         }
         updateShingle(inputPoint, scaledInput);
     }
@@ -772,7 +769,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         } else {
             initialValues = new double[values.length][];
             for (int i = 0; i < values.length; i++) {
-                initialValues[i] = copyIfNotnull(initialValues[i]);
+                initialValues[i] = copyIfNotnull(values[i]);
             }
         }
     }

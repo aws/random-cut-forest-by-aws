@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,9 +24,13 @@ import java.util.Random;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.state.ThresholdedRandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
@@ -126,6 +131,7 @@ public class ConsistencyTest {
         int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
+        System.out.println(seed);
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
         int numberOfTrees = 30; // and using fewer trees to speed up test
@@ -201,6 +207,147 @@ public class ConsistencyTest {
                 assertEquals(firstResult.getRCFScore(), fourthResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), fourthResult.getAnomalyGrade(), 1e-10);
 
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransformMethod.class)
+    public void TimeAugmentedTest(TransformMethod transformMethod) {
+        int sampleSize = 256;
+        int baseDimensions = 1;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+
+        int numTrials = 1; // test is exact equality, reducing the number of trials
+        int numberOfTrees = 30; // and using fewer trees to speed up test
+        int length = 10 * sampleSize;
+        int dataSize = 2 * length;
+        for (int i = 0; i < numTrials; i++) {
+            Precision precision = Precision.FLOAT_32;
+            long seed = new Random().nextLong();
+            System.out.println("seed = " + seed);
+
+            // TransformMethod transformMethod = TransformMethod.NONE;
+            ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                    .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                    .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                    .forestMode(ForestMode.STANDARD).weightTime(0).transformMethod(transformMethod).normalizeTime(true)
+                    .outputAfter(32).initialAcceptFraction(0.125).build();
+            ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                    .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                    .forestMode(ForestMode.TIME_AUGMENTED).weightTime(0).transformMethod(transformMethod)
+                    .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).build();
+
+            // ensuring that the parameters are the same; otherwise the grades/scores cannot
+            // be the same
+            // weighTime has to be 0 in the above
+            first.setLowerThreshold(1.1);
+            second.setLowerThreshold(1.1);
+            first.setHorizon(0.75);
+            second.setHorizon(0.75);
+
+            Random noise = new Random(0);
+
+            // change the last argument seed for a different run
+            MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1,
+                    50, 100, 5, seed, baseDimensions);
+
+            int count = 0;
+            for (int j = 0; j < length; j++) {
+
+                long timestamp = 100 * count + noise.nextInt(10) - 5;
+                AnomalyDescriptor result = first.process(dataWithKeys.data[j], timestamp);
+                AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
+                checkArgument(Math.abs(result.getRCFScore() - test.getRCFScore()) < 1e-10, " error");
+                checkArgument(Math.abs(result.getAnomalyGrade() - test.getAnomalyGrade()) < 1e-10, " error");
+                ++count;
+            }
+
+            ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+            ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+            for (int j = length; j < 2 * length; j++) {
+
+                // can be a different gap
+                long timestamp = 150 * count + noise.nextInt(10) - 5;
+                AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], timestamp);
+                AnomalyDescriptor secondResult = second.process(dataWithKeys.data[count], timestamp);
+                AnomalyDescriptor thirdResult = third.process(dataWithKeys.data[count], timestamp);
+
+                assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
+                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-10);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransformMethod.class)
+    public void ImputeTest(TransformMethod transformMethod) {
+
+        int sampleSize = 256;
+        int baseDimensions = 1;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+
+        int numTrials = 1; // test is exact equality, reducing the number of trials
+        int numberOfTrees = 30; // and using fewer trees to speed up test
+        int length = 10 * sampleSize;
+        int dataSize = 2 * length;
+        for (int i = 0; i < numTrials; i++) {
+            Precision precision = Precision.FLOAT_32;
+            long seed = new Random().nextLong();
+            System.out.println("seed = " + seed);
+            double[] weights = new double[] { 1.7, 4.2 };
+
+            ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                    .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                    .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                    .forestMode(ForestMode.STANDARD).weightTime(0).transformMethod(transformMethod).normalizeTime(true)
+                    .outputAfter(32).initialAcceptFraction(0.125).weights(weights).build();
+            ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                    .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                    .forestMode(ForestMode.STREAMING_IMPUTE).weightTime(0).transformMethod(transformMethod)
+                    .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).weights(weights).build();
+
+            // ensuring that the parameters are the same; otherwise the grades/scores cannot
+            // be the same
+            // weighTime has to be 0 in the above
+            first.setLowerThreshold(1.1);
+            second.setLowerThreshold(1.1);
+            first.setHorizon(0.75);
+            second.setHorizon(0.75);
+
+            Random noise = new Random(0);
+
+            // change the last argument seed for a different run
+            MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1,
+                    50, 100, 5, seed, baseDimensions);
+
+            for (int j = 0; j < length; j++) {
+                // gap has to be asymptotically same
+                long timestamp = 100 * j + noise.nextInt(10) - 5;
+                AnomalyDescriptor result = first.process(dataWithKeys.data[j], 0L);
+                AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
+                assertEquals(result.getRCFScore(), test.getRCFScore(), 1e-10);
+                assertEquals(result.getAnomalyGrade(), test.getAnomalyGrade(), 1e-10);
+            }
+
+            ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+            ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+
+            for (int j = length; j < 2 * length; j++) {
+
+                // has to be the same gap
+                long timestamp = 100 * j + noise.nextInt(10) - 5;
+                AnomalyDescriptor firstResult = first.process(dataWithKeys.data[j], 0L);
+                AnomalyDescriptor thirdResult = third.process(dataWithKeys.data[j], timestamp);
+
+                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
+                assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-10);
             }
         }
     }
