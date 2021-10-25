@@ -52,7 +52,7 @@ public class BasicThresholder {
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
-    // and secondaryDeviation may not be used always -- in current code, the are
+    // and secondaryDeviation may not be used always -- in current code, they are
     // both used always
     protected int count = 0;
 
@@ -131,6 +131,12 @@ public class BasicThresholder {
         thresholdDeviation.setDiscount(futureAnomalyRate / 2);
     }
 
+    /**
+     * a boolean that determines if enough values have been seen to be able to
+     * discern deviations
+     * 
+     * @return true/false based on counts of various statistic
+     */
     public boolean isDeviationReady() {
         if (count < minimumScores) {
             return false;
@@ -145,6 +151,16 @@ public class BasicThresholder {
         }
     }
 
+    /**
+     * this function helps switch from short term (not able to use deviation, using
+     * absolute scores) which is the first minimumScores observations of the scoring
+     * function to using deviation (and not using absokute scores, except as a lower
+     * bound) at 2*minimumScores It is often the case that the data has "run"
+     * effects and the initial scopres can all come in low or can all come in high
+     * 
+     * @return a parameter that helps smoot transition of initial to long term
+     *         behavior
+     */
     protected double intermediateTermFraction() {
         if (count < minimumScores) {
             return 0;
@@ -155,18 +171,20 @@ public class BasicThresholder {
         }
     }
 
-    protected boolean isLongTermReady() {
-        return (intermediateTermFraction() == 1);
-    }
-
-    protected double basicThreshold(double factor) {
+    /**
+     * a thresholder that is used for short/itermediate term
+     * 
+     * @param factor                   the factor used in long term evaluation
+     * @param intermediateTermFraction the fraction determining the transition from
+     *                                 short to long term
+     * @return an interpolated threshold value
+     */
+    protected double notLongTermThreshold(double factor, double intermediateTermFraction) {
         if (!isDeviationReady()) { // count < minimumScore is this branch
             return Math.max(initialThreshold, lowerThreshold);
-        } else if (isLongTermReady()) {
-            return longTermThreshold(factor);
         } else {
-            return Math.max(lowerThreshold, intermediateTermFraction() * longTermThreshold(factor)
-                    + (1 - intermediateTermFraction()) * initialThreshold);
+            return Math.max(lowerThreshold, intermediateTermFraction * longTermThreshold(factor)
+                    + (1 - intermediateTermFraction) * initialThreshold);
         }
 
     }
@@ -191,18 +209,19 @@ public class BasicThresholder {
         // please change here is a first cut
 
         double elasticScore = (previous) ? elasticity : 0;
-        if (isLongTermReady()) {
+        double intermediateTermFraction = intermediateTermFraction();
+        if (intermediateTermFraction == 1) {
             if (score < longTermThreshold(factor) - elasticScore) {
                 return 0;
             }
             double tFactor = upperZfactor;
-            if (longTermDeviation() > 0) {
-                tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / longTermDeviation());
+            double longTermDeviation = longTermDeviation();
+            if (longTermDeviation > 0) {
+                tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / longTermDeviation);
             }
-
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
-            double t = basicThreshold(factor);
+            double t = notLongTermThreshold(factor, intermediateTermFraction);
             if (score < t - elasticScore) {
                 return 0;
             }
@@ -276,7 +295,7 @@ public class BasicThresholder {
      * DEFAULT_Z_FACTOR it maintains the invariant that the upper_factor is at least
      * twice the z-factor
      *
-     * while increasing; increase upper first and while decreasing decrease the
+     * While increasing; increase upper first. While decreasing; decrease the
      * z-factor first (change default if required)
      * 
      * @param factor new z-factor
@@ -287,7 +306,7 @@ public class BasicThresholder {
     }
 
     /**
-     * upodates the upper Z-factor subject to invariant that it is never lower than
+     * updates the upper Z-factor subject to invariant that it is never lower than
      * 2*z-factor
      * 
      * @param factor new upper-Zfactor
@@ -301,7 +320,7 @@ public class BasicThresholder {
      * threshold LTE initial threshold LTE upper threshold as well as 2 * lower
      * threshold LTE upper threshold
      *
-     * while increasing increase from the largest to smallest while decreasing
+     * while increasing; increase from the largest to smallest. while decreasing;
      * decrease from the smallest to largest
      * 
      * @param lower new lower threshold

@@ -235,10 +235,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
                 || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE);
     }
 
-    public static boolean isForecastFeasible(int internalTimeStamp, int shingleSize, int inputLength) {
-        return (internalTimeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED && shingleSize * inputLength >= 4);
-    }
-
     /**
      * sets up the AnomalyDescriptor object
      *

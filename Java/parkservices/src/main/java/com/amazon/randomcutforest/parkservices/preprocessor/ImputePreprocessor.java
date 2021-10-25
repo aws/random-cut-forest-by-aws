@@ -222,7 +222,9 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
 
     /**
      * decides if the forest should be updated, this is needed for imputation on the
-     * fly
+     * fly. The main goal of this function is to avoid runaway sequences where a
+     * single input changes the forest too much. But in some cases that behavior can
+     * be warranted and then this function should be changed
      *
      * @return if the forest should be updated
      */
@@ -265,7 +267,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     /**
      * The postprocessing now has to handle imputation while changing the state;
      * note that the imputation is repeated to avoid storing potentially large
-     * number of transient shingles (which would noe be admitted to the forest
+     * number of transient shingles (which would not be admitted to the forest
      * anyways unless there is at least one actual value in the shingle)
      * 
      * @param result                the descriptor of the evaluation on the current

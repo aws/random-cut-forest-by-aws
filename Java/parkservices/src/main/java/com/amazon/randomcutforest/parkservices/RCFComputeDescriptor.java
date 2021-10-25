@@ -41,7 +41,7 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
 
     ImputationMethod imputationMethod = ImputationMethod.PREVIOUS;
 
-    // the most important of the forest
+    // the most important parameter of the forest
     int shingleSize;
 
     // the actual dimensions
