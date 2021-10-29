@@ -233,6 +233,7 @@ public class PredictorCorrector {
      */
     double[] applyBasicCorrector(double[] point, int gap, int shingleSize, int baseDimensions,
             IRCFComputeDescriptor lastAnomalyDescriptor) {
+        checkArgument(gap >= 0 && gap <= shingleSize, "incorrect invocation");
         double[] correctedPoint = Arrays.copyOf(point, point.length);
         double[] lastExpectedPoint = lastAnomalyDescriptor.getExpectedRCFPoint();
         double[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();

@@ -49,6 +49,8 @@ public class BoxCacheDouble extends BoxCache<double[]> {
             }
         } else if (cacheFraction == 1.0) {
             cachedBoxes = new BoundingBox[maxSize];
+        } else if (cacheFraction == 0) {
+            cachedBoxes = null;
         }
     }
 

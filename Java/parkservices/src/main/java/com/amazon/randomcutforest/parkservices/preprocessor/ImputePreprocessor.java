@@ -234,6 +234,16 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 && (transformMethod == DIFFERENCE || transformMethod == NORMALIZE_DIFFERENCE)) {
             // this shingle is disconnected from the previously seen values
             // these transformations will have little meaning
+            // positions 0 and 1 corresponds to the oldest in the shingle -- if we admit
+            // that case
+            // then we would admit a shingle where impact of the most recent observation is
+            // shingleSize - 1
+            // and the oldest one is 1. It seemed conservative to not allow that --
+            // primarily to stop a
+            // "runaway" effect where a single value (and its imputations affect
+            // everything).
+            // A gap at positions 1 and 2 would correspond to a shingleSize - 2 and 2 (or
+            // two different points).
             return false;
         }
         dataQuality.update(1 - fraction);

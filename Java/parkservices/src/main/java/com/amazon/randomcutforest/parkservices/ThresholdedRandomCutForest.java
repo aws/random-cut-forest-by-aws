@@ -183,13 +183,17 @@ public class ThresholdedRandomCutForest {
     public <T extends IRCFComputeDescriptor> T singleStepProcess(T input, IPreprocessor<T> preprocessor,
             Function<T, T> core) {
         boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
-        if (ifZero) { // turn caching on temporarily
-            forest.setBoundingBoxCacheFraction(1.0);
-        }
-        T answer = preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
-                lastAnomalyDescriptor, forest);
-        if (ifZero) { // turn caching off
-            forest.setBoundingBoxCacheFraction(0);
+        T answer;
+        try {
+            if (ifZero) { // turn caching on temporarily
+                forest.setBoundingBoxCacheFraction(1.0);
+            }
+            answer = preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
+                    lastAnomalyDescriptor, forest);
+        } finally {
+            if (ifZero) { // turn caching off
+                forest.setBoundingBoxCacheFraction(0);
+            }
         }
         return answer;
     }
