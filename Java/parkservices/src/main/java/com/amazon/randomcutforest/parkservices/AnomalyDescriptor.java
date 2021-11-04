@@ -22,47 +22,25 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.TransformMethod;
 
 @Getter
 @Setter
-public class AnomalyDescriptor {
+public class AnomalyDescriptor extends RCFComputeDescriptor {
 
     public static int NUMBER_OF_EXPECTED_VALUES = 1;
 
-    // anomalies should have score for postprocessing
-    double rcfScore;
     // the following describes the grade of the anomaly in the range [0:1] where
     // 0 is not an anomaly
     double anomalyGrade;
-
-    // same for attribution; this is basic RCF attribution which has high/low
-    // information
-    DiVector attribution;
-
-    // sequence index (the number of updates to RCF) -- it is possible in imputation
-    // that
-    // the number of updates more than the input tuples seen by the overall program
-    long totalUpdates;
-
-    // timestamp (basically a sequence index, but can be scaled and jittered as in
-    // the example);
-    // kept as long for potential future use
-    long timestamp;
 
     // if the anomaly is due to timestamp when it is augmented only for current time
     long expectedTimeStamp;
 
     // confidence, for both anomalies/non-anomalies
     double dataConfidence;
-
-    // number of trees in the forest
-    int forestSize;
-
-    // flag indicating of expected values are present -- one reason for them not
-    // being present
-    // is that forecasting can requires more values than anomaly detection,
-    boolean expectedValuesPresent;
 
     // flag indicating if the anomaly is the start of an anomaly or part of a run of
     // anomalies
@@ -72,29 +50,19 @@ public class AnomalyDescriptor {
     // considered as anomaly
     boolean inHighScoreRegion;
 
-    /**
-     * position of the anomaly vis a vis the current time (can be -ve) if anomaly is
-     * detected late, which can and should happen sometime; for shingle size 1; this
-     * is always 0
-     */
-    int relativeIndex;
-
     // a flattened version denoting the basic contribution of each input variable
     // (not shingled) for the
     // time slice indicated by relativeIndex
-    double[] currentTimeAttribution;
+    double[] relevantAttribution;
 
-    // when time is appended
+    // when time is appended for the anomalous time slice
     double timeAttribution;
 
-    // current values
-    double[] currentValues;
-
     // the values being replaced; may correspond to past
-    double[] oldValues;
+    double[] pastValues;
 
     // older timestamp if that is replaced
-    long oldTimeStamp;
+    long pastTimeStamp;
 
     // expected values, currently set to maximum 1
     double[][] expectedValuesList;
@@ -102,22 +70,28 @@ public class AnomalyDescriptor {
     // likelihood values for the list
     double[] likelihoodOfValues;
 
+    // the threshold used in inference
     double threshold;
 
-    public void setCurrentValues(double[] currentValues) {
-        this.currentValues = Arrays.copyOf(currentValues, currentValues.length);
+    public AnomalyDescriptor(double[] input, long inputTimeStamp) {
+        super(input, inputTimeStamp);
     }
 
-    public void setAttribution(DiVector attribution) {
-        this.attribution = new DiVector(attribution);
+    public AnomalyDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
+            TransformMethod transformMethod, ImputationMethod imputationMethod) {
+        super(input, inputTimeStamp, forestMode, transformMethod, imputationMethod);
     }
 
-    public void setOldValues(double[] values) {
-        this.oldValues = Arrays.copyOf(values, values.length);
+    public void setPastValues(double[] values) {
+        pastValues = copyIfNotnull(values);
     }
 
-    public void setCurrentTimeAttribution(double[] values) {
-        this.currentTimeAttribution = Arrays.copyOf(values, values.length);
+    public boolean isExpectedValuesPresent() {
+        return expectedValuesList != null;
+    }
+
+    public void setRelevantAttribution(double[] values) {
+        this.relevantAttribution = copyIfNotnull(values);
     }
 
     public void setExpectedValues(int position, double[] values, double likelihood) {
@@ -131,4 +105,20 @@ public class AnomalyDescriptor {
         expectedValuesList[position] = Arrays.copyOf(values, values.length);
         likelihoodOfValues[position] = likelihood;
     }
+
+    public void setDataConfidence(double timeDecay, long valuesSeen, long outputAfter, double dataQuality) {
+        long total = valuesSeen;
+        double lambda = timeDecay;
+        double totalExponent = total * lambda;
+        if (totalExponent == 0) {
+            dataConfidence = 0.0;
+        } else if (totalExponent >= 20) {
+            dataConfidence = Math.min(1.0, dataQuality);
+        } else {
+            double eTotal = Math.exp(totalExponent);
+            double confidence = dataQuality * (eTotal - Math.exp(lambda * Math.min(total, outputAfter))) / (eTotal - 1);
+            dataConfidence = Math.max(0, confidence);
+        }
+    }
+
 }

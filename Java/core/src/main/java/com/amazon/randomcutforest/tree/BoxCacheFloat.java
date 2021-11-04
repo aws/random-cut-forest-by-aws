@@ -49,6 +49,8 @@ public class BoxCacheFloat extends BoxCache<float[]> {
             }
         } else if (cacheFraction == 1.0) {
             cachedBoxes = new BoundingBoxFloat[maxSize];
+        } else if (cacheFraction == 0) {
+            cachedBoxes = null;
         }
     }
 

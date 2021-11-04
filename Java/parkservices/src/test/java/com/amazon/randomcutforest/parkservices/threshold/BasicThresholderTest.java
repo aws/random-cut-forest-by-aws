@@ -112,9 +112,9 @@ public class BasicThresholderTest {
         basicThresholder.updatePrimary(0.0);
         assertEquals(basicThresholder.intermediateTermFraction(), 0.4, 1e-10);
         basicThresholder.updatePrimary(0.0);
-        assertFalse(basicThresholder.isLongTermReady());
+        assertFalse(basicThresholder.intermediateTermFraction() == 1);
         basicThresholder.setMinimumScores(4);
-        assertTrue(basicThresholder.isLongTermReady());
+        assertTrue(basicThresholder.intermediateTermFraction() == 1);
     }
 
 }

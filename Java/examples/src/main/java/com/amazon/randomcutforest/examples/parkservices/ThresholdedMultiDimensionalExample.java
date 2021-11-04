@@ -82,32 +82,32 @@ public class ThresholdedMultiDimensionalExample implements Example {
             if (result.getAnomalyGrade() != 0) {
                 System.out.print("timestamp " + (count + shingleSize - 1) + " RESULT value ");
                 for (int i = (shingleSize - 1) * baseDimensions; i < shingleSize * baseDimensions; i++) {
-                    System.out.print(result.getCurrentValues()[i] + ", ");
+                    System.out.print(result.getCurrentInput()[i] + ", ");
                 }
-                System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
+                System.out.print("score " + result.getRCFScore() + ", grade " + result.getAnomalyGrade() + ", ");
 
                 if (result.isExpectedValuesPresent()) {
                     if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
                         System.out.print(-result.getRelativeIndex() + " steps ago, instead of ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.getOldValues()[i] + ", ");
+                            System.out.print(result.getPastValues()[i] + ", ");
                         }
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getOldValues()[i] != result.getExpectedValuesList()[0][i]) {
+                            if (result.getPastValues()[i] != result.getExpectedValuesList()[0][i]) {
                                 System.out.print("( "
-                                        + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
+                                        + (result.getPastValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     } else {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getCurrentValues()[(shingleSize - 1) * baseDimensions
+                            if (result.getCurrentInput()[(shingleSize - 1) * baseDimensions
                                     + i] != result.getExpectedValuesList()[0][i]) {
                                 System.out
-                                        .print("( " + (result.getCurrentValues()[(shingleSize - 1) * baseDimensions + i]
+                                        .print("( " + (result.getCurrentInput()[(shingleSize - 1) * baseDimensions + i]
                                                 - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }

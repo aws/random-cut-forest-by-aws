@@ -88,7 +88,7 @@ public class PreprocessorTest {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(6).dimensions(12).build();
         });
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertDoesNotThrow(() -> {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
                     .forestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });

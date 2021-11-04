@@ -15,11 +15,14 @@
 
 package com.amazon.randomcutforest.examples.parkservices;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
@@ -46,7 +49,7 @@ public class ThresholdedInternalShinglingExample implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int shingleSize = 8;
+        int shingleSize = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
@@ -57,15 +60,29 @@ public class ThresholdedInternalShinglingExample implements Example {
         int baseDimensions = 1;
 
         long count = 0;
-
         int dimensions = baseDimensions * shingleSize;
+        TransformMethod transformMethod = TransformMethod.NONE;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                 .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
-                .outputAfter(32).initialAcceptFraction(0.125).adjustThreshold(true).build();
+                .weightTime(0).transformMethod(transformMethod).normalizeTime(true).outputAfter(32)
+                .initialAcceptFraction(0.125).build();
+        ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
+                .forestMode(ForestMode.TIME_AUGMENTED).weightTime(0).transformMethod(transformMethod)
+                .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).build();
+
+        // ensuring that the parameters are the same; otherwise the grades/scores cannot
+        // be the same
+        // weighTime has to be 0
+        forest.setLowerThreshold(1.1);
+        second.setLowerThreshold(1.1);
+        forest.setHorizon(0.75);
+        second.setHorizon(0.75);
 
         long seed = new Random().nextLong();
-        Random noise = new Random();
+        Random noise = new Random(0);
 
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
@@ -80,7 +97,11 @@ public class ThresholdedInternalShinglingExample implements Example {
             // then the noise corresponds to a jitter; one can try TIME_AUGMENTED and
             // .normalizeTime(true)
 
-            AnomalyDescriptor result = forest.process(point, 100 * count + noise.nextInt(10) - 5);
+            long timestamp = 100 * count + noise.nextInt(10) - 5;
+            AnomalyDescriptor result = forest.process(point, timestamp);
+            AnomalyDescriptor test = second.process(point, timestamp);
+            checkArgument(Math.abs(result.getRCFScore() - test.getRCFScore()) < 1e-10, " error");
+            checkArgument(Math.abs(result.getAnomalyGrade() - test.getAnomalyGrade()) < 1e-10, " error");
 
             if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
                 System.out
@@ -89,11 +110,11 @@ public class ThresholdedInternalShinglingExample implements Example {
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("timestamp " + count + " RESULT value ");
+                System.out.print("timestamp " + count + " RESULT value " + result.getInternalTimeStamp() + " ");
                 for (int i = 0; i < baseDimensions; i++) {
-                    System.out.print(result.getCurrentValues()[i] + ", ");
+                    System.out.print(result.getCurrentInput()[i] + ", ");
                 }
-                System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
+                System.out.print("score " + result.getRCFScore() + ", grade " + result.getAnomalyGrade() + ", ");
                 if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
                     System.out.print(-result.getRelativeIndex() + " steps ago, ");
                 }
@@ -101,24 +122,23 @@ public class ThresholdedInternalShinglingExample implements Example {
                     if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
                         System.out.print("instead of ");
                         for (int i = 0; i < baseDimensions; i++) {
-                            System.out.print(result.getOldValues()[i] + ", ");
+                            System.out.print(result.getPastValues()[i] + ", ");
                         }
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getOldValues()[i] != result.getExpectedValuesList()[0][i]) {
+                            if (result.getPastValues()[i] != result.getExpectedValuesList()[0][i]) {
                                 System.out.print("( "
-                                        + (result.getOldValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
+                                        + (result.getPastValues()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     } else {
                         System.out.print("expected ");
                         for (int i = 0; i < baseDimensions; i++) {
                             System.out.print(result.getExpectedValuesList()[0][i] + ", ");
-                            if (result.getCurrentValues()[i] != result.getExpectedValuesList()[0][i]) {
-                                System.out.print(
-                                        "( " + (result.getCurrentValues()[i] - result.getExpectedValuesList()[0][i])
-                                                + " ) ");
+                            if (result.getCurrentInput()[i] != result.getExpectedValuesList()[0][i]) {
+                                System.out.print("( "
+                                        + (result.getCurrentInput()[i] - result.getExpectedValuesList()[0][i]) + " ) ");
                             }
                         }
                     }

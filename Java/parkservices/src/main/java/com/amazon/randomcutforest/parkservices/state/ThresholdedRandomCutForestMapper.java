@@ -20,7 +20,11 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.PredictorCorrector;
+import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
@@ -46,24 +50,30 @@ public class ThresholdedRandomCutForestMapper
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
         BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
         Preprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorStates()[0]);
-        ThresholdedRandomCutForest tForest = new ThresholdedRandomCutForest(forest, thresholder, preprocessor);
 
-        tForest.setIgnoreSimilar(state.isIgnoreSimilar());
-        tForest.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
-        tForest.setLastScore(state.getLastScore());
-        tForest.setLastAnomalyScore(state.getLastAnomalyScore());
-        tForest.setLastAnomalyTimeStamp(state.getLastAnomalyTimeStamp());
-        tForest.setPreviousIsPotentialAnomaly(state.isPreviousIsPotentialAnomaly());
-        tForest.setTriggerFactor(state.getTriggerFactor());
-        tForest.setNumberOfAttributors(state.getNumberOfAttributors());
-        tForest.setInHighScoreRegion(state.isInHighScoreRegion());
-        tForest.setLastAnomalyAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
-        tForest.setLastAnomalyPoint(state.getLastAnomalyPoint());
-        tForest.setLastExpectedPoint(state.getLastExpectedPoint());
-        tForest.setForestMode(ForestMode.valueOf(state.getForestMode()));
-        tForest.setLastRelativeIndex(state.getLastRelativeIndex());
-        tForest.setTransformMethod(TransformMethod.valueOf(state.getTransformMethod()));
-        return tForest;
+        ForestMode forestMode = ForestMode.valueOf(state.getForestMode());
+        TransformMethod transformMethod = TransformMethod.valueOf(state.getTransformMethod());
+
+        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
+        descriptor.setRCFScore(state.getLastAnomalyScore());
+        descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
+        descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
+        descriptor.setRCFPoint(state.getLastAnomalyPoint());
+        descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
+        descriptor.setRelativeIndex(state.getLastRelativeIndex());
+        descriptor.setForestMode(forestMode);
+        descriptor.setTransformMethod(transformMethod);
+        descriptor
+                .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
+
+        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder);
+        predictorCorrector.setIgnoreSimilar(state.isIgnoreSimilar());
+        predictorCorrector.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
+        predictorCorrector.setTriggerFactor(state.getTriggerFactor());
+        predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
+
+        return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
+                descriptor);
     }
 
     @Override
@@ -82,22 +92,22 @@ public class ThresholdedRandomCutForestMapper
         state.setThresholderState(thresholderMapper.toState(model.getThresholder()));
 
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
-        state.setPreprocessorStates(new PreprocessorState[] { preprocessorMapper.toState(model.getPreprocessor()) });
-        state.setTriggerFactor(model.getTriggerFactor());
-        state.setInHighScoreRegion(model.isInHighScoreRegion());
-        state.setLastScore(model.getLastScore());
-        state.setLastAnomalyTimeStamp(model.getLastAnomalyTimeStamp());
-        state.setLastAnomalyScore(model.getLastAnomalyScore());
-        state.setLastAnomalyAttribution(new DiVectorMapper().toState(model.getLastAnomalyAttribution()));
-        state.setLastAnomalyPoint(model.getLastAnomalyPoint());
-        state.setLastExpectedPoint(model.getLastExpectedPoint());
-        state.setIgnoreSimilar(model.isIgnoreSimilar());
-        state.setIgnoreSimilarFactor(model.getIgnoreSimilarFactor());
-        state.setPreviousIsPotentialAnomaly(model.isPreviousIsPotentialAnomaly());
-        state.setNumberOfAttributors(model.getNumberOfAttributors());
+        state.setPreprocessorStates(
+                new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
+        state.setTriggerFactor(model.getPredictorCorrector().getTriggerFactor());
+        state.setIgnoreSimilar(model.getPredictorCorrector().isIgnoreSimilar());
+        state.setIgnoreSimilarFactor(model.getPredictorCorrector().getIgnoreSimilarFactor());
+        state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
         state.setForestMode(model.getForestMode().name());
         state.setTransformMethod(model.getTransformMethod().name());
-        state.setLastRelativeIndex(model.getLastRelativeIndex());
+
+        IRCFComputeDescriptor descriptor = model.getLastAnomalyDescriptor();
+        state.setLastAnomalyTimeStamp(descriptor.getInternalTimeStamp());
+        state.setLastAnomalyScore(descriptor.getRCFScore());
+        state.setLastAnomalyAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
+        state.setLastAnomalyPoint(descriptor.getRCFPoint());
+        state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
+        state.setLastRelativeIndex(descriptor.getRelativeIndex());
 
         return state;
     }

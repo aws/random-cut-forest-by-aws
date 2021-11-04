@@ -33,12 +33,16 @@ public enum ImputationMethod {
      */
     PREVIOUS,
     /**
+     * next seen value in each input dimension
+     */
+    NEXT,
+    /**
      * linear interpolation
      */
     LINEAR,
     /**
      * use the RCF imputation; but would often require a minimum number of
-     * observations and would uses a default (often LINEAR) till that point
+     * observations and would use defaults (often LINEAR) till that point
      */
     RCF;
 }

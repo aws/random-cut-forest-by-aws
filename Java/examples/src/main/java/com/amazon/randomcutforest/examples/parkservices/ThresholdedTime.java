@@ -83,7 +83,7 @@ public class ThresholdedTime implements Example {
             AnomalyDescriptor result = forest.process(data, time);
 
             if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.print("Sequence " + count + " stamp " + (result.getTimestamp()) + " CHANGE ");
+                System.out.print("Sequence " + count + " stamp " + (result.getInternalTimeStamp()) + " CHANGE ");
                 if (!anomalyState) {
                     System.out.println(" to Distribution 1 ");
                 } else {
@@ -94,18 +94,18 @@ public class ThresholdedTime implements Example {
             }
 
             if (result.getAnomalyGrade() != 0) {
-                System.out.print("Sequence " + count + " stamp " + (result.getTimestamp()) + " RESULT ");
-                System.out.print("score " + result.getRcfScore() + ", grade " + result.getAnomalyGrade() + ", ");
+                System.out.print("Sequence " + count + " stamp " + (result.getInternalTimeStamp()) + " RESULT ");
+                System.out.print("score " + result.getRCFScore() + ", grade " + result.getAnomalyGrade() + ", ");
 
                 if (result.isExpectedValuesPresent()) {
                     if (result.getRelativeIndex() != 0 && result.isStartOfAnomaly()) {
                         System.out.print(-result.getRelativeIndex() + " steps ago, instead of stamp "
-                                + result.getOldTimeStamp());
+                                + result.getPastTimeStamp());
                         System.out.print(", expected timestamp " + result.getExpectedTimeStamp() + " ( "
-                                + (result.getOldTimeStamp() - result.getExpectedTimeStamp() + ")"));
+                                + (result.getPastTimeStamp() - result.getExpectedTimeStamp() + ")"));
                     } else {
                         System.out.print("expected " + result.getExpectedTimeStamp() + " ( "
-                                + (result.getTimestamp() - result.getExpectedTimeStamp() + ")"));
+                                + (result.getInternalTimeStamp() - result.getExpectedTimeStamp() + ")"));
                     }
                 }
                 System.out.println();
