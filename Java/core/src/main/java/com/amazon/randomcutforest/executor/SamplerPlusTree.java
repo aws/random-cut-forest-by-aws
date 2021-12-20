@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.executor;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import lombok.Getter;
 
@@ -90,7 +91,6 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
             // the tree may choose to return a reference to an existing point
             // whose value is equal to `point`
             P addedPoint = tree.addPoint(point, sequenceIndex);
-
             sampler.addPoint(addedPoint);
             return UpdateResult.<P>builder().addedPoint(addedPoint).deletedPoint(deleteRef).build();
         }
@@ -134,4 +134,13 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     public boolean isOutputReady() {
         return tree.isOutputReady();
     }
+
+    // the following is for testing RCF3.0 alongside RCF2.0 and will be merged into
+    // getAnomalyScore()
+    public double dynamicScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
+            BiFunction<Double, Double, Double> normalizer) {
+        return tree.dynamicScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);
+    }
+
 }
