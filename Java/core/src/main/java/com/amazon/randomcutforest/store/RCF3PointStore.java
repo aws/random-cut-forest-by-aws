@@ -382,10 +382,6 @@ public abstract class RCF3PointStore implements IPointStore<float[]> {
             int locn = getLocation(i);
             if (locn < currentStoreCapacity * dimensions && locn >= 0) {
                 reverseReference.add(new Integer[] { locn, i });
-            } else {
-                if (refCount[i] != 0) {
-                    System.out.println("AA");
-                }
             }
         }
         reverseReference.sort((o1, o2) -> o1[0].compareTo(o2[0]));

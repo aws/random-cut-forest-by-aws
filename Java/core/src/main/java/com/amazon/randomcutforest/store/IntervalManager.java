@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.store;
 
+import java.util.Arrays;
+
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
-
-import java.util.Arrays;
 
 /**
  * This class defines common functionality for Store classes, including
  * maintaining the stack of free pointers.
  */
+// to be renamed to IndexIntervalManager in next PR alongside ser/de changes
 public class IntervalManager {
 
     protected int capacity;
@@ -43,6 +44,7 @@ public class IntervalManager {
 
     public void extendCapacity(int newCapacity) {
         checkArgument(newCapacity > capacity, " incorrect call, we can only increase capacity");
+        // the current capacity need not be the final capacity, for example in case of point store
         if (freeIndexesStart.length == lastInUse) {
             freeIndexesStart = Arrays.copyOf(freeIndexesStart, lastInUse + 1);
             freeIndexesEnd = Arrays.copyOf(freeIndexesEnd, lastInUse + 1);
