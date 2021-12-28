@@ -83,6 +83,15 @@ impl BoundingBox {
         self.min_values.len()
     }
 
+    // replaces with a point, and optional rotation
+    pub fn replace_with_point(&mut self, point : &[f32]){
+        assert!(point.len() == self.min_values.len(), " incorrect box replacement");
+        for i in 0..point.len() {
+            self.max_values[i] = point[i];
+            self.min_values[i] = point[i];
+        }
+    }
+
 
     pub fn get_cut_and_separation(&self, factor: f64, point: &[f32], verbose:bool) -> (Cut, bool, bool) {
 

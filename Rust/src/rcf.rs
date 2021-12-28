@@ -130,16 +130,17 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 			println!("Shingle size must divide dimensions.");
 			panic!();
 		}
-
+		assert!(!internal_rotation || internal_shingling, " internal shingling required for rotations");
 		let mut rng = ChaCha20Rng::seed_from_u64(random_seed);
 		let new_random_seed = rng.next_u64();
 		let mut models: Vec<SamplerPlusTree<C, P, N>> = Vec::new();
-
+        let using_transforms = internal_rotation; // other conditions may be added eventually
 		let allocate = caching_profile(bounding_box_cache_fraction, number_of_trees);
 		for i in 0..number_of_trees {
 			models.push(SamplerPlusTree::<C, P, N>::new(
 				dimensions,
 				capacity,
+				using_transforms,
 				rng.next_u64(),
 				store_attributes,
 				time_decay,

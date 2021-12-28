@@ -16,6 +16,7 @@ use crate::rcf::Max;
 pub struct SamplerPlusTree<C,P,N> {
 tree : RCFTree<C,P,N>,
 sampler : Sampler<P>,
+using_transforms : bool,
 time_decay : f64,
 entries_seen : usize,
 initial_accept_fraction : f64,
@@ -27,7 +28,7 @@ impl<C: Max + Copy, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> SamplerP
     P: std::convert::TryFrom<usize>, usize: From<P>,
     N: std::convert::TryFrom<usize>, usize: From<N> {
     pub fn new(dimensions: usize,
-               capacity: usize, random_seed: u64, store_attributes: bool, time_decay: f64, initial_accept_fraction: f64, bounding_box_cache_fraction: f64) -> Self
+               capacity: usize, using_transforms: bool, random_seed: u64, store_attributes: bool, time_decay: f64, initial_accept_fraction: f64, bounding_box_cache_fraction: f64) -> Self
     where
     <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug {
         let mut rng = ChaCha20Rng::seed_from_u64(random_seed);
@@ -36,7 +37,8 @@ impl<C: Max + Copy, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> SamplerP
         SamplerPlusTree {
             time_decay,
             initial_accept_fraction,
-            tree: RCFTree::<C,P,N>::new(dimensions, capacity, bounding_box_cache_fraction, rng.next_u64()),
+            using_transforms,
+            tree: RCFTree::<C,P,N>::new(dimensions, capacity, using_transforms, bounding_box_cache_fraction, rng.next_u64()),
             sampler: Sampler::new(capacity,  store_attributes),
             entries_seen: 0,
             random_seed: self_seed

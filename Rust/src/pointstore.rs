@@ -28,7 +28,10 @@ pub struct PointStore<L> {
 pub trait PointStoreView {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32>;
     fn get_size(&self) -> usize;
-    fn get(&self, index: usize) -> &[f32];
+    //fn get(&self, index: usize) -> &[f32];
+    fn get_copy(&self, index:usize) -> Vec<f32>;
+    fn is_equal(&self, point : &[f32], index : usize) -> bool;
+    fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize);
 }
 
 pub trait PointStoreEdit {
@@ -123,6 +126,7 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         new_point
     }
 
+    /*
     fn get(&self, index: usize) -> &[f32] {
         let base = self.dimensions / self.shingle_size;
         if self.reference_count[index] == 0 {
@@ -136,54 +140,10 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         } else {
             println!(" not yet implemented");
             panic!()
-            /*
-            let mut answer: Vec<f32> = vec![0.0;self.dimensions];
-            for i in 0..self.dimensions {
-                answer [(i + adj_locn) % self.dimensions ] = self.store[adj_locn + i];
-            }
-            return &answer;
-             */
         }
     }
-
-    fn get_size(&self) -> usize {
-        self.store.len() * std::mem::size_of::<f32>()
-            + self.location.len() * std::mem::size_of::<L>()
-            + self.reference_count.len() * std::mem::size_of::<u8>()
-            + self.index_manager.get_size() + std::mem::size_of::<PointStore<L>>()
-    }
-}
-
-impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for &PointStore<L>
-    where L: std::convert::TryFrom<usize>, usize: From<L> {
-
-    fn get_shingled_point(&self, point: &[f32]) -> Vec<f32> {
-        let mut new_point = vec![0.0; self.dimensions];
-        if self.internal_shingling {
-            let base = self.dimensions / self.shingle_size;
-            if point.len() != base {
-                println!("The point must be '{}' floats long", self.dimensions);
-                panic!();
-            }
-            for i in 0..(self.dimensions - base) {
-                new_point[i] = self.last_known_shingle[i + base];
-            }
-            for i in 0..base {
-                new_point[self.dimensions - base + i] = point[i];
-            }
-            return new_point;
-        }
-        if point.len() != self.dimensions {
-            println!("The point must be '{}' floats long", self.dimensions);
-            panic!();
-        }
-        for i in 0..self.dimensions {
-            new_point[i] = point[i];
-        }
-        new_point
-    }
-
-    fn get(&self, index: usize) -> &[f32] {
+*/
+    fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize) {
         let base = self.dimensions / self.shingle_size;
         if self.reference_count[index] == 0 {
             println!(" Index '{}' not in use", index);
@@ -191,7 +151,37 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for &PointStore<L>
         }
         let locn: usize = self.location[index].try_into().unwrap(); // because of u32
         let adj_locn = locn * base;
-        &self.store[adj_locn..(adj_locn + self.dimensions)]
+        let offset = if (!self.internal_rotation) { 0 } else { adj_locn % self.dimensions };
+        (&self.store[adj_locn..(adj_locn + self.dimensions)], offset)
+    }
+
+    fn get_copy(&self, index: usize) -> Vec<f32>{
+        let mut new_point = vec![0.0;self.dimensions];
+        let (reference, offset) = self.get_reference_and_offset(index);
+        if (self.internal_rotation) {
+            for i in 0..self.dimensions {
+                new_point[(i + offset) % self.dimensions] = reference[i];
+            }
+        } else {
+            for i in 0..self.dimensions {
+                new_point[i] = reference[i];
+            }
+        }
+        new_point
+    }
+
+    fn is_equal(&self, point: &[f32], index: usize) -> bool{
+        let (reference, offset) = self.get_reference_and_offset(index);
+        if (self.internal_rotation) {
+            for i in 0..self.dimensions {
+                if (point[(i + offset) % self.dimensions] != reference[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return point.eq(reference);
+        }
     }
 
     fn get_size(&self) -> usize {
@@ -201,6 +191,7 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for &PointStore<L>
             + self.index_manager.get_size() + std::mem::size_of::<PointStore<L>>()
     }
 }
+
 
 
 impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>

@@ -10,6 +10,7 @@ mod intervalstoremanager;
 mod newnodestore;
 mod abstractnodeview;
 mod visitor;
+mod multivisitor;
 mod scalarscorevisitor;
 
 extern crate rand;
@@ -36,9 +37,9 @@ fn main() {
     let point_store_capacity = (capacity*number_of_trees + 1);
     let time_decay = 0.1/capacity as f64;
     let initial_accept_fraction = 0.1;
-    let bounding_box_cache_fraction = 0.0;
+    let bounding_box_cache_fraction =0.2;
     let random_seed = 17;
-    let parallel_enabled : bool = true;
+    let parallel_enabled : bool = false;
     let store_attributes : bool = false;
     let internal_shingling: bool = true;
     let internal_rotation = false;
@@ -50,7 +51,7 @@ fn main() {
     for i in 0..data_with_key.data.len() {
         let new_score = forest.score(&data_with_key.data[i]);
 
-       //assert!(abs(new_score - forest.generic_score(&data_with_key.data[i])) < 1e-5);
+      // assert!(abs(new_score - forest.generic_score(&data_with_key.data[i])) < 1e-5);
         /*
         if next_index < data_with_key.change_indices.len() && data_with_key.change_indices[next_index] == i {
             println!(" score at change {} position {} ", new_score, i);

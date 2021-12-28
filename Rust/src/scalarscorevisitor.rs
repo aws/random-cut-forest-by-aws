@@ -35,7 +35,7 @@ impl ScalarScoreVisitor {
     }
 }
 
-impl Visitor for ScalarScoreVisitor{
+impl Visitor<f64> for ScalarScoreVisitor{
     fn accept_leaf(&mut self, point: &[f32],node_view: &mut dyn NodeView) {
         let mass =node_view.get_mass();
         if point.eq(node_view.get_leaf_point()) && mass > self.ignore_mass {
@@ -58,12 +58,20 @@ impl Visitor for ScalarScoreVisitor{
         }
     }
 
-    fn get_score(&self) -> f64 {
+    fn get_result(&self) -> f64 {
         self.score
     }
 
     fn has_converged(&self) -> bool {
         self.converged
+    }
+
+    fn use_shadow_box(&self) -> bool {
+        self.ignore_mass > 0
+    }
+
+    fn accept_needs_box(&self) -> bool {
+        self.use_shadow_box()
     }
 }
 
