@@ -14,10 +14,11 @@ use crate::rcf::normalizer;
 use crate::pointstore::PointStoreView;
 use rand_chacha::ChaCha20Rng;
 use crate::abstractnodeview::AbstractNodeView;
+use crate::imputevisitor::ImputeVisitor;
 use crate::randomcuttree::rand::RngCore;
 use crate::randomcuttree::rand::Rng;
 use crate::scalarscorevisitor::ScalarScoreVisitor;
-use crate::visitor::Visitor;
+use crate::visitor::{MultiVisitorDescriptor, StreamingMultiVisitor, Visitor, VisitorDescriptor};
 
 pub type StoreInUse = NewNodeStore<u8,u16,u8>;
 
@@ -196,17 +197,8 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 		leaf_point_index
 	}
 
-	pub fn dynamic_score(&self, point: &[f32], point_store: &dyn PointStoreView, ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
-						 score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
-						 normalizer: fn (f64,usize) -> f64) -> f64
-		where <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug,  <N as TryFrom<usize>>::Error: Debug {
-		if self.root == 0 {
-			return 0.0;
-		}
-		self.node_store.dynamic_score(self.root, ignore_mass,self.tree_mass, point, point_store,score_seen,score_unseen,damp,normalizer)
-	}
 
-	pub fn generic_dynamic_score(&self, point: &[f32], point_store: &dyn PointStoreView, ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
+	pub fn generic_score(&self, point: &[f32], point_store: &dyn PointStoreView, ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
 								 score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
 								 normalizer: fn (f64,usize) -> f64) -> f64 {
 		if self.root == 0 {
@@ -214,11 +206,24 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 		}
 
 		let mut visitor = ScalarScoreVisitor::new(self.tree_mass,ignore_mass,damp,score_seen,score_unseen,normalizer);
-		let mut node_view = AbstractNodeView::new(self.dimensions,self.root);
+		let mut node_view = AbstractNodeView::new(self.dimensions,self.root,self.node_store.use_path_for_box(),visitor.descriptor(),visitor.multivisitor_descriptor());
 		node_view.traverse(&mut visitor,point,point_store,&self.node_store);
 		normalizer(visitor.get_result(),self.tree_mass)
 	}
 
+	pub fn conditional_field(&self, positions: &[usize], point: &[f32], point_store: &dyn PointStoreView, centrality: f64, ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
+						  score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
+						  normalizer: fn (f64,usize) -> f64) -> usize {
+		if self.root == 0 {
+			return usize::MAX;
+		}
+
+		let mut visitor = ImputeVisitor::new(positions,centrality,self.tree_mass,ignore_mass,damp,score_seen,score_unseen,normalizer);
+		let mut node_view = AbstractNodeView::new(self.dimensions, self.root, self.node_store.use_path_for_box(), visitor.descriptor(),visitor.multivisitor_descriptor());
+
+		node_view.traverse_multi(&mut visitor,point,point_store,&self.node_store);
+		visitor.get_arguments()
+	}
 
 	pub fn get_size(&self) -> usize {
 		self.node_store.get_size(self.dimensions.into()) + std::mem::size_of::<RCFTree<C,P,N>>()

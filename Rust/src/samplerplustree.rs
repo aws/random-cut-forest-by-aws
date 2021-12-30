@@ -88,23 +88,21 @@ impl<C: Max + Copy, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> SamplerP
         }
     }
 
-    pub fn dynamic_score(&self, point: &[f32], point_store: &dyn PointStoreView,ignore_mass: usize,score_seen: fn (usize,usize) -> f64,
-                         score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
-                         normalizer: fn (f64,usize) -> f64 ) -> f64 where
-    <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug
-    {
-
-        self.tree.dynamic_score(point, point_store, ignore_mass, score_seen,score_unseen,damp,normalizer)
-    }
-
-    pub fn generic_dynamic_score(&self, point: &[f32], point_store: &dyn PointStoreView,ignore_mass: usize,score_seen: fn (usize,usize) -> f64,
+    pub fn generic_score(&self, point: &[f32], point_store: &dyn PointStoreView,ignore_mass: usize,score_seen: fn (usize,usize) -> f64,
                                  score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
                                  normalizer: fn (f64,usize) -> f64 ) -> f64 where
         <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug
     {
-        self.tree.generic_dynamic_score(point, point_store,ignore_mass,score_seen, score_unseen, damp, normalizer)
+        self.tree.generic_score(point, point_store,ignore_mass,score_seen, score_unseen, damp, normalizer)
     }
 
+    pub fn conditional_field(&self, positions: &[usize], centrality: f64, point: &[f32], point_store: &dyn PointStoreView, ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
+                          score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
+                          normalizer: fn (f64,usize) -> f64 ) -> usize where
+        <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug
+    {
+        self.tree.conditional_field(positions, point, point_store,centrality,ignore_mass,score_seen, score_unseen, damp, normalizer)
+    }
 
     pub fn get_size(&self) -> usize {
         self.tree.get_size() +

@@ -28,7 +28,7 @@ pub struct PointStore<L> {
 pub trait PointStoreView {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32>;
     fn get_size(&self) -> usize;
-    //fn get(&self, index: usize) -> &[f32];
+    fn get_missing_values(&self, values: &[usize]) -> Vec<usize>;
     fn get_copy(&self, index:usize) -> Vec<f32>;
     fn is_equal(&self, point : &[f32], index : usize) -> bool;
     fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize);
@@ -126,23 +126,6 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         new_point
     }
 
-    /*
-    fn get(&self, index: usize) -> &[f32] {
-        let base = self.dimensions / self.shingle_size;
-        if self.reference_count[index] == 0 {
-            println!(" Index '{}' not in use", index);
-            panic!();
-        }
-        let locn: usize = self.location[index].try_into().unwrap(); // because of u32
-        let adj_locn = locn * base;
-        if (!self.internal_rotation) {
-            &self.store[adj_locn..(adj_locn + self.dimensions)]
-        } else {
-            println!(" not yet implemented");
-            panic!()
-        }
-    }
-*/
     fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize) {
         let base = self.dimensions / self.shingle_size;
         if self.reference_count[index] == 0 {
@@ -168,6 +151,23 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
             }
         }
         new_point
+    }
+
+    fn get_missing_values(&self, values:&[usize]) -> Vec<usize>{
+        if !self.internal_shingling {
+            return Vec::from(values);
+        }
+        let mut answer = Vec::new();
+        let base = self.dimensions / self.shingle_size;
+        for i in 0..values.len() {
+          assert!(values[i]< base);
+            if self.internal_rotation {
+              answer.push((self.next_sequence_index * base) % self.dimensions + values[i]);
+            } else {
+                answer.push(self.dimensions - base + values[i]);
+            }
+        }
+        answer
     }
 
     fn is_equal(&self, point: &[f32], index: usize) -> bool{

@@ -72,17 +72,19 @@ pub trait RCF {
 	fn get_entries_seen(&self) -> u64;
 
 	fn score(&self, point: &[f32]) -> f64 {
-		self.dynamic_score(point, 0, score_seen, score_unseen, damp, normalizer)
+		self.generic_score(point, 0, score_seen, score_unseen, damp, normalizer)
 	}
-	fn dynamic_score(&self, point: &[f32],ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
-					 score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
-					 normalizer: fn (f64,usize) -> f64 ) -> f64;
-	fn generic_score(&self, point: &[f32]) -> f64 {
-		self.generic_dynamic_score(point, 0, score_seen, score_unseen, damp, normalizer)
-	}
-	fn generic_dynamic_score(&self, point: &[f32],ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
+
+	fn generic_score(&self, point: &[f32],ignore_mass: usize, score_seen: fn (usize,usize) -> f64,
 						 score_unseen :fn (usize,usize) -> f64, damp : fn (usize,usize) -> f64,
 						 normalizer: fn (f64,usize) -> f64 ) -> f64;
+
+	fn conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64) -> Vec<usize> {
+		self.generic_conditional_field(positions,point,centrality,0,score_seen,score_unseen,damp,normalizer)
+	}
+	fn generic_conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64, ignore_mass: usize, score_seen: fn(usize, usize) -> f64,
+							  score_unseen: fn(usize, usize) -> f64, damp: fn(usize, usize) -> f64,
+							  normalizer: fn(f64, usize) -> f64) -> Vec<usize>;
 	fn get_size(&self) -> usize;
 	fn get_point_store_size(&self) -> usize;
 
@@ -194,7 +196,6 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 	<C as TryFrom<usize>>::Error: Debug, <L as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug {
 
 
-
 	fn update(&mut self, point: &[f32], timestamp: u64) where
 		<C as TryFrom<usize>>::Error: Debug, <L as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug {
 		let point_index = self.point_store.add(&point);
@@ -215,24 +216,8 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 		self.point_store.get_size()
 	}
 
-	fn dynamic_score(&self, point: &[f32], ignore_mass: usize, score_seen: fn(usize, usize) -> f64,
-					 score_unseen: fn(usize, usize) -> f64, damp: fn(usize, usize) -> f64,
-					 normalizer: fn(f64, usize) -> f64) -> f64 where
-		<C as TryFrom<usize>>::Error: Debug, <L as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug {
-		let mut sum = 0.0;
-		let new_point = self.point_store.get_shingled_point(point);
-		sum = if self.parallel_enabled {
-			self.sampler_plus_trees.par_iter()
-				.map(|m| m.dynamic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
-		} else {
-			self.sampler_plus_trees.iter()
-				.map(|m| m.dynamic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
-		};
 
-		sum / (self.sampler_plus_trees.len() as f64)
-	}
-
-	fn generic_dynamic_score(&self, point: &[f32], ignore_mass: usize, score_seen: fn(usize, usize) -> f64,
+	fn generic_score(&self, point: &[f32], ignore_mass: usize, score_seen: fn(usize, usize) -> f64,
 							 score_unseen: fn(usize, usize) -> f64, damp: fn(usize, usize) -> f64,
 							 normalizer: fn(f64, usize) -> f64) -> f64 where
 		<C as TryFrom<usize>>::Error: Debug, <L as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug, <N as TryFrom<usize>>::Error: Debug {
@@ -240,12 +225,29 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 		let new_point = self.point_store.get_shingled_point(point);
 		sum = if (self.parallel_enabled) {
 			self.sampler_plus_trees.par_iter()
-				.map(|m| m.generic_dynamic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
+				.map(|m| m.generic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
 		} else {
 			self.sampler_plus_trees.iter()
-				.map(|m| m.generic_dynamic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
+				.map(|m| m.generic_score(&new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).sum()
 		};
 		sum / (self.sampler_plus_trees.len() as f64)
+	}
+
+
+	fn generic_conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64, ignore_mass: usize, score_seen: fn(usize, usize) -> f64,
+		score_unseen: fn(usize, usize) -> f64, damp: fn(usize, usize) -> f64,
+		normalizer: fn(f64, usize) -> f64)  -> Vec<usize> {
+		let new_point = self.point_store.get_shingled_point(point);
+		let new_positions = self.point_store.get_missing_values(positions);
+		let mut list : Vec<usize> = if (self.parallel_enabled) {
+			self.sampler_plus_trees.par_iter()
+				.map(|m| m.conditional_field(&new_positions, centrality, &new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).collect()
+		} else {
+			self.sampler_plus_trees.iter()
+				.map(|m| m.conditional_field(&new_positions, centrality, &new_point, &self.point_store, ignore_mass, score_seen, score_unseen, damp, normalizer)).collect()
+		};
+		list.sort();
+		list
 	}
 
 	fn get_size(&self) -> usize {
