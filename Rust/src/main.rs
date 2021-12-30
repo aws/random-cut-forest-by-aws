@@ -12,7 +12,6 @@ mod abstractnodeview;
 mod visitor;
 mod scalarscorevisitor;
 mod imputevisitor;
-mod othermain;
 
 extern crate rand;
 
