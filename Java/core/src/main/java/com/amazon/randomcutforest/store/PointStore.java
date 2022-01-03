@@ -184,11 +184,10 @@ public abstract class PointStore<Store, Point> implements IPointStore<Point> {
                     || startOfFreeSegment % dimensions == (nextSequenceIndex - 1) * baseDimension % dimensions) {
                 return baseDimension;
             }
-        } else {
-            if (!rotationEnabled) {
-                return dimensions;
-            }
+        } else if (!rotationEnabled) {
+            return dimensions;
         }
+
         // the following adds the padding for what exists;
         // then the padding for the new part; all mod (dimensions)
         // note that the expression is baseDimension when the condition

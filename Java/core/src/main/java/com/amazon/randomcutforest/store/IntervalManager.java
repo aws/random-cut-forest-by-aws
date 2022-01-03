@@ -15,10 +15,10 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.Arrays;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+
+import java.util.Arrays;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -44,7 +44,8 @@ public class IntervalManager {
 
     public void extendCapacity(int newCapacity) {
         checkArgument(newCapacity > capacity, " incorrect call, we can only increase capacity");
-        // the current capacity need not be the final capacity, for example in case of point store
+        // the current capacity need not be the final capacity, for example in case of
+        // point store
         if (freeIndexesStart.length == lastInUse) {
             freeIndexesStart = Arrays.copyOf(freeIndexesStart, lastInUse + 1);
             freeIndexesEnd = Arrays.copyOf(freeIndexesEnd, lastInUse + 1);
@@ -119,10 +120,6 @@ public class IntervalManager {
         freeIndexesStart[lastInUse] = index;
         freeIndexesEnd[lastInUse] = index;
         lastInUse += 1;
-    }
-
-    public int getSize() {
-        return 0;
     }
 
 }

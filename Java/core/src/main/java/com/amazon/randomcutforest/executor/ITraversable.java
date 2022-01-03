@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.function.BiFunction;
-
 import com.amazon.randomcutforest.IMultiVisitorFactory;
 import com.amazon.randomcutforest.IVisitorFactory;
 import com.amazon.randomcutforest.MultiVisitor;
@@ -81,11 +79,5 @@ public interface ITraversable {
      *         traversal query, otherwise false.
      */
     boolean isOutputReady();
-
-    default double dynamicScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
-            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
-            BiFunction<Double, Double, Double> normalizer) {
-        return 0;
-    }
 
 }

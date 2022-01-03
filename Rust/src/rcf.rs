@@ -36,26 +36,6 @@ pub(crate) fn score_unseen(x: usize, y : usize) -> f64 { 1.0/(x as f64 + 1.0) }
 pub(crate) fn normalizer(x: f64, y: usize) -> f64 { x * f64::log2(1.0 + y as f64)}
 pub(crate) fn damp(x: usize, y:usize) -> f64 { 1.0 - (x as f64)/(2.0 * y as f64) }
 
-pub fn caching_profile(bounding_box_cache_fraction: f64, number_of_trees: usize) -> Vec<f64> {
-	let mut total_fraction = bounding_box_cache_fraction * number_of_trees as f64;
-	let mut answer: Vec<f64> = vec![bounding_box_cache_fraction; number_of_trees];
-	if bounding_box_cache_fraction > 0.2 && bounding_box_cache_fraction < 0.7 {
-		for i in 0..number_of_trees {
-			let mut amount = bounding_box_cache_fraction;
-			let mut excess = total_fraction - 0.2 * (number_of_trees - i) as f64;
-			if excess > 0.5 {
-				amount = 0.7;
-			} else {
-				amount = 0.2 + excess;
-			}
-			total_fraction -= amount;
-			answer[i] = amount;
-			assert!(total_fraction >= 0.0);
-		}
-	}
-	return answer;
-}
-
 pub trait RCF {
 	fn validate_update(&self, point: &[f32]) {
 		let expected = if !self.is_internal_shingling_enabled() { self.get_dimensions() } else { self.get_dimensions() / self.get_shingle_size() };
@@ -137,7 +117,6 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 		let new_random_seed = rng.next_u64();
 		let mut models: Vec<SamplerPlusTree<C, P, N>> = Vec::new();
         let using_transforms = internal_rotation; // other conditions may be added eventually
-		let allocate = caching_profile(bounding_box_cache_fraction, number_of_trees);
 		for i in 0..number_of_trees {
 			models.push(SamplerPlusTree::<C, P, N>::new(
 				dimensions,
@@ -146,7 +125,7 @@ impl<C: Max + Copy, L: Max + Copy + std::cmp::PartialEq, P: Max + Copy + std::cm
 				rng.next_u64(),
 				store_attributes,
 				time_decay,
-				initial_accept_fraction, allocate[i]));
+				initial_accept_fraction, bounding_box_cache_fraction));
 		}
 		RCFStruct {
 			random_seed,
@@ -172,7 +151,7 @@ pub fn create_rcf(dimensions: usize, shingle_size: usize,
 				  capacity: usize, number_of_trees: usize, random_seed: u64, store_attributes: bool, parallel_enabled: bool, internal_shingling: bool, internal_rotation: bool, time_decay: f64, initial_accept_fraction: f64, bounding_box_cache_fraction: f64)
 				  -> Box<dyn RCF>  {
 	if (dimensions < u8::MAX as usize)  && (capacity -1 <= u8::MAX as usize) {
-		if (capacity*(1+number_of_trees)*shingle_size  <= u16::MAX as usize) {
+		if capacity*(1+number_of_trees)*shingle_size  <= u16::MAX as usize {
 			println!(" choosing RCF_Tiny");
 			Box::new(RCFTiny::new(dimensions, shingle_size, capacity, number_of_trees, random_seed, store_attributes,parallel_enabled, internal_shingling, internal_rotation,time_decay, initial_accept_fraction, bounding_box_cache_fraction))
 		} else {

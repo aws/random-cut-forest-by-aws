@@ -22,14 +22,14 @@ import java.util.Set;
 
 import com.amazon.randomcutforest.store.IPointStoreView;
 
-public class AbstractNodeView implements INodeView {
+public class NodeView implements INodeView {
     AbstractNodeStore nodeStore;
     int currentNodeOffset;
     double[] leafPoint;
     IPointStoreView<float[]> pointStoreView;
     BoundingBoxFloat currentBox;
 
-    public AbstractNodeView(AbstractNodeStore nodeStore, IPointStoreView<float[]> pointStoreView, int root) {
+    public NodeView(AbstractNodeStore nodeStore, IPointStoreView<float[]> pointStoreView, int root) {
         this.currentNodeOffset = root;
         this.pointStoreView = pointStoreView;
         this.nodeStore = nodeStore;
@@ -41,14 +41,13 @@ public class AbstractNodeView implements INodeView {
 
     public IBoundingBoxView getBoundingBox() {
         if (currentBox == null) {
-            return nodeStore.getBox(currentNodeOffset, pointStoreView);
+            return nodeStore.getBox(currentNodeOffset);
         }
         return currentBox;
     }
 
     public IBoundingBoxView getSiblingBoundingBox(double[] point) {
-        return (toLeft(point)) ? nodeStore.getRightBox(currentNodeOffset, pointStoreView)
-                : nodeStore.getLeftBox(currentNodeOffset, pointStoreView);
+        return (toLeft(point)) ? nodeStore.getRightBox(currentNodeOffset) : nodeStore.getLeftBox(currentNodeOffset);
     }
 
     public int getCutDimension() {

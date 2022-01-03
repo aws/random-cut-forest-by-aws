@@ -1,9 +1,9 @@
 
 use std::io::empty;
-use crate::abstractnodeview::NodeView;
 use crate::boundingbox::BoundingBox;
 use crate::newnodestore::NewNodeStore;
 use crate::newnodestore::NodeStoreView;
+use crate::nodeview::NodeView;
 use crate::pointstore::PointStoreView;
 use crate::rcf::Max;
 use crate::visitor::{Visitor, VisitorDescriptor};
@@ -80,8 +80,11 @@ impl Visitor<f64> for ScalarScoreVisitor {
             use_box_for_accept: false,
             use_child_boxes_for_accept: false,
             use_mass_distribution_for_accept: false,
-            use_cuts_for_accept: false,
-            maintain_shadow_box_for_accept: self.ignore_mass > 0
+            maintain_shadow_box_for_accept: self.ignore_mass > 0,
+            use_box_for_trigger: false,
+            use_child_boxes_for_trigger: false,
+            use_child_mass_distribution_for_trigger: false,
+            trigger_manipulation_needs_node_view_accept_fields: false
         }
     }
 }

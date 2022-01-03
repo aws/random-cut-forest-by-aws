@@ -56,6 +56,7 @@ public abstract class AbstractNodeStore {
     protected IntervalManager freeNodeManager;
     protected double[] rangeSumData;
     protected float[] boundingBoxData;
+    protected final IPointStoreView<float[]> pointStoreView;
     protected final HashMap<Integer, Integer> leafMass;
 
     /**
@@ -63,7 +64,8 @@ public abstract class AbstractNodeStore {
      *
      * @param capacity The maximum number of Nodes whose data can be stored.
      */
-    public AbstractNodeStore(int capacity, int dimensions, double nodeCacheFraction) {
+    public AbstractNodeStore(int capacity, int dimensions, double nodeCacheFraction,
+            IPointStoreView<float[]> pointStoreView) {
         this.capacity = capacity;
         this.dimensions = dimensions;
         freeNodeManager = new IntervalManager(capacity - 1);
@@ -73,6 +75,7 @@ public abstract class AbstractNodeStore {
         int cache_limit = (int) Math.floor(nodeCacheFraction * capacity);
         rangeSumData = new double[cache_limit];
         boundingBoxData = new float[2 * dimensions * cache_limit];
+        this.pointStoreView = pointStoreView;
     }
 
     abstract int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass);
@@ -152,7 +155,7 @@ public abstract class AbstractNodeStore {
         return false;
     }
 
-    public BoundingBoxFloat getBox(int index, IPointStoreView<float[]> pointStoreView) {
+    public BoundingBoxFloat getBox(int index) {
         if (isLeaf(index)) {
             float[] point = pointStoreView.get(getPointIndex(index));
             return new BoundingBoxFloat(point, point);
@@ -166,7 +169,7 @@ public abstract class AbstractNodeStore {
     }
 
     public BoundingBoxFloat reconstructBox(int index, IPointStoreView<float[]> pointStoreView) {
-        BoundingBoxFloat mutatedBoundingBox = getBox(getLeftIndex(index), pointStoreView);
+        BoundingBoxFloat mutatedBoundingBox = getBox(getLeftIndex(index));
         growNodeBox(mutatedBoundingBox, pointStoreView, index, getRightIndex(index));
         return mutatedBoundingBox;
     }
@@ -254,7 +257,7 @@ public abstract class AbstractNodeStore {
         } else if (otherBox != null) {
             return otherBox.probabilityOfCut(point);
         } else {
-            BoundingBoxFloat box = getBox(node, pointStoreView);
+            BoundingBoxFloat box = getBox(node);
             return box.probabilityOfCut(point);
         }
     }
@@ -335,51 +338,6 @@ public abstract class AbstractNodeStore {
 
     public abstract void replaceParentBySibling(int grandParent, int parent, int node);
 
-    public double dynamicScore2(int root, int ignoreMass, double[] point, IPointStoreView<float[]> pointStoreView,
-            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            Function<Double, Double> treeDamp) {
-        if (root == 0) {
-            return 0.0;
-        }
-        float[] floatPoint = toFloatArray(point);
-        Stack<int[]> path = getPath(root, floatPoint, false);
-        int[] leafState = path.pop();
-        double depth = path.size(); // accounts for level 0 at root
-        double mass = getMass(leafState[0]);
-        float[] oldPoint = pointStoreView.get(getPointIndex(leafState[0]));
-
-        boolean shadow = (mass <= ignoreMass);
-        if (Arrays.equals(floatPoint, oldPoint) && !shadow) {
-            return treeDamp.apply(mass) * scoreSeen.apply(depth, mass);
-        }
-
-        double scoreValue = scoreUnseen.apply(depth, mass);
-        if (!path.isEmpty()) {
-            int sibling = leafState[1];
-            int parent = path.lastElement()[0];
-            BoundingBoxFloat boundingBox = (shadow) ? getBox(sibling, pointStoreView)
-                    : (nodeCacheFraction < SWITCH_FRACTION) ? getBox(parent, pointStoreView) : null;
-            while (!path.isEmpty()) { // otherwise a single node at root
-                depth -= 1;
-                mass = getMass(parent);
-                double prob = (!shadow) ? probabilityOfCut(parent, floatPoint, pointStoreView, boundingBox)
-                        : boundingBox.probabilityOfCut(floatPoint);
-                if (prob == 0.0) {
-                    break;
-                }
-                scoreValue = (1 - prob) * scoreValue + prob * scoreUnseen.apply(depth, mass);
-                sibling = path.pop()[1];
-                if (!path.isEmpty()) {
-                    parent = path.lastElement()[0];
-                    if (boundingBox != null) {
-                        growNodeBox(boundingBox, pointStoreView, parent, sibling);
-                    }
-                }
-            }
-        }
-        return scoreValue;
-    }
-
     public double dynamicScore(int root, int ignoreMass, double[] point, IPointStoreView<float[]> pointStoreView,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             Function<Double, Double> treeDamp) {
@@ -420,7 +378,7 @@ public abstract class AbstractNodeStore {
                 if (answer[2] == 1) {
                     growNodeBox(box, pointStoreView, node, getRightIndex(node));
                 } else {
-                    box.copyFrom(getBox(getRightIndex(node), pointStoreView));
+                    box.copyFrom(getBox(getRightIndex(node)));
                     answer[2] = 1;
                 }
             }
@@ -431,7 +389,7 @@ public abstract class AbstractNodeStore {
                 if (answer[2] == 1) {
                     growNodeBox(box, pointStoreView, node, getLeftIndex(node));
                 } else {
-                    box.copyFrom(getBox(getLeftIndex(node), pointStoreView));
+                    box.copyFrom(getBox(getLeftIndex(node)));
                     answer[2] = 1;
                 }
             }
@@ -460,7 +418,7 @@ public abstract class AbstractNodeStore {
 
     protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, int root,
             IPointStoreView<float[]> pointStoreView, Function<double[], double[]> projectToTree) {
-        AbstractNodeView currentNodeView = new AbstractNodeView(this, pointStoreView, root);
+        NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, root, 0);
     }
 
@@ -468,16 +426,16 @@ public abstract class AbstractNodeStore {
         return point[getCutDimension(currentNodeOffset)] <= cutValue[currentNodeOffset - 1];
     }
 
-    BoundingBoxFloat getLeftBox(int index, IPointStoreView<float[]> pointStoreView) {
-        return getBox(getLeftIndex(index), pointStoreView);
+    BoundingBoxFloat getLeftBox(int index) {
+        return getBox(getLeftIndex(index));
     }
 
-    BoundingBoxFloat getRightBox(int index, IPointStoreView<float[]> pointStoreView) {
-        return getBox(getRightIndex(index), pointStoreView);
+    BoundingBoxFloat getRightBox(int index) {
+        return getBox(getRightIndex(index));
     }
 
-    protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor,
-            AbstractNodeView currentNodeView, int node, int depthOfNode) {
+    protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeView currentNodeView,
+            int node, int depthOfNode) {
         if (isLeaf(node)) {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
@@ -495,12 +453,12 @@ public abstract class AbstractNodeStore {
 
     protected <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, int root,
             IPointStoreView<float[]> pointStoreView, Function<double[], double[]> liftToTree) {
-        AbstractNodeView currentNodeView = new AbstractNodeView(this, pointStoreView, root);
+        NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traverseTreeMulti(point, visitor, currentNodeView, root, 0);
     }
 
-    protected <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, AbstractNodeView currentNodeView,
-            int node, int depthOfNode) {
+    protected <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeView currentNodeView, int node,
+            int depthOfNode) {
         if (isLeaf(node)) {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
             visitor.acceptLeaf(currentNodeView, depthOfNode);

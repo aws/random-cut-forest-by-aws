@@ -62,9 +62,9 @@ impl<C: Max + Copy, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> SamplerP
             let accept_state = self.sampler.accept_point(initial, weight as f32, point_index, point_attribute);
 
             self.entries_seen += 1;
-            if accept_state.0 {
-                let delete_ref = if accept_state.1 != usize::MAX {
-                    self.tree.delete(accept_state.1, accept_state.3, point_store)
+            if accept_state.eviction_occurred {
+                let delete_ref = if accept_state.point_index != usize::MAX {
+                    self.tree.delete(accept_state.point_index, accept_state.point_attribute, point_store)
                 } else {usize::MAX};
 
                 // the tree may choose to return a reference to an existing point

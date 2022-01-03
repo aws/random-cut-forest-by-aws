@@ -29,6 +29,7 @@ import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
+import com.amazon.randomcutforest.tree.NewRandomCutTree;
 
 /**
  * A SamplerPlusTree corresponds to a combination of sampler and tree where the
@@ -137,10 +138,10 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
 
     // the following is for testing RCF3.0 alongside RCF2.0 and will be merged into
     // getAnomalyScore()
-    public double dynamicScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+    public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
-        return tree.dynamicScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);
+        return ((NewRandomCutTree) tree).scalarScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);
     }
 
 }

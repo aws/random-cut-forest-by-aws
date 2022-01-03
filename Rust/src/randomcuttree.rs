@@ -13,12 +13,12 @@ use crate::rcf::score_unseen;
 use crate::rcf::normalizer;
 use crate::pointstore::PointStoreView;
 use rand_chacha::ChaCha20Rng;
-use crate::abstractnodeview::AbstractNodeView;
 use crate::imputevisitor::ImputeVisitor;
+use crate::nodeview::BasicNodeView;
 use crate::randomcuttree::rand::RngCore;
 use crate::randomcuttree::rand::Rng;
 use crate::scalarscorevisitor::ScalarScoreVisitor;
-use crate::visitor::{MultiVisitorDescriptor, StreamingMultiVisitor, Visitor, VisitorDescriptor};
+use crate::visitor::{StreamingMultiVisitor, UniqueMultiVisitor, Visitor, VisitorDescriptor};
 
 pub type StoreInUse = NewNodeStore<u8,u16,u8>;
 
@@ -55,47 +55,41 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 
 	pub fn add(&mut self, point_index: usize, point_attribute: usize, point_store: &dyn PointStoreView) -> usize
 		where <C as TryFrom<usize>>::Error: Debug, <P as TryFrom<usize>>::Error: Debug,  <N as TryFrom<usize>>::Error: Debug {
+
 		if self.root == 0 {
-			self.root = self.node_store.add_leaf(0, point_index, 1);
+			self.root = self.node_store.leaf_index(point_index);
 			self.tree_mass = 1;
 			point_index
 		} else {
 			let point = &point_store.get_copy(point_index);
-			let mut leaf_path = self.node_store.get_path(self.root, point);
-			let (leaf_node, leaf_saved_sibling) = leaf_path.pop().unwrap();
-			let mut sibling = leaf_saved_sibling;
-			let leaf_point_index = self.node_store.get_point_index(leaf_node);
+			let mut path_to_root = self.node_store.get_path(self.root, point);
+			let (mut node,mut sibling) = path_to_root.pop().unwrap();
+
+			let leaf_point_index = self.node_store.get_point_index(node);
 			let old_point = &point_store.get_copy(leaf_point_index);
-			let mut saved_parent = 0;
-			if leaf_path.len() != 0 {
-				saved_parent = leaf_path.last().unwrap().0;
-			}
 
 			self.tree_mass += 1;
 			if point.eq(old_point) {
-				self.node_store.increase_leaf_mass(leaf_node);
-				if saved_parent != 0 {
-					self.node_store.manage_ancestors_add(leaf_path,point,point_store);
-				}
+				self.node_store.increase_leaf_mass(node);
+				self.node_store.manage_ancestors_add(&mut path_to_root, point, point_store, true);
 				return leaf_point_index
-			} else {
-				let mut node = leaf_node;
+			}else {
+				let mut saved_parent = if path_to_root.len() != 0 { path_to_root.last().unwrap().0} else {0};
 				let mut saved_node = node;
-				let mut parent = saved_parent;
-				let mut saved_mass = self.node_store.get_mass(leaf_node);
-				let mut saved_cut_value: f32 = 0.0;
 				let mut current_box = BoundingBox::new(old_point, old_point);
 				let mut saved_box = current_box.copy();
-				let mut saved_dim: usize = usize::MAX; // deliberate, to be converted later
 				let mut parent_path : Vec<(usize,usize)> = Vec::new();
 				let mut rng = ChaCha20Rng::seed_from_u64(self.random_seed);
 				self.random_seed = rng.next_u64();
+
+				let mut parent = saved_parent;
+				let mut saved_cut = Cut::new(usize::MAX, 0.0);
+				/** the loop has the execute once */
 				loop {
 					let factor: f64 = rng.gen();
-					let (new_cut, separation, inside_box) = current_box.get_cut_and_separation(factor, point,false);
+					let (new_cut, separation) = Cut::random_cut_and_separation(&current_box,factor, point);
 					if separation {
-						saved_cut_value = new_cut.get_value();
-						saved_dim = new_cut.get_dimension();
+						saved_cut = new_cut;
 						saved_parent = parent;
 						saved_node = node;
 						saved_box = current_box.copy();
@@ -103,47 +97,31 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 					} else {
 						parent_path.push((node,sibling));
 					}
-
-					if (saved_dim == usize::MAX) {
-						println!("cut failed ");
-						panic!()
-					}
-
+					assert!(saved_cut.dimension != usize::MAX);
 
 					if parent == 0 {
 						break;
 					} else {
 						self.node_store.grow_node_box(&mut current_box, point_store, parent, sibling);
-						let (a, b) = leaf_path.pop().unwrap();
+						let (a, b) = path_to_root.pop().unwrap();
 						node = a;
 						sibling = b;
-						parent = if leaf_path.len() != 0 { leaf_path.last().unwrap().0 } else { 0 };
+						parent = if path_to_root.len() != 0 { path_to_root.last().unwrap().0 } else { 0 };
 					}
 				}
-				let new_leaf_node = self.node_store.add_leaf(0, point_index, 1);
-				let mut merged_node: usize;
-				let saved_mass = self.node_store.get_mass(saved_node);
-
-				if point[saved_dim] <= saved_cut_value {
-					merged_node = self.node_store.add_node(saved_parent, new_leaf_node, saved_node, saved_dim.try_into().unwrap(), saved_cut_value, saved_mass + 1);
-			        //self.node_store.check_right(saved_node,saved_dim,saved_cut_value,point_store);
-				} else {
-					merged_node = self.node_store.add_node(saved_parent, saved_node, new_leaf_node, saved_dim.try_into().unwrap(), saved_cut_value, saved_mass + 1);
-					//self.node_store.check_left(saved_node,saved_dim,saved_cut_value,point_store);
-				}
-
-				saved_box.check_contains_and_add_point(point);
-				self.node_store.add_box(merged_node, &saved_box);
 
 				if saved_parent != 0 {
-					// add the new node
-					self.node_store.replace_node(saved_parent, saved_node, merged_node);
-
-					while(!parent_path.is_empty()){
-						leaf_path.push(parent_path.pop().unwrap());
+					while !parent_path.is_empty(){
+						path_to_root.push(parent_path.pop().unwrap());
 					}
-					// fix bounding boxes and mass
-					self.node_store.manage_ancestors_add(leaf_path, point, point_store);
+					assert!(path_to_root.last().unwrap().0 == saved_parent);
+				} else {
+					assert!(path_to_root.len() == 0);
+				}
+				let merged_node = self.node_store.add_node(saved_parent,point,saved_node,point_index,saved_cut, &saved_box);
+
+				if saved_parent != 0 {
+					self.node_store.manage_ancestors_add(&mut path_to_root, point, point_store,false);
 				} else {
 					self.root = merged_node;
 				}
@@ -166,7 +144,7 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 
 		let leaf_point_index = self.node_store.get_point_index(leaf_node);
 
-		if (leaf_point_index != point_index) {
+		if leaf_point_index != point_index {
 			if !point_store.is_equal(point,leaf_point_index) {
 				println!(" deleting wrong node; looking for {} found {}", point_index, leaf_point_index);
 				let old_point =point_store.get_copy(leaf_point_index);
@@ -189,10 +167,13 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 					self.node_store.set_root(self.root);
 				} else {
 					self.node_store.replace_node(grand_parent, parent, leaf_saved_sibling);
-					self.node_store.manage_ancestors_delete(leaf_path, point, point_store);
+					self.node_store.manage_ancestors_delete(&mut leaf_path, point, point_store,false);
 				}
+
 				self.node_store.delete_internal_node(parent);
 			}
+		} else {
+			self.node_store.manage_ancestors_delete(&mut leaf_path, point, point_store,true);
 		}
 		leaf_point_index
 	}
@@ -206,7 +187,7 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 		}
 
 		let mut visitor = ScalarScoreVisitor::new(self.tree_mass,ignore_mass,damp,score_seen,score_unseen,normalizer);
-		let mut node_view = AbstractNodeView::new(self.dimensions,self.root,self.node_store.use_path_for_box(),visitor.descriptor(),visitor.multivisitor_descriptor());
+		let mut node_view = BasicNodeView::new(self.dimensions,self.root,self.node_store.use_path_for_box(),false,false);
 		node_view.traverse(&mut visitor,point,point_store,&self.node_store);
 		normalizer(visitor.get_result(),self.tree_mass)
 	}
@@ -219,9 +200,9 @@ impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C,P,N> where
 		}
 
 		let mut visitor = ImputeVisitor::new(positions,centrality,self.tree_mass,ignore_mass,damp,score_seen,score_unseen,normalizer);
-		let mut node_view = AbstractNodeView::new(self.dimensions, self.root, self.node_store.use_path_for_box(), visitor.descriptor(),visitor.multivisitor_descriptor());
+		let mut node_view = BasicNodeView::new(self.dimensions,self.root,self.node_store.use_path_for_box(),true,false);
 
-		node_view.traverse_multi(&mut visitor,point,point_store,&self.node_store);
+		node_view.traverse_unique_multi(&mut visitor,point,point_store,&self.node_store);
 		visitor.get_arguments()
 	}
 

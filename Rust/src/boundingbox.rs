@@ -32,10 +32,10 @@ impl BoundingBox {
         let old_sum = self.range_sum;
 
         for (x, y) in self.min_values.iter_mut().zip(minvalues) {
-            *x = if (*x < *y) { *x } else { *y };
+            *x = if *x < *y { *x } else { *y };
         }
         for (x, y) in self.max_values.iter_mut().zip(maxvalues) {
-            *x = if (*x < *y) { *y } else { *x };
+            *x = if *x < *y { *y } else { *x };
         }
 
         self.range_sum = self.min_values.iter().zip(self.get_max_values()).map(|(x, y)| (y - x) as f64).sum();
@@ -49,11 +49,6 @@ impl BoundingBox {
         let not_inside = self.min_values.iter().zip(values).zip(self.get_max_values()).any(|((x, y), z)|
             x > y || y > z);
         return !not_inside;
-    }
-
-
-    pub fn add_box_and_check_absorbs(&mut self, other_box: &BoundingBox) -> bool {
-        self.two_arrays(other_box.get_min_values(), other_box.get_max_values())
     }
 
     pub fn copy_from(&mut self, other_box: &BoundingBox) {
@@ -92,45 +87,6 @@ impl BoundingBox {
         }
     }
 
-
-    pub fn get_cut_and_separation(&self, factor: f64, point: &[f32], verbose:bool) -> (Cut, bool, bool) {
-
-        //let mut range : f64 = 0.0;
-        let mut range: f64 = self.min_values.iter().zip(self.get_max_values())
-            .zip(point).map(|((x, y), z)|
-            { if z < x { (x - z) as f64 } else if y < z { (z - y) as f64 } else { 0.0 } }).sum();
-        if range == 0.0 {
-            return (Cut::new(usize::MAX, 0.0), false, true);
-        }
-        range += self.range_sum;
-        range *= factor;
-
-        let mut dim: usize = 0;
-        let mut new_cut : f32  = f32::MAX;
-
-        while dim < point.len() {
-            let minv = if point[dim] < self.min_values[dim] { point[dim] } else { self.min_values[dim] };
-            let maxv = if point[dim] > self.max_values[dim] { point[dim] } else { self.max_values[dim] };
-
-            let gap: f32 = maxv - minv;
-            if gap > range as f32 {
-                new_cut = minv + range as f32; // precision lost here
-                if new_cut <= minv || new_cut >= maxv {
-                    new_cut = minv;
-                }
-                break;
-            }
-            range = range - gap as f64;
-            dim += 1;
-        }
-
-        let minvalue = self.min_values[dim];
-        let maxvalue = self.max_values[dim];
-
-        let separation: bool = ((point[dim] <= new_cut) && (new_cut < minvalue)) ||
-            ((maxvalue <= new_cut) && (new_cut < point[dim]));
-        (Cut::new(dim.try_into().unwrap(), new_cut), separation, false)
-    }
 
     pub fn copy(&self) -> BoundingBox {
         BoundingBox::new(&self.min_values, &self.max_values)

@@ -1,12 +1,12 @@
 use std::cmp::min;
 use std::io::empty;
-use crate::abstractnodeview::NodeView;
 use crate::boundingbox::BoundingBox;
 use crate::newnodestore::NewNodeStore;
 use crate::newnodestore::NodeStoreView;
+use crate::nodeview::NodeView;
 use crate::pointstore::PointStoreView;
 use crate::rcf::Max;
-use crate::visitor::{MultiVisitorDescriptor, StreamingMultiVisitor, Visitor, VisitorDescriptor};
+use crate::visitor::{StreamingMultiVisitor, UniqueMultiVisitor, Visitor, VisitorDescriptor};
 
 #[repr(C)]
 pub struct ImputeVisitor {
@@ -76,7 +76,7 @@ impl Visitor<f64> for ImputeVisitor {
     }
 
     fn has_converged(&self) -> bool {
-        self.values.last().unwrap().0
+            self.values.last().unwrap().0
     }
 
     fn descriptor(&self) -> VisitorDescriptor {
@@ -85,22 +85,16 @@ impl Visitor<f64> for ImputeVisitor {
             use_box_for_accept: false,
             use_child_boxes_for_accept: false,
             use_mass_distribution_for_accept: false,
-            use_cuts_for_accept: false,
-            maintain_shadow_box_for_accept: false
-        }
-    }
-    fn multivisitor_descriptor(&self) -> MultiVisitorDescriptor {
-        MultiVisitorDescriptor{
+            maintain_shadow_box_for_accept: false,
             use_box_for_trigger: false,
             use_child_boxes_for_trigger: false,
-            use_mass_distribution_for_trigger: false,
-            use_cuts_for_trigger: true,
+            use_child_mass_distribution_for_trigger: false,
             trigger_manipulation_needs_node_view_accept_fields: false
         }
     }
 }
 
-impl StreamingMultiVisitor<f64,usize> for ImputeVisitor {
+impl UniqueMultiVisitor<f64,usize> for ImputeVisitor {
     fn get_arguments(&self) -> usize {
         assert_eq!(self.values.len(), 1, "incorrect state");
         self.values.last().unwrap().2
@@ -110,11 +104,7 @@ impl StreamingMultiVisitor<f64,usize> for ImputeVisitor {
         self.missing.contains(&node_view.get_cut_dimension())
     }
 
-    fn init_trigger(&mut self, point: &[f32],node_view: &dyn NodeView) {}
-
-    fn half_trigger(&mut self, point: &[f32],node_view: &dyn NodeView) {}
-
-    fn close_trigger(&mut self, point: &[f32],node_view: &dyn NodeView) {
+    fn combine_branches(&mut self, point: &[f32], node_view: &dyn NodeView) {
         assert!(self.values.len() >= 2, "incorrect state");
         let (first_converged, first_score, first_index, first_result) = self.values.pop().unwrap();
         let (second_converged, second_score, second_index, second_result) = self.values.pop().unwrap();
@@ -124,8 +114,12 @@ impl StreamingMultiVisitor<f64,usize> for ImputeVisitor {
             self.values.push((first_converged || second_converged, second_score, second_index, second_result));
         }
     }
-}
 
+    fn unique_answer(&self) -> &[f32] {
+        assert!(self.values.len() >= 1, "incorrect state, at least one leaf must have been visited");
+        &self.values.last().unwrap().3
+    }
+}
 
 
 

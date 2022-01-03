@@ -113,7 +113,7 @@ public abstract class RCF3PointStore implements IPointStore<float[]> {
      */
     @Override
     public int decrementRefCount(int index) {
-        // indexManager.checkValidIndex(index);
+        checkArgument((refCount[index] & 0xff) > 0, " cannot decrement index");
         Integer value = refCountMap.remove(index);
         if (value == null) {
             if ((refCount[index] & 0xff) == 1) {
@@ -161,10 +161,9 @@ public abstract class RCF3PointStore implements IPointStore<float[]> {
                     || startOfFreeSegment % dimensions == (nextSequenceIndex - 1) * baseDimension % dimensions) {
                 return baseDimension;
             }
-        } else {
-            if (!rotationEnabled) {
-                return dimensions;
-            }
+        } else if (!rotationEnabled) {
+            return dimensions;
+
         }
         // the following adds the padding for what exists;
         // then the padding for the new part; all mod (dimensions)
@@ -358,14 +357,6 @@ public abstract class RCF3PointStore implements IPointStore<float[]> {
     public double[] getInternalShingle() {
         checkState(internalShinglingEnabled, "internal shingling is not enabled");
         return copyShingle();
-    }
-
-    /**
-     *
-     * @return the number of indices stored
-     */
-    public int size() {
-        return indexManager.getSize();
     }
 
     /**

@@ -13,6 +13,14 @@ current_size : usize,
 accepted_state : (f32, usize, usize)
 }
 
+#[repr(C)]
+pub struct SamplerAcceptState {
+    pub(crate) eviction_occurred: bool,
+    pub(crate) point_index: usize,
+    pub(crate) evicted_weight: f32,
+    pub(crate) point_attribute: usize
+}
+
 impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
     P: std::convert::TryFrom<usize>, usize: From<P> {
     pub fn new(capacity: usize,  store_attributes: bool) -> Self {
@@ -82,8 +90,7 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
     pub fn add_point(&mut self, point_index: usize) where <P as TryFrom<usize>>::Error: Debug {
         if point_index != usize::MAX {
             assert!(self.current_size < self.capacity.into(), "sampler full");
-            assert!(self.accepted_state.1 != usize::MAX,
-                    "this method should only be called after a successful call to accept_sample(long)");
+            assert_ne!(self.accepted_state.1, usize::MAX, "this method should only be called after a successful call to accept_sample(long)");
 
             self.weights[self.current_size] = self.accepted_state.0;
             self.points[self.current_size] = point_index.try_into().unwrap();
@@ -112,19 +119,24 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
         }
     }
 
-    pub fn accept_point(&mut self, initial: bool, weight: f32, point_index: usize, attribute: usize) -> (bool, usize, f32, usize) {
+
+    pub fn accept_point(&mut self, initial: bool, weight: f32, point_index: usize, attribute: usize) -> SamplerAcceptState {
+        let mut return_val = (true, usize::MAX, weight, usize::MAX);
         if initial || (weight < self.weights[0]) {
             self.accepted_state = (weight, point_index, attribute);
-            //println!("adding {}", weight);
-            let mut return_val = (true, usize::MAX, weight, usize::MAX);
             if !initial {
                 let partial = self.evict_max();
-                //println!(" evicing {} weight {} ",partial.0,partial.1);
                 return_val = (true, partial.0, partial.1, partial.2);
             }
-            return return_val;
+        } else {
+            return_val.0 = false;
         }
-        (false, usize::MAX, weight, usize::MAX)
+        return SamplerAcceptState {
+            eviction_occurred: return_val.0,
+            point_index : return_val.1,
+            evicted_weight: return_val.2,
+            point_attribute: return_val.3
+        }
     }
 
     /**

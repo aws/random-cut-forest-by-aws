@@ -17,6 +17,8 @@ package com.amazon.randomcutforest.tree;
 
 import java.util.Arrays;
 
+import com.amazon.randomcutforest.store.IPointStoreView;
+
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
  * defined by its location in the tree (parent and child nodes), its random cut,
@@ -47,8 +49,9 @@ public class NodeStoreMedium extends AbstractNodeStore {
      *
      * @param capacity The maximum number of Nodes whose data can be stored.
      */
-    public NodeStoreMedium(int capacity, int dimensions, double nodeCacheFraction) {
-        super(capacity, dimensions, nodeCacheFraction);
+    public NodeStoreMedium(int capacity, int dimensions, double nodeCacheFraction,
+            IPointStoreView<float[]> pointStoreView) {
+        super(capacity, dimensions, nodeCacheFraction, pointStoreView);
         mass = new char[capacity - 1];
         Arrays.fill(mass, (char) 0);
         if (nodeCacheFraction > 0) {

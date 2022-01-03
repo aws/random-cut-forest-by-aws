@@ -73,11 +73,14 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
         randomSeed = builder.randomSeed;
         outputAfter = builder.outputAfter.orElse(capacity / 4);
         if (capacity <= 256 && pointStoreView.getDimensions() <= 256) {
-            nodeStore = new NodeStoreSmall(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction);
+            nodeStore = new NodeStoreSmall(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
+                    pointStoreView);
         } else if (capacity <= Character.MAX_VALUE && pointStoreView.getDimensions() <= Character.MAX_VALUE) {
-            nodeStore = new NodeStoreMedium(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction);
+            nodeStore = new NodeStoreMedium(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
+                    pointStoreView);
         } else {
-            nodeStore = new NodeStoreLarge(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction);
+            nodeStore = new NodeStoreLarge(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
+                    pointStoreView);
         }
     }
 
@@ -306,7 +309,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
         return leafPointIndex;
     }
 
-    public double dynamicScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+    public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
         Function<Double, Double> treeDamp = x -> damp.apply(x, treeMass * 1.0);

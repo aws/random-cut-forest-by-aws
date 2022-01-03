@@ -806,9 +806,17 @@ public class RCF3 {
         double result = 0;
         double[] changedPoint = transformToShingledPoint(point);
 
-        result = updateExecutor.getComponents().stream()
-                .map(x -> x.dynamicScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer))
-                .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
+        if (parallelExecutionEnabled) {
+            result = updateExecutor.getComponents().parallelStream()
+                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
+                            normalizer))
+                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
+        } else {
+            result = updateExecutor.getComponents().stream()
+                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
+                            normalizer))
+                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
+        }
         return result / numberOfTrees;
 
     }

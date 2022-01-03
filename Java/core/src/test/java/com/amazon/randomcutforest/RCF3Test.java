@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
@@ -102,29 +103,14 @@ public class RCF3Test {
         double val = 0;
         for (int j = 0; j < shingledData.length; j++) {
 
-            // double score = forest.getAnomalyScore(dataWithKey.data[j+count]);
+            double score = forest.getAnomalyScore(dataWithKey.data[j + count]);
             double newScore = forest.dynamicScore(dataWithKey.data[count + j]);
-            // double otherScore = otherForest.getAnomalyScore(shingledData[j]);
-            // assertEquals(score,newScore,1e-5);
-            // assertEquals(score,otherScore,1e-5);
-
-            // double dynamicScore = forest.getDynamicScore(dataWithKey.data[j + count], 5,
-            // CommonUtils::defaultScoreSeenFunction,
-            // CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-            // double newDynamicScore = forest.dynamicScore(dataWithKey.data[j + count], 5,
-            // CommonUtils::defaultScoreSeenFunction,
-            // CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction,
-            // (x,y) -> x);
-            // double otherDynamicScore = otherForest.getDynamicScore(shingledData[j], 5,
-            // CommonUtils::defaultScoreSeenFunction,
-            // CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
-
-            // assertEquals(dynamicScore,newDynamicScore,1e-5);
-            // assertEquals(otherDynamicScore,dynamicScore,1e-2);
-            // there is more loss of precision in the otherDynamicScore
+            double otherScore = otherForest.getAnomalyScore(shingledData[j]);
+            assertEquals(score, newScore, 0.1);
+            assertEquals(score, otherScore, 1e-5);
 
             forest.update(dataWithKey.data[j + count]);
-            // otherForest.update(shingledData[j]);
+            otherForest.update(shingledData[j]);
         }
     }
 
@@ -150,15 +136,15 @@ public class RCF3Test {
 
         for (int j = 0; j < dataWithKey.data.length - test; j++) {
             forest.update(dataWithKey.data[j]);
-            // otherForest.update(dataWithKey.data[j]);
+            otherForest.update(dataWithKey.data[j]);
         }
 
         for (int j = dataWithKey.data.length - test; j < dataWithKey.data.length; j++) {
             double[] first = forest.extrapolate(1);
-            // double [] second = otherForest.extrapolate(1);
-            // assertArrayEquals(first,second,1e-2);
+            double[] second = otherForest.extrapolate(1);
+            assertArrayEquals(first, second, 1e-2);
             forest.update(dataWithKey.data[j]);
-            // otherForest.update(dataWithKey.data[j]);
+            otherForest.update(dataWithKey.data[j]);
         }
 
     }
@@ -180,12 +166,10 @@ public class RCF3Test {
                 .initialAcceptFraction(0.1).precision(Precision.FLOAT_32).sampleSize(500).build();
 
         double score = 0;
-        int nextIndex = 0;
         for (int j = 0; j < dataWithKey.data.length; j++) {
             double val = forest.dynamicScore(dataWithKey.data[j]);
             score += val;
             forest.update(dataWithKey.data[j]);
-
         }
 
         System.out.println(score / dataWithKey.data.length);
