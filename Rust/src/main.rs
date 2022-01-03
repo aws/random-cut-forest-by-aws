@@ -18,7 +18,6 @@ extern crate rand;
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use crate::othermain::alternate_main;
 use crate::rcf::{create_rcf, RCF};
 use crate::rcf::RCFTiny;
 use crate::rcf::RCFSmall;
