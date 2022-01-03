@@ -79,4 +79,5 @@ public interface ITraversable {
      *         traversal query, otherwise false.
      */
     boolean isOutputReady();
+
 }
