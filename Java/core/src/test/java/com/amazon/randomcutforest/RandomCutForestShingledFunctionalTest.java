@@ -28,7 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
@@ -161,11 +161,11 @@ public class RandomCutForestShingledFunctionalTest {
                 assertEquals(firstResult, secondResult, 1e-10);
                 assertEquals(secondResult, thirdResult, 1e-10);
             }
-            PointStoreFloat store = (PointStoreFloat) first.getUpdateCoordinator().getStore();
+            PointStore store = (PointStore) first.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
-            store = (PointStoreFloat) second.getUpdateCoordinator().getStore();
+            store = (PointStore) second.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
-            store = (PointStoreFloat) third.getUpdateCoordinator().getStore();
+            store = (PointStore) third.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
         }
     }

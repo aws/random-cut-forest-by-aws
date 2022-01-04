@@ -166,7 +166,6 @@ public class PointStoreDoubleTest {
         PointStoreDouble store = new PointStoreDouble.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
                 .currentStoreCapacity(1).build();
-        assertTrue(store.isDynamicResizingEnabled());
         assertFalse(store.isInternalRotationEnabled());
         Random random = new Random(0);
         double[] shingle = new double[shinglesize];
@@ -191,7 +190,6 @@ public class PointStoreDoubleTest {
         PointStoreDouble store = new PointStoreDouble.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
                 .internalRotationEnabled(true).currentStoreCapacity(1).build();
-        assertTrue(store.isDynamicResizingEnabled());
         assertTrue(store.isInternalRotationEnabled());
         Random random = new Random(0);
         double[] shingle = new double[shinglesize];

@@ -48,8 +48,8 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeDoubleMapper;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeFloatMapper;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
@@ -163,7 +163,7 @@ public class RandomCutForestMapper
                 if (forest.getPrecision() == Precision.FLOAT_32) {
                     PointStoreFloatMapper mapper = new PointStoreFloatMapper();
                     mapper.setCompressionEnabled(compressionEnabled);
-                    pointStoreState = mapper.toState((PointStoreFloat) pointStoreCoordinator.getStore());
+                    pointStoreState = mapper.toState((PointStore) pointStoreCoordinator.getStore());
                 } else {
                     PointStoreDoubleMapper mapper = new PointStoreDoubleMapper();
                     mapper.setCompressionEnabled(compressionEnabled);

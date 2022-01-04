@@ -19,7 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-public class RCF3PointStoreSmall extends RCF3PointStore {
+public class PointStoreSmall extends PointStore {
 
     public static char INFEASIBLE_SMALL_POINTSTORE_LOCN = (char) -1;
     protected char[] locationList;
@@ -50,11 +50,46 @@ public class RCF3PointStoreSmall extends RCF3PointStore {
         return locationList.length;
     }
 
-    public RCF3PointStoreSmall(RCF3PointStore.Builder builder) {
+    public PointStoreSmall(PointStore.Builder builder) {
         super(builder);
         checkArgument(shingleSize * capacity < Character.MAX_VALUE, " incorrect parameters");
-        locationList = new char[currentStoreCapacity];
-        Arrays.fill(locationList, INFEASIBLE_SMALL_POINTSTORE_LOCN);
+        if (builder.locationList != null) {
+            locationList = new char[builder.locationList.length];
+            for (int i = 0; i < locationList.length; i++) {
+                locationList[i] = (char) builder.locationList[i];
+            }
+        } else {
+            locationList = new char[currentStoreCapacity];
+            Arrays.fill(locationList, INFEASIBLE_SMALL_POINTSTORE_LOCN);
+        }
     }
 
+    public PointStoreSmall(int dimensions, int capacity) {
+        this(PointStore.builder().capacity(capacity).dimensions(dimensions).shingleSize(1).initialSize(capacity));
+    }
+
+    @Override
+    protected void checkFeasible(int index) {
+        checkArgument(locationList[index] != INFEASIBLE_SMALL_POINTSTORE_LOCN, " invalid point");
+    }
+
+    @Override
+    public int size() {
+        int count = 0;
+        for (int i = 0; i < locationList.length; i++) {
+            if (locationList[i] != INFEASIBLE_SMALL_POINTSTORE_LOCN) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public int[] getLocationList() {
+        int[] answer = new int[locationList.length];
+        for (int i = 0; i < locationList.length; i++) {
+            answer[i] = locationList[i];
+        }
+        return answer;
+    }
 }

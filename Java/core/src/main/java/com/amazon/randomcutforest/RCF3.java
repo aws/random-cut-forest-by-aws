@@ -60,7 +60,7 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulato
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.RCF3PointStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.NewRandomCutTree;
@@ -296,7 +296,7 @@ public class RCF3 {
     }
 
     private void initCompactFloat(Builder<?> builder) {
-        IPointStore tempStore = RCF3PointStore.builder().capacity(pointStoreCapacity).initialSize(2 * sampleSize)
+        IPointStore tempStore = PointStore.builder().capacity(pointStoreCapacity).initialSize(2 * sampleSize)
                 .internalShinglingEnabled(internalShinglingEnabled).shingleSize(shingleSize).dimensions(dimensions)
                 // .dynamicResizingEnabled(true)
                 .internalRotationEnabled(builder.internalRotationEnabled).build();

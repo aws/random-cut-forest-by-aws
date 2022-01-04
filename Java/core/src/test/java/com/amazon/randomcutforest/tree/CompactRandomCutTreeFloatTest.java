@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.Weighted;
-import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.store.PointStore;
 
 public class CompactRandomCutTreeFloatTest {
 
@@ -50,8 +50,8 @@ public class CompactRandomCutTreeFloatTest {
     @BeforeEach
     public void setUp() {
         rng = mock(Random.class);
-        PointStoreFloat pointStoreFloat = new PointStoreFloat.Builder().indexCapacity(100).capacity(100)
-                .initialSize(100).dimensions(2).build();
+        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
+                .dimensions(2).build();
         tree = CompactRandomCutTreeFloat.builder().random(rng).centerOfMassEnabled(true).pointStore(pointStoreFloat)
                 .storeSequenceIndexesEnabled(true).dimension(2).inputDimension(2).build();
 
@@ -367,8 +367,8 @@ public class CompactRandomCutTreeFloatTest {
     @Test
     public void testUpdatesOnSmallBoundingBox() {
         // verifies on small bounding boxes random cuts and tree updates are functional
-        PointStoreFloat pointStoreFloat = new PointStoreFloat.Builder().indexCapacity(10).capacity(10)
-                .currentStoreCapacity(10).dimensions(1).build();
+        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(10).capacity(10).currentStoreCapacity(10)
+                .dimensions(1).build();
         CompactRandomCutTreeFloat tree = CompactRandomCutTreeFloat.builder().random(rng).pointStore(pointStoreFloat)
                 .build();
 

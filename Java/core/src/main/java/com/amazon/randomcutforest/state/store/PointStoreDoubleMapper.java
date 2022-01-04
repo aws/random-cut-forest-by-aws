@@ -25,7 +25,6 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.util.ArrayPacking;
 
@@ -49,7 +48,7 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         int startOfFreeSegment = state.getStartOfFreeSegment();
         int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
-        Arrays.fill(locationList, PointStore.INFEASIBLE_POINTSTORE_LOCATION);
+        Arrays.fill(locationList, PointStoreDouble.INFEASIBLE_LOCN);
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
 
@@ -71,23 +70,25 @@ public class PointStoreDoubleMapper implements IStateMapper<PointStoreDouble, Po
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
         state.setShingleSize(model.getShingleSize());
-        state.setDirectLocationMap(model.isDirectLocationMap());
+        state.setDirectLocationMap(false);
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
         state.setLastTimeStamp(model.getNextSequenceIndex());
         if (model.isInternalShinglingEnabled()) {
             state.setInternalShingle(model.getInternalShingle());
             state.setRotationEnabled(model.isInternalRotationEnabled());
         }
-        state.setDynamicResizingEnabled(model.isDynamicResizingEnabled());
-        if (model.isDynamicResizingEnabled()) {
+        state.setDynamicResizingEnabled(true);
+        if (state.isDynamicResizingEnabled()) {
             state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
             state.setIndexCapacity(model.getIndexCapacity());
         }
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setPrecision(Precision.FLOAT_64.name());
-        int prefix = model.getValidPrefix();
-        state.setRefCount(ArrayPacking.pack(model.getRefCount(), prefix, state.isCompressed()));
-        state.setLocationList(ArrayPacking.pack(model.getLocationList(), prefix, state.isCompressed()));
+        // int prefix = model.getValidPrefix();
+        int[] refcount = model.getRefCount();
+        state.setRefCount(ArrayPacking.pack(refcount, refcount.length, state.isCompressed()));
+        int[] locationList = model.getLocationList();
+        state.setLocationList(ArrayPacking.pack(locationList, locationList.length, state.isCompressed()));
         state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

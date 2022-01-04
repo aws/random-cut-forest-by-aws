@@ -24,7 +24,7 @@ import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.state.store.SmallNodeStoreMapper;
 import com.amazon.randomcutforest.store.INodeStore;
 import com.amazon.randomcutforest.store.NodeStore;
-import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.SmallNodeStore;
 import com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
@@ -58,7 +58,7 @@ public class CompactRandomCutTreeFloatMapper implements
         CompactRandomCutTreeFloat tree = new CompactRandomCutTreeFloat.Builder()
                 .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).maxSize(state.getMaxSize())
-                .root(state.getRoot()).randomSeed(state.getSeed()).pointStore((PointStoreFloat) context.getPointStore())
+                .root(state.getRoot()).randomSeed(state.getSeed()).pointStore((PointStore) context.getPointStore())
                 .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
                 .outputAfter(state.getOutputAfter()).build();
         return tree;

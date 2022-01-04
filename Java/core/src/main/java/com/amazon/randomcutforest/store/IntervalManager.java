@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
+import java.util.Stack;
 
 /**
  * This class defines common functionality for Store classes, including
@@ -40,6 +41,21 @@ public class IntervalManager {
         this.capacity = capacity;
         freeIndexesStart[0] = 0;
         freeIndexesEnd[0] = capacity - 1;
+    }
+
+    public IntervalManager(Stack<int[]> stack, int capacity) {
+        checkArgument(capacity > 0, "incorrect parameters");
+        lastInUse = stack.size();
+        freeIndexesEnd = new int[lastInUse + 1];
+        freeIndexesStart = new int[lastInUse + 1];
+        this.capacity = capacity;
+        int count = 0;
+        while (stack.size() > 0) {
+            int[] interval = stack.pop();
+            freeIndexesStart[count] = interval[0];
+            freeIndexesEnd[count] = interval[1];
+            ++count;
+        }
     }
 
     public void extendCapacity(int newCapacity) {

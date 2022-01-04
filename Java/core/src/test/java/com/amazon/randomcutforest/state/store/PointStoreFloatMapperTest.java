@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.store.PointStoreSmall;
 
 public class PointStoreFloatMapperTest {
     private PointStoreFloatMapper mapper;
@@ -35,7 +36,7 @@ public class PointStoreFloatMapperTest {
     public void testRoundTrip() {
         int dimensions = 2;
         int capacity = 4;
-        PointStoreFloat store = new PointStoreFloat(dimensions, capacity);
+        PointStore store = new PointStoreSmall(dimensions, capacity);
 
         double[] point1 = { 1.1, -22.2 };
         int index1 = store.add(point1, 1);
@@ -44,7 +45,7 @@ public class PointStoreFloatMapperTest {
         double[] point3 = { 10.1, 100.1 };
         int index3 = store.add(point3, 3);
 
-        PointStoreFloat store2 = mapper.toModel(mapper.toState(store));
+        PointStore store2 = mapper.toModel(mapper.toState(store));
 
         assertEquals(capacity, store2.getCapacity());
         assertEquals(3, store2.size());
