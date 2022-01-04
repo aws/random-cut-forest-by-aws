@@ -20,10 +20,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static java.lang.Math.max;
 
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.Vector;
 
 public class PointStoreDouble implements IPointStore<double[]> {
@@ -33,7 +31,7 @@ public class PointStoreDouble implements IPointStore<double[]> {
     /**
      * an index manager to manage free locations
      */
-    protected IntervalManager indexManager;
+    protected IndexIntervalManager indexManager;
     /**
      * generic store class
      */
@@ -210,9 +208,6 @@ public class PointStoreDouble implements IPointStore<double[]> {
             amountToWrite = getAmountToWrite(tempPoint);
             if (startOfFreeSegment > currentStoreCapacity * dimensions - amountToWrite) {
                 resizeStore();
-                if (startOfFreeSegment + amountToWrite > currentStoreCapacity * dimensions) {
-                    System.out.println("AA");
-                }
                 checkState(startOfFreeSegment + amountToWrite <= currentStoreCapacity * dimensions, "out of space");
             }
         }
@@ -713,7 +708,7 @@ public class PointStoreDouble implements IPointStore<double[]> {
         if (builder.refCount == null) {
             int size = (int) builder.initialPointStoreSize.orElse(builder.capacity);
             currentStoreCapacity = size;
-            this.indexManager = new IntervalManager(size);
+            this.indexManager = new IndexIntervalManager(size);
             startOfFreeSegment = 0;
             refCount = new byte[size];
             if (internalShinglingEnabled) {
@@ -740,34 +735,7 @@ public class PointStoreDouble implements IPointStore<double[]> {
                 this.internalShingle = (builder.knownShingle != null) ? Arrays.copyOf(builder.knownShingle, dimensions)
                         : new double[dimensions];
             }
-            BitSet bits = new BitSet(refCount.length);
-            for (int i = 0; i < refCount.length; i++) {
-                if ((refCount[i] & 0xff) > 0) {
-                    bits.set(i);
-                }
-            }
-            int first = bits.nextClearBit(0);
-            Stack<int[]> stack = new Stack<>();
-
-            while (first < refCount.length) {
-                int last = bits.nextSetBit(first) - 1;
-                if (last >= first) {
-                    stack.push(new int[] { first, last });
-                    first = last + 1;
-                } else { // we do not all distiction between all full and all empty
-                    if (first < refCount.length - 1) {
-                        if (bits.nextClearBit(first + 1) == first + 1) {
-                            stack.push(new int[] { first, refCount.length - 1 });
-                        } else {
-                            stack.push(new int[] { first, first });
-                        }
-                    } else {
-                        stack.push(new int[] { refCount.length - 1, refCount.length - 1 });
-                    }
-                    break;
-                }
-            }
-            indexManager = new IntervalManager(stack, builder.indexCapacity);
+            indexManager = new IndexIntervalManager(builder.refCount, builder.indexCapacity);
             store = (builder.store == null) ? new double[currentStoreCapacity * dimensions] : builder.store;
             this.locationList = builder.locationList;
         }
@@ -872,13 +840,6 @@ public class PointStoreDouble implements IPointStore<double[]> {
 
     public String toString(int index) {
         return Arrays.toString(get(index));
-    }
-
-    void copyTo(int dest, int source, int length) {
-        // validateInternalState(dest <= source, "error");
-        for (int i = 0; i < length; i++) {
-            store[dest + i] = store[source + i];
-        }
     }
 
     public static Builder builder() {

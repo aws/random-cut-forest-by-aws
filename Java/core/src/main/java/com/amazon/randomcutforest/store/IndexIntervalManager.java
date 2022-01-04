@@ -19,21 +19,22 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Stack;
 
 /**
  * This class defines common functionality for Store classes, including
  * maintaining the stack of free pointers.
  */
-// to be renamed to IndexIntervalManager in next PR alongside ser/de changes
-public class IntervalManager {
+
+public class IndexIntervalManager {
 
     protected int capacity;
     protected int[] freeIndexesStart;
     protected int[] freeIndexesEnd;
     protected int lastInUse;
 
-    public IntervalManager(int capacity) {
+    public IndexIntervalManager(int capacity) {
         checkArgument(capacity > 0, "incorrect parameters");
         freeIndexesEnd = new int[1];
         freeIndexesStart = new int[1];
@@ -43,19 +44,53 @@ public class IntervalManager {
         freeIndexesEnd[0] = capacity - 1;
     }
 
-    public IntervalManager(Stack<int[]> stack, int capacity) {
+    public IndexIntervalManager(int[] refCount, int capacity) {
         checkArgument(capacity > 0, "incorrect parameters");
+        BitSet bits = new BitSet(refCount.length);
+        int numUsed = 0;
+        for (int i = 0; i < refCount.length; i++) {
+            if ((refCount[i] & 0xff) > 0) {
+                bits.set(i);
+                ++numUsed;
+            }
+        }
+        int first = bits.nextClearBit(0);
+        Stack<int[]> stack = new Stack<>();
+        while (first < refCount.length) {
+            int last = bits.nextSetBit(first) - 1;
+            if (last >= first) {
+                stack.push(new int[] { first, last });
+                first = bits.nextClearBit(last + 1);
+                if (first < 0) {
+                    break;
+                }
+            } else { // we do not all distiction between all full and all empty
+                if (first < refCount.length - 1) {
+                    if (bits.nextClearBit(first + 1) == first + 1) {
+                        stack.push(new int[] { first, refCount.length - 1 });
+                    } else {
+                        stack.push(new int[] { first, first });
+                    }
+                } else {
+                    stack.push(new int[] { refCount.length - 1, refCount.length - 1 });
+                }
+                break;
+            }
+        }
         lastInUse = stack.size();
         freeIndexesEnd = new int[lastInUse + 1];
         freeIndexesStart = new int[lastInUse + 1];
         this.capacity = capacity;
         int count = 0;
+        int free = 0;
         while (stack.size() > 0) {
             int[] interval = stack.pop();
             freeIndexesStart[count] = interval[0];
             freeIndexesEnd[count] = interval[1];
             ++count;
+            free += (interval[1] - interval[0] + 1);
         }
+        checkArgument(free + numUsed == refCount.length, "incorrect bit conversions");
     }
 
     public void extendCapacity(int newCapacity) {

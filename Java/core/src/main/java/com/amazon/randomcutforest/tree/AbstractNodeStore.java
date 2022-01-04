@@ -26,7 +26,7 @@ import java.util.function.Function;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.IPointStoreView;
-import com.amazon.randomcutforest.store.IntervalManager;
+import com.amazon.randomcutforest.store.IndexIntervalManager;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -53,7 +53,7 @@ public abstract class AbstractNodeStore {
     protected final int dimensions;
     protected final float[] cutValue;
     protected double nodeCacheFraction;
-    protected IntervalManager freeNodeManager;
+    protected IndexIntervalManager freeNodeManager;
     protected double[] rangeSumData;
     protected float[] boundingBoxData;
     protected final IPointStoreView<float[]> pointStoreView;
@@ -68,7 +68,7 @@ public abstract class AbstractNodeStore {
             IPointStoreView<float[]> pointStoreView) {
         this.capacity = capacity;
         this.dimensions = dimensions;
-        freeNodeManager = new IntervalManager(capacity - 1);
+        freeNodeManager = new IndexIntervalManager(capacity - 1);
         this.nodeCacheFraction = nodeCacheFraction;
         cutValue = new float[capacity - 1];
         leafMass = new HashMap<>();

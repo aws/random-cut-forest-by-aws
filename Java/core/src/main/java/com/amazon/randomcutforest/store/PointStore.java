@@ -20,10 +20,8 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static java.lang.Math.max;
 
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.Vector;
 
 public abstract class PointStore implements IPointStore<float[]> {
@@ -32,7 +30,7 @@ public abstract class PointStore implements IPointStore<float[]> {
     /**
      * an index manager to manage free locations
      */
-    protected IntervalManager indexManager;
+    protected IndexIntervalManager indexManager;
     /**
      * generic store class
      */
@@ -370,6 +368,15 @@ public abstract class PointStore implements IPointStore<float[]> {
 
     abstract int locationListLength();
 
+    void alignBoundaries(int initial, int freshStart) {
+        int locn = freshStart;
+        for (int i = 0; i < initial; i++) {
+            store[locn] = 0;
+            ++locn;
+        }
+
+    }
+
     public void compact() {
         Vector<Integer[]> reverseReference = new Vector<>();
         for (int i = 0; i < locationListLength(); i++) {
@@ -403,14 +410,11 @@ public abstract class PointStore implements IPointStore<float[]> {
                 }
             }
 
-            // aligning the boundaries
-            for (int i = 0; i < initial; i++) {
-                store[freshStart] = 0;
-                ++freshStart;
-            }
+            alignBoundaries(initial, freshStart);
+            freshStart += initial;
 
+            int start = freshStart;
             for (int i = blockStart; i < blockEnd; i++) {
-                store[freshStart] = store[i];
                 assert (!rotationEnabled || freshStart % dimensions == i % dimensions);
 
                 if (jStatic < jEnd) {
@@ -423,6 +427,7 @@ public abstract class PointStore implements IPointStore<float[]> {
                 }
                 freshStart += 1;
             }
+            copyTo(start, blockStart, blockEnd - blockStart);
 
             if (jStatic != jDynamic) {
                 throw new IllegalStateException("There is discepancy in indices");
@@ -705,7 +710,7 @@ public abstract class PointStore implements IPointStore<float[]> {
         if (builder.refCount == null) {
             int size = (int) builder.initialPointStoreSize.orElse(builder.capacity);
             currentStoreCapacity = size;
-            this.indexManager = new IntervalManager(size);
+            this.indexManager = new IndexIntervalManager(size);
             startOfFreeSegment = 0;
             refCount = new byte[size];
             if (internalShinglingEnabled) {
@@ -730,39 +735,8 @@ public abstract class PointStore implements IPointStore<float[]> {
                 this.internalShingle = (builder.knownShingle != null) ? Arrays.copyOf(builder.knownShingle, dimensions)
                         : new double[dimensions];
             }
-            BitSet bits = new BitSet(refCount.length);
-            int count = 0;
-            for (int i = 0; i < refCount.length; i++) {
-                if ((refCount[i] & 0xff) > 0) {
-                    bits.set(i);
-                    ++count;
-                }
-            }
-            int first = bits.nextClearBit(0);
-            Stack<int[]> stack = new Stack<>();
 
-            while (first < refCount.length) {
-                int last = bits.nextSetBit(first) - 1;
-                if (last >= first) {
-                    stack.push(new int[] { first, last });
-                    first = bits.nextClearBit(last + 1);
-                    if (first < 0) {
-                        break;
-                    }
-                } else { // we do not all distiction between all full and all empty
-                    if (first < refCount.length - 1) {
-                        if (bits.nextClearBit(first + 1) == first + 1) {
-                            stack.push(new int[] { first, refCount.length - 1 });
-                        } else {
-                            stack.push(new int[] { first, first });
-                        }
-                    } else {
-                        stack.push(new int[] { refCount.length - 1, refCount.length - 1 });
-                    }
-                    break;
-                }
-            }
-            indexManager = new IntervalManager(stack, builder.indexCapacity);
+            indexManager = new IndexIntervalManager(builder.refCount, builder.indexCapacity);
             store = (builder.store == null) ? new float[currentStoreCapacity * dimensions] : builder.store;
         }
     }
@@ -872,9 +846,10 @@ public abstract class PointStore implements IPointStore<float[]> {
     }
 
     void copyTo(int dest, int source, int length) {
-        // validateInternalState(dest <= source, "error");
-        for (int i = 0; i < length; i++) {
-            store[dest + i] = store[source + i];
+        if (dest < source) {
+            for (int i = 0; i < length; i++) {
+                store[dest + i] = store[source + i];
+            }
         }
     }
 
