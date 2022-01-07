@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import lombok.Getter;
+import lombok.Setter;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 @Getter
 @Setter
@@ -88,5 +88,30 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
         state.setLocationList(ArrayPacking.pack(locationList, locationList.length, state.isCompressed()));
         state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
+    }
+
+    public PointStore convertFromDouble(PointStoreState state) {
+        checkNotNull(state.getRefCount(), "refCount must not be null");
+        checkNotNull(state.getPointData(), "pointData must not be null");
+        checkArgument(Precision.valueOf(state.getPrecision()) == Precision.FLOAT_64,
+                "precision must be " + Precision.FLOAT_64);
+        int indexCapacity = state.getIndexCapacity();
+        int dimensions = state.getDimensions();
+        float[] store = toFloatArray(
+                ArrayPacking.unpackDoubles(state.getPointData(), state.getCurrentStoreCapacity() * dimensions));
+        int startOfFreeSegment = state.getStartOfFreeSegment();
+        int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
+        int[] locationList = new int[indexCapacity];
+        int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
+        System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+
+        return PointStore.builder().internalRotationEnabled(state.isRotationEnabled())
+                .internalShinglingEnabled(state.isInternalShinglingEnabled())
+                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
+                .directLocationEnabled(state.isDirectLocationMap()).indexCapacity(indexCapacity)
+                .currentStoreCapacity(state.getCurrentStoreCapacity()).capacity(state.getCapacity())
+                .shingleSize(state.getShingleSize()).dimensions(state.getDimensions()).locationList(locationList)
+                .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
+                .knownShingle(state.getInternalShingle()).store(store).build();
     }
 }

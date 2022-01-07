@@ -44,19 +44,27 @@ public class IndexIntervalManager {
         freeIndexesEnd[0] = capacity - 1;
     }
 
-    public IndexIntervalManager(int[] refCount, int capacity) {
-        checkArgument(capacity > 0, "incorrect parameters");
+    static BitSet toBits(int[] refCount) {
+        checkArgument(refCount != null, " not meaninglful");
         BitSet bits = new BitSet(refCount.length);
-        int numUsed = 0;
         for (int i = 0; i < refCount.length; i++) {
             if ((refCount[i] & 0xff) > 0) {
                 bits.set(i);
-                ++numUsed;
             }
         }
+        return bits;
+    }
+
+    public IndexIntervalManager(int[] refCount, int capacity) {
+        this(capacity, refCount.length, toBits(refCount));
+    }
+
+    public IndexIntervalManager(int capacity, int length, BitSet bits) {
+        checkArgument(bits != null, " null bitset not allowed");
+        this.capacity = capacity;
         int first = bits.nextClearBit(0);
         Stack<int[]> stack = new Stack<>();
-        while (first < refCount.length) {
+        while (first < length) {
             int last = bits.nextSetBit(first) - 1;
             if (last >= first) {
                 stack.push(new int[] { first, last });
@@ -65,14 +73,14 @@ public class IndexIntervalManager {
                     break;
                 }
             } else { // we do not all distiction between all full and all empty
-                if (first < refCount.length - 1) {
+                if (first < length - 1) {
                     if (bits.nextClearBit(first + 1) == first + 1) {
-                        stack.push(new int[] { first, refCount.length - 1 });
+                        stack.push(new int[] { first, length - 1 });
                     } else {
                         stack.push(new int[] { first, first });
                     }
                 } else {
-                    stack.push(new int[] { refCount.length - 1, refCount.length - 1 });
+                    stack.push(new int[] { length - 1, length - 1 });
                 }
                 break;
             }
@@ -82,15 +90,12 @@ public class IndexIntervalManager {
         freeIndexesStart = new int[lastInUse + 1];
         this.capacity = capacity;
         int count = 0;
-        int free = 0;
         while (stack.size() > 0) {
             int[] interval = stack.pop();
             freeIndexesStart[count] = interval[0];
             freeIndexesEnd[count] = interval[1];
             ++count;
-            free += (interval[1] - interval[0] + 1);
         }
-        checkArgument(free + numUsed == refCount.length, "incorrect bit conversions");
     }
 
     public void extendCapacity(int newCapacity) {
@@ -116,17 +121,18 @@ public class IndexIntervalManager {
      * @return the maximum number of nodes whose data can be stored.
      */
     public int getCapacity() {
-        if (capacity == 0) {
-            System.out.println("HUH");
-        }
         return capacity;
     }
 
     /**
-     * @return the number of nodes whose data is currently stored.
+     * @return the number of indices whioch are being maintained
      */
     public int size() {
-        return capacity - lastInUse;
+        int sum = 0;
+        for (int i = 0; i < lastInUse; i++) {
+            sum += freeIndexesEnd[i] - freeIndexesStart[i] + 1;
+        }
+        return sum;
     }
 
     /**
@@ -173,4 +179,12 @@ public class IndexIntervalManager {
         lastInUse += 1;
     }
 
+    public int[] getFreeIndices() {
+        int[] answer = new int[2 * lastInUse];
+        for (int i = 0; i < 2 * lastInUse; i += 2) {
+            answer[i] = freeIndexesStart[i / 2];
+            answer[i + 1] = freeIndexesEnd[i / 2];
+        }
+        return answer;
+    }
 }
