@@ -18,4 +18,5 @@ package com.amazon.randomcutforest.state;
 public class Version {
     public static final String V2_0 = "2.0";
     public static final String V2_1 = "2.1";
+    public static final String V3_0 = "3.0";
 }

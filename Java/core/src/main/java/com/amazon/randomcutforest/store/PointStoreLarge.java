@@ -37,11 +37,11 @@ public class PointStoreLarge extends PointStore {
     };
 
     void setLocation(int index, int location) {
-        locationList[index] = location;
+        locationList[index] = location / baseDimension;
     }
 
     int getLocation(int index) {
-        return locationList[index];
+        return baseDimension * locationList[index];
     }
 
     int locationListLength() {

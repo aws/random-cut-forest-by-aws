@@ -15,16 +15,18 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.state.IStateMapper;
-import com.amazon.randomcutforest.store.PointStore;
-import com.amazon.randomcutforest.util.ArrayPacking;
-import lombok.Getter;
-import lombok.Setter;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.Version;
+import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
@@ -64,6 +66,7 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
     public PointStoreState toState(PointStore model) {
         model.compact();
         PointStoreState state = new PointStoreState();
+        state.setVersion(Version.V3_0);
         state.setCompressed(compressionEnabled);
         state.setDimensions(model.getDimensions());
         state.setCapacity(model.getCapacity());
@@ -104,6 +107,9 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
         int[] locationList = new int[indexCapacity];
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+        if (!state.getVersion().equals(Version.V3_0)) {
+            transformArray(locationList, dimensions / state.getShingleSize());
+        }
 
         return PointStore.builder().internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
@@ -114,4 +120,14 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
                 .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
                 .knownShingle(state.getInternalShingle()).store(store).build();
     }
+
+    void transformArray(int[] location, int baseDimension) {
+        checkArgument(baseDimension > 0, "incorrect invocation");
+        for (int i = 0; i < location.length; i++) {
+            if (location[i] > 0) {
+                location[i] = location[i] / baseDimension;
+            }
+        }
+    }
+
 }
