@@ -1,16 +1,16 @@
 use crate::rcf::Max;
 use std::fmt::Debug;
 extern crate num;
-use num::Integer;
-use std::convert::TryFrom;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use crate::intervalstoremanager::IntervalStoreManager;
+
+use std::collections::HashMap;
+
+use std::convert::TryFrom;
 
 #[repr(C)]
 pub struct PointStore<L> {
-    internal_shingling : bool,
-    internal_rotation : bool,
+    internal_shingling: bool,
+    internal_rotation: bool,
     last_known_shingle: Vec<f32>,
     dimensions: usize,
     shingle_size: usize,
@@ -22,34 +22,35 @@ pub struct PointStore<L> {
     start_free_region: usize,
     index_manager: IntervalStoreManager<usize>,
     hash_reference_counts: HashMap<usize, usize>,
-    entries_seen: i32
+    entries_seen: i32,
 }
 
 pub trait PointStoreView {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32>;
     fn get_size(&self) -> usize;
     fn get_missing_values(&self, values: &[usize]) -> Vec<usize>;
-    fn get_copy(&self, index:usize) -> Vec<f32>;
-    fn is_equal(&self, point : &[f32], index : usize) -> bool;
-    fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize);
+    fn get_copy(&self, index: usize) -> Vec<f32>;
+    fn is_equal(&self, point: &[f32], index: usize) -> bool;
+    fn get_reference_and_offset(&self, index: usize) -> (&[f32], usize);
 }
 
 pub trait PointStoreEdit {
     fn add(&mut self, point: &[f32]) -> usize;
     fn inc(&mut self, index: usize);
     fn dec(&mut self, index: usize);
-    fn adjust_count(&mut self, result: &[(usize,usize)]);
+    fn adjust_count(&mut self, result: &[(usize, usize)]);
     fn compact(&mut self);
 }
 
-
-impl<L : Copy + Max + std::cmp::PartialEq>  PointStore<L> {
-    pub fn new(dimensions: usize,
-               shingle_size: usize,
-               capacity: usize,
-               initial_capacity: usize,
-               internal_shingling: bool,
-               internal_rotation: bool) -> Self {
+impl<L: Copy + Max + std::cmp::PartialEq> PointStore<L> {
+    pub fn new(
+        dimensions: usize,
+        shingle_size: usize,
+        capacity: usize,
+        initial_capacity: usize,
+        internal_shingling: bool,
+        internal_rotation: bool,
+    ) -> Self {
         PointStore {
             internal_shingling,
             internal_rotation,
@@ -64,7 +65,7 @@ impl<L : Copy + Max + std::cmp::PartialEq>  PointStore<L> {
             last_known_shingle: vec![0.0; dimensions],
             hash_reference_counts: HashMap::new(),
             entries_seen: 0,
-            next_sequence_index : 0
+            next_sequence_index: 0,
         }
     }
 
@@ -83,13 +84,13 @@ impl<L : Copy + Max + std::cmp::PartialEq>  PointStore<L> {
         }
         answer
     }
-
 }
 
-
-impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
-    where L: std::convert::TryFrom<usize>, usize: From<L> {
-
+impl<L: Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
+where
+    L: std::convert::TryFrom<usize>,
+    usize: From<L>,
+{
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32> {
         let mut new_point = vec![0.0; self.dimensions];
         if self.internal_shingling {
@@ -98,7 +99,7 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
                 println!("The point must be '{}' floats long", self.dimensions);
                 panic!();
             }
-            if (!self.internal_rotation) {
+            if !self.internal_rotation {
                 for i in 0..(self.dimensions - base) {
                     new_point[i] = self.last_known_shingle[i + base];
                 }
@@ -106,11 +107,11 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
                     new_point[self.dimensions - base + i] = point[i];
                 }
             } else {
-                for i in 0..(self.dimensions){
+                for i in 0..(self.dimensions) {
                     new_point[i] = self.last_known_shingle[i];
                 }
                 let offset = (self.next_sequence_index * base) % self.dimensions;
-                for i in  0..base {
+                for i in 0..base {
                     new_point[offset + i] = point[i];
                 }
             }
@@ -126,7 +127,7 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         new_point
     }
 
-    fn get_reference_and_offset(&self, index: usize) -> (&[f32],usize) {
+    fn get_reference_and_offset(&self, index: usize) -> (&[f32], usize) {
         let base = self.dimensions / self.shingle_size;
         if self.reference_count[index] == 0 {
             println!(" Index '{}' not in use", index);
@@ -134,14 +135,18 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         }
         let locn: usize = self.location[index].try_into().unwrap(); // because of u32
         let adj_locn = locn * base;
-        let offset = if (!self.internal_rotation) { 0 } else { adj_locn % self.dimensions };
+        let offset = if !self.internal_rotation {
+            0
+        } else {
+            adj_locn % self.dimensions
+        };
         (&self.store[adj_locn..(adj_locn + self.dimensions)], offset)
     }
 
-    fn get_copy(&self, index: usize) -> Vec<f32>{
-        let mut new_point = vec![0.0;self.dimensions];
+    fn get_copy(&self, index: usize) -> Vec<f32> {
+        let mut new_point = vec![0.0; self.dimensions];
         let (reference, offset) = self.get_reference_and_offset(index);
-        if (self.internal_rotation) {
+        if self.internal_rotation {
             for i in 0..self.dimensions {
                 new_point[(i + offset) % self.dimensions] = reference[i];
             }
@@ -153,16 +158,16 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         new_point
     }
 
-    fn get_missing_values(&self, values:&[usize]) -> Vec<usize>{
+    fn get_missing_values(&self, values: &[usize]) -> Vec<usize> {
         if !self.internal_shingling {
             return Vec::from(values);
         }
         let mut answer = Vec::new();
         let base = self.dimensions / self.shingle_size;
         for i in 0..values.len() {
-          assert!(values[i]< base);
+            assert!(values[i] < base);
             if self.internal_rotation {
-              answer.push((self.next_sequence_index * base) % self.dimensions + values[i]);
+                answer.push((self.next_sequence_index * base) % self.dimensions + values[i]);
             } else {
                 answer.push(self.dimensions - base + values[i]);
             }
@@ -170,11 +175,11 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         answer
     }
 
-    fn is_equal(&self, point: &[f32], index: usize) -> bool{
+    fn is_equal(&self, point: &[f32], index: usize) -> bool {
         let (reference, offset) = self.get_reference_and_offset(index);
-        if (self.internal_rotation) {
+        if self.internal_rotation {
             for i in 0..self.dimensions {
-                if (point[(i + offset) % self.dimensions] != reference[i]) {
+                if point[(i + offset) % self.dimensions] != reference[i] {
                     return false;
                 }
             }
@@ -188,16 +193,21 @@ impl<L :Copy + Max + std::cmp::PartialEq> PointStoreView for PointStore<L>
         self.store.len() * std::mem::size_of::<f32>()
             + self.location.len() * std::mem::size_of::<L>()
             + self.reference_count.len() * std::mem::size_of::<u8>()
-            + self.index_manager.get_size() + std::mem::size_of::<PointStore<L>>()
+            + self.index_manager.get_size()
+            + std::mem::size_of::<PointStore<L>>()
     }
 }
 
-
-
 impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
-    where L: std::convert::TryFrom<usize>, usize: From<L>, <L as TryFrom<usize>>::Error: Debug {
-
-    fn add(&mut self, point: &[f32]) -> usize where <L as TryFrom<usize>>::Error: Debug {
+where
+    L: std::convert::TryFrom<usize>,
+    usize: From<L>,
+    <L as TryFrom<usize>>::Error: Debug,
+{
+    fn add(&mut self, point: &[f32]) -> usize
+    where
+        <L as TryFrom<usize>>::Error: Debug,
+    {
         let base = self.dimensions / self.shingle_size;
         self.next_sequence_index += 1;
         if self.internal_shingling {
@@ -211,14 +221,13 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
             for i in 0..base {
                 self.last_known_shingle[self.dimensions - base + i] = point[i];
             }
-            if (self.next_sequence_index < self.shingle_size){
+            if self.next_sequence_index < self.shingle_size {
                 return usize::MAX;
             }
         } else if point.len() != self.dimensions {
             println!("The point must be '{}' floats long", self.dimensions);
             panic!();
         }
-
 
         if self.dimensions + self.start_free_region > self.store.len() {
             self.compact();
@@ -244,8 +253,11 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
         let position: usize = self.index_manager.get();
         assert!(self.reference_count[position] == 0);
         self.reference_count[position] = 1;
-        let mut new_point: &[f32] = if self.internal_shingling { &self.last_known_shingle }
-        else { &point };
+        let new_point: &[f32] = if self.internal_shingling {
+            &self.last_known_shingle
+        } else {
+            &point
+        };
 
         if self.ready_to_copy(&new_point) {
             let base = self.dimensions / self.shingle_size;
@@ -304,8 +316,8 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
         }
     }
 
-    fn adjust_count(&mut self, result:&[(usize,usize)]) {
-        for (insert,delete) in result {
+    fn adjust_count(&mut self, result: &[(usize, usize)]) {
+        for (insert, delete) in result {
             if *insert != usize::MAX {
                 self.inc(*insert);
                 if *delete != usize::MAX {
@@ -315,7 +327,10 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
         }
     }
 
-    fn compact(&mut self) where <L as TryFrom<usize>>::Error: Debug {
+    fn compact(&mut self)
+    where
+        <L as TryFrom<usize>>::Error: Debug,
+    {
         let base = self.dimensions / self.shingle_size;
         let mut reverse_reference: Vec<(usize, usize)> = Vec::new();
         for i in 0..self.location.len() {
@@ -332,9 +347,11 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
             let mut block_start: usize = reverse_reference[j_static].0;
             block_start = block_start * base;
             let mut block_end: usize = block_start + self.dimensions;
-            let initial = if (self.internal_rotation) {
+            let initial = if self.internal_rotation {
                 (self.dimensions - fresh_start + block_start) % self.dimensions
-            } else {0};
+            } else {
+                0
+            };
 
             let mut k = j_static + 1;
             j_dynamic = j_static + 1;
@@ -353,14 +370,16 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
             }
 
             // aligning the boundaries
-            for i in 0..initial {
+            for _i in 0..initial {
                 self.store[fresh_start] = 0.0;
                 fresh_start += 1;
             }
 
             for i in block_start..block_end {
                 self.store[fresh_start] = self.store[i];
-                assert!(!self.internal_rotation || fresh_start % self.dimensions == i % self.dimensions);
+                assert!(
+                    !self.internal_rotation || fresh_start % self.dimensions == i % self.dimensions
+                );
                 if j_static < end {
                     let locn: usize = reverse_reference[j_static].0;
                     if i == base * locn {
@@ -373,13 +392,13 @@ impl<L: Max + Copy + std::cmp::PartialEq> PointStoreEdit for PointStore<L>
             }
 
             if j_static != j_dynamic {
-                println!("There is discepancy in indices between '{}' versus '{}'", j_static, j_dynamic);
+                println!(
+                    "There is discepancy in indices between '{}' versus '{}'",
+                    j_static, j_dynamic
+                );
                 panic!();
             }
         }
         self.start_free_region = fresh_start.try_into().unwrap();
     }
-
-
 }
-

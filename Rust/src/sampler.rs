@@ -1,16 +1,15 @@
-
-use std::collections::HashSet;
-use std::fmt::Debug;
 use crate::rcf::Max;
+
+use std::fmt::Debug;
 #[repr(C)]
-pub struct Sampler <P>{
-capacity: usize,
-weights : Vec<f32>,
-points : Vec<P>,
-store_attributes: bool,
-point_attributes : Vec<P>,
-current_size : usize,
-accepted_state : (f32, usize, usize)
+pub struct Sampler<P> {
+    capacity: usize,
+    weights: Vec<f32>,
+    points: Vec<P>,
+    store_attributes: bool,
+    point_attributes: Vec<P>,
+    current_size: usize,
+    accepted_state: (f32, usize, usize),
 }
 
 #[repr(C)]
@@ -18,14 +17,20 @@ pub struct SamplerAcceptState {
     pub(crate) eviction_occurred: bool,
     pub(crate) point_index: usize,
     pub(crate) evicted_weight: f32,
-    pub(crate) point_attribute: usize
+    pub(crate) point_attribute: usize,
 }
 
-impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
-    P: std::convert::TryFrom<usize>, usize: From<P> {
-    pub fn new(capacity: usize,  store_attributes: bool) -> Self {
-        let attrib_vec: Vec<P> = if store_attributes { vec![P::MAX; capacity] }
-                                 else { Vec::new() };
+impl<P: Max + Copy + std::cmp::PartialEq> Sampler<P>
+where
+    P: std::convert::TryFrom<usize>,
+    usize: From<P>,
+{
+    pub fn new(capacity: usize, store_attributes: bool) -> Self {
+        let attrib_vec: Vec<P> = if store_attributes {
+            vec![P::MAX; capacity]
+        } else {
+            Vec::new()
+        };
         Sampler {
             store_attributes,
             capacity,
@@ -33,7 +38,7 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
             points: vec![P::MAX; capacity],
             point_attributes: attrib_vec,
             accepted_state: (0.0, usize::MAX, usize::MAX),
-            current_size: 0
+            current_size: 0,
         }
     }
 
@@ -45,7 +50,9 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
         let mut current: usize = start_index;
         while 2 * current + 1 < self.current_size {
             let mut max_index: usize = 2 * current + 1;
-            if 2 * current + 2 < self.current_size && self.weights[2 * current + 2] > self.weights[max_index] {
+            if 2 * current + 2 < self.current_size
+                && self.weights[2 * current + 2] > self.weights[max_index]
+            {
                 max_index = 2 * current + 2;
             }
             if self.weights[max_index] > self.weights[current] {
@@ -87,10 +94,17 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
         }
     }
 
-    pub fn add_point(&mut self, point_index: usize) where <P as TryFrom<usize>>::Error: Debug {
+    pub fn add_point(&mut self, point_index: usize)
+    where
+        <P as TryFrom<usize>>::Error: Debug,
+    {
         if point_index != usize::MAX {
             assert!(self.current_size < self.capacity.into(), "sampler full");
-            assert_ne!(self.accepted_state.1, usize::MAX, "this method should only be called after a successful call to accept_sample(long)");
+            assert_ne!(
+                self.accepted_state.1,
+                usize::MAX,
+                "this method should only be called after a successful call to accept_sample(long)"
+            );
 
             self.weights[self.current_size] = self.accepted_state.0;
             self.points[self.current_size] = point_index.try_into().unwrap();
@@ -98,8 +112,11 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
             // P::MAX This corresponds to the change in the index value via
             // duplicates in the trees
             if self.store_attributes {
-                self.point_attributes[self.current_size] = if self.accepted_state.2 != usize::MAX
-                { self.accepted_state.2.try_into().unwrap() } else { P::MAX }
+                self.point_attributes[self.current_size] = if self.accepted_state.2 != usize::MAX {
+                    self.accepted_state.2.try_into().unwrap()
+                } else {
+                    P::MAX
+                }
             };
 
             let mut current = self.current_size;
@@ -119,8 +136,13 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
         }
     }
 
-
-    pub fn accept_point(&mut self, initial: bool, weight: f32, point_index: usize, attribute: usize) -> SamplerAcceptState {
+    pub fn accept_point(
+        &mut self,
+        initial: bool,
+        weight: f32,
+        point_index: usize,
+        attribute: usize,
+    ) -> SamplerAcceptState {
         let mut return_val = (true, usize::MAX, weight, usize::MAX);
         if initial || (weight < self.weights[0]) {
             self.accepted_state = (weight, point_index, attribute);
@@ -133,10 +155,10 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
         }
         return SamplerAcceptState {
             eviction_occurred: return_val.0,
-            point_index : return_val.1,
+            point_index: return_val.1,
             evicted_weight: return_val.2,
-            point_attribute: return_val.3
-        }
+            point_attribute: return_val.3,
+        };
     }
 
     /**
@@ -145,9 +167,17 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
      */
 
     pub fn evict_max(&mut self) -> (usize, f32, usize) {
-        let evicted_attribute_index: usize = if self.store_attributes { self.point_attributes[0].into() } else { usize::MAX };
+        let evicted_attribute_index: usize = if self.store_attributes {
+            self.point_attributes[0].into()
+        } else {
+            usize::MAX
+        };
 
-        let evicted_point = (self.points[0].into(), self.weights[0], evicted_attribute_index);
+        let evicted_point = (
+            self.points[0].into(),
+            self.weights[0],
+            evicted_attribute_index,
+        );
         self.current_size -= 1;
         let current: usize = self.current_size.into();
         self.weights[0] = self.weights[current];
@@ -166,16 +196,15 @@ impl<P: Max + Copy + std::cmp::PartialEq>  Sampler<P> where
 
     pub fn get_fill_fraction(&self) -> f64 {
         if self.current_size == self.capacity {
-            return 1.0
+            return 1.0;
         }
         let fill_fraction: f64 = self.current_size as f64 / self.capacity as f64;
         fill_fraction
     }
 
     pub fn get_size(&self) -> usize {
-        (self.weights.len()) * std::mem::size_of::<f32>() +
-            (self.points.len()) * std::mem::size_of::<P>() +
-            std::mem::size_of::<Sampler<P>>()
+        (self.weights.len()) * std::mem::size_of::<f32>()
+            + (self.points.len()) * std::mem::size_of::<P>()
+            + std::mem::size_of::<Sampler<P>>()
     }
 }
-
