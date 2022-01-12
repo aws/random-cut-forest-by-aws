@@ -6,20 +6,23 @@ pub struct IntervalStoreManager<T> {
     capacity: usize,
     last_in_use: usize,
     free_indices_start: Vec<T>,
-    free_indices_end: Vec<T>
+    free_indices_end: Vec<T>,
 }
 
-
-impl<T: Copy + std::convert::TryFrom<usize>>
-IntervalStoreManager<T>
-where  T: std::fmt::Display + std::cmp::PartialEq, usize: From<T>
+impl<T: Copy + std::convert::TryFrom<usize>> IntervalStoreManager<T>
+where
+    T: std::fmt::Display + std::cmp::PartialEq,
+    usize: From<T>,
 {
-    pub fn new(size: usize) -> Self where <T as TryFrom<usize>>::Error: Debug {
+    pub fn new(size: usize) -> Self
+    where
+        <T as TryFrom<usize>>::Error: Debug,
+    {
         IntervalStoreManager {
             capacity: size,
             last_in_use: 1,
             free_indices_start: vec![0.try_into().unwrap()],
-            free_indices_end: vec![(size - 1).try_into().unwrap()]
+            free_indices_end: vec![(size - 1).try_into().unwrap()],
         }
     }
 
@@ -27,8 +30,10 @@ where  T: std::fmt::Display + std::cmp::PartialEq, usize: From<T>
         self.capacity
     }
 
-
-    pub fn change_capacity(&mut self, new_capacity: usize) where <T as TryFrom<usize>>::Error: Debug {
+    pub fn change_capacity(&mut self, new_capacity: usize)
+    where
+        <T as TryFrom<usize>>::Error: Debug,
+    {
         if new_capacity > self.capacity {
             let start: T = self.capacity.try_into().unwrap();
             let end: T = (new_capacity - 1).try_into().unwrap();
@@ -44,12 +49,14 @@ where  T: std::fmt::Display + std::cmp::PartialEq, usize: From<T>
         }
     }
 
-
     pub fn is_empty(&self) -> bool {
         self.last_in_use == 0
     }
 
-    pub fn get(&mut self) -> usize where <T as TryFrom<usize>>::Error: Debug {
+    pub fn get(&mut self) -> usize
+    where
+        <T as TryFrom<usize>>::Error: Debug,
+    {
         if self.is_empty() {
             println!(" no more indices left");
             panic!();
@@ -64,7 +71,10 @@ where  T: std::fmt::Display + std::cmp::PartialEq, usize: From<T>
         new_value
     }
 
-    pub fn release(&mut self, index: usize) where <T as TryFrom<usize>>::Error: Debug {
+    pub fn release(&mut self, index: usize)
+    where
+        <T as TryFrom<usize>>::Error: Debug,
+    {
         let val: T = TryFrom::try_from(index).unwrap();
         if self.last_in_use != 0 {
             let start: usize = self.free_indices_start[self.last_in_use - 1].into();
@@ -98,8 +108,7 @@ where  T: std::fmt::Display + std::cmp::PartialEq, usize: From<T>
     }
 
     pub fn get_size(&self) -> usize {
-        self.free_indices_start.len() * 2 * std::mem::size_of::<T>() + std::mem::size_of::<IntervalStoreManager<T>>()
+        self.free_indices_start.len() * 2 * std::mem::size_of::<T>()
+            + std::mem::size_of::<IntervalStoreManager<T>>()
     }
 }
-
-
