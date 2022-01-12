@@ -34,8 +34,8 @@ import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
 import com.amazon.randomcutforest.state.store.PointStoreFloatMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
@@ -94,7 +94,8 @@ public class V1JsonToV2StateConverter {
                         .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
                         .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
             } else {
-                pointStore = new PointStoreFloat(dimensions, capacity);
+                pointStore = PointStore.builder().dimensions(dimensions).capacity(capacity).shingleSize(1)
+                        .initialSize(capacity).build();
                 globalTree = new CompactRandomCutTreeFloat.Builder().pointStore(pointStore)
                         .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
                         .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
@@ -108,7 +109,7 @@ public class V1JsonToV2StateConverter {
             if (precision == Precision.FLOAT_64) {
                 return new PointStoreDoubleMapper().toState((PointStoreDouble) pointStore);
             } else {
-                return new PointStoreFloatMapper().toState((PointStoreFloat) pointStore);
+                return new PointStoreFloatMapper().toState((PointStore) pointStore);
             }
         }
 

@@ -29,8 +29,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 public class RandomCutForestMapperTest {
@@ -86,8 +86,8 @@ public class RandomCutForestMapperTest {
             assertEquals(store.size(), store2.size());
 
         } else {
-            PointStoreFloat store = (PointStoreFloat) coordinator.getStore();
-            PointStoreFloat store2 = (PointStoreFloat) coordinator2.getStore();
+            PointStore store = (PointStore) coordinator.getStore();
+            PointStore store2 = (PointStore) coordinator2.getStore();
             assertArrayEquals(store.getRefCount(), store2.getRefCount());
             assertArrayEquals(store.getStore(), store2.getStore());
             assertEquals(store.getCapacity(), store2.getCapacity());

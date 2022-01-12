@@ -19,9 +19,9 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-public class RCF3PointStoreLarge extends RCF3PointStore {
+public class PointStoreLarge extends PointStore {
 
-    static int INFEASIBLE_LOCN = (int) -1;
+    public static int INFEASIBLE_LOCN = (int) -1;
     protected int[] locationList;
 
     void setInfeasiblePointstoreLocationIndex(int index) {
@@ -37,22 +37,47 @@ public class RCF3PointStoreLarge extends RCF3PointStore {
     };
 
     void setLocation(int index, int location) {
-        locationList[index] = location;
+        locationList[index] = location / baseDimension;
     }
 
     int getLocation(int index) {
-        return locationList[index];
+        return baseDimension * locationList[index];
     }
 
     int locationListLength() {
         return locationList.length;
     }
 
-    public RCF3PointStoreLarge(RCF3PointStore.Builder builder) {
+    public PointStoreLarge(PointStore.Builder builder) {
         super(builder);
         checkArgument(dimensions * capacity < Integer.MAX_VALUE, " incorrect parameters");
-        locationList = new int[currentStoreCapacity];
-        Arrays.fill(locationList, INFEASIBLE_LOCN);
+        if (builder.locationList != null) {
+            locationList = Arrays.copyOf(builder.locationList, builder.locationList.length);
+        } else {
+            locationList = new int[currentStoreCapacity];
+            Arrays.fill(locationList, INFEASIBLE_LOCN);
+        }
+    }
+
+    @Override
+    public int size() {
+        int count = 0;
+        for (int i = 0; i < locationList.length; i++) {
+            if (locationList[i] != INFEASIBLE_LOCN) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    @Override
+    protected void checkFeasible(int index) {
+        checkArgument(locationList[index] != INFEASIBLE_LOCN, " invalid point");
+    }
+
+    @Override
+    public int[] getLocationList() {
+        return Arrays.copyOf(locationList, locationList.length);
     }
 
 }

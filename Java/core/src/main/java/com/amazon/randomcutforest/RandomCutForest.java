@@ -57,8 +57,8 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.store.PointStoreFloat;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
@@ -323,7 +323,7 @@ public class RandomCutForest {
     }
 
     private void initCompactFloat(Builder<?> builder) {
-        PointStoreFloat tempStore = PointStoreFloat.builder().internalRotationEnabled(builder.internalRotationEnabled)
+        PointStore tempStore = PointStore.builder().internalRotationEnabled(builder.internalRotationEnabled)
                 .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
                 .directLocationEnabled(builder.directLocationMapEnabled)
                 .internalShinglingEnabled(internalShinglingEnabled)

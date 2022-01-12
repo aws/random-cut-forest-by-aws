@@ -33,17 +33,17 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.CommonUtils;
 
-public class PointStoreFloatTest {
+public class PointStoreTest {
 
     private int dimensions;
     private int capacity;
-    private PointStoreFloat pointStore;
+    private PointStore pointStore;
 
     @BeforeEach
     public void setUp() {
         dimensions = 2;
         capacity = 4;
-        pointStore = new PointStoreFloat(dimensions, capacity);
+        pointStore = new PointStoreSmall(dimensions, capacity);
     }
 
     @Test
@@ -168,10 +168,9 @@ public class PointStoreFloatTest {
     @Test
     public void internalshinglingTestNoRotation() {
         int shinglesize = 10;
-        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
+        PointStore store = new PointStore.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
                 .currentStoreCapacity(1).build();
-        assertTrue(store.isDynamicResizingEnabled());
         assertFalse(store.isInternalRotationEnabled());
         Random random = new Random(0);
         double[] shingle = new double[shinglesize];
@@ -192,10 +191,9 @@ public class PointStoreFloatTest {
     @Test
     public void internalshinglingTestWithRotation() {
         int shinglesize = 10;
-        PointStoreFloat store = new PointStoreFloat.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
+        PointStore store = new PointStore.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
                 .internalRotationEnabled(true).currentStoreCapacity(1).build();
-        assertTrue(store.isDynamicResizingEnabled());
         assertTrue(store.isInternalRotationEnabled());
         Random random = new Random(0);
         double[] shingle = new double[shinglesize];
@@ -222,7 +220,7 @@ public class PointStoreFloatTest {
     @Test
     public void checkRotationAndCompact() {
         int shinglesize = 4;
-        PointStoreFloat store = new PointStoreFloat.Builder().capacity(2 * shinglesize).dimensions(shinglesize)
+        PointStore store = new PointStore.Builder().capacity(2 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
                 .internalRotationEnabled(true).currentStoreCapacity(1).build();
         for (int i = 0; i < 2 * shinglesize; i++) {
@@ -265,9 +263,8 @@ public class PointStoreFloatTest {
     @Test
     void CompactionTest() {
         int shinglesize = 2;
-        PointStoreFloat store = new PointStoreFloat.Builder().capacity(6).dimensions(shinglesize)
-                .shingleSize(shinglesize).indexCapacity(6).directLocationEnabled(false).internalShinglingEnabled(true)
-                .build();
+        PointStore store = new PointStore.Builder().capacity(6).dimensions(shinglesize).shingleSize(shinglesize)
+                .indexCapacity(6).directLocationEnabled(false).internalShinglingEnabled(true).build();
 
         store.add(new double[] { 0 }, 0L);
         for (int i = 0; i < 5; i++) {

@@ -32,7 +32,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.IPointStore;
-import com.amazon.randomcutforest.store.PointStoreFloat;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 
 public class CompactRandomCutTreeFloatMapperTest {
@@ -43,7 +43,8 @@ public class CompactRandomCutTreeFloatMapperTest {
     private static class TreeProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
-            IPointStore<float[]> pointStore = new PointStoreFloat(dimensions, capacity);
+            IPointStore<float[]> pointStore = PointStore.builder().dimensions(dimensions).capacity(capacity)
+                    .shingleSize(1).initialSize(capacity).build();
             List<Integer> indexes = new ArrayList<>();
 
             for (int i = 0; i < capacity; i++) {
