@@ -1,10 +1,11 @@
 extern crate rand;
 use rand::SeedableRng;
 extern crate rand_chacha;
-use crate::multidimdatawithkey::rand::Rng;
-use crate::multidimdatawithkey::rand::RngCore;
-use rand_chacha::ChaCha20Rng;
 use std::f32::consts::PI;
+
+use rand_chacha::ChaCha20Rng;
+
+use crate::multidimdatawithkey::rand::{Rng, RngCore};
 
 pub struct MultiDimDataWithKey {
     pub data: Vec<Vec<f32>>,

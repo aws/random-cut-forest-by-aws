@@ -1,16 +1,16 @@
-use crate::pointstore::PointStoreView;
-use crate::randomcuttree::RCFTree;
-use crate::sampler::Sampler;
-
 use std::fmt::Debug;
+
+use crate::{pointstore::PointStore, randomcuttree::RCFTree, sampler::Sampler};
 extern crate rand;
 use rand::SeedableRng;
 extern crate rand_chacha;
 
-use crate::rcf::Max;
-use crate::samplerplustree::rand::Rng;
-use crate::samplerplustree::rand::RngCore;
 use rand_chacha::ChaCha20Rng;
+
+use crate::{
+    samplerplustree::rand::{Rng, RngCore},
+    types::Max,
+};
 
 #[repr(C)]
 pub struct SamplerPlusTree<C, P, N> {
@@ -71,7 +71,7 @@ where
         &mut self,
         point_index: usize,
         point_attribute: usize,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> (usize, usize)
     where
         <C as TryFrom<usize>>::Error: Debug,
@@ -132,7 +132,7 @@ where
     pub fn generic_score(
         &self,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
         score_unseen: fn(usize, usize) -> f64,
@@ -160,7 +160,7 @@ where
         positions: &[usize],
         centrality: f64,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
         score_unseen: fn(usize, usize) -> f64,

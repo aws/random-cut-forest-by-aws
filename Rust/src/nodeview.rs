@@ -1,10 +1,9 @@
-use crate::boundingbox::BoundingBox;
-
-use crate::newnodestore::NodeStoreView;
-use crate::pointstore::PointStoreView;
-use crate::rcf::Max;
-use crate::visitor::{UniqueMultiVisitor, Visitor};
-
+use crate::{
+    boundingbox::BoundingBox,
+    newnodestore::NodeStoreView,
+    pointstore::PointStore,
+    visitor::{UniqueMultiVisitor, Visitor},
+};
 
 pub trait NodeView {
     fn get_mass(&self) -> usize;
@@ -82,7 +81,7 @@ impl BasicNodeView {
     pub fn set_leaf_view(
         &mut self,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node_store: &dyn NodeStoreView,
     ) {
         self.leaf_index = node_store.get_leaf_point_index(self.current_node);
@@ -127,7 +126,7 @@ impl BasicNodeView {
         &mut self,
         parent: usize,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node_store: &dyn NodeStoreView,
     ) {
         let past_node = self.current_node;
@@ -185,7 +184,7 @@ impl BasicNodeView {
         &mut self,
         visitor: &mut dyn Visitor<T>,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node_store: &dyn NodeStoreView,
     ) {
         if node_store.is_leaf(self.current_node) {
@@ -207,7 +206,7 @@ impl BasicNodeView {
         &mut self,
         visitor: &mut dyn UniqueMultiVisitor<T, Q>,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node_store: &dyn NodeStoreView,
     ) {
         if node_store.is_leaf(self.current_node) {

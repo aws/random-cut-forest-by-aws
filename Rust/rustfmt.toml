@@ -1,0 +1,12 @@
+# This configuration uses unstable features from rustfmt nightly to format imports. Follow these steps to run `cargo fmt`:
+# 1. Install the nightly toolchain
+#     rustup toolchains install nightly
+# 2. Install or update the nightly build of rustfmt
+#     rustup component add rustfmt --toolchain nightly
+# 3. Run `cargo fmt` with the `+nightly` flag
+#     `cargo +nightly fmt`
+unstable_features = true
+
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+reorder_imports = true

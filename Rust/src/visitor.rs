@@ -1,9 +1,4 @@
-
-
-
 use crate::nodeview::NodeView;
-
-
 
 pub trait Visitor<T> {
     fn accept_leaf(&mut self, point: &[f32], node_view: &dyn NodeView);

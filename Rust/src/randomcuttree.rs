@@ -1,24 +1,25 @@
-use crate::boundingbox::BoundingBox;
-use crate::cut::Cut;
-use crate::newnodestore::{NewNodeStore, NodeStoreView};
-
-use crate::rcf::{Max};
 use std::fmt::Debug;
+
+use crate::{
+    boundingbox::BoundingBox,
+    cut::Cut,
+    newnodestore::{NewNodeStore, NodeStoreView},
+};
 
 extern crate rand;
 use rand::SeedableRng;
 extern crate rand_chacha;
-use crate::imputevisitor::ImputeVisitor;
-use crate::nodeview::BasicNodeView;
-use crate::pointstore::PointStoreView;
-use crate::randomcuttree::rand::Rng;
-use crate::randomcuttree::rand::RngCore;
-
-
-
-use crate::scalarscorevisitor::ScalarScoreVisitor;
-use crate::visitor::{UniqueMultiVisitor, Visitor};
 use rand_chacha::ChaCha20Rng;
+
+use crate::{
+    imputevisitor::ImputeVisitor,
+    nodeview::BasicNodeView,
+    pointstore::PointStore,
+    randomcuttree::rand::{Rng, RngCore},
+    scalarscorevisitor::ScalarScoreVisitor,
+    types::Max,
+    visitor::{UniqueMultiVisitor, Visitor},
+};
 
 pub type StoreInUse = NewNodeStore<u8, u16, u8>;
 
@@ -76,7 +77,7 @@ where
         &mut self,
         point_index: usize,
         _point_attribute: usize,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> usize
     where
         <C as TryFrom<usize>>::Error: Debug,
@@ -116,7 +117,7 @@ where
 
                 let mut parent = saved_parent;
                 let mut saved_cut = Cut::new(usize::MAX, 0.0);
-                /** the loop has the execute once */
+                /* the loop has the execute once */
                 loop {
                     let factor: f64 = rng.gen();
                     let (new_cut, separation) =
@@ -188,7 +189,7 @@ where
         &mut self,
         point_index: usize,
         _point_attribute: usize,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> usize
     where
         <C as TryFrom<usize>>::Error: Debug,
@@ -257,7 +258,7 @@ where
     pub fn generic_score(
         &self,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
         score_unseen: fn(usize, usize) -> f64,
@@ -291,7 +292,7 @@ where
         &self,
         positions: &[usize],
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         centrality: f64,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
