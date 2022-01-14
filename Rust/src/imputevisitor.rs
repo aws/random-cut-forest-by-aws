@@ -1,12 +1,8 @@
-
-
-use crate::newnodestore::NodeStoreView;
-use crate::nodeview::NodeView;
-
-
-use crate::visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor};
-
-
+use crate::{
+    newnodestore::NodeStoreView,
+    nodeview::NodeView,
+    visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor},
+};
 
 #[repr(C)]
 pub struct ImputeVisitor {

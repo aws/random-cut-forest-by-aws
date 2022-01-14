@@ -1,35 +1,21 @@
-use crate::pointstore::PointStore;
-use crate::pointstore::PointStoreEdit;
-use crate::pointstore::PointStoreView;
-use crate::samplerplustree::SamplerPlusTree;
 use rayon::prelude::*;
-extern crate num;
 
+use crate::{
+    pointstore::{PointStore, VectorPointStore},
+    samplerplustree::SamplerPlusTree,
+};
+extern crate num;
 extern crate rand;
 use rand::SeedableRng;
 extern crate rand_chacha;
-
-use crate::rcf::rand::RngCore;
-
 use core::fmt::Debug;
+
 use rand_chacha::ChaCha20Rng;
 
-
-pub trait Max {
-    const MAX: Self;
-}
-
-impl Max for u8 {
-    const MAX: u8 = u8::MAX;
-}
-
-impl Max for u16 {
-    const MAX: u16 = u16::MAX;
-}
-
-impl Max for usize {
-    const MAX: usize = usize::MAX;
-}
+use crate::{
+    rcf::rand::RngCore,
+    types::{Location, Max},
+};
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
     1.0 / (x as f64 + f64::log2(1.0 + y as f64))
@@ -106,7 +92,10 @@ pub trait RCF {
     // to be extended to match Java version
 }
 
-pub struct RCFStruct<C, L, P, N> {
+pub struct RCFStruct<C, L, P, N>
+where
+    L: Location,
+{
     dimensions: usize,
     capacity: usize,
     number_of_trees: usize,
@@ -121,7 +110,7 @@ pub struct RCFStruct<C, L, P, N> {
     bounding_box_cache_fraction: f64,
     parallel_enabled: bool,
     random_seed: u64,
-    point_store: PointStore<L>,
+    point_store: VectorPointStore<L>,
 }
 
 pub type RCFTiny = RCFStruct<u8, u16, u16, u8>; // sampleSize <= 256 for these and shingleSize * { max { base_dimensions, (number_of_trees + 1) } <= 256
@@ -129,17 +118,11 @@ pub type RCFSmall = RCFStruct<u8, usize, u16, u8>; // sampleSize <= 256 and (num
 pub type RCFMedium = RCFStruct<u16, usize, usize, u16>; // sampleSize, dimensions <= u16::MAX
 pub type RCFLarge = RCFStruct<usize, usize, usize, usize>; // as large as the machine would allow
 
-impl<
-        C: Max + Copy,
-        L: Max + Copy + std::cmp::PartialEq,
-        P: Max + Copy + std::cmp::PartialEq,
-        N: Max + Copy,
-    > RCFStruct<C, L, P, N>
+impl<C: Max + Copy, L: Location, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy>
+    RCFStruct<C, L, P, N>
 where
     C: std::convert::TryFrom<usize> + std::marker::Sync,
     usize: From<C>,
-    L: std::convert::TryFrom<usize> + std::marker::Sync,
-    usize: From<L>,
     P: std::convert::TryFrom<usize> + std::marker::Sync,
     usize: From<P>,
     N: std::convert::TryFrom<usize> + std::marker::Sync,
@@ -207,7 +190,7 @@ where
             initial_accept_fraction,
             bounding_box_cache_fraction,
             parallel_enabled,
-            point_store: PointStore::<L>::new(
+            point_store: VectorPointStore::<L>::new(
                 dimensions.into(),
                 shingle_size.into(),
                 point_store_capacity,
@@ -304,17 +287,12 @@ pub fn create_rcf(
     }
 }
 
-impl<
-        C: Max + Copy,
-        L: Max + Copy + std::cmp::PartialEq,
-        P: Max + Copy + std::cmp::PartialEq,
-        N: Max + Copy,
-    > RCF for RCFStruct<C, L, P, N>
+impl<C: Max + Copy, L: Location, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> RCF
+    for RCFStruct<C, L, P, N>
 where
     C: std::convert::TryFrom<usize> + std::marker::Sync + Send,
     usize: From<C>,
-    L: std::convert::TryFrom<usize> + std::marker::Sync + Send,
-    usize: From<L>,
+    L: Location,
     P: std::convert::TryFrom<usize> + std::marker::Sync + Send,
     usize: From<P>,
     N: std::convert::TryFrom<usize> + std::marker::Sync + Send,

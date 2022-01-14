@@ -11,19 +11,11 @@ mod rcf;
 mod sampler;
 mod samplerplustree;
 mod scalarscorevisitor;
+mod types;
 mod visitor;
 
 extern crate rand;
-
-
-
-
-
 use crate::rcf::{create_rcf, RCF};
-
-
-
-
 extern crate rand_chacha;
 
 fn main() {

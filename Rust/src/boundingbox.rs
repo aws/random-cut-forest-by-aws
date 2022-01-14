@@ -1,5 +1,3 @@
-
-
 #[repr(C)]
 pub struct BoundingBox {
     range_sum: f64,

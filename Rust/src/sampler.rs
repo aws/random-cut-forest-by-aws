@@ -1,6 +1,7 @@
-use crate::rcf::Max;
-
 use std::fmt::Debug;
+
+use crate::types::Max;
+
 #[repr(C)]
 pub struct Sampler<P> {
     capacity: usize,

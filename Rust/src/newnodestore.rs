@@ -1,13 +1,9 @@
-use crate::boundingbox::BoundingBox;
-use crate::cut::Cut;
-use crate::intervalstoremanager::IntervalStoreManager;
-use crate::pointstore::PointStoreView;
-use crate::rcf::{Max};
+use std::{collections::HashMap, fmt::Debug, mem};
 
-
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::mem;
+use crate::{
+    boundingbox::BoundingBox, cut::Cut, intervalstoremanager::IntervalStoreManager,
+    pointstore::PointStore, types::Max,
+};
 
 /**
 * capacity is the number of leaves in the tree
@@ -47,25 +43,25 @@ const switch_threshold: f64 = 0.5;
 
 pub trait NodeStoreView {
     fn get_mass(&self, index: usize) -> usize;
-    fn get_box(&self, index: usize, point_store: &dyn PointStoreView) -> BoundingBox;
+    fn get_box(&self, index: usize, point_store: &dyn PointStore) -> BoundingBox;
     fn get_probability_of_cut(
         &self,
         index: usize,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> f64;
     fn grow_node_box_pair(
         &self,
         first: &mut BoundingBox,
         second: &mut BoundingBox,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node: usize,
         sibling: usize,
     );
     fn grow_node_box(
         &self,
         bounding_box: &mut BoundingBox,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         node: usize,
         sibling: usize,
     );
@@ -217,7 +213,7 @@ where
         );
     }
 
-    pub fn reconstruct_box(&self, index: usize, point_store: &dyn PointStoreView) -> BoundingBox {
+    pub fn reconstruct_box(&self, index: usize, point_store: &dyn PointStore) -> BoundingBox {
         let idx: usize = (index - 1).try_into().unwrap();
         let mut mutated_bounding_box = self.get_box(self.left_index[idx].into(), point_store);
         self.grow_node_box(
@@ -233,7 +229,7 @@ where
         &mut self,
         index: usize,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> bool {
         let idx = self.translate(index.into());
         if idx != usize::MAX {
@@ -340,7 +336,7 @@ where
         &mut self,
         path: &mut Vec<(usize, usize)>,
         point: &[f32],
-        _point_store: &dyn PointStoreView,
+        _point_store: &dyn PointStore,
         box_resolved: bool,
     ) where
         <N as TryFrom<usize>>::Error: Debug,
@@ -360,7 +356,7 @@ where
         &mut self,
         path: &mut Vec<(usize, usize)>,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         box_resolved: bool,
     ) where
         <N as TryFrom<usize>>::Error: Debug,
@@ -412,7 +408,7 @@ where
         index: usize,
         dim: usize,
         value: f32,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> bool {
         if self.is_leaf(index) {
             let point = (self.project_to_tree)(point_store.get_copy(self.get_point_index(index)));
@@ -427,7 +423,7 @@ where
         index: usize,
         dim: usize,
         value: f32,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> bool {
         if self.is_leaf(index) {
             let point = (self.project_to_tree)(point_store.get_copy(self.get_point_index(index)));
@@ -504,7 +500,7 @@ where
         answer
     }
 
-    fn get_box(&self, index: usize, point_store: &dyn PointStoreView) -> BoundingBox {
+    fn get_box(&self, index: usize, point_store: &dyn PointStore) -> BoundingBox {
         if self.is_leaf(index) {
             return if self.using_transforms {
                 let point =
@@ -538,7 +534,7 @@ where
         &self,
         index: usize,
         point: &[f32],
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
     ) -> f64 {
         let node_idx: usize = self.translate(index);
         if node_idx != usize::MAX {
@@ -571,7 +567,7 @@ where
     fn grow_node_box(
         &self,
         bounding_box: &mut BoundingBox,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         _node: usize,
         sibling: usize,
     ) {
@@ -617,7 +613,7 @@ where
         &self,
         first: &mut BoundingBox,
         second: &mut BoundingBox,
-        point_store: &dyn PointStoreView,
+        point_store: &dyn PointStore,
         _node: usize,
         sibling: usize,
     ) {

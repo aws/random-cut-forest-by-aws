@@ -1,11 +1,8 @@
-
-
-use crate::newnodestore::NodeStoreView;
-use crate::nodeview::NodeView;
-
-use crate::rcf::Max;
-use crate::visitor::{Visitor, VisitorDescriptor};
-
+use crate::{
+    newnodestore::NodeStoreView,
+    nodeview::NodeView,
+    visitor::{Visitor, VisitorDescriptor},
+};
 
 #[repr(C)]
 pub struct ScalarScoreVisitor {
