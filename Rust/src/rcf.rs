@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 
 use crate::{
-    pointstore::{PointStore, VectorPointStore},
+    pointstore::{PointStore, VectorizedPointStore},
     samplerplustree::SamplerPlusTree,
 };
 extern crate num;
@@ -94,7 +94,14 @@ pub trait RCF {
 
 pub struct RCFStruct<C, L, P, N>
 where
+    C: Location,
+    usize: From<C>,
     L: Location,
+    usize: From<L>,
+    P: Location,
+    usize: From<P>,
+    N: Location,
+    usize: From<N>,
 {
     dimensions: usize,
     capacity: usize,
@@ -110,7 +117,7 @@ where
     bounding_box_cache_fraction: f64,
     parallel_enabled: bool,
     random_seed: u64,
-    point_store: VectorPointStore<L>,
+    point_store: VectorizedPointStore<L>,
 }
 
 pub type RCFTiny = RCFStruct<u8, u16, u16, u8>; // sampleSize <= 256 for these and shingleSize * { max { base_dimensions, (number_of_trees + 1) } <= 256
@@ -118,15 +125,20 @@ pub type RCFSmall = RCFStruct<u8, usize, u16, u8>; // sampleSize <= 256 and (num
 pub type RCFMedium = RCFStruct<u16, usize, usize, u16>; // sampleSize, dimensions <= u16::MAX
 pub type RCFLarge = RCFStruct<usize, usize, usize, usize>; // as large as the machine would allow
 
-impl<C: Max + Copy, L: Location, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy>
-    RCFStruct<C, L, P, N>
+impl<C, L, P, N> RCFStruct<C, L, P, N>
 where
-    C: std::convert::TryFrom<usize> + std::marker::Sync,
+    C: Location,
     usize: From<C>,
-    P: std::convert::TryFrom<usize> + std::marker::Sync,
+    L: Location,
+    usize: From<L>,
+    P: Location,
     usize: From<P>,
-    N: std::convert::TryFrom<usize> + std::marker::Sync,
+    N: Location,
     usize: From<N>,
+    <C as TryFrom<usize>>::Error: Debug,
+    <L as TryFrom<usize>>::Error: Debug,
+    <P as TryFrom<usize>>::Error: Debug,
+    <N as TryFrom<usize>>::Error: Debug,
 {
     pub fn new(
         dimensions: usize,
@@ -141,13 +153,7 @@ where
         time_decay: f64,
         initial_accept_fraction: f64,
         bounding_box_cache_fraction: f64,
-    ) -> Self
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <L as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> Self {
         let mut point_store_capacity: usize = (capacity * number_of_trees + 1).try_into().unwrap();
         if point_store_capacity < 2 * capacity {
             point_store_capacity = 2 * capacity;
@@ -190,7 +196,7 @@ where
             initial_accept_fraction,
             bounding_box_cache_fraction,
             parallel_enabled,
-            point_store: VectorPointStore::<L>::new(
+            point_store: VectorizedPointStore::<L>::new(
                 dimensions.into(),
                 shingle_size.into(),
                 point_store_capacity,
@@ -287,28 +293,22 @@ pub fn create_rcf(
     }
 }
 
-impl<C: Max + Copy, L: Location, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> RCF
-    for RCFStruct<C, L, P, N>
+impl<C, L, P, N> RCF for RCFStruct<C, L, P, N>
 where
-    C: std::convert::TryFrom<usize> + std::marker::Sync + Send,
+    C: Location,
     usize: From<C>,
     L: Location,
-    P: std::convert::TryFrom<usize> + std::marker::Sync + Send,
+    usize: From<L>,
+    P: Location,
     usize: From<P>,
-    N: std::convert::TryFrom<usize> + std::marker::Sync + Send,
+    N: Location,
     usize: From<N>,
     <C as TryFrom<usize>>::Error: Debug,
     <L as TryFrom<usize>>::Error: Debug,
     <P as TryFrom<usize>>::Error: Debug,
     <N as TryFrom<usize>>::Error: Debug,
 {
-    fn update(&mut self, point: &[f32], _timestamp: u64)
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <L as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    fn update(&mut self, point: &[f32], _timestamp: u64) {
         let point_index = self.point_store.add(&point);
         if point_index != usize::MAX {
             let result: Vec<(usize, usize)> = if self.parallel_enabled {
@@ -328,8 +328,20 @@ where
         }
     }
 
-    fn get_point_store_size(&self) -> usize {
-        self.point_store.get_size()
+    fn get_dimensions(&self) -> usize {
+        self.dimensions
+    }
+
+    fn get_shingle_size(&self) -> usize {
+        self.shingle_size
+    }
+
+    fn is_internal_shingling_enabled(&self) -> bool {
+        self.internal_shingling
+    }
+
+    fn get_entries_seen(&self) -> u64 {
+        self.entries_seen
     }
 
     fn generic_score(
@@ -340,13 +352,7 @@ where
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> f64
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <L as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> f64 {
         let mut sum = 0.0;
         let new_point = self.point_store.get_shingled_point(point);
         sum = if self.parallel_enabled {
@@ -443,19 +449,7 @@ where
         sum + self.point_store.get_size() + std::mem::size_of::<RCFStruct<C, L, P, N>>()
     }
 
-    fn get_dimensions(&self) -> usize {
-        self.dimensions
-    }
-
-    fn get_shingle_size(&self) -> usize {
-        self.shingle_size
-    }
-
-    fn is_internal_shingling_enabled(&self) -> bool {
-        self.internal_shingling
-    }
-
-    fn get_entries_seen(&self) -> u64 {
-        self.entries_seen
+    fn get_point_store_size(&self) -> usize {
+        self.point_store.get_size()
     }
 }

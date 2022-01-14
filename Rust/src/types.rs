@@ -18,7 +18,11 @@ impl Max for usize {
 /// The Location trait is used as a shorthand for the various traits needed by store (e.g., point
 /// store, node store) locations. These are the values vended by stores to reference a stored
 /// value.
-pub trait Location: Copy + Max + std::cmp::PartialEq + Into<usize> + TryFrom<usize> + Sync {}
+pub trait Location:
+    Copy + Max + std::cmp::PartialEq + TryFrom<usize> + std::marker::Send + Sync
+{
+}
 
+impl Location for u8 {}
 impl Location for u16 {}
 impl Location for usize {}

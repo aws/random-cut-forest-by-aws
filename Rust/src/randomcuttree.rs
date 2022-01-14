@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::{
     boundingbox::BoundingBox,
     cut::Cut,
-    newnodestore::{NewNodeStore, NodeStoreView},
+    nodestore::{NodeStore, VectorNodeStore},
 };
 
 extern crate rand;
@@ -17,31 +17,42 @@ use crate::{
     pointstore::PointStore,
     randomcuttree::rand::{Rng, RngCore},
     scalarscorevisitor::ScalarScoreVisitor,
-    types::Max,
+    types::{Location, Max},
     visitor::{UniqueMultiVisitor, Visitor},
 };
 
-pub type StoreInUse = NewNodeStore<u8, u16, u8>;
+pub type StoreInUse = VectorNodeStore<u8, u16, u8>;
 
 #[repr(C)]
-pub struct RCFTree<C, P, N> {
+pub struct RCFTree<C, P, N>
+where
+    C: Location,
+    usize: From<C>,
+    P: Location,
+    usize: From<P>,
+    N: Location,
+    usize: From<N>,
+{
     dimensions: usize,
     capacity: usize,
-    node_store: NewNodeStore<C, P, N>,
+    node_store: VectorNodeStore<C, P, N>,
     random_seed: u64,
     root: usize,
     tree_mass: usize,
     using_transforms: bool,
 }
 
-impl<C: Max + Copy, P: Max + Copy, N: Max + Copy> RCFTree<C, P, N>
+impl<C, P, N> RCFTree<C, P, N>
 where
-    C: std::convert::TryFrom<usize>,
+    C: Location,
     usize: From<C>,
-    P: std::convert::TryFrom<usize>,
+    P: Location,
     usize: From<P>,
-    N: std::convert::TryFrom<usize>,
+    N: Location,
     usize: From<N>,
+    <C as TryFrom<usize>>::Error: Debug,
+    <P as TryFrom<usize>>::Error: Debug,
+    <N as TryFrom<usize>>::Error: Debug,
 {
     pub fn new(
         dimensions: usize,
@@ -49,19 +60,14 @@ where
         using_transforms: bool,
         bounding_box_cache_fraction: f64,
         random_seed: u64,
-    ) -> Self
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> Self {
         let project_to_tree: fn(Vec<f32>) -> Vec<f32> = { |x| x };
         RCFTree {
             dimensions,
             capacity,
             using_transforms,
             random_seed,
-            node_store: NewNodeStore::<C, P, N>::new(
+            node_store: VectorNodeStore::<C, P, N>::new(
                 capacity,
                 dimensions,
                 using_transforms,
@@ -78,12 +84,7 @@ where
         point_index: usize,
         _point_attribute: usize,
         point_store: &dyn PointStore,
-    ) -> usize
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> usize {
         if self.root == 0 {
             self.root = self.node_store.leaf_index(point_index);
             self.tree_mass = 1;
@@ -190,12 +191,7 @@ where
         point_index: usize,
         _point_attribute: usize,
         point_store: &dyn PointStore,
-    ) -> usize
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> usize {
         if self.root == 0 {
             println!(" deleting from an empty tree");
             panic!();

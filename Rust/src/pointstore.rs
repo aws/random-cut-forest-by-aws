@@ -19,7 +19,7 @@ pub trait PointStore {
 }
 
 #[repr(C)]
-pub struct VectorPointStore<L>
+pub struct VectorizedPointStore<L>
 where
     L: Location,
 {
@@ -39,8 +39,10 @@ where
     entries_seen: i32,
 }
 
-impl<L: Location> VectorPointStore<L>
+impl<L> VectorizedPointStore<L>
 where
+    L: Location,
+    usize: From<L>,
     <L as TryFrom<usize>>::Error: Debug,
 {
     pub fn new(
@@ -51,7 +53,7 @@ where
         internal_shingling: bool,
         internal_rotation: bool,
     ) -> Self {
-        VectorPointStore {
+        VectorizedPointStore {
             internal_shingling,
             internal_rotation,
             dimensions,
@@ -86,8 +88,10 @@ where
     }
 }
 
-impl<L: Location> PointStore for VectorPointStore<L>
+impl<L> PointStore for VectorizedPointStore<L>
 where
+    L: Location,
+    usize: From<L>,
     <L as TryFrom<usize>>::Error: Debug,
 {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32> {
@@ -131,7 +135,7 @@ where
             + self.location.len() * std::mem::size_of::<L>()
             + self.reference_count.len() * std::mem::size_of::<u8>()
             + self.index_manager.get_size()
-            + std::mem::size_of::<VectorPointStore<L>>()
+            + std::mem::size_of::<VectorizedPointStore<L>>()
     }
 
     fn get_missing_values(&self, values: &[usize]) -> Vec<usize> {

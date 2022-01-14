@@ -1,5 +1,5 @@
 use crate::{
-    newnodestore::NodeStoreView,
+    nodestore::NodeStore,
     nodeview::NodeView,
     visitor::{Visitor, VisitorDescriptor},
 };
