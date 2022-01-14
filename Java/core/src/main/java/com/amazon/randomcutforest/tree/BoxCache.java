@@ -19,6 +19,8 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
 
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
 public abstract class BoxCache<Point> implements IBoxCache<Point> {
 
     protected double cacheFraction;
@@ -96,16 +98,23 @@ public abstract class BoxCache<Point> implements IBoxCache<Point> {
                 }
             }
             cacheMap = newMap;
-        } else if (bitSet != null) {
-            BitSet newBitSet = new BitSet(maxSize);
-            for (int i = 0; i < map.length; i++) {
-                if (bitSet.get(i)) {
-                    newBitSet.set(map[i]);
+        } else {
+            if (bitSet != null) {
+                BitSet newBitSet = new BitSet(maxSize);
+                for (int i = 0; i < map.length; i++) {
+                    if (bitSet.get(i)) {
+                        if (map[i] != NULL) {
+                            newBitSet.set(map[i]);
+                        } else {
+                            newBitSet.set(i);
+                        }
+                    }
                 }
+                bitSet = newBitSet;
             }
-            bitSet = newBitSet;
-        } else if (cachedBoxes != null) {
-            remap(map);
+            if (cachedBoxes != null) {
+                remap(map);
+            }
         }
     }
 

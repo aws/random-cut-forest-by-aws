@@ -219,6 +219,12 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
         }
     }
 
+    public void addPoint(Integer pointIndex, float weight, long sequenceIndex) {
+        checkArgument(acceptPointState == null && size < capacity && pointIndex != null, " operation not permitted");
+        acceptPointState = new AcceptPointState(sequenceIndex, weight);
+        addPoint(pointIndex);
+    }
+
     @Override
     public void addPoint(Integer pointIndex) {
         if (pointIndex != null) {

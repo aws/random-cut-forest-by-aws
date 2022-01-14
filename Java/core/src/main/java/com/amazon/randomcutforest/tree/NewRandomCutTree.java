@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.tree;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -58,30 +59,34 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
      */
 
     private Random testRandom;
+    protected boolean storeSequenceIndexesEnabled;
+    protected boolean centerOfMassEnabled;
     private long randomSeed;
     protected int root;
     protected IPointStoreView<float[]> pointStoreView;
-    protected int treeMass;
-    protected int capacity;
+    // protected int treeMass;
+    protected int numberOfLeaves;
     protected AbstractNodeStore nodeStore;
-    protected double nodeCacheFraction = 1.0;
+    protected double boundingBoxCacheFraction = 1.0;
     protected int outputAfter;
+    protected int dimension;
 
     protected NewRandomCutTree(Builder<?> builder) {
         pointStoreView = builder.pointStoreView;
-        capacity = builder.capacity;
+        numberOfLeaves = builder.capacity;
         randomSeed = builder.randomSeed;
-        outputAfter = builder.outputAfter.orElse(capacity / 4);
-        if (capacity <= 256 && pointStoreView.getDimensions() <= 256) {
-            nodeStore = new NodeStoreSmall(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
-                    pointStoreView);
-        } else if (capacity <= Character.MAX_VALUE && pointStoreView.getDimensions() <= Character.MAX_VALUE) {
-            nodeStore = new NodeStoreMedium(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
-                    pointStoreView);
-        } else {
-            nodeStore = new NodeStoreLarge(capacity, pointStoreView.getDimensions(), builder.nodeCacheFraction,
-                    pointStoreView);
-        }
+        outputAfter = builder.outputAfter.orElse(numberOfLeaves / 4);
+        dimension = pointStoreView.getDimensions();
+        nodeStore = (builder.nodeStore != null) ? builder.nodeStore
+                : AbstractNodeStore.builder().capacity(numberOfLeaves - 1).dimensions(pointStoreView.getDimensions())
+                        .boundingBoxCacheFraction(builder.boundingBoxCacheFraction).pointStoreView(pointStoreView)
+                        .centerOfMassEnabled(builder.centerOfMassEnabled)
+                        .storeSequencesEnabled(builder.storeSequenceIndexesEnabled).build();
+        // note the number of internal nodes is one less than sampleSize
+        // the RCF V2_0 states used this notion
+        this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
+        this.centerOfMassEnabled = builder.centerOfMassEnabled;
+        this.root = builder.root;
     }
 
     @Override
@@ -89,7 +94,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
             checkArgument(Double.class.isAssignableFrom(clazz),
                     String.format("Setting '%s' must be a double value", name));
-            setNodeCacheFraction((Double) value);
+            setBoundingBoxCacheFraction((Double) value);
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
         }
@@ -101,7 +106,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
             checkArgument(clazz.isAssignableFrom(Double.class),
                     String.format("Setting '%s' must be a double value", name));
-            return clazz.cast(nodeCacheFraction);
+            return clazz.cast(boundingBoxCacheFraction);
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
         }
@@ -111,9 +116,9 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     // boxes
     // 0 would mean less space usage, but slower throughput
     // 1 would imply larger space but better throughput
-    public void setNodeCacheFraction(double fraction) {
+    public void setBoundingBoxCacheFraction(double fraction) {
         checkArgument(0 <= fraction && fraction <= 1, "incorrect parameter");
-        nodeCacheFraction = fraction;
+        boundingBoxCacheFraction = fraction;
     }
 
     /**
@@ -169,29 +174,38 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
 
     public Integer addPoint(Integer pointIndex, long sequenceIndex) {
 
-        if (root == 0) {
-            root = nodeStore.addLeaf(0, pointIndex, 1);
-            treeMass = 1;
+        if (root == Null) {
+            root = nodeStore.addLeaf(pointIndex, sequenceIndex);
             return pointIndex;
         } else {
+
             float[] point = pointStoreView.get(pointIndex);
-            Stack<int[]> leafPath = nodeStore.getPath(root, point, false);
-            int[] first = leafPath.pop();
+            Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
+            int[] first = pathToRoot.pop();
             int leafNode = first[0];
+            int savedParent = (pathToRoot.size() == 0) ? Null : pathToRoot.lastElement()[0];
+            if (!nodeStore.isLeaf(leafNode)) {
+                // this corresponds to rebuilding a partial tree
+                if (savedParent == Null) {
+                    root = pointIndex + numberOfLeaves; // note this capacity is nodestore.capacity + 1
+                } else {
+                    nodeStore.addToPartialTree(pathToRoot, point, pointIndex);
+                    nodeStore.manageAncestorsAdd(pathToRoot, point, pointStoreView);
+                    nodeStore.addLeaf(pointIndex, sequenceIndex);
+                }
+                return pointIndex;
+            }
             int leafSavedSibling = first[1];
             int sibling = leafSavedSibling;
             int leafPointIndex = nodeStore.getPointIndex(leafNode);
             float[] oldPoint = pointStoreView.get(leafPointIndex);
-            int savedParent = 0;
-            if (leafPath.size() != 0) {
-                savedParent = leafPath.lastElement()[0];
-            }
             Stack<int[]> parentPath = new Stack<>();
-            treeMass += 1;
+
             if (Arrays.equals(point, oldPoint)) {
                 nodeStore.increaseLeafMass(leafNode);
                 checkArgument(!nodeStore.freeNodeManager.isEmpty(), "incorrect/impossible state");
-                nodeStore.manageAncestorsAdd(leafPath, point, pointStoreView);
+                nodeStore.manageAncestorsAdd(pathToRoot, point, pointStoreView);
+                nodeStore.addLeaf(leafPointIndex, sequenceIndex);
                 return leafPointIndex;
             } else {
                 int node = leafNode;
@@ -227,38 +241,30 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
                         randomCut(factor, point, currentBox);
                         throw new IllegalStateException(" cut failed ");
                     }
-                    if (currentBox.contains(point) || parent == 0) {
+                    if (currentBox.contains(point) || parent == Null) {
                         break;
                     } else {
                         nodeStore.growNodeBox(currentBox, pointStoreView, parent, sibling);
-                        int[] next = leafPath.pop();
+                        int[] next = pathToRoot.pop();
                         node = next[0];
                         sibling = next[1];
-                        if (leafPath.size() != 0) {
-                            parent = leafPath.lastElement()[0];
+                        if (pathToRoot.size() != 0) {
+                            parent = pathToRoot.lastElement()[0];
                         } else {
-                            parent = 0;
+                            parent = Null;
                         }
                     }
                 }
-                int newLeafNode = nodeStore.addLeaf(0, pointIndex, 1);
-                int newMass = nodeStore.getMass(savedNode) + 1;
-                int mergedNode = (point[savedDim] <= savedCutValue)
-                        ? nodeStore.addNode(savedParent, newLeafNode, savedNode, savedDim, savedCutValue, newMass)
-                        : nodeStore.addNode(savedParent, savedNode, newLeafNode, savedDim, savedCutValue, newMass);
-
-                savedBox.addPoint(point);
-                nodeStore.addBox(mergedNode, savedBox);
-
-                if (savedParent != 0) {
-                    // add the new node
-                    nodeStore.spliceEdge(savedParent, savedNode, mergedNode);
+                if (savedParent != Null) {
                     while (!parentPath.isEmpty()) {
-                        leafPath.push(parentPath.pop());
+                        pathToRoot.push(parentPath.pop());
                     }
-                    assert (leafPath.lastElement()[0] == savedParent);
-                    nodeStore.manageAncestorsAdd(leafPath, point, pointStoreView);
-                } else {
+                    assert (pathToRoot.lastElement()[0] == savedParent);
+                }
+
+                int mergedNode = nodeStore.addNode(pathToRoot, point, sequenceIndex, pointIndex, savedNode, savedDim,
+                        savedCutValue, savedBox);
+                if (savedParent == Null) {
                     root = mergedNode;
                 }
             }
@@ -267,44 +273,40 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     }
 
     public Integer deletePoint(Integer pointIndex, long sequenceIndex) {
-        if (root == 0) {
+
+        if (root == Null) {
             throw new IllegalStateException(" deleting from an empty tree");
         }
-
-        treeMass = treeMass - 1;
         float[] point = pointStoreView.get(pointIndex);
-        // System.out.println(" new delete " + Arrays.toString(point));
-        Stack<int[]> leafPath = nodeStore.getPath(root, point, false);
-        int[] first = leafPath.pop();
+        Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
+        int[] first = pathToRoot.pop();
         int leafSavedSibling = first[1];
         int leafNode = first[0];
         int leafPointIndex = nodeStore.getPointIndex(leafNode);
-        float[] oldPoint = pointStoreView.get(leafPointIndex);
 
-        if (!Arrays.equals(point, oldPoint)) {
+        if (leafPointIndex != pointIndex && !pointStoreView.pointEquals(leafPointIndex, point)) {
             throw new IllegalStateException(" deleting wrong node " + leafPointIndex + " instead of " + pointIndex);
+        } else if (storeSequenceIndexesEnabled) {
+            nodeStore.removeLeaf(leafPointIndex, sequenceIndex);
         }
 
         if (nodeStore.decreaseLeafMass(leafNode) == 0) {
-            if (leafPath.size() == 0) {
-                root = 0;
+            if (pathToRoot.size() == 0) {
+                root = Null;
             } else {
-                int parent = leafPath.pop()[0];
-                int grandParent = 0;
-                if (leafPath.size() != 0) {
-                    grandParent = leafPath.lastElement()[0];
-                }
-
-                if (grandParent == 0) {
+                int parent = pathToRoot.pop()[0];
+                if (pathToRoot.size() == 0) {
                     root = leafSavedSibling;
                     nodeStore.setRoot(root);
                 } else {
+                    int grandParent = pathToRoot.lastElement()[0];
                     nodeStore.replaceParentBySibling(grandParent, parent, leafNode);
-                    assert (leafPath.lastElement()[0] == grandParent);
-                    nodeStore.manageAncestorsDelete(leafPath, point, pointStoreView);
+                    nodeStore.manageAncestorsDelete(pathToRoot, point, pointStoreView);
                 }
                 nodeStore.deleteInternalNode(parent);
             }
+        } else {
+            nodeStore.manageAncestorsDelete(pathToRoot, point, pointStoreView);
         }
         return leafPointIndex;
     }
@@ -312,10 +314,11 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
-        Function<Double, Double> treeDamp = x -> damp.apply(x, treeMass * 1.0);
+        Function<Double, Double> treeDamp = x -> damp.apply(x, getMass() * 1.0);
+
         return normalizer.apply(
                 nodeStore.dynamicScore(root, ignoreMass, point, pointStoreView, scoreSeen, scoreUnseen, treeDamp),
-                treeMass * 1.0);
+                getMass() * 1.0);
     }
 
     /**
@@ -339,7 +342,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
      */
     @Override
     public <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory) {
-        checkState(root != 0, "this tree doesn't contain any nodes");
+        checkState(root != Null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.newVisitor(this, point);
         nodeStore.traversePathToLeafAndVisitNodes(projectToTree(point), visitor, root, pointStoreView,
                 this::liftFromTree);
@@ -365,7 +368,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     public <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
-        checkState(root != 0, "this tree doesn't contain any nodes");
+        checkState(root != Null, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.newVisitor(this, point);
         nodeStore.traverseTreeMulti(projectToTree(point), visitor, root, pointStoreView, this::liftFromTree);
         return visitorFactory.liftResult(this, visitor.getResult());
@@ -377,7 +380,27 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
      */
     @Override
     public int getMass() {
-        return treeMass;
+        return root == Null ? 0 : nodeStore.getMass(root);
+    }
+
+    public int getNumberOfLeaves() {
+        return numberOfLeaves;
+    }
+
+    public boolean isCenterOfMassEnabled() {
+        return centerOfMassEnabled;
+    }
+
+    public boolean isStoreSequenceIndexesEnabled() {
+        return storeSequenceIndexesEnabled;
+    }
+
+    public double getBoundingBoxCacheFraction() {
+        return boundingBoxCacheFraction;
+    }
+
+    public int getDimension() {
+        return dimension;
     }
 
     /**
@@ -418,27 +441,40 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
         return randomSeed;
     }
 
+    public AbstractNodeStore getNodeStore() {
+        return nodeStore;
+    }
+
     public static class Builder<T extends Builder<T>> {
-        protected double nodeCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
+        protected boolean storeSequenceIndexesEnabled = RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
+        protected boolean centerOfMassEnabled = RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
+        protected double boundingBoxCacheFraction = RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         protected long randomSeed = new Random().nextLong();
         protected Random random = null;
         protected int capacity = RandomCutForest.DEFAULT_SAMPLE_SIZE;
         protected Optional<Integer> outputAfter = Optional.empty();
         protected int dimension;
         protected IPointStoreView<float[]> pointStoreView;
+        protected AbstractNodeStore nodeStore;
+        protected int root = Null;
 
         public T capacity(int capacity) {
             this.capacity = capacity;
             return (T) this;
         }
 
-        public T nodeCacheFraction(double boundingBoxCacheFraction) {
-            this.nodeCacheFraction = boundingBoxCacheFraction;
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
             return (T) this;
         }
 
         public T pointStoreView(IPointStoreView<float[]> pointStoreView) {
             this.pointStoreView = pointStoreView;
+            return (T) this;
+        }
+
+        public T nodeStore(AbstractNodeStore nodeStore) {
+            this.nodeStore = nodeStore;
             return (T) this;
         }
 
@@ -457,8 +493,27 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
             return (T) this;
         }
 
+        public T setRoot(int root) {
+            this.root = root;
+            return (T) this;
+        }
+
+        public T storeSequenceIndexesEnabled(boolean storeSequenceIndexesEnabled) {
+            this.storeSequenceIndexesEnabled = storeSequenceIndexesEnabled;
+            return (T) this;
+        }
+
+        public T centerOfMassEnabled(boolean centerOfMassEnabled) {
+            this.centerOfMassEnabled = centerOfMassEnabled;
+            return (T) this;
+        }
+
         public NewRandomCutTree build() {
             return new NewRandomCutTree(this);
         }
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 }

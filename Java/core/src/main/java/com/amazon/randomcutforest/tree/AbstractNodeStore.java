@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.Arrays;
@@ -49,44 +50,93 @@ public abstract class AbstractNodeStore {
 
     public static double SWITCH_FRACTION = 0.499;
 
+    public static int Null = -1;
+
+    /**
+     * the number of internal nodes; the nodes will range from 0..capacity-1 the
+     * value capacity would correspond to "not yet set" the values Y= capacity+1+X
+     * correspond to pointstore index X note that capacity + 1 + X =
+     * number_of_leaves + X
+     */
     protected final int capacity;
     protected final int dimensions;
     protected final float[] cutValue;
-    protected double nodeCacheFraction;
+    protected double boundingboxCacheFraction;
     protected IndexIntervalManager freeNodeManager;
     protected double[] rangeSumData;
     protected float[] boundingBoxData;
     protected final IPointStoreView<float[]> pointStoreView;
     protected final HashMap<Integer, Integer> leafMass;
+    protected boolean centerOfMassEnabled;
+    protected boolean storeSequenceIndexesEnabled;
+    protected float[] pointSum;
+    protected HashMap<Integer, HashMap<Long, Integer>> sequenceMap;
 
-    /**
-     * Create a new NodeStore with the given capacity.
-     *
-     * @param capacity The maximum number of Nodes whose data can be stored.
-     */
-    public AbstractNodeStore(int capacity, int dimensions, double nodeCacheFraction,
-            IPointStoreView<float[]> pointStoreView) {
-        this.capacity = capacity;
-        this.dimensions = dimensions;
-        freeNodeManager = new IndexIntervalManager(capacity - 1);
-        this.nodeCacheFraction = nodeCacheFraction;
-        cutValue = new float[capacity - 1];
+    public AbstractNodeStore(AbstractNodeStore.Builder<?> builder) {
+        this.capacity = builder.capacity;
+        this.dimensions = builder.dimensions;
+        if ((builder.leftIndex == null)) {
+            freeNodeManager = new IndexIntervalManager(capacity);
+        }
+        this.boundingboxCacheFraction = builder.boundingBoxCacheFraction;
+        cutValue = (builder.cutValues != null) ? builder.cutValues : new float[capacity];
         leafMass = new HashMap<>();
-        int cache_limit = (int) Math.floor(nodeCacheFraction * capacity);
+        int cache_limit = (int) Math.floor(boundingboxCacheFraction * capacity);
         rangeSumData = new double[cache_limit];
         boundingBoxData = new float[2 * dimensions * cache_limit];
-        this.pointStoreView = pointStoreView;
+        this.pointStoreView = builder.pointStoreView;
+        this.centerOfMassEnabled = builder.centerOfMassEnabled;
+        this.storeSequenceIndexesEnabled = builder.storeSequencesEnabled;
+        if (this.centerOfMassEnabled) {
+            pointSum = new float[(capacity) * dimensions];
+        }
+        if (this.storeSequenceIndexesEnabled) {
+            sequenceMap = new HashMap<>();
+        }
     }
 
-    abstract int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass);
+    protected abstract int addNode(Stack<int[]> pathToRoot, float[] point, long sequenceIndex, int pointIndex,
+            int childIndex, int cutDimension, float cutValue, BoundingBoxFloat box);
 
-    public int addLeaf(int parentIndex, int pointIndex, int mass) {
-        return pointIndex + capacity;
+    protected int addLeaf(int pointIndex, long sequenceIndex) {
+        if (storeSequenceIndexesEnabled) {
+            HashMap<Long, Integer> leafMap = sequenceMap.remove(pointIndex);
+            if (leafMap == null) {
+                leafMap = new HashMap<>();
+            }
+            Integer count = leafMap.remove(sequenceIndex);
+            if (count != null) {
+                leafMap.put(sequenceIndex, count + 1);
+            } else {
+                leafMap.put(sequenceIndex, 1);
+            }
+            sequenceMap.put(pointIndex, leafMap);
+        }
+        return pointIndex + capacity + 1;
+    }
+
+    public void removeLeaf(int leafPointIndex, long sequenceIndex) {
+        HashMap<Long, Integer> leafMap = sequenceMap.remove(leafPointIndex);
+        checkArgument(leafMap != null, " leaf index not found in tree");
+        Integer count = leafMap.remove(sequenceIndex);
+        checkArgument(count != null, " sequence index not found in leaf");
+        if (count > 1) {
+            leafMap.put(sequenceIndex, count - 1);
+            sequenceMap.put(leafPointIndex, leafMap);
+        } else if (leafMap.size() > 0) {
+            sequenceMap.put(leafPointIndex, leafMap);
+        }
     }
 
     public boolean isLeaf(int index) {
-        return index != 0 && index >= capacity;
+        return index > capacity;
     }
+
+    public boolean isInternal(int index) {
+        return index < capacity && index >= 0;
+    }
+
+    public abstract void addToPartialTree(Stack<int[]> pathToRoot, float[] point, int pointIndex);
 
     public abstract int getLeftIndex(int index);
 
@@ -94,13 +144,33 @@ public abstract class AbstractNodeStore {
 
     public abstract void setRoot(int index);
 
+    public float[] getPointSum(int index) {
+        checkArgument(centerOfMassEnabled, " enable center of mass");
+        return (isLeaf(index)) ? pointStoreView.getScaledPoint(getPointIndex(index), getMass(index))
+                : Arrays.copyOfRange(pointSum, index * dimensions, (index + 1) * dimensions);
+    }
+
+    public void invalidatePointSum(int index) {
+        for (int i = 0; i < dimensions; i++) {
+            pointSum[index * dimensions + i] = 0;
+        }
+    }
+
+    public void recomputePointSum(int index) {
+        float[] left = getPointSum(getLeftIndex(index));
+        float[] right = getPointSum(getRightIndex(index));
+        for (int i = 0; i < dimensions; i++) {
+            pointSum[index * dimensions + i] = left[i] + right[i];
+        }
+    }
+
     public void increaseLeafMass(int index) {
-        int y = (index - capacity);
+        int y = (index - capacity - 1);
         leafMass.merge(y, 1, Integer::sum);
     }
 
     public int decreaseLeafMass(int index) {
-        int y = (index - capacity);
+        int y = (index - capacity - 1);
         Integer value = leafMass.remove(y);
         if (value != null) {
             if (value > 1) {
@@ -115,22 +185,19 @@ public abstract class AbstractNodeStore {
     }
 
     public int translate(int index) {
-        if (index != 0 && rangeSumData.length <= index - 1) {
+        if (rangeSumData.length <= index) {
             return Integer.MAX_VALUE;
         } else {
-            return index - 1;
+            return index;
         }
     }
 
-    public void copyBoxToData(int index, BoundingBoxFloat box) {
-        int idx = translate(index);
-        if (idx != Integer.MAX_VALUE) {
-            int base = 2 * idx * dimensions;
-            int mid = base + dimensions;
-            System.arraycopy(box.getMinValues(), 0, boundingBoxData, base, dimensions);
-            System.arraycopy(box.getMaxValues(), 0, boundingBoxData, mid, dimensions);
-            rangeSumData[idx] = box.getRangeSum();
-        }
+    void copyBoxToData(int idx, BoundingBoxFloat box) {
+        int base = 2 * idx * dimensions;
+        int mid = base + dimensions;
+        System.arraycopy(box.getMinValues(), 0, boundingBoxData, base, dimensions);
+        System.arraycopy(box.getMaxValues(), 0, boundingBoxData, mid, dimensions);
+        rangeSumData[idx] = box.getRangeSum();
     }
 
     public boolean checkContainsAndAddPoint(int index, float[] point) {
@@ -160,9 +227,17 @@ public abstract class AbstractNodeStore {
             float[] point = pointStoreView.get(getPointIndex(index));
             return new BoundingBoxFloat(point, point);
         } else {
+            checkArgument(isInternal(index), " incomplete state");
             int idx = translate(index);
             if (idx != Integer.MAX_VALUE) {
-                return getBoxFromData(idx);
+                if (rangeSumData[idx] != 0) {
+                    // return non-trivial boxes
+                    return getBoxFromData(idx);
+                } else {
+                    BoundingBoxFloat box = reconstructBox(index, pointStoreView);
+                    copyBoxToData(idx, box);
+                    return box;
+                }
             }
             return reconstructBox(index, pointStoreView);
         }
@@ -192,16 +267,15 @@ public abstract class AbstractNodeStore {
 
     public boolean checkContainsAndRebuildBox(int index, float[] point, IPointStoreView<float[]> pointStoreView) {
         int idx = translate(index);
-        if (idx != Integer.MAX_VALUE) {
+        if (idx != Integer.MAX_VALUE && rangeSumData[idx] != 0) {
             if (!checkStrictlyContains(index, point)) {
                 BoundingBoxFloat mutatedBoundingBox = reconstructBox(index, pointStoreView);
-                copyBoxToData(index, mutatedBoundingBox);
+                copyBoxToData(idx, mutatedBoundingBox);
                 return false;
             }
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
     public BoundingBoxFloat getBoxFromData(int idx) {
@@ -212,9 +286,13 @@ public abstract class AbstractNodeStore {
                 Arrays.copyOfRange(boundingBoxData, mid, mid + dimensions));
     }
 
-    public void addBox(int index, BoundingBoxFloat box) {
-        if (!isLeaf(index)) {
-            copyBoxToData(index, box);
+    protected void addBox(int index, float[] point, BoundingBoxFloat box) {
+        if (isInternal(index)) {
+            int idx = translate(index);
+            if (idx != Integer.MAX_VALUE) {
+                copyBoxToData(idx, box);
+                checkContainsAndAddPoint(index, point);
+            }
         }
     }
 
@@ -223,9 +301,16 @@ public abstract class AbstractNodeStore {
             float[] point = pointStoreView.get(getPointIndex(sibling));
             box.addPoint(point);
         } else {
-            int sibling_idx = translate(sibling);
-            if (sibling_idx != Integer.MAX_VALUE) {
-                box.addBox(getBoxFromData(sibling_idx));
+            checkArgument(isInternal(sibling), " incomplete state");
+            int siblingIdx = translate(sibling);
+            if (siblingIdx != Integer.MAX_VALUE) {
+                if (rangeSumData[siblingIdx] != 0) {
+                    box.addBox(getBoxFromData(siblingIdx));
+                } else {
+                    BoundingBoxFloat newBox = getBox(siblingIdx);
+                    copyBoxToData(siblingIdx, newBox);
+                    box.addBox(newBox);
+                }
                 return;
             }
             growNodeBox(box, pointStoreView, sibling, getLeftIndex(sibling));
@@ -270,7 +355,10 @@ public abstract class AbstractNodeStore {
         while (!path.isEmpty()) {
             int index = path.pop()[0];
             increaseMassOfInternalNode(index);
-            if (nodeCacheFraction > 0.0) {
+            if (pointSum != null) {
+                recomputePointSum(index);
+            }
+            if (boundingboxCacheFraction > 0.0) {
                 checkContainsAndRebuildBox(index, point, pointStoreview);
                 checkContainsAndAddPoint(index, point);
             }
@@ -282,7 +370,10 @@ public abstract class AbstractNodeStore {
         while (!path.isEmpty()) {
             int index = path.pop()[0];
             decreaseMassOfInternalNode(index);
-            if (nodeCacheFraction > 0.0 && !resolved) {
+            if (pointSum != null) {
+                recomputePointSum(index);
+            }
+            if (boundingboxCacheFraction > 0.0 && !resolved) {
                 resolved = checkContainsAndRebuildBox(index, point, pointStoreview);
             }
         }
@@ -291,12 +382,14 @@ public abstract class AbstractNodeStore {
     public Stack<int[]> getPath(int root, float[] point, boolean verbose) {
         int node = root;
         Stack<int[]> answer = new Stack<>();
-        answer.push(new int[] { root, 0 });
-        while (!isLeaf(node)) {
+        answer.push(new int[] { root, capacity });
+        while (isInternal(node)) {
+            double y = getCutValue(node);
             if (leftOf(node, point)) {
                 answer.push(new int[] { getLeftIndex(node), getRightIndex(node) });
                 node = getLeftIndex(node);
-            } else {
+            } else { // this would push potential Null, of node == capacity
+                     // that would be used for tree reconstruction
                 answer.push(new int[] { getRightIndex(node), getLeftIndex(node) });
                 node = getRightIndex(node);
             }
@@ -307,10 +400,10 @@ public abstract class AbstractNodeStore {
     public abstract void deleteInternalNode(int index);
 
     public int getLeafMass(int index) {
-        int y = (index - capacity);
+        int y = (index - capacity - 1);
         Integer value = leafMass.get(y);
         if (value != null) {
-            return value;
+            return value + 1;
         } else {
             return 1;
         }
@@ -319,11 +412,16 @@ public abstract class AbstractNodeStore {
     public abstract int getMass(int index);
 
     public int getPointIndex(int index) {
-        return index - capacity;
+        return index - capacity - 1;
+    }
+
+    protected boolean leftOf(float cutValue, int cutDimension, float[] point) {
+        return point[cutDimension] <= cutValue;
     }
 
     public boolean leftOf(int node, float[] point) {
-        return point[getCutDimension(node)] <= cutValue[node - 1];
+        int cutDimension = getCutDimension(node);
+        return leftOf(cutValue[node], cutDimension, point);
     }
 
     public int getSibling(int node, int parent) {
@@ -341,11 +439,11 @@ public abstract class AbstractNodeStore {
     public double dynamicScore(int root, int ignoreMass, double[] point, IPointStoreView<float[]> pointStoreView,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             Function<Double, Double> treeDamp) {
-        if (root == 0) {
+        if (root == Null) {
             return 0.0;
         }
         BoundingBoxFloat boundingBox = null;
-        if (nodeCacheFraction < SWITCH_FRACTION || ignoreMass > 0) {
+        if (boundingboxCacheFraction < SWITCH_FRACTION || ignoreMass > 0) {
             float[] fakePoint = new float[point.length];
             boundingBox = new BoundingBoxFloat(fakePoint, fakePoint);
         }
@@ -369,8 +467,8 @@ public abstract class AbstractNodeStore {
                 return new double[] { 1.0, scoreUnseen.apply(1.0 * depth, mass), ignoreFlag };
             }
         }
+        checkArgument(isInternal(node), " incomplete state" + depth + " " + node);
         double[] answer;
-        int sibling;
         if (leftOf(node, point)) {
             answer = scoreScalar(getLeftIndex(node), depth + 1, box, ignoreMass, point, pointStoreView, scoreSeen,
                     scoreUnseen, treeDamp);
@@ -409,11 +507,11 @@ public abstract class AbstractNodeStore {
     public abstract int getCutDimension(int index);
 
     public double getCutValue(int index) {
-        return cutValue[index - 1];
+        return cutValue[index];
     }
 
-    public double getNodeCacheFraction() {
-        return nodeCacheFraction;
+    public double getBoundingboxCacheFraction() {
+        return boundingboxCacheFraction;
     }
 
     protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, int root,
@@ -423,7 +521,7 @@ public abstract class AbstractNodeStore {
     }
 
     protected boolean toLeft(double[] point, int currentNodeOffset) {
-        return point[getCutDimension(currentNodeOffset)] <= cutValue[currentNodeOffset - 1];
+        return point[getCutDimension(currentNodeOffset)] <= cutValue[currentNodeOffset];
     }
 
     BoundingBoxFloat getLeftBox(int index) {
@@ -440,6 +538,7 @@ public abstract class AbstractNodeStore {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
+            checkArgument(isInternal(node), " incomplete state " + node + " " + depthOfNode);
             if (toLeft(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, getLeftIndex(node), depthOfNode + 1);
                 currentNodeView.updateToParent(node, getRightIndex(node), false);
@@ -463,6 +562,7 @@ public abstract class AbstractNodeStore {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
+            checkArgument(isInternal(node), " incomplete state");
             currentNodeView.setCurrentNodeOnly(node);
             if (visitor.trigger(currentNodeView)) {
                 traverseTreeMulti(point, visitor, currentNodeView, getLeftIndex(node), depthOfNode + 1);
@@ -480,6 +580,140 @@ public abstract class AbstractNodeStore {
             }
             visitor.accept(currentNodeView, depthOfNode);
         }
+    }
+
+    public abstract int[] getCutDimension();
+
+    public abstract int[] getRightIndex();
+
+    public abstract int[] getLeftIndex();
+
+    public float[] getCutValue() {
+        return cutValue;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public boolean isCanonicalAndNotALeaf() {
+        return false;
+    }
+
+    public int size() {
+        return capacity - freeNodeManager.size();
+    }
+
+    public int[] getNodeFreeIndexes() {
+        return freeNodeManager.getFreeIndices();
+    }
+
+    /**
+     * a builder
+     */
+
+    public static class Builder<T extends Builder<T>> {
+        protected int dimensions;
+        protected int capacity;
+        protected int[] leftIndex;
+        protected int[] rightIndex;
+        protected int[] cutDimension;
+        protected float[] cutValues;
+        protected int[] freeIndicesIntervalArray;
+        protected int root;
+        protected double boundingBoxCacheFraction;
+        protected boolean centerOfMassEnabled;
+        protected boolean storeSequencesEnabled;
+        protected IPointStoreView<float[]> pointStoreView;
+
+        // dimension of the points being stored
+        public T dimensions(int dimensions) {
+            this.dimensions = dimensions;
+            return (T) this;
+        }
+
+        // maximum number of points in the store
+        public T capacity(int capacity) {
+            this.capacity = capacity;
+            return (T) this;
+        }
+
+        public T useRoot(int root) {
+            this.root = root;
+            return (T) this;
+        }
+
+        public T leftIndex(int[] leftIndex) {
+            this.leftIndex = leftIndex;
+            return (T) this;
+        }
+
+        public T rightIndex(int[] rightIndex) {
+            this.rightIndex = rightIndex;
+            return (T) this;
+        }
+
+        public T cutDimension(int[] cutDimension) {
+            this.cutDimension = cutDimension;
+            return (T) this;
+        }
+
+        public T freeIndicesIntervalArray(int[] freeIndicesIntervalArray) {
+            this.freeIndicesIntervalArray = freeIndicesIntervalArray;
+            return (T) this;
+        }
+
+        public T cutValues(float[] cutValues) {
+            this.cutValues = cutValues;
+            return (T) this;
+        }
+
+        public T pointStoreView(IPointStoreView<float[]> pointStoreView) {
+            this.pointStoreView = pointStoreView;
+            return (T) this;
+        }
+
+        public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
+            this.boundingBoxCacheFraction = boundingBoxCacheFraction;
+            return (T) this;
+        }
+
+        public T centerOfMassEnabled(boolean centerOfMassEnabled) {
+            this.centerOfMassEnabled = centerOfMassEnabled;
+            return (T) this;
+        }
+
+        public T storeSequencesEnabled(boolean storeSequencesEnabled) {
+            this.storeSequencesEnabled = storeSequencesEnabled;
+            return (T) this;
+        }
+
+        public AbstractNodeStore build() {
+            checkArgument(pointStoreView != null, " a point store view is required ");
+            if (leftIndex == null) {
+                checkArgument(rightIndex == null, " incorrect option of right indices");
+                checkArgument(cutValues == null, "incorrect option of cut values");
+                checkArgument(cutDimension == null, " incorrect option of cut dimensions");
+            } else {
+                checkArgument(leftIndex.length == capacity, " incorrect length of right indices");
+                checkArgument(cutValues.length == capacity, "incorrect length of cut values");
+                checkArgument(cutDimension.length == capacity, " incorrect length of cut dimensions");
+            }
+
+            // capacity is numbner of internal nodes
+            if (capacity < 256 && pointStoreView.getDimensions() <= 256) {
+                return new NodeStoreSmall(this);
+            } else if (capacity < Character.MAX_VALUE && pointStoreView.getDimensions() <= Character.MAX_VALUE) {
+                return new NodeStoreMedium(this);
+            } else {
+                return new NodeStoreLarge(this);
+            }
+        }
+
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
 }

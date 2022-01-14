@@ -16,8 +16,10 @@
 package com.amazon.randomcutforest.tree;
 
 import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Stack;
 
-import com.amazon.randomcutforest.store.IPointStoreView;
+import com.amazon.randomcutforest.store.IndexIntervalManager;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -44,126 +46,172 @@ public class NodeStoreLarge extends AbstractNodeStore {
     public final int[] cutDimension;
     private final int[] mass;
 
-    /**
-     * Create a new NodeStore with the given capacity.
-     *
-     * @param capacity The maximum number of Nodes whose data can be stored.
-     */
-    public NodeStoreLarge(int capacity, int dimensions, double nodeCacheFraction,
-            IPointStoreView<float[]> pointStoreView) {
-        super(capacity, dimensions, nodeCacheFraction, pointStoreView);
-        mass = new int[capacity - 1];
-        Arrays.fill(mass, (char) 0);
-        if (nodeCacheFraction > 0) {
-            parentIndex = new int[capacity - 1];
-            Arrays.fill(parentIndex, (char) 0);
+    public NodeStoreLarge(AbstractNodeStore.Builder builder) {
+        super(builder);
+        mass = new int[capacity];
+        Arrays.fill(mass, 0);
+        if (boundingboxCacheFraction > 0) {
+            parentIndex = new int[capacity];
+            Arrays.fill(parentIndex, capacity);
         } else {
             parentIndex = null;
         }
-        leftIndex = new int[capacity - 1];
-        rightIndex = new int[capacity - 1];
-        cutDimension = new int[capacity - 1];
-        Arrays.fill(leftIndex, 0);
-        Arrays.fill(rightIndex, 0);
+        if (builder.leftIndex == null) {
+            leftIndex = new int[capacity];
+            rightIndex = new int[capacity];
+            cutDimension = new int[capacity];
+            Arrays.fill(leftIndex, capacity);
+            Arrays.fill(rightIndex, capacity);
+        } else {
+            leftIndex = Arrays.copyOf(builder.leftIndex, builder.leftIndex.length);
+            rightIndex = Arrays.copyOf(builder.rightIndex, builder.rightIndex.length);
+            cutDimension = Arrays.copyOf(builder.cutDimension, builder.cutDimension.length);
+            BitSet bits = new BitSet(capacity);
+            if (builder.root != Null) {
+                bits.set(builder.root);
+            }
+            for (int i = 0; i < leftIndex.length; i++) {
+                if (isInternal(leftIndex[i])) {
+                    bits.set(leftIndex[i]);
+                    if (parentIndex != null) {
+                        parentIndex[leftIndex[i]] = i;
+                    }
+                }
+            }
+            for (int i = 0; i < rightIndex.length; i++) {
+                if (isInternal(rightIndex[i])) {
+                    bits.set(rightIndex[i]);
+                    if (parentIndex != null) {
+                        parentIndex[rightIndex[i]] = i;
+                    }
+                }
+            }
+            freeNodeManager = new IndexIntervalManager(capacity, capacity, bits);
+        }
     }
 
-    /**
-     * Add new node data to this store.
-     *
-     * @param mass         Node mass.
-     * @param parentIndex  Index of the parent node.
-     * @param leftIndex    Index of the left child node.
-     * @param rightIndex   Index of the right child node.
-     * @param cutDimension The dimension of the cut in this node.
-     * @param cutValue     The value of the cut in this node.
-     * @return the index of the newly stored node.
-     */
     @Override
-    public int addNode(int parentIndex, int leftIndex, int rightIndex, int cutDimension, double cutValue, int mass) {
+    public int addNode(Stack<int[]> pathToRoot, float[] point, long sequenceIndex, int pointIndex, int childIndex,
+            int cutDimension, float cutValue, BoundingBoxFloat box) {
         int index = freeNodeManager.takeIndex();
-        this.cutValue[index] = (float) cutValue;
-        this.cutDimension[index] = cutDimension;
-        this.leftIndex[index] = leftIndex;
-        this.rightIndex[index] = rightIndex;
-        this.mass[index] = (char) (mass - 1);
+        this.cutValue[index] = cutValue;
+        this.cutDimension[index] = (byte) cutDimension;
+        if (leftOf(cutValue, cutDimension, point)) {
+            this.leftIndex[index] = (pointIndex + capacity + 1);
+            this.rightIndex[index] = childIndex;
+        } else {
+            this.rightIndex[index] = (pointIndex + capacity + 1);
+            this.leftIndex[index] = childIndex;
+        }
+        this.mass[index] = (getMass(childIndex) + 1) % (capacity + 1);
+        addLeaf(pointIndex, sequenceIndex);
+        int parentIndex = (pathToRoot.size() == 0) ? Null : pathToRoot.lastElement()[0];
         if (this.parentIndex != null) {
             this.parentIndex[index] = parentIndex;
-            if (!isLeaf(leftIndex)) {
-                this.parentIndex[leftIndex - 1] = (index + 1);
-            }
-            if (!isLeaf(rightIndex)) {
-                this.parentIndex[rightIndex - 1] = (index + 1);
+            if (!isLeaf(childIndex)) {
+                this.parentIndex[childIndex] = (index);
             }
         }
-        return index + 1;
+        addBox(index, point, box);
+        if (parentIndex != Null) {
+            spliceEdge(parentIndex, childIndex, index);
+            manageAncestorsAdd(pathToRoot, point, pointStoreView);
+        }
+        if (pointSum != null) {
+            recomputePointSum(index);
+        }
+        return index;
     }
 
     public int getLeftIndex(int index) {
-        return leftIndex[index - 1];
+        return leftIndex[index];
     }
 
     public int getRightIndex(int index) {
-        return rightIndex[index - 1];
+        return rightIndex[index];
     }
 
     public void setRoot(int index) {
         if (!isLeaf(index) && parentIndex != null) {
-            parentIndex[index - 1] = 0;
+            parentIndex[index] = capacity;
         }
     }
 
     @Override
     protected void decreaseMassOfInternalNode(int node) {
-        --mass[node - 1];
+        mass[node] = (mass[node] + capacity) % (capacity + 1);
     }
 
     @Override
     protected void increaseMassOfInternalNode(int node) {
-        ++mass[node - 1];
+        mass[node] = (mass[node] + 1) % (capacity + 1);
     }
 
     public void deleteInternalNode(int index) {
-        leftIndex[index - 1] = 0;
-        rightIndex[index - 1] = 0;
-        mass[index - 1] = 0;
+        leftIndex[index] = capacity;
+        rightIndex[index] = capacity;
         if (parentIndex != null) {
-            parentIndex[index - 1] = 0;
+            parentIndex[index] = capacity;
         }
-        cutDimension[index - 1] = Integer.MAX_VALUE;
-        cutValue[index - 1] = (float) 0.0;
-        freeNodeManager.releaseIndex(index - 1);
+        if (pointSum != null) {
+            invalidatePointSum(index);
+        }
+        freeNodeManager.releaseIndex(index);
     }
 
     public int getMass(int index) {
-        return (isLeaf(index)) ? getLeafMass(index) : (mass[index - 1] + 1);
+        return (isLeaf(index)) ? getLeafMass(index) : mass[index] != 0 ? mass[index] : (capacity + 1);
     }
 
     public void spliceEdge(int parent, int node, int newNode) {
         assert (!isLeaf(newNode));
-        if (node == leftIndex[parent - 1]) {
-            leftIndex[parent - 1] = newNode;
+        if (node == leftIndex[parent]) {
+            leftIndex[parent] = newNode;
         } else {
-            rightIndex[parent - 1] = newNode;
+            rightIndex[parent] = newNode;
         }
-        if (!isLeaf(node) && nodeCacheFraction > 0.0) {
-            parentIndex[node - 1] = newNode;
+        if (parentIndex != null && isInternal(node)) {
+            parentIndex[node] = newNode;
         }
     }
 
     public void replaceParentBySibling(int grandParent, int parent, int node) {
         int sibling = getSibling(node, parent);
-        if (parent == leftIndex[grandParent - 1]) {
-            leftIndex[grandParent - 1] = sibling;
+        if (parent == leftIndex[grandParent]) {
+            leftIndex[grandParent] = sibling;
         } else {
-            rightIndex[grandParent - 1] = sibling;
+            rightIndex[grandParent] = sibling;
         }
-        if (!isLeaf(sibling) && nodeCacheFraction > 0.0) {
-            parentIndex[sibling - 1] = grandParent;
+        if (parentIndex != null && isInternal(sibling)) {
+            parentIndex[sibling] = grandParent;
         }
     }
 
     public int getCutDimension(int index) {
-        return cutDimension[index - 1];
+        return cutDimension[index];
+    }
+
+    public int[] getCutDimension() {
+        return Arrays.copyOf(cutDimension, cutDimension.length);
+    }
+
+    public int[] getLeftIndex() {
+        return Arrays.copyOf(leftIndex, leftIndex.length);
+    }
+
+    public int[] getRightIndex() {
+        return Arrays.copyOf(rightIndex, rightIndex.length);
+    }
+
+    @Override
+    public void addToPartialTree(Stack<int[]> pathToRoot, float[] point, int pointIndex) {
+        int node = pathToRoot.lastElement()[0];
+        if (leftOf(node, point)) {
+            leftIndex[node] = (pointIndex + capacity + 1);
+        } else {
+            rightIndex[node] = (pointIndex + capacity + 1);
+        }
+        manageAncestorsAdd(pathToRoot, point, pointStoreView);
     }
 
 }

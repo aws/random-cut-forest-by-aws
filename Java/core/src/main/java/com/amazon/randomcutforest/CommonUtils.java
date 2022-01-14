@@ -200,7 +200,7 @@ public class CommonUtils {
     };
 
     public static double[] toDoubleArray(float[] point) {
-        checkNotNull(point, "point must not be null");
+        checkNotNull(point, "array must not be null");
         double[] result = new double[point.length];
         for (int i = 0; i < point.length; i++) {
             result[i] = point[i];
@@ -209,10 +209,46 @@ public class CommonUtils {
     }
 
     public static float[] toFloatArray(double[] point) {
-        checkNotNull(point, "point must not be null");
+        checkNotNull(point, "array must not be null");
         float[] result = new float[point.length];
         for (int i = 0; i < point.length; i++) {
             result[i] = (float) point[i];
+        }
+        return result;
+    }
+
+    public static int[] toIntArray(byte[] values) {
+        checkNotNull(values, "array must not be null");
+        int[] result = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = values[i] & 0xff;
+        }
+        return result;
+    }
+
+    public static int[] toIntArray(char[] values) {
+        checkNotNull(values, "array must not be null");
+        int[] result = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = values[i];
+        }
+        return result;
+    }
+
+    public static char[] toCharArray(int[] values) {
+        checkNotNull(values, "array must not be null");
+        char[] result = new char[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = (char) values[i];
+        }
+        return result;
+    }
+
+    public static byte[] toByteArray(int[] values) {
+        checkNotNull(values, "array must not be null");
+        byte[] result = new byte[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = (byte) values[i];
         }
         return result;
     }
