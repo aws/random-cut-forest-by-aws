@@ -15,17 +15,18 @@
 
 package com.amazon.randomcutforest.state.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+
+import java.util.Arrays;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.util.ArrayPacking;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 
 @Getter
 @Setter

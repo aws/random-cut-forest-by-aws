@@ -177,6 +177,10 @@ public class NodeStoreSmall extends AbstractNodeStore {
         if (pointSum != null) {
             invalidatePointSum(index);
         }
+        int idx = translate(index);
+        if (idx != Integer.MAX_VALUE) {
+            rangeSumData[idx] = 0.0;
+        }
         freeNodeManager.releaseIndex(index);
     }
 

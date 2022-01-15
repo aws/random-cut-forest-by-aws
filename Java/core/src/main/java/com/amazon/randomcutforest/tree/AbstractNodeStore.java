@@ -184,6 +184,18 @@ public abstract class AbstractNodeStore {
         }
     }
 
+    public void resizeCache(double fraction) {
+        if (fraction == 0) {
+            rangeSumData = null;
+            boundingBoxData = null;
+        } else {
+            int limit = (int) Math.floor(fraction * capacity);
+            rangeSumData = Arrays.copyOf(rangeSumData, limit);
+            boundingBoxData = Arrays.copyOf(boundingBoxData, limit * 2 * dimensions);
+        }
+        boundingboxCacheFraction = fraction;
+    }
+
     public int translate(int index) {
         if (rangeSumData.length <= index) {
             return Integer.MAX_VALUE;
@@ -202,7 +214,7 @@ public abstract class AbstractNodeStore {
 
     public boolean checkContainsAndAddPoint(int index, float[] point) {
         int idx = translate(index);
-        if (idx != Integer.MAX_VALUE) {
+        if (idx != Integer.MAX_VALUE && rangeSumData[idx] != 0) {
             int base = 2 * idx * dimensions;
             int mid = base + dimensions;
             double rangeSum = 0;
@@ -289,7 +301,7 @@ public abstract class AbstractNodeStore {
     protected void addBox(int index, float[] point, BoundingBoxFloat box) {
         if (isInternal(index)) {
             int idx = translate(index);
-            if (idx != Integer.MAX_VALUE) {
+            if (idx != Integer.MAX_VALUE) { // always add irrespective of rangesum
                 copyBoxToData(idx, box);
                 checkContainsAndAddPoint(index, point);
             }
@@ -301,7 +313,7 @@ public abstract class AbstractNodeStore {
             float[] point = pointStoreView.get(getPointIndex(sibling));
             box.addPoint(point);
         } else {
-            checkArgument(isInternal(sibling), " incomplete state");
+            checkArgument(isInternal(sibling), " incomplete state " + sibling);
             int siblingIdx = translate(sibling);
             if (siblingIdx != Integer.MAX_VALUE) {
                 if (rangeSumData[siblingIdx] != 0) {
@@ -321,9 +333,9 @@ public abstract class AbstractNodeStore {
 
     public double probabilityOfCut(int node, float[] point, IPointStoreView<float[]> pointStoreView,
             BoundingBoxFloat otherBox) {
-        int node_idx = translate(node);
-        if (node_idx != Integer.MAX_VALUE) {
-            int base = 2 * node_idx * dimensions;
+        int nodeIdx = translate(node);
+        if (nodeIdx != Integer.MAX_VALUE && rangeSumData[nodeIdx] != 0) {
+            int base = 2 * nodeIdx * dimensions;
             int mid = base + dimensions;
             double minsum = 0;
             double maxsum = 0;
@@ -338,7 +350,7 @@ public abstract class AbstractNodeStore {
             if (sum == 0.0) {
                 return 0.0;
             }
-            return sum / (rangeSumData[node_idx] + sum);
+            return sum / (rangeSumData[nodeIdx] + sum);
         } else if (otherBox != null) {
             return otherBox.probabilityOfCut(point);
         } else {
@@ -588,7 +600,7 @@ public abstract class AbstractNodeStore {
 
     public abstract int[] getLeftIndex();
 
-    public float[] getCutValue() {
+    public float[] getCutValues() {
         return cutValue;
     }
 
@@ -604,10 +616,6 @@ public abstract class AbstractNodeStore {
         return capacity - freeNodeManager.size();
     }
 
-    public int[] getNodeFreeIndexes() {
-        return freeNodeManager.getFreeIndices();
-    }
-
     /**
      * a builder
      */
@@ -619,7 +627,6 @@ public abstract class AbstractNodeStore {
         protected int[] rightIndex;
         protected int[] cutDimension;
         protected float[] cutValues;
-        protected int[] freeIndicesIntervalArray;
         protected int root;
         protected double boundingBoxCacheFraction;
         protected boolean centerOfMassEnabled;
@@ -655,11 +662,6 @@ public abstract class AbstractNodeStore {
 
         public T cutDimension(int[] cutDimension) {
             this.cutDimension = cutDimension;
-            return (T) this;
-        }
-
-        public T freeIndicesIntervalArray(int[] freeIndicesIntervalArray) {
-            this.freeIndicesIntervalArray = freeIndicesIntervalArray;
             return (T) this;
         }
 

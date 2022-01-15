@@ -15,18 +15,20 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static java.lang.Math.max;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.Vector;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
-import static java.lang.Math.max;
-
 public abstract class PointStore implements IPointStore<float[]> {
 
     public static int INFEASIBLE_POINTSTORE_INDEX = -1;
+
+    public static int INFEASIBLE_LOCN = (int) -1;
     /**
      * an index manager to manage free locations
      */
@@ -823,10 +825,6 @@ public abstract class PointStore implements IPointStore<float[]> {
         int address = getLocation(index);
 
         if (!rotationEnabled) {
-
-              if (store.length < (address + dimensions)) {
-                  System.out.println("AAA " + store.length + " " + address + " " + (address + dimensions));
-              }
             return Arrays.copyOfRange(store, address, address + dimensions);
         } else {
             float[] answer = new float[dimensions];

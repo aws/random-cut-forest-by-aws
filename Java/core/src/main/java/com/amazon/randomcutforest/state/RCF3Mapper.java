@@ -30,6 +30,7 @@ import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.RCF3;
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
@@ -41,12 +42,10 @@ import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreFloatMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeContext;
-import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeFloatMapper;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 import com.amazon.randomcutforest.state.tree.RandomCutTreeMapper;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.NewRandomCutTree;
 
@@ -153,6 +152,7 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
             PointStoreCoordinator<?> pointStoreCoordinator = (PointStoreCoordinator<?>) forest.getUpdateCoordinator();
             PointStoreFloatMapper mapper = new PointStoreFloatMapper();
             mapper.setCompressionEnabled(compressionEnabled);
+            mapper.setNumberOfTrees(forest.getNumberOfTrees());
             PointStoreState pointStoreState = mapper.toState((PointStore) pointStoreCoordinator.getStore());
             state.setPointStoreState(pointStoreState);
         }
@@ -182,11 +182,9 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
         state.setCompactSamplerStates(samplerStates);
 
         if (trees != null) {
-            CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
-            treeMapper.setCompressed(compressionEnabled);
-            treeMapper.setPartialTreeStateEnabled(partialTreeStateEnabled || forest.isStoreSequenceIndexesEnabled());
+            RandomCutTreeMapper treeMapper = new RandomCutTreeMapper();
             List<CompactRandomCutTreeState> treeStates = trees.stream()
-                    .map(t -> treeMapper.toState((CompactRandomCutTreeFloat) t)).collect(Collectors.toList());
+                    .map(t -> treeMapper.toState((NewRandomCutTree) t)).collect(Collectors.toList());
             state.setCompactRandomCutTreeStates(treeStates);
         }
         return state;
@@ -339,8 +337,9 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
             } else if (treeStates != null) {
                 tree = treeMapper.toModel(treeStates.get(i), context, random.nextLong());
                 sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
-
+                tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, treeStates.get(i).getBoundingBoxCacheFraction());
             } else {
+                // using boundingBoxCahce for the new tree
                 tree = new NewRandomCutTree.Builder().capacity(state.getSampleSize()).randomSeed(random.nextLong())
                         .pointStoreView(pointStore).boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                         .centerOfMassEnabled(state.isCenterOfMassEnabled())

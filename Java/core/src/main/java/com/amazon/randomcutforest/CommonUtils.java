@@ -199,20 +199,21 @@ public class CommonUtils {
 
     };
 
-    public static double[] toDoubleArray(float[] point) {
-        checkNotNull(point, "array must not be null");
-        double[] result = new double[point.length];
-        for (int i = 0; i < point.length; i++) {
-            result[i] = point[i];
+    public static double[] toDoubleArray(float[] array) {
+        checkNotNull(array, "array must not be null");
+        double[] result = new double[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = array[i];
         }
         return result;
     }
 
-    public static float[] toFloatArray(double[] point) {
-        checkNotNull(point, "array must not be null");
-        float[] result = new float[point.length];
-        for (int i = 0; i < point.length; i++) {
-            result[i] = (float) point[i];
+    public static float[] toFloatArray(double[] array) {
+        checkNotNull(array, "array must not be null");
+        float[] result = new float[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = (array[i] == 0) ? 0 : (float) array[i];
+            // eliminating -0.0 issues
         }
         return result;
     }

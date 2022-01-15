@@ -21,7 +21,7 @@ import java.util.Arrays;
 
 public class PointStoreSmall extends PointStore {
 
-    public static char INFEASIBLE_SMALL_POINTSTORE_LOCN = (char) -1;
+    public static char INFEASIBLE_SMALL_POINTSTORE_LOCN = (char) PointStore.INFEASIBLE_LOCN;
     protected char[] locationList;
 
     void setInfeasiblePointstoreLocationIndex(int index) {

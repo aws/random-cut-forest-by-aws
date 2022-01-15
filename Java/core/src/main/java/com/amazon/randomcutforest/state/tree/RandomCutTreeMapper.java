@@ -15,10 +15,13 @@
 
 package com.amazon.randomcutforest.state.tree;
 
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
+
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
+import com.amazon.randomcutforest.state.Version;
 import com.amazon.randomcutforest.tree.AbstractNodeStore;
 import com.amazon.randomcutforest.tree.NewRandomCutTree;
 
@@ -34,8 +37,9 @@ public class RandomCutTreeMapper
         nodeStoreMapper.setRoot(state.getRoot());
         AbstractNodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState(), context);
 
+        // boundingBoxcache is not set deliberately;
+        // it should be set after the partial tree is complete
         NewRandomCutTree tree = new NewRandomCutTree.Builder()
-                .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).capacity(state.getMaxSize())
                 .setRoot(state.getRoot()).randomSeed(state.getSeed()).pointStoreView(context.getPointStore())
                 .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
@@ -46,8 +50,16 @@ public class RandomCutTreeMapper
     @Override
     public CompactRandomCutTreeState toState(NewRandomCutTree model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
-        // model.reorderNodesInBreadthFirstOrder();
-        state.setRoot(model.getRoot());
+        state.setVersion(Version.V3_0);
+        int root = model.getRoot();
+        AbstractNodeStoreMapper nodeStoreMapper = new AbstractNodeStoreMapper();
+        nodeStoreMapper.setRoot(root);
+        state.setNodeStoreState(nodeStoreMapper.toState(model.getNodeStore()));
+        // the compression of nodeStore would change the root
+        if ((root != Null) && (root < model.getNumberOfLeaves() - 1)) {
+            root = 0; // reordering is forced
+        }
+        state.setRoot(root);
         state.setMaxSize(model.getNumberOfLeaves());
         state.setPartialTreeState(true);
         state.setStoreSequenceIndexesEnabled(model.isStoreSequenceIndexesEnabled());
@@ -56,9 +68,6 @@ public class RandomCutTreeMapper
         state.setOutputAfter(model.getOutputAfter());
         state.setSeed(model.getRandomSeed());
         state.setDimensions(model.getDimension());
-
-        AbstractNodeStoreMapper nodeStoreMapper = new AbstractNodeStoreMapper();
-        state.setNodeStoreState(nodeStoreMapper.toState(model.getNodeStore()));
 
         return state;
     }

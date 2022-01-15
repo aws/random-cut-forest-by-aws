@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
-
-import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
 
 public abstract class BoxCache<Point> implements IBoxCache<Point> {
 

@@ -373,7 +373,7 @@ public class RCF3 {
                 "incorrect cache fraction range");
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
-        outputAfter = builder.outputAfter.orElse((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
+        outputAfter = builder.outputAfter.orElse((int) max(1, sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
         internalShinglingEnabled = builder.internalShinglingEnabled;
         shingleSize = builder.shingleSize;
         dimensions = builder.dimensions;

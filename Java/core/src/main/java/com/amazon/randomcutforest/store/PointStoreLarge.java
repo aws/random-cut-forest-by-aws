@@ -21,7 +21,6 @@ import java.util.Arrays;
 
 public class PointStoreLarge extends PointStore {
 
-    public static int INFEASIBLE_LOCN = (int) -1;
     protected int[] locationList;
 
     void setInfeasiblePointstoreLocationIndex(int index) {

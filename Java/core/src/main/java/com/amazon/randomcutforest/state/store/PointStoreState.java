@@ -110,4 +110,9 @@ public class PointStoreState {
      */
     private int indexCapacity;
 
+    /**
+     * reduces the effect of repeated points; used in version 3.0
+     */
+    private int[] duplicateRefs;
+
 }

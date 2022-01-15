@@ -15,16 +15,17 @@
 
 package com.amazon.randomcutforest.state.tree;
 
-import static com.amazon.randomcutforest.tree.AbstractCompactRandomCutTree.NULL;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 import static java.lang.Math.min;
 
-import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
+import com.amazon.randomcutforest.state.Version;
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 import com.amazon.randomcutforest.tree.AbstractNodeStore;
 import com.amazon.randomcutforest.util.ArrayPacking;
@@ -51,9 +52,10 @@ public class AbstractNodeStoreMapper
             replaceLeaves(rightIndex, capacity);
         }
 
-        int[] nodeFreeIndexes = ArrayPacking.unpackInts(state.getNodeFreeIndexes(), state.isCompressed());
+        // note boundingBoxCache is not set deliberately
         return AbstractNodeStore.builder().capacity(capacity).useRoot(root).leftIndex(leftIndex).rightIndex(rightIndex)
-                .cutDimension(cutDimension).cutValues(cutValue).freeIndicesIntervalArray(nodeFreeIndexes)
+                .cutDimension(cutDimension).cutValues(cutValue)
+                .dimensions(compactRandomCutTreeContext.getPointStore().getDimensions())
                 .pointStoreView(compactRandomCutTreeContext.getPointStore()).build();
     }
 
@@ -61,55 +63,40 @@ public class AbstractNodeStoreMapper
     public NodeStoreState toState(AbstractNodeStore model) {
         NodeStoreState state = new NodeStoreState();
         int capacity = model.getCapacity();
+        state.setVersion(Version.V3_0);
         state.setCapacity(capacity);
         state.setCompressed(true);
         state.setPartialTreeStateEnabled(true);
         state.setPrecision(Precision.FLOAT_32.name());
 
-        int[] leftIndex = Arrays.copyOf(model.getLeftIndex(), model.getLeftIndex().length);
-        int[] rightIndex = Arrays.copyOf(model.getRightIndex(), model.getRightIndex().length);
-        boolean check = state.isCompressed() && model.isCanonicalAndNotALeaf();
+        int[] leftIndex = model.getLeftIndex();
+        int[] rightIndex = model.getRightIndex();
+        int[] cutDimension = model.getCutDimension();
+        float[] cutValues = model.getCutValues();
+
+        int[] map = new int[capacity];
+        int size = reorderNodesInBreadthFirstOrder(map, leftIndex, rightIndex, capacity);
+        state.setSize(size);
+        boolean check = root != Null && root < capacity;
         state.setCanonicalAndNotALeaf(check);
         if (check) { // can have a canonical representation saving a lot of space
-            reduceToBits(model.size(), leftIndex, rightIndex);
-            state.setLeftIndex(ArrayPacking.pack(leftIndex, state.isCompressed()));
-            state.setRightIndex(ArrayPacking.pack(rightIndex, state.isCompressed()));
-            state.setSize(model.size());
-        } else { // the temporary array leftIndex and rightIndex may be corrupt in reduceToBits()
-            int[] left = model.getLeftIndex();
-            replaceLeaves(left, capacity);
-            int[] right = model.getRightIndex();
-            replaceLeaves(right, capacity);
-            state.setLeftIndex(ArrayPacking.pack(left, state.isCompressed()));
-            state.setRightIndex(ArrayPacking.pack(right, state.isCompressed()));
-        }
-
-        state.setCutDimension(ArrayPacking.pack(model.getCutDimension(), state.isCompressed()));
-        state.setCutValueData(ArrayPacking.pack(model.getCutValue()));
-        state.setNodeFreeIndexes(ArrayPacking.pack(model.getNodeFreeIndexes(), state.isCompressed()));
-
-        return state;
-    }
-
-    protected static void reduceToBits(int size, int[] leftIndex, int[] rightIndex) {
-        for (int i = 0; i < size; i++) {
-            if (leftIndex[i] != NULL) {
-                if (leftIndex[i] < leftIndex.length) {
-                    leftIndex[i] = 1;
-                } else {
-                    leftIndex[i] = 0;
-                }
-
-                if (rightIndex[i] < rightIndex.length) {
-                    rightIndex[i] = 1;
-                } else {
-                    rightIndex[i] = 0;
-                }
+            int[] reorderedLeftArray = new int[size];
+            int[] reorderedRightArray = new int[size];
+            int[] reorderedCutDimension = new int[size];
+            float[] reorderedCutValue = new float[size];
+            for (int i = 0; i < size; i++) {
+                reorderedLeftArray[i] = (leftIndex[map[i]] < capacity) ? 1 : 0;
+                reorderedRightArray[i] = (rightIndex[map[i]] < capacity) ? 1 : 0;
+                reorderedCutDimension[i] = cutDimension[map[i]];
+                reorderedCutValue[i] = cutValues[map[i]];
             }
+            state.setLeftIndex(ArrayPacking.pack(reorderedLeftArray, state.isCompressed()));
+            state.setRightIndex(ArrayPacking.pack(reorderedRightArray, state.isCompressed()));
+            state.setSize(model.size());
+            state.setCutDimension(ArrayPacking.pack(reorderedCutDimension, state.isCompressed()));
+            state.setCutValueData(ArrayPacking.pack(reorderedCutValue));
         }
-        for (int i = size; i < leftIndex.length; i++) {
-            leftIndex[i] = rightIndex[i] = 0;
-        }
+        return state;
     }
 
     /**
@@ -162,4 +149,60 @@ public class AbstractNodeStoreMapper
             array[i] = min(array[i], capacity);
         }
     }
+
+    /**
+     * The following function reorders the nodes stored in the tree in a breadth
+     * first order; Note that a regular binary tree where each internal node has 2
+     * chidren, as is the case for AbstractRandomCutTree or any tree produced in a
+     * Random Forest ensemble (not restricted to Random Cut Forests), has maxsize -
+     * 1 internal nodes for maxSize number of leaves. The leaves are numbered 0 +
+     * (maxsize), 1 + (maxSize), ..., etc. in that BFS ordering. The root is node 0.
+     *
+     * Note that if the binary tree is a complete binary tree, then the numbering
+     * would correspond to the well known heuristic where children of node index i
+     * are numbered 2*i and 2*i + 1. The trees in AbstractCompactRandomCutTree will
+     * not be complete binary trees. But a similar numbering enables us to compress
+     * the entire structure of the tree into two bit arrays corresponding to
+     * presence of left and right children. The idea can be viewed as similar to
+     * Zak's numbering for regular binary trees Lexicographic generation of binary
+     * trees, S. Zaks, TCS volume 10, pages 63-82, 1980, that uses depth first
+     * numbering. However an extensive literature exists on this topic.
+     *
+     * The overall relies on the extra advantage that we can use two bit sequences;
+     * the left and right child pointers which appears to be simple. While it is
+     * feasible to always maintain this order, that would complicate the standard
+     * binary search tree pattern and this tranformation is used when the tree is
+     * serialized. Note that while there is savings in representing the tree
+     * structure into two bit arrays, the bulk of the serialization corresponds to
+     * the payload at the nodes (cuts, dimensions for internal nodes and index to
+     * pointstore, number of copies for the leaves). The translation to the bits is
+     * handled by the NodeStoreMapper. The algorithm here corresponds to just
+     * producing the cannoical order.
+     *
+     * The algorithm renumbers the nodes in BFS ordering.
+     */
+    public int reorderNodesInBreadthFirstOrder(int[] map, int[] leftIndex, int[] rightIndex, int capacity) {
+
+        if ((root != Null) && (root < capacity)) {
+            int currentNode = 0;
+            ArrayBlockingQueue<Integer> nodeQueue = new ArrayBlockingQueue<>(capacity);
+            nodeQueue.add(root);
+            while (!nodeQueue.isEmpty()) {
+                int head = nodeQueue.poll();
+                int leftChild = leftIndex[head];
+                if (leftChild < capacity) {
+                    nodeQueue.add(leftChild);
+                }
+                int rightChild = rightIndex[head];
+                if (rightChild < capacity) {
+                    nodeQueue.add(rightChild);
+                }
+                map[currentNode] = head;
+                currentNode++;
+            }
+            return currentNode;
+        }
+        return 0;
+    }
+
 }

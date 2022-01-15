@@ -64,10 +64,9 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     private long randomSeed;
     protected int root;
     protected IPointStoreView<float[]> pointStoreView;
-    // protected int treeMass;
     protected int numberOfLeaves;
     protected AbstractNodeStore nodeStore;
-    protected double boundingBoxCacheFraction = 1.0;
+    protected double boundingBoxCacheFraction;
     protected int outputAfter;
     protected int dimension;
 
@@ -84,6 +83,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
                         .storeSequencesEnabled(builder.storeSequenceIndexesEnabled).build();
         // note the number of internal nodes is one less than sampleSize
         // the RCF V2_0 states used this notion
+        this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.centerOfMassEnabled = builder.centerOfMassEnabled;
         this.root = builder.root;
@@ -119,6 +119,7 @@ public class NewRandomCutTree implements ITree<Integer, float[]> {
     public void setBoundingBoxCacheFraction(double fraction) {
         checkArgument(0 <= fraction && fraction <= 1, "incorrect parameter");
         boundingBoxCacheFraction = fraction;
+        nodeStore.resizeCache(fraction);
     }
 
     /**
