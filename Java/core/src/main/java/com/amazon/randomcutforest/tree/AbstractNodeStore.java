@@ -52,6 +52,8 @@ public abstract class AbstractNodeStore {
 
     public static int Null = -1;
 
+    public static boolean DEFAULT_STORE_PARENT = false;
+
     /**
      * the number of internal nodes; the nodes will range from 0..capacity-1 the
      * value capacity would correspond to "not yet set" the values Y= capacity+1+X
@@ -631,6 +633,7 @@ public abstract class AbstractNodeStore {
         protected double boundingBoxCacheFraction;
         protected boolean centerOfMassEnabled;
         protected boolean storeSequencesEnabled;
+        protected boolean storeParent = DEFAULT_STORE_PARENT;
         protected IPointStoreView<float[]> pointStoreView;
 
         // dimension of the points being stored
@@ -682,6 +685,11 @@ public abstract class AbstractNodeStore {
 
         public T centerOfMassEnabled(boolean centerOfMassEnabled) {
             this.centerOfMassEnabled = centerOfMassEnabled;
+            return (T) this;
+        }
+
+        public T storeParent(boolean storeParent) {
+            this.storeParent = storeParent;
             return (T) this;
         }
 

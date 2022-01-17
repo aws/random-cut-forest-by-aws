@@ -767,6 +767,8 @@ public class CompactRandomCutForestFunctionalTest {
             mapper.setSaveTreeStateEnabled(true);
             mapper.setSaveExecutorContextEnabled(true);
             RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            RCF3Mapper otherMapper = new RCF3Mapper();
+            RCF3 forest3 = otherMapper.toModel(mapper.toState(forest));
 
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
@@ -774,6 +776,7 @@ public class CompactRandomCutForestFunctionalTest {
                 assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
                 forest.update(point);
+                forest3.update(point);
             }
         }
     }

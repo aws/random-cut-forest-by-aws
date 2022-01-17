@@ -55,7 +55,7 @@ public class NodeStoreSmall extends AbstractNodeStore {
         super(builder);
         mass = new byte[capacity];
         Arrays.fill(mass, (byte) 0);
-        if (boundingboxCacheFraction > 0) {
+        if (builder.storeParent) {
             parentIndex = new byte[capacity];
             Arrays.fill(parentIndex, (byte) capacity);
         } else {

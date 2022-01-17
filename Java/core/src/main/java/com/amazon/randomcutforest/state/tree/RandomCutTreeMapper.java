@@ -37,9 +37,10 @@ public class RandomCutTreeMapper
         nodeStoreMapper.setRoot(state.getRoot());
         AbstractNodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState(), context);
 
+        int dimension = (state.getDimensions() != 0) ? state.getDimensions() : context.getPointStore().getDimensions();
         // boundingBoxcache is not set deliberately;
         // it should be set after the partial tree is complete
-        NewRandomCutTree tree = new NewRandomCutTree.Builder()
+        NewRandomCutTree tree = new NewRandomCutTree.Builder().dimension(dimension)
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).capacity(state.getMaxSize())
                 .setRoot(state.getRoot()).randomSeed(state.getSeed()).pointStoreView(context.getPointStore())
                 .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())

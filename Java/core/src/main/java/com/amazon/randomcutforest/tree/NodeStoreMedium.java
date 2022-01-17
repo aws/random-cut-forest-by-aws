@@ -50,7 +50,7 @@ public class NodeStoreMedium extends AbstractNodeStore {
         super(builder);
         mass = new char[capacity];
         Arrays.fill(mass, (char) 0);
-        if (boundingboxCacheFraction > 0) {
+        if (builder.storeParent) {
             parentIndex = new char[capacity];
             Arrays.fill(parentIndex, (char) capacity);
         } else {

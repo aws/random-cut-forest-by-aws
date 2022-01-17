@@ -50,7 +50,7 @@ public class NodeStoreLarge extends AbstractNodeStore {
         super(builder);
         mass = new int[capacity];
         Arrays.fill(mass, 0);
-        if (boundingboxCacheFraction > 0) {
+        if (builder.storeParent) {
             parentIndex = new int[capacity];
             Arrays.fill(parentIndex, capacity);
         } else {
