@@ -9,11 +9,19 @@ use rand_chacha::ChaCha20Rng;
 
 use crate::{
     samplerplustree::rand::{Rng, RngCore},
-    types::Max,
+    types::{Location, Max},
 };
 
 #[repr(C)]
-pub struct SamplerPlusTree<C, P, N> {
+pub struct SamplerPlusTree<C, P, N>
+where
+    C: Location,
+    usize: From<C>,
+    P: Location,
+    usize: From<P>,
+    N: Location,
+    usize: From<N>,
+{
     tree: RCFTree<C, P, N>,
     sampler: Sampler<P>,
     using_transforms: bool,
@@ -23,14 +31,17 @@ pub struct SamplerPlusTree<C, P, N> {
     random_seed: u64,
 }
 
-impl<C: Max + Copy, P: Max + Copy + std::cmp::PartialEq, N: Max + Copy> SamplerPlusTree<C, P, N>
+impl<C, P, N> SamplerPlusTree<C, P, N>
 where
-    C: std::convert::TryFrom<usize>,
+    C: Location,
     usize: From<C>,
-    P: std::convert::TryFrom<usize>,
+    P: Location,
     usize: From<P>,
-    N: std::convert::TryFrom<usize>,
+    N: Location,
     usize: From<N>,
+    <C as TryFrom<usize>>::Error: Debug,
+    <P as TryFrom<usize>>::Error: Debug,
+    <N as TryFrom<usize>>::Error: Debug,
 {
     pub fn new(
         dimensions: usize,
@@ -41,12 +52,7 @@ where
         time_decay: f64,
         initial_accept_fraction: f64,
         bounding_box_cache_fraction: f64,
-    ) -> Self
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> Self {
         let mut rng = ChaCha20Rng::seed_from_u64(random_seed);
         let self_seed = rng.next_u64();
 
@@ -72,12 +78,7 @@ where
         point_index: usize,
         point_attribute: usize,
         point_store: &dyn PointStore,
-    ) -> (usize, usize)
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> (usize, usize) {
         if point_index != usize::MAX {
             let mut initial = false;
             let mut rng = ChaCha20Rng::seed_from_u64(self.random_seed);
@@ -138,12 +139,7 @@ where
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> f64
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> f64 {
         self.tree.generic_score(
             point,
             point_store,
@@ -166,12 +162,7 @@ where
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> usize
-    where
-        <C as TryFrom<usize>>::Error: Debug,
-        <P as TryFrom<usize>>::Error: Debug,
-        <N as TryFrom<usize>>::Error: Debug,
-    {
+    ) -> usize {
         self.tree.conditional_field(
             positions,
             point,

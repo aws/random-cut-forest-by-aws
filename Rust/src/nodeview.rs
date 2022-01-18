@@ -1,6 +1,6 @@
 use crate::{
     boundingbox::BoundingBox,
-    newnodestore::NodeStoreView,
+    nodestore::NodeStore,
     pointstore::PointStore,
     visitor::{UniqueMultiVisitor, Visitor},
 };
@@ -82,7 +82,7 @@ impl BasicNodeView {
         &mut self,
         point: &[f32],
         point_store: &dyn PointStore,
-        node_store: &dyn NodeStoreView,
+        node_store: &dyn NodeStore,
     ) {
         self.leaf_index = node_store.get_leaf_point_index(self.current_node);
 
@@ -114,7 +114,7 @@ impl BasicNodeView {
         };
     }
 
-    pub fn update_view_for_path(&mut self, node_store: &dyn NodeStoreView) {
+    pub fn update_view_for_path(&mut self, node_store: &dyn NodeStore) {
         let (a, b, c, d) = node_store.get_cut_and_children(self.current_node);
         self.cut_dimension = a;
         self.cut_value = b;
@@ -127,7 +127,7 @@ impl BasicNodeView {
         parent: usize,
         point: &[f32],
         point_store: &dyn PointStore,
-        node_store: &dyn NodeStoreView,
+        node_store: &dyn NodeStore,
     ) {
         let past_node = self.current_node;
         self.current_node = parent;
@@ -185,7 +185,7 @@ impl BasicNodeView {
         visitor: &mut dyn Visitor<T>,
         point: &[f32],
         point_store: &dyn PointStore,
-        node_store: &dyn NodeStoreView,
+        node_store: &dyn NodeStore,
     ) {
         if node_store.is_leaf(self.current_node) {
             self.set_leaf_view(point, point_store, node_store);
@@ -207,7 +207,7 @@ impl BasicNodeView {
         visitor: &mut dyn UniqueMultiVisitor<T, Q>,
         point: &[f32],
         point_store: &dyn PointStore,
-        node_store: &dyn NodeStoreView,
+        node_store: &dyn NodeStore,
     ) {
         if node_store.is_leaf(self.current_node) {
             self.set_leaf_view(point, point_store, node_store);

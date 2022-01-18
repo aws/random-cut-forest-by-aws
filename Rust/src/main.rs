@@ -3,7 +3,7 @@ mod cut;
 mod imputevisitor;
 mod intervalstoremanager;
 mod multidimdatawithkey;
-mod newnodestore;
+mod nodestore;
 mod nodeview;
 mod pointstore;
 mod randomcuttree;
