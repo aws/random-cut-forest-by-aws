@@ -199,20 +199,57 @@ public class CommonUtils {
 
     };
 
-    public static double[] toDoubleArray(float[] point) {
-        checkNotNull(point, "point must not be null");
-        double[] result = new double[point.length];
-        for (int i = 0; i < point.length; i++) {
-            result[i] = point[i];
+    public static double[] toDoubleArray(float[] array) {
+        checkNotNull(array, "array must not be null");
+        double[] result = new double[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = array[i];
         }
         return result;
     }
 
-    public static float[] toFloatArray(double[] point) {
-        checkNotNull(point, "point must not be null");
-        float[] result = new float[point.length];
-        for (int i = 0; i < point.length; i++) {
-            result[i] = (float) point[i];
+    public static float[] toFloatArray(double[] array) {
+        checkNotNull(array, "array must not be null");
+        float[] result = new float[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = (array[i] == 0) ? 0 : (float) array[i];
+            // eliminating -0.0 issues
+        }
+        return result;
+    }
+
+    public static int[] toIntArray(byte[] values) {
+        checkNotNull(values, "array must not be null");
+        int[] result = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = values[i] & 0xff;
+        }
+        return result;
+    }
+
+    public static int[] toIntArray(char[] values) {
+        checkNotNull(values, "array must not be null");
+        int[] result = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = values[i];
+        }
+        return result;
+    }
+
+    public static char[] toCharArray(int[] values) {
+        checkNotNull(values, "array must not be null");
+        char[] result = new char[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = (char) values[i];
+        }
+        return result;
+    }
+
+    public static byte[] toByteArray(int[] values) {
+        checkNotNull(values, "array must not be null");
+        byte[] result = new byte[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = (byte) values[i];
         }
         return result;
     }

@@ -298,7 +298,6 @@ public class RCF3 {
     private void initCompactFloat(Builder<?> builder) {
         IPointStore tempStore = PointStore.builder().capacity(pointStoreCapacity).initialSize(2 * sampleSize)
                 .internalShinglingEnabled(internalShinglingEnabled).shingleSize(shingleSize).dimensions(dimensions)
-                // .dynamicResizingEnabled(true)
                 .internalRotationEnabled(builder.internalRotationEnabled).build();
 
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
@@ -306,7 +305,7 @@ public class RCF3 {
         for (int i = 0; i < numberOfTrees; i++) {
             ITree<Integer, float[]> tree = new NewRandomCutTree.Builder<>().capacity(sampleSize)
                     .outputAfter(outputAfter).randomSeed(random.nextLong()).pointStoreView(tempStore)
-                    .nodeCacheFraction(boundingBoxCacheFraction).build();
+                    .boundingBoxCacheFraction(boundingBoxCacheFraction).build();
 
             IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
                     .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
@@ -374,7 +373,7 @@ public class RCF3 {
                 "incorrect cache fraction range");
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
-        outputAfter = builder.outputAfter.orElse((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
+        outputAfter = builder.outputAfter.orElse((int) max(1, sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION));
         internalShinglingEnabled = builder.internalShinglingEnabled;
         shingleSize = builder.shingleSize;
         dimensions = builder.dimensions;

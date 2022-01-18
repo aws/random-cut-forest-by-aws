@@ -26,6 +26,7 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.Version;
 import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.store.PointStoreLarge;
 import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
@@ -36,6 +37,8 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
      * If true, then the arrays are compressed via simple data dependent scheme
      */
     private boolean compressionEnabled = true;
+
+    private int numberOfTrees = 255; // byte encoding as default
 
     @Override
     public PointStore toModel(PointStoreState state, long seed) {
@@ -50,7 +53,27 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
         int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
         int[] locationList = new int[indexCapacity];
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
-        System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+        if (!state.getVersion().equals(Version.V3_0)) {
+            System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+        } else {
+            int[] duplicateRefs = state.getDuplicateRefs();
+            if (duplicateRefs != null) {
+                checkArgument(duplicateRefs.length % 2 == 0, " corrupt duplicates");
+                for (int i = 0; i < duplicateRefs.length; i += 2) {
+                    refCount[duplicateRefs[i]] += duplicateRefs[i + 1];
+                }
+            }
+            int nextLocation = 0;
+            for (int i = 0; i < indexCapacity; i++) {
+                if (refCount[i] > 0) {
+                    locationList[i] = tempList[nextLocation];
+                    ++nextLocation;
+                } else {
+                    locationList[i] = PointStoreLarge.INFEASIBLE_LOCN;
+                }
+            }
+            checkArgument(nextLocation == tempList.length, "incorrect location encoding");
+        }
 
         return PointStore.builder().internalRotationEnabled(state.isRotationEnabled())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled())
@@ -86,9 +109,26 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setPrecision(Precision.FLOAT_32.name());
         int[] refcount = model.getRefCount();
+        int[] tempList = model.getLocationList();
+        int[] locationList = new int[model.getIndexCapacity()];
+        int[] duplicateRefs = new int[2 * model.getIndexCapacity()];
+        int size = 0;
+        int duplicateSize = 0;
+        for (int i = 0; i < refcount.length; i++) {
+            if (refcount[i] > 0) {
+                locationList[size] = tempList[i];
+                ++size;
+                if (refcount[i] > numberOfTrees) {
+                    duplicateRefs[duplicateSize] = i;
+                    duplicateRefs[duplicateSize + 1] = refcount[i] - numberOfTrees;
+                    refcount[i] = numberOfTrees;
+                    duplicateSize += 2;
+                }
+            }
+        }
         state.setRefCount(ArrayPacking.pack(refcount, refcount.length, state.isCompressed()));
-        int[] locationList = model.getLocationList();
-        state.setLocationList(ArrayPacking.pack(locationList, locationList.length, state.isCompressed()));
+        state.setDuplicateRefs(ArrayPacking.pack(duplicateRefs, duplicateSize, state.isCompressed()));
+        state.setLocationList(ArrayPacking.pack(locationList, size, state.isCompressed()));
         state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
     }

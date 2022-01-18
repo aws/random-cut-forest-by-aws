@@ -45,7 +45,7 @@ public class IndexIntervalManager {
     }
 
     static BitSet toBits(int[] refCount) {
-        checkArgument(refCount != null, " not meaninglful");
+        checkArgument(refCount != null, "not a meaningful array input");
         BitSet bits = new BitSet(refCount.length);
         for (int i = 0; i < refCount.length; i++) {
             if ((refCount[i] & 0xff) > 0) {
@@ -72,7 +72,7 @@ public class IndexIntervalManager {
                 if (first < 0) {
                     break;
                 }
-            } else { // we do not all distiction between all full and all empty
+            } else { // we do not distinguish between all full and all empty
                 if (first < length - 1) {
                     if (bits.nextClearBit(first + 1) == first + 1) {
                         stack.push(new int[] { first, length - 1 });
@@ -125,7 +125,7 @@ public class IndexIntervalManager {
     }
 
     /**
-     * @return the number of indices whioch are being maintained
+     * @return the number of indices which are being maintained
      */
     public int size() {
         int sum = 0;

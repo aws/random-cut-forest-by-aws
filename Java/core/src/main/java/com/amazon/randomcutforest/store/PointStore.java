@@ -27,6 +27,8 @@ import java.util.Vector;
 public abstract class PointStore implements IPointStore<float[]> {
 
     public static int INFEASIBLE_POINTSTORE_INDEX = -1;
+
+    public static int INFEASIBLE_LOCN = (int) -1;
     /**
      * an index manager to manage free locations
      */

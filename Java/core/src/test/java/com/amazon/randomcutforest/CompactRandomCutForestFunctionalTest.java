@@ -38,7 +38,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.state.RCF3Mapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
@@ -673,14 +675,23 @@ public class CompactRandomCutForestFunctionalTest {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveTreeStateEnabled(true);
             mapper.setSaveExecutorContextEnabled(true);
-            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            RandomCutForestState state = mapper.toState(forest);
+            RandomCutForest forest2 = mapper.toModel(state);
+            RCF3Mapper newMapper = new RCF3Mapper();
+            newMapper.setSaveTreeStateEnabled(true);
+            newMapper.setPartialTreeStateEnabled(true);
+            newMapper.setSaveExecutorContextEnabled(true);
+            RCF3 forest3 = newMapper.toModel(state);
 
             // update re-instantiated forest
             for (int i = 0; i < 10000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                double score = forest.getAnomalyScore(point);
+                assertEquals(score, forest2.getAnomalyScore(point), 1E-10);
+                assertEquals(score, forest3.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
                 forest.update(point);
+                forest3.update(point);
             }
         }
     }
@@ -688,12 +699,12 @@ public class CompactRandomCutForestFunctionalTest {
     @Test
     public void testUpdateAfterRoundTripPartial() {
         int dimensions = 10;
-        for (int trials = 0; trials < 100; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(64)
-                    .precision(Precision.FLOAT_32).build();
+        for (int trials = 0; trials < 1; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(256)
+                    .boundingBoxCacheFraction(new Random().nextDouble()).precision(Precision.FLOAT_32).build();
 
             Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(300); i++) {
+            for (int i = 0; i < new Random().nextInt(3000); i++) {
                 forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
@@ -702,14 +713,39 @@ public class CompactRandomCutForestFunctionalTest {
             mapper.setSaveTreeStateEnabled(true);
             mapper.setPartialTreeStateEnabled(true);
             mapper.setSaveExecutorContextEnabled(true);
-            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            RandomCutForestState state = mapper.toState(forest);
+            RandomCutForest forest2 = mapper.toModel(state);
+            RCF3Mapper newMapper = new RCF3Mapper();
+            newMapper.setSaveTreeStateEnabled(true);
+            newMapper.setPartialTreeStateEnabled(true);
+            newMapper.setSaveExecutorContextEnabled(true);
+            RCF3 forest3 = newMapper.toModel(state);
 
             // update re-instantiated forest
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 500; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                double score = forest.getAnomalyScore(point);
+                assertEquals(score, forest2.getAnomalyScore(point), 1E-10);
+                assertEquals(score, forest3.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
                 forest.update(point);
+                forest3.update(point);
+            }
+
+            RCF3Mapper anotherMapper = new RCF3Mapper();
+            anotherMapper.setSaveExecutorContextEnabled(true);
+            anotherMapper.setSaveTreeStateEnabled(true);
+            RCF3 forest4 = anotherMapper.toModel(anotherMapper.toState(forest3));
+
+            for (int i = 0; i < 500; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                double score = forest.getAnomalyScore(point);
+
+                assertEquals(score, forest2.getAnomalyScore(point), 1E-10);
+                assertEquals(score, forest4.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+                forest4.update(point);
             }
         }
     }
@@ -731,6 +767,8 @@ public class CompactRandomCutForestFunctionalTest {
             mapper.setSaveTreeStateEnabled(true);
             mapper.setSaveExecutorContextEnabled(true);
             RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            RCF3Mapper otherMapper = new RCF3Mapper();
+            RCF3 forest3 = otherMapper.toModel(mapper.toState(forest));
 
             // update re-instantiated forest
             for (int i = 0; i < 100; i++) {
@@ -738,6 +776,7 @@ public class CompactRandomCutForestFunctionalTest {
                 assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
                 forest.update(point);
+                forest3.update(point);
             }
         }
     }
