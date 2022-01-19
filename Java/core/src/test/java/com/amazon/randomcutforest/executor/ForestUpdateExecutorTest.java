@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.executor;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
+import com.amazon.randomcutforest.store.PointStore;
 
 @ExtendWith(MockitoExtension.class)
 public class ForestUpdateExecutorTest {
@@ -51,26 +51,29 @@ public class ForestUpdateExecutorTest {
     private static final int threadPoolSize = 2;
 
     @Captor
-    private ArgumentCaptor<List<UpdateResult<double[]>>> updateResultCaptor;
+    private ArgumentCaptor<List<UpdateResult<Integer>>> updateResultCaptor;
 
     private static class TestExecutorProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
 
-            ComponentList<double[], double[]> sequentialComponents = new ComponentList<>();
-            ComponentList<double[], double[]> parallelComponents = new ComponentList<>();
+            ComponentList<Integer, float[]> sequentialComponents = new ComponentList<>();
+            ComponentList<Integer, float[]> parallelComponents = new ComponentList<>();
 
             for (int i = 0; i < numberOfTrees; i++) {
                 sequentialComponents.add(mock(IComponentModel.class));
                 parallelComponents.add(mock(IComponentModel.class));
             }
 
-            IStateCoordinator<double[], double[]> sequentialUpdateCoordinator = spy(new PassThroughCoordinator());
-            AbstractForestUpdateExecutor<double[], double[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
+            PointStore pointStore = mock(PointStore.class);
+            IStateCoordinator<Integer, float[]> sequentialUpdateCoordinator = spy(
+                    new PointStoreCoordinator<>(pointStore));
+            AbstractForestUpdateExecutor<Integer, float[]> sequentialExecutor = new SequentialForestUpdateExecutor<>(
                     sequentialUpdateCoordinator, sequentialComponents);
 
-            IStateCoordinator<double[], double[]> parallelUpdateCoordinator = spy(new PassThroughCoordinator());
-            AbstractForestUpdateExecutor<double[], double[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
+            IStateCoordinator<Integer, float[]> parallelUpdateCoordinator = spy(
+                    new PointStoreCoordinator<>(pointStore));
+            AbstractForestUpdateExecutor<Integer, float[]> parallelExecutor = new ParallelForestUpdateExecutor<>(
                     parallelUpdateCoordinator, parallelComponents, threadPoolSize);
 
             return Stream.of(sequentialExecutor, parallelExecutor).map(Arguments::of);
@@ -79,43 +82,43 @@ public class ForestUpdateExecutorTest {
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
-    public void testUpdate(AbstractForestUpdateExecutor<double[], ?> executor) {
+    public void testUpdate(AbstractForestUpdateExecutor<Integer, ?> executor) {
         int addAndDelete = 4;
         int addOnly = 4;
 
-        ComponentList<double[], ?> components = executor.components;
+        ComponentList<Integer, ?> components = executor.components;
         for (int i = 0; i < addAndDelete; i++) {
-            IComponentModel<double[], ?> model = components.get(i);
-            UpdateResult<double[]> result = new UpdateResult<>(new double[] { i }, new double[] { 2 * i });
+            IComponentModel<Integer, ?> model = components.get(i);
+            UpdateResult<Integer> result = new UpdateResult<>(i, 2 * i);
             when(model.update(any(), anyLong())).thenReturn(result);
         }
 
         for (int i = addAndDelete; i < addAndDelete + addOnly; i++) {
-            IComponentModel<double[], ?> model = components.get(i);
-            UpdateResult<double[]> result = UpdateResult.<double[]>builder().addedPoint(new double[] { i }).build();
+            IComponentModel<Integer, ?> model = components.get(i);
+            UpdateResult<Integer> result = UpdateResult.<Integer>builder().addedPoint(i).build();
             when(model.update(any(), anyLong())).thenReturn(result);
         }
 
         for (int i = addAndDelete + addOnly; i < numberOfTrees; i++) {
-            IComponentModel<double[], ?> model = components.get(i);
+            IComponentModel<Integer, ?> model = components.get(i);
             when(model.update(any(), anyLong())).thenReturn(UpdateResult.noop());
         }
 
         double[] point = new double[] { 1.0 };
         executor.update(point);
 
-        executor.components.forEach(model -> verify(model).update(aryEq(point), eq(0L)));
+        executor.components.forEach(model -> verify(model).update(any(), eq(0L)));
 
-        IStateCoordinator<double[], ?> coordinator = executor.updateCoordinator;
-        verify(coordinator, times(1)).completeUpdate(updateResultCaptor.capture(), aryEq(point));
+        IStateCoordinator<Integer, ?> coordinator = executor.updateCoordinator;
+        verify(coordinator, times(1)).completeUpdate(updateResultCaptor.capture(), any());
 
-        List<UpdateResult<double[]>> updateResults = updateResultCaptor.getValue();
+        List<UpdateResult<Integer>> updateResults = updateResultCaptor.getValue();
         assertEquals(addAndDelete + addOnly, updateResults.size());
 
         int actualAddAndAndDelete = 0;
         int actualAddOnly = 0;
         for (int i = 0; i < updateResults.size(); i++) {
-            UpdateResult<double[]> result = updateResults.get(i);
+            UpdateResult<Integer> result = updateResults.get(i);
             if (result.getDeletedPoint().isPresent()) {
                 actualAddAndAndDelete++;
             } else {

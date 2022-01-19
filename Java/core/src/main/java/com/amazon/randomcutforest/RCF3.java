@@ -15,6 +15,22 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static java.lang.Math.max;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collector;
+
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.anomalydetection.DynamicAttributionVisitor;
@@ -50,22 +66,6 @@ import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ArrayUtils;
 import com.amazon.randomcutforest.util.ShingleBuilder;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.stream.Collector;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static java.lang.Math.max;
 
 /**
  * The RandomCutForest class is the interface to the algorithms in this package,

@@ -112,7 +112,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
     @Override
     public abstract void addPoint(P pointIndex);
 
-    AbstractStreamSampler(Builder<?> builder) {
+    public AbstractStreamSampler(Builder<?> builder) {
         this.capacity = builder.capacity;
         this.initialAcceptFraction = builder.initialAcceptFraction;
         this.timeDecay = builder.timeDecay;
@@ -241,7 +241,7 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             this.testRandom = random;
         }
 
-        double nextDouble() {
+        public double nextDouble() {
             if (testRandom != null) {
                 return testRandom.nextDouble();
             }
@@ -297,6 +297,10 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
         public T timeDecay(double timeDecay) {
             this.timeDecay = timeDecay;
             return (T) this;
+        }
+
+        public double getTimeDecay() {
+            return timeDecay;
         }
     }
 }

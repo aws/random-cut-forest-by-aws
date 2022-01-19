@@ -34,8 +34,6 @@ import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.state.sampler.ArraySamplersToCompactStateConverter;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerMapper;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
@@ -120,6 +118,7 @@ public class RandomCutForestMapper
      */
     @Override
     public RandomCutForestState toState(RandomCutForest forest) {
+        checkArgument(forest.isCompact(), " this method is for compact forests only");
         if (saveTreeStateEnabled) {
             checkArgument(forest.isCompact(), "tree state cannot be saved for noncompact forests");
         }
@@ -152,79 +151,63 @@ public class RandomCutForestMapper
             state.setExecutionContext(executionContext);
         }
 
-        if (forest.isCompact()) {
-            if (saveCoordinatorStateEnabled) {
-                PointStoreCoordinator<?> pointStoreCoordinator = (PointStoreCoordinator<?>) forest
-                        .getUpdateCoordinator();
-                PointStoreState pointStoreState;
-                if (forest.getPrecision() == Precision.FLOAT_32) {
-                    PointStoreFloatMapper mapper = new PointStoreFloatMapper();
-                    mapper.setCompressionEnabled(compressionEnabled);
-                    pointStoreState = mapper.toState((PointStore) pointStoreCoordinator.getStore());
-                } else {
-                    PointStoreDoubleMapper mapper = new PointStoreDoubleMapper();
-                    mapper.setCompressionEnabled(compressionEnabled);
-                    pointStoreState = mapper.toState((PointStoreDouble) pointStoreCoordinator.getStore());
-                }
-                state.setPointStoreState(pointStoreState);
+        if (saveCoordinatorStateEnabled) {
+            PointStoreCoordinator<?> pointStoreCoordinator = (PointStoreCoordinator<?>) forest.getUpdateCoordinator();
+            PointStoreState pointStoreState;
+            if (forest.getPrecision() == Precision.FLOAT_32) {
+                PointStoreFloatMapper mapper = new PointStoreFloatMapper();
+                mapper.setCompressionEnabled(compressionEnabled);
+                pointStoreState = mapper.toState((PointStore) pointStoreCoordinator.getStore());
+            } else {
+                PointStoreDoubleMapper mapper = new PointStoreDoubleMapper();
+                mapper.setCompressionEnabled(compressionEnabled);
+                pointStoreState = mapper.toState((PointStoreDouble) pointStoreCoordinator.getStore());
             }
-            List<CompactSamplerState> samplerStates = null;
-            if (saveSamplerStateEnabled) {
-                samplerStates = new ArrayList<>();
+            state.setPointStoreState(pointStoreState);
+        }
+        List<CompactSamplerState> samplerStates = null;
+        if (saveSamplerStateEnabled) {
+            samplerStates = new ArrayList<>();
+        }
+        List<ITree<Integer, ?>> trees = null;
+        if (saveTreeStateEnabled) {
+            trees = new ArrayList<>();
+        }
+
+        CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
+        samplerMapper.setCompressionEnabled(compressionEnabled);
+
+        for (IComponentModel<?, ?> component : forest.getComponents()) {
+            SamplerPlusTree<Integer, ?> samplerPlusTree = (SamplerPlusTree<Integer, ?>) component;
+            CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
+            if (samplerStates != null) {
+                samplerStates.add(samplerMapper.toState(sampler));
             }
-            List<ITree<Integer, ?>> trees = null;
-            if (saveTreeStateEnabled) {
-                trees = new ArrayList<>();
-            }
-
-            CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
-            samplerMapper.setCompressionEnabled(compressionEnabled);
-
-            for (IComponentModel<?, ?> component : forest.getComponents()) {
-                SamplerPlusTree<Integer, ?> samplerPlusTree = (SamplerPlusTree<Integer, ?>) component;
-                CompactSampler sampler = (CompactSampler) samplerPlusTree.getSampler();
-                if (samplerStates != null) {
-                    samplerStates.add(samplerMapper.toState(sampler));
-                }
-                if (trees != null) {
-                    trees.add(samplerPlusTree.getTree());
-                }
-            }
-
-            state.setCompactSamplerStates(samplerStates);
-
             if (trees != null) {
-                if (forest.getPrecision() == Precision.FLOAT_32) {
-                    CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
-                    treeMapper.setCompressed(compressionEnabled);
-                    treeMapper.setPartialTreeStateEnabled(
-                            partialTreeStateEnabled || forest.isStoreSequenceIndexesEnabled());
-                    List<CompactRandomCutTreeState> treeStates = trees.stream()
-                            .map(t -> treeMapper.toState((CompactRandomCutTreeFloat) t)).collect(Collectors.toList());
-                    state.setCompactRandomCutTreeStates(treeStates);
-                } else {
-                    CompactRandomCutTreeDoubleMapper treeMapper = new CompactRandomCutTreeDoubleMapper();
-                    treeMapper.setCompress(compressionEnabled);
-                    treeMapper.setPartialTreeStateEnabled(
-                            partialTreeStateEnabled || forest.isStoreSequenceIndexesEnabled());
-                    List<CompactRandomCutTreeState> treeStates = trees.stream()
-                            .map(t -> treeMapper.toState((CompactRandomCutTreeDouble) t)).collect(Collectors.toList());
-                    state.setCompactRandomCutTreeStates(treeStates);
-                }
+                trees.add(samplerPlusTree.getTree());
             }
-        } else {
-            ArraySamplersToCompactStateConverter converter = new ArraySamplersToCompactStateConverter(
-                    forest.isStoreSequenceIndexesEnabled(), forest.getDimensions(),
-                    forest.getNumberOfTrees() * forest.getSampleSize());
+        }
 
-            for (IComponentModel<?, ?> model : forest.getComponents()) {
-                SamplerPlusTree<double[], ?> samplerPlusTree = (SamplerPlusTree<double[], ?>) model;
-                SimpleStreamSampler<double[]> sampler = (SimpleStreamSampler<double[]>) samplerPlusTree.getSampler();
-                converter.addSampler(sampler);
+        state.setCompactSamplerStates(samplerStates);
+
+        if (trees != null) {
+            if (forest.getPrecision() == Precision.FLOAT_32) {
+                CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
+                treeMapper.setCompressed(compressionEnabled);
+                treeMapper
+                        .setPartialTreeStateEnabled(partialTreeStateEnabled || forest.isStoreSequenceIndexesEnabled());
+                List<CompactRandomCutTreeState> treeStates = trees.stream()
+                        .map(t -> treeMapper.toState((CompactRandomCutTreeFloat) t)).collect(Collectors.toList());
+                state.setCompactRandomCutTreeStates(treeStates);
+            } else {
+                CompactRandomCutTreeDoubleMapper treeMapper = new CompactRandomCutTreeDoubleMapper();
+                treeMapper.setCompress(compressionEnabled);
+                treeMapper
+                        .setPartialTreeStateEnabled(partialTreeStateEnabled || forest.isStoreSequenceIndexesEnabled());
+                List<CompactRandomCutTreeState> treeStates = trees.stream()
+                        .map(t -> treeMapper.toState((CompactRandomCutTreeDouble) t)).collect(Collectors.toList());
+                state.setCompactRandomCutTreeStates(treeStates);
             }
-
-            state.setPointStoreState(converter.getPointStoreDoubleState());
-            state.setCompactSamplerStates(converter.getCompactSamplerStates());
         }
 
         return state;

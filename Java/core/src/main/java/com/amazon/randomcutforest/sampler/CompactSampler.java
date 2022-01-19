@@ -52,12 +52,6 @@ import java.util.stream.Stream;
  * The coefficient function used by CompactSampler is:
  * <code>c(i) = exp(timeDecay * sequenceIndex(i))</code>.
  * </p>
- * <p>
- * Note that the sampling algorithm used is the same as for
- * {@link SimpleStreamSampler}. The difference is that CompactSampler is
- * specialized to use Integers as the point reference type and the
- * implementation uses less runtime memory.
- * </p>
  */
 public class CompactSampler extends AbstractStreamSampler<Integer> {
 

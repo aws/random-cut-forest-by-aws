@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.parkservices;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_COMPACT;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INTERNAL_SHINGLING_ENABLED;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_NUMBER_OF_TREES;
@@ -288,7 +287,6 @@ public class ThresholdedRandomCutForest {
         protected Optional<Double> lowerThreshold = Optional.empty();
         protected Optional<Double> weightTime = Optional.empty();
         protected Optional<Long> randomSeed = Optional.empty();
-        protected boolean compact = DEFAULT_COMPACT;
         protected boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         protected boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
@@ -343,7 +341,7 @@ public class ThresholdedRandomCutForest {
 
         protected RandomCutForest buildForest() {
             RandomCutForest.Builder builder = new RandomCutForest.Builder().dimensions(dimensions)
-                    .sampleSize(sampleSize).numberOfTrees(numberOfTrees).compact(compact)
+                    .sampleSize(sampleSize).numberOfTrees(numberOfTrees).compact(true)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).centerOfMassEnabled(centerOfMassEnabled)
                     .parallelExecutionEnabled(parallelExecutionEnabled).precision(precision)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).shingleSize(shingleSize)
@@ -426,8 +424,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
+        @Deprecated
         public T compact(boolean compact) {
-            this.compact = compact;
             return (T) this;
         }
 

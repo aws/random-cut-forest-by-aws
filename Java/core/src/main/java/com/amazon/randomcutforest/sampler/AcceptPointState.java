@@ -19,12 +19,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * A container class used by {@link CompactSampler} and
- * {@link SimpleStreamSampler}. These sampler implementations compute weights
- * during {@link IStreamSampler#acceptPoint} to determine if a new point should
- * be added to the sample. This class retains the sequence index and computed
- * weight from that method call for use in the subsequent
- * {@link IStreamSampler#addPoint} call.
+ * A container class used by {@link CompactSampler}. These sampler
+ * implementations compute weights during {@link IStreamSampler#acceptPoint} to
+ * determine if a new point should be added to the sample. This class retains
+ * the sequence index and computed weight from that method call for use in the
+ * subsequent {@link IStreamSampler#addPoint} call.
  */
 @Data
 @AllArgsConstructor
