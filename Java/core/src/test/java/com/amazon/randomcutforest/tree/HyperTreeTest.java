@@ -31,6 +31,7 @@ import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.DynamicScoringRandomCutForest;
 import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 public class HyperTreeTest {
@@ -99,6 +100,7 @@ public class HyperTreeTest {
         int sampleSize;
         int numberOfTrees;
 
+        PointStore pointStore;
         ArrayList<HyperTree> trees;
 
         public HyperForest(int dimensions, int numberOfTrees, int sampleSize, int seed,
@@ -107,10 +109,13 @@ public class HyperTreeTest {
             this.seed = seed;
             this.sampleSize = sampleSize;
             this.dimensions = dimensions;
+            pointStore = PointStore.builder().capacity(numberOfTrees * sampleSize).dimensions(dimensions).shingleSize(1)
+                    .build();
             trees = new ArrayList<>();
             random = new Random(seed);
             for (int i = 0; i < numberOfTrees; i++) {
-                trees.add(new HyperTree.Builder().buildGVec(vecSeparation).randomSeed(random.nextInt()).build());
+                trees.add(new HyperTree.Builder().pointStoreView(pointStore).dimension(dimensions)
+                        .buildGVec(vecSeparation).randomSeed(random.nextInt()).build());
             }
         }
 
@@ -165,28 +170,46 @@ public class HyperTreeTest {
         }
 
         void makeForest(double[][] pointList, int prefix) {
+            for (int i = 0; i < pointList.length; i++) {
+                if (pointList[i].length != dimensions) {
+                    throw new IllegalArgumentException("Points have incorrect dimensions");
+                }
+            }
+            boolean[][] status = new boolean[numberOfTrees + 1][pointList.length];
             for (int i = 0; i < numberOfTrees; i++) {
-                List<double[]> samples = new ArrayList<>();
-                boolean[] status = new boolean[pointList.length];
                 int y = 0;
-
                 while (y < sampleSize) {
                     int z = random.nextInt(prefix);
-                    if (!status[z]) {
-                        status[z] = true;
-                        if (pointList[z].length == dimensions) {
-                            samples.add(pointList[z]);
-                        } else {
-                            throw new IllegalArgumentException("Points have incorrect dimensions");
-                        }
+                    if (!status[i][z]) {
+                        status[i + 1][z] = true;
+                        status[0][z] = true; // will compute union across trees
                         ++y;
                     }
                 }
-                trees.get(i).makeTree(samples, random.nextInt());
+            }
+            int[] reference = new int[pointList.length];
+            List<Integer>[] lists = new List[numberOfTrees];
+            for (int i = 0; i < numberOfTrees; i++) {
+                lists[i] = new ArrayList<>();
+            }
+            for (int i = 0; i < pointList.length; i++) {
+                if (status[0][i]) {
+                    reference[i] = pointStore.add(pointList[i], 0L);
+                    for (int j = 0; j < numberOfTrees; j++) {
+                        if (status[j + 1][i]) {
+                            lists[j].add(reference[i]);
+                        }
+                    }
+                }
+                ;
+            }
+            for (int i = 0; i < numberOfTrees; i++) {
+                trees.get(i).makeTree(lists[i], random.nextInt());
             }
         }
 
     }
+
     // ===========================================================
 
     public static double getSimulatedAnomalyScore(DynamicScoringRandomCutForest forest, double[] point,

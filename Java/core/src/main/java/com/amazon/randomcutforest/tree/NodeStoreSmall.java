@@ -39,9 +39,6 @@ import com.amazon.randomcutforest.store.IndexIntervalManager;
  * If we think of an array of Node objects as being row-oriented (where each row
  * is a Node), then this class is analogous to a column-oriented database of
  * Nodes.
- *
- * Note that a NodeStore does not store instances of the
- * {@link com.amazon.randomcutforest.tree.Node} class.
  */
 public class NodeStoreSmall extends AbstractNodeStore {
 

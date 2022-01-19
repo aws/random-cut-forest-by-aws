@@ -18,8 +18,8 @@ package com.amazon.randomcutforest.interpolation;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Cut;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
+import com.amazon.randomcutforest.tree.NodeView;
 
 public class SimpleInterpolationVisitorTest {
 
@@ -63,8 +63,9 @@ public class SimpleInterpolationVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = { 1.0, 2.0, 3.0 };
-        Node leafNode = spy(new Node(point));
-
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
         int leafDepth = 100;
         int leafMass = 10;
         when(leafNode.getMass()).thenReturn(leafMass);
@@ -94,7 +95,9 @@ public class SimpleInterpolationVisitorTest {
         double[] point = { 1.0, 9.0, 4.0 };
         double[] anotherPoint = { 4.0, 5.0, 6.0 };
 
-        Node leafNode = spy(new Node(anotherPoint));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(anotherPoint, anotherPoint));
         when(leafNode.getMass()).thenReturn(4);
         int leafDepth = 100;
         int sampleSize = 99;
@@ -137,7 +140,10 @@ public class SimpleInterpolationVisitorTest {
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
         double[] point = Arrays.copyOf(pointToScore, pointToScore.length);
-        Node node = new Node(point);
+        INodeView node = mock(NodeView.class);
+        when(node.getLeafPoint()).thenReturn(point);
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(point, point));
+        when(node.getMass()).thenReturn(1);
         int depth = 2;
         visitor.acceptLeaf(node, depth);
         InterpolationMeasure result = visitor.getResult();
@@ -157,12 +163,14 @@ public class SimpleInterpolationVisitorTest {
 
         depth--;
         double[] siblingPoint = { 1.0, -2.0 };
-        Node sibling = spy(new Node(siblingPoint));
+        INodeView sibling = mock(NodeView.class);
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = spy(
-                new Node(node, sibling, new Cut(0, 0.5), node.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
-        when(parent.getMass()).thenReturn(node.getMass() + siblingMass);
+        INodeView parent = mock(NodeView.class);
+        when(parent.getMass()).thenReturn(1 + siblingMass);
+        BoundingBox boundingBox = new BoundingBox(point, siblingPoint);
+        when(parent.getBoundingBox()).thenReturn(boundingBox);
+        when(parent.getSiblingBoundingBox(any())).thenReturn(new BoundingBox(siblingPoint));
         visitor.accept(parent, depth);
         result = visitor.getResult();
 
@@ -207,7 +215,10 @@ public class SimpleInterpolationVisitorTest {
         int sampleSize = 50;
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
-        Node leafNode = spy(new Node(new double[] { 1.0, -2.0 }));
+        INodeView leafNode = mock(NodeView.class);
+        double[] point = new double[] { 1.0, -2.0 };
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
         int leafMass = 3;
         when(leafNode.getMass()).thenReturn(leafMass);
         int depth = 4;
@@ -243,13 +254,13 @@ public class SimpleInterpolationVisitorTest {
         // parent does not contain pointToScore
 
         depth--;
-        Node sibling = spy(new Node(new double[] { 2.0, -0.5 }));
+        INodeView sibling = mock(NodeView.class);
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = spy(new Node(leafNode, sibling, new Cut(0, 0.5),
-                leafNode.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
+        INodeView parent = mock(NodeView.class);
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
+        when(parent.getBoundingBox()).thenReturn(new BoundingBox(point, new double[] { 2.0, -0.5 }));
         visitor.accept(parent, depth);
         result = visitor.getResult();
 
@@ -282,25 +293,5 @@ public class SimpleInterpolationVisitorTest {
         assertFalse(visitor.pointInsideBox);
 
         depth--;
-        Node aunt = new Node(null, null, new Cut(1, 0.5),
-                new BoundingBox(new double[] { -1.0, 1.0 }).getMergedBox(new double[] { -0.5, -1.5 }));
-        Node grandparent = spy(
-                new Node(parent, aunt, new Cut(0, 0.1), parent.getBoundingBox().getMergedBox(aunt.getBoundingBox())));
-        when(grandparent.getMass()).thenReturn(parentMass + aunt.getMass());
-        visitor.accept(grandparent, depth);
-        result = visitor.getResult();
-
-        for (int i = 0; i < pointToScore.length; i++) {
-            assertEquals(expectedProbVector[2 * i], result.probMass.high[i]);
-            assertEquals(expectedProbVector[2 * i + 1], result.probMass.low[i]);
-
-            assertEquals(expectedNumPts[2 * i], result.measure.high[i]);
-            assertEquals(expectedNumPts[2 * i + 1], result.measure.low[i]);
-
-            assertEquals(expectedDistances[2 * i], result.distances.high[i]);
-            assertEquals(expectedDistances[2 * i + 1], result.distances.low[i]);
-        }
-
-        assertTrue(visitor.pointInsideBox);
     }
 }

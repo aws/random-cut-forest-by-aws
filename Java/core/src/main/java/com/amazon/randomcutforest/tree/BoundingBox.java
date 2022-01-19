@@ -26,9 +26,9 @@ import java.util.Arrays;
  * such that the bounding box is equal to the set of points x whose ith
  * coordinate is between a_i and b_i.
  *
- * {@link Node}s in a {@link RandomCutTree} contain a BoundingBox, which is
- * always the smallest BoundingBox that contains all leaf points which are
- * descendents of the Node.
+ * A node in a {@link RandomCutTree} contain a BoundingBox (possibly generated
+ * on demand), which is always the smallest BoundingBox that contains all leaf
+ * points which are descendents of the Node.
  */
 public class BoundingBox extends AbstractBoundingBox<double[]> {
 

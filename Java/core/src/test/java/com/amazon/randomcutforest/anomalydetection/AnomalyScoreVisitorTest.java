@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.anomalydetection;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
@@ -23,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -32,7 +33,9 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.INodeView;
+import com.amazon.randomcutforest.tree.NodeView;
 
 public class AnomalyScoreVisitorTest {
 
@@ -71,7 +74,9 @@ public class AnomalyScoreVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = { 1.0, 2.0, 3.0 };
-        Node leafNode = spy(new Node(point));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -99,8 +104,10 @@ public class AnomalyScoreVisitorTest {
     public void testAcceptLeafNotEquals() {
         double[] point = new double[] { 1.0, 2.0, 3.0 };
         double[] anotherPoint = new double[] { 4.0, 5.0, 6.0 };
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(anotherPoint, anotherPoint));
 
-        Node leafNode = new Node(anotherPoint);
         int leafDepth = 100;
 
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, 2);
@@ -118,7 +125,10 @@ public class AnomalyScoreVisitorTest {
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(pointToScore, sampleSize);
 
         double[] point = Arrays.copyOf(pointToScore, pointToScore.length);
-        Node node = new Node(point);
+        INodeView node = mock(NodeView.class);
+        when(node.getLeafPoint()).thenReturn(point);
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(point, point));
+
         int depth = 2;
         visitor.acceptLeaf(node, depth);
         double expectedScore = CommonUtils.defaultDampFunction(node.getMass(), sampleSize)
@@ -127,15 +137,15 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] { 1.0, 1.0 });
-        node = new Node(null, null, null, boundingBox);
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 1.0, 1.0 });
+        node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         assertThat(visitor.getResult(),
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
         boundingBox = boundingBox.getMergedBox(new double[] { -1.0, -1.0 });
-        node = new Node(null, null, null, boundingBox);
+        node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         assertThat(visitor.getResult(),
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
@@ -147,7 +157,10 @@ public class AnomalyScoreVisitorTest {
         int sampleSize = 50;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(pointToScore, sampleSize);
 
-        Node node = new Node(new double[] { 1.0, 1.0 });
+        INodeView node = mock(NodeView.class);
+        double[] otherPoint = new double[] { 1.0, 1.0 };
+        when(node.getLeafPoint()).thenReturn(otherPoint);
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(otherPoint, otherPoint));
         int depth = 4;
         visitor.acceptLeaf(node, depth);
         double expectedScore = 1.0 / (depth + 1);
@@ -155,8 +168,9 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] { 2.0, 0.0 });
-        node = new Node(null, null, null, boundingBox);
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 2.0, 0.0 });
+        when(node.getBoundingBox()).thenReturn(boundingBox);
+
         visitor.accept(node, depth);
         double p = visitor.getProbabilityOfSeparation(boundingBox);
         expectedScore = p * (1.0 / (depth + 1)) + (1 - p) * expectedScore;
@@ -165,7 +179,8 @@ public class AnomalyScoreVisitorTest {
 
         depth--;
         boundingBox = boundingBox.getMergedBox(new double[] { -1.0, 0.0 });
-        node = new Node(null, null, null, boundingBox);
+
+        when(node.getBoundingBox()).thenReturn(boundingBox);
         visitor.accept(node, depth);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         expectedScore = p * (1.0 / (depth + 1)) + (1 - p) * expectedScore;
@@ -174,7 +189,7 @@ public class AnomalyScoreVisitorTest {
 
         depth--;
         boundingBox = boundingBox.getMergedBox(new double[] { -1.0, -1.0 });
-        node = new Node(null, null, null, boundingBox);
+        node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         assertThat(visitor.getResult(),

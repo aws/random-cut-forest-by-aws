@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +30,9 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.INodeView;
+import com.amazon.randomcutforest.tree.NodeView;
 
 public class ImputeVisitorTest {
 
@@ -70,7 +72,10 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = { queryPoint[0], 2.0, queryPoint[2] };
-        Node leafNode = spy(new Node(point));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getLiftedLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -87,7 +92,10 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafEqualsZeroDepth() {
         double[] point = { queryPoint[0], 2.0, queryPoint[2] };
-        Node leafNode = spy(new Node(point));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getLiftedLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
 
         int leafDepth = 0;
         int leafMass = 10;
@@ -104,8 +112,10 @@ public class ImputeVisitorTest {
     @Test
     public void testAcceptLeafNotEquals() {
         double[] point = { queryPoint[0], 2.0, -111.11 };
-        Node leafNode = spy(new Node(point));
-
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getLiftedLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
         int leafDepth = 100;
         int leafMass = 10;
         when(leafNode.getMass()).thenReturn(leafMass);
@@ -122,8 +132,10 @@ public class ImputeVisitorTest {
     public void testAccept() {
 
         double[] point = { queryPoint[0], 2.0, -111.11 };
-        Node node = spy(new Node(point));
-
+        INodeView node = mock(NodeView.class);
+        when(node.getLeafPoint()).thenReturn(point);
+        when(node.getLiftedLeafPoint()).thenReturn(point);
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(point, point));
         int depth = 100;
         int leafMass = 10;
         when(node.getMass()).thenReturn(leafMass);
@@ -136,8 +148,8 @@ public class ImputeVisitorTest {
         assertEquals(defaultScoreUnseenFunction(depth, leafMass), visitor.getAnomalyRank());
 
         depth--;
-        BoundingBox boundingBox = node.getBoundingBox().getMergedBox(new double[] { 99.0, 4.0, -19.0 });
-        node = spy(new Node(null, null, null, boundingBox));
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 99.0, 4.0, -19.0 });
+        when(node.getBoundingBox()).thenReturn(boundingBox);
         when(node.getMass()).thenReturn(leafMass + 2);
 
         double oldRank = visitor.getAnomalyRank();
@@ -163,7 +175,10 @@ public class ImputeVisitorTest {
         ImputeVisitor other = new ImputeVisitor(otherPoint, 0, new int[0]);
 
         // set other.rank to a small value
-        Node node = new Node(new double[] { 0, 0, 0 });
+        NodeView node = mock(NodeView.class);
+        when(node.getLeafPoint()).thenReturn(new double[] { 0, 0, 0 });
+        when(node.getLiftedLeafPoint()).thenReturn(new double[] { 0, 0, 0 });
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(new double[] { 0, 0, 0 }));
         other.acceptLeaf(node, 99);
 
         assertTrue(other.getAnomalyRank() < visitor.getAnomalyRank());

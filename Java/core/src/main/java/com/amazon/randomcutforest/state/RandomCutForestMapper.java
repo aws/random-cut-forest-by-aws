@@ -30,13 +30,11 @@ import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
-import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.sampler.ArraySamplersToCompactStateConverter;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerMapper;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
@@ -53,7 +51,6 @@ import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
  * A utility class for creating a {@link RandomCutForestState} instance from a
@@ -270,43 +267,11 @@ public class RandomCutForestMapper
                 .boundingBoxCacheFraction(state.getBoundingBoxCacheFraction()).compact(state.isCompact())
                 .internalShinglingEnabled(state.isInternalShinglingEnabled()).randomSeed(seed);
 
-        if (state.isCompact()) {
-            if (Precision.valueOf(state.getPrecision()) == Precision.FLOAT_32) {
-                return singlePrecisionForest(builder, state, null, null, null);
-            } else {
-                return doublePrecisionForest(builder, state, null, null, null);
-            }
+        if (Precision.valueOf(state.getPrecision()) == Precision.FLOAT_32) {
+            return singlePrecisionForest(builder, state, null, null, null);
+        } else {
+            return doublePrecisionForest(builder, state, null, null, null);
         }
-
-        Random random = builder.getRandom();
-        List<CompactSamplerState> samplerStates = state.getCompactSamplerStates();
-        CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
-
-        PointStoreDouble pointStore = new PointStoreDoubleMapper().toModel(state.getPointStoreState());
-        PassThroughCoordinator coordinator = new PassThroughCoordinator();
-        coordinator.setTotalUpdates(state.getTotalUpdates());
-        ComponentList<double[], double[]> components = new ComponentList<>();
-        for (int i = 0; i < state.getNumberOfTrees(); i++) {
-            CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i));
-            RandomCutTree tree = RandomCutTree.builder()
-                    .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
-                    .outputAfter(state.getOutputAfter()).centerOfMassEnabled(state.isCenterOfMassEnabled())
-                    .randomSeed(random.nextLong()).build();
-            SimpleStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder()
-                    .capacity(state.getSampleSize()).timeDecay(state.getTimeDecay()).randomSeed(random.nextLong())
-                    .build();
-            sampler.setMaxSequenceIndex(compactData.getMaxSequenceIndex());
-            sampler.setMostRecentTimeDecayUpdate(compactData.getMostRecentTimeDecayUpdate());
-
-            for (Weighted<Integer> sample : compactData.getWeightedSample()) {
-                double[] point = pointStore.get(sample.getValue());
-                sampler.addSample(new Weighted<>(point, sample.getWeight(), sample.getSequenceIndex()));
-                tree.addPoint(point, sample.getSequenceIndex());
-            }
-            components.add(new SamplerPlusTree<>(sampler, tree));
-        }
-
-        return new RandomCutForest(builder, coordinator, components, random);
     }
 
     /**

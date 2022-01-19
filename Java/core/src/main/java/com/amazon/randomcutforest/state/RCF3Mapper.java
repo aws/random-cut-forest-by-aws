@@ -47,7 +47,7 @@ import com.amazon.randomcutforest.state.tree.RandomCutTreeMapper;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.NewRandomCutTree;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
  * A utility class for creating a {@link RandomCutForestState} instance from a
@@ -183,8 +183,8 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
 
         if (trees != null) {
             RandomCutTreeMapper treeMapper = new RandomCutTreeMapper();
-            List<CompactRandomCutTreeState> treeStates = trees.stream()
-                    .map(t -> treeMapper.toState((NewRandomCutTree) t)).collect(Collectors.toList());
+            List<CompactRandomCutTreeState> treeStates = trees.stream().map(t -> treeMapper.toState((RandomCutTree) t))
+                    .collect(Collectors.toList());
             state.setCompactRandomCutTreeStates(treeStates);
         }
         return state;
@@ -246,8 +246,8 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
 
         for (int i = 0; i < state.getNumberOfTrees(); i++) {
             CompactSampler compactData = samplerMapper.toModel(samplerStates.get(i));
-            NewRandomCutTree tree = NewRandomCutTree.builder().capacity(state.getSampleSize())
-                    .pointStoreView(pointStore).storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
+            RandomCutTree tree = RandomCutTree.builder().capacity(state.getSampleSize()).pointStoreView(pointStore)
+                    .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled())
                     .outputAfter(state.getOutputAfter()).centerOfMassEnabled(state.isCenterOfMassEnabled())
                     .randomSeed(random.nextLong()).build();
             CompactSampler sampler = CompactSampler.builder().capacity(state.getSampleSize())
@@ -340,7 +340,7 @@ public class RCF3Mapper implements IContextualStateMapper<RCF3, RandomCutForestS
                 tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, treeStates.get(i).getBoundingBoxCacheFraction());
             } else {
                 // using boundingBoxCahce for the new tree
-                tree = new NewRandomCutTree.Builder().capacity(state.getSampleSize()).randomSeed(random.nextLong())
+                tree = new RandomCutTree.Builder().capacity(state.getSampleSize()).randomSeed(random.nextLong())
                         .pointStoreView(pointStore).boundingBoxCacheFraction(state.getBoundingBoxCacheFraction())
                         .centerOfMassEnabled(state.isCenterOfMassEnabled())
                         .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).build();

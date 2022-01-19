@@ -18,10 +18,8 @@ package com.amazon.randomcutforest.tree;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -120,21 +118,6 @@ public class CompactRandomCutTreeDoubleTest {
         tree.switchLeafReference(3);
         assertEquals(tree.getEquivalentReference(3), 3);
         assertEquals(tree.getEquivalentReference(5), null);
-    }
-
-    @Test
-    public void testBuilderWithCustomerArguments() {
-        RandomCutTree customTree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
-        assertTrue(customTree.centerOfMassEnabled());
-        assertTrue(customTree.storeSequenceIndexesEnabled());
-    }
-
-    @Test
-    public void testDefaultTree() {
-        RandomCutTree defaultTree = RandomCutTree.defaultTree();
-        assertFalse(defaultTree.centerOfMassEnabled());
-        assertFalse(defaultTree.storeSequenceIndexesEnabled());
     }
 
     /**
@@ -363,30 +346,6 @@ public class CompactRandomCutTreeDoubleTest {
         assertThat(tree.getMass(tree.getRightChild(node)), is(2));
         assertEquals(tree.sequenceIndexes[tree.nodeStore.computeLeafIndex(tree.getRightChild(node))].get(5L), 1);
         assertEquals(tree.sequenceIndexes[tree.nodeStore.computeLeafIndex(tree.getRightChild(node))].get(4L), 1);
-    }
-
-    @Test
-    public void testDeleteRoot() {
-        RandomCutTree tree = RandomCutTree.defaultTree();
-        double[] point = new double[] { -0.1, 0.1 };
-        tree.addPoint(point, 1);
-        tree.deletePoint(point, 1);
-
-        assertThat(tree.getRoot(), is(nullValue()));
-    }
-
-    @Test
-    public void testDeleteChildOfRoot() {
-        RandomCutTree tree = RandomCutTree.defaultTree();
-        double[] point1 = new double[] { -0.1, 0.2 };
-        double[] point2 = new double[] { -0.3, 0.4 };
-        tree.addPoint(point1, 1);
-        tree.addPoint(point2, 2);
-        tree.deletePoint(point1, 1);
-
-        Node root = tree.getRoot();
-        assertThat(root.isLeaf(), is(true));
-        assertThat(root.getLeafPoint(), is(point2));
     }
 
     @Test
