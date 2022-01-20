@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.tree.BoundingBox;
-import com.amazon.randomcutforest.tree.Cut;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
+import com.amazon.randomcutforest.tree.NodeView;
 
 public class AnomalyAttributionVisitorTest {
 
@@ -76,7 +76,9 @@ public class AnomalyAttributionVisitorTest {
     @Test
     public void testAcceptLeafEquals() {
         double[] point = { 1.1, -2.2, 3.3 };
-        Node leafNode = spy(new Node(point));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
 
         int leafDepth = 100;
         int leafMass = 10;
@@ -102,7 +104,9 @@ public class AnomalyAttributionVisitorTest {
         double[] point = new double[] { 1.1, -2.2, 3.3 };
         double[] anotherPoint = new double[] { -4.0, 5.0, 6.0 };
 
-        Node leafNode = spy(new Node(anotherPoint));
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(anotherPoint, anotherPoint));
         int leafDepth = 100;
         int leafMass = 4;
         when(leafNode.getMass()).thenReturn(leafMass);
@@ -154,7 +158,11 @@ public class AnomalyAttributionVisitorTest {
         int treeMass = 50;
         AnomalyAttributionVisitor visitor = new AnomalyAttributionVisitor(pointToScore, treeMass, 0);
 
-        Node leafNode = new Node(new double[] { 1.0, -2.0 });
+        INodeView leafNode = mock(NodeView.class);
+        double[] point = new double[] { 1.0, -2.0 };
+        when(leafNode.getLeafPoint()).thenReturn(point);
+        when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
+
         int leafMass = 3;
         when(leafNode.getMass()).thenReturn(leafMass);
         int depth = 4;
@@ -176,13 +184,14 @@ public class AnomalyAttributionVisitorTest {
         // parent does not contain pointToScore
 
         depth--;
-        Node sibling = spy(new Node(new double[] { 2.0, -0.5 }));
+        INodeView sibling = mock(NodeView.class);
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
-        Node parent = spy(new Node(leafNode, sibling, new Cut(0, 0.5),
-                leafNode.getBoundingBox().getMergedBox(sibling.getBoundingBox())));
+        INodeView parent = mock(NodeView.class);
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
+        BoundingBox boundingBox = new BoundingBox(point, new double[] { 2.0, -0.5 });
+        when(parent.getBoundingBox()).thenReturn(boundingBox);
         visitor.accept(parent, depth);
         result = visitor.getResult();
 
@@ -215,12 +224,12 @@ public class AnomalyAttributionVisitorTest {
         assertFalse(visitor.pointInsideBox);
 
         depth--;
-        Node auntie = new Node(null, null, new Cut(1, 0.5),
-                new BoundingBox(new double[] { -1.0, 1.0 }).getMergedBox(new double[] { -0.5, -1.5 }));
-        Node grandparent = spy(new Node(parent, auntie, new Cut(0, 0.1),
-                parent.getBoundingBox().getMergedBox(auntie.getBoundingBox())));
-        when(grandparent.getMass()).thenReturn(parentMass + auntie.getMass());
-        visitor.accept(grandparent, depth);
+        INodeView grandParent = mock(NodeView.class);
+
+        when(grandParent.getMass()).thenReturn(parentMass + 2);
+        when(grandParent.getBoundingBox()).thenReturn(boundingBox
+                .getMergedBox(new BoundingBox(new double[] { -1.0, 1.0 }).getMergedBox(new double[] { -0.5, -1.5 })));
+        visitor.accept(grandParent, depth);
         result = visitor.getResult();
 
         for (int i = 0; i < pointToScore.length; i++) {

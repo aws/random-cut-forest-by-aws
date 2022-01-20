@@ -63,7 +63,6 @@ import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.NewRandomCutTree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ArrayUtils;
 import com.amazon.randomcutforest.util.ShingleBuilder;
@@ -303,8 +302,8 @@ public class RCF3 {
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer, float[]> tree = new NewRandomCutTree.Builder<>().capacity(sampleSize)
-                    .outputAfter(outputAfter).randomSeed(random.nextLong()).pointStoreView(tempStore)
+            ITree<Integer, float[]> tree = new RandomCutTree.Builder<>().capacity(sampleSize).outputAfter(outputAfter)
+                    .randomSeed(random.nextLong()).pointStoreView(tempStore)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).build();
 
             IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)

@@ -90,9 +90,9 @@ public class RCF3Test {
         RCF3 forest = RCF3.builder().numberOfTrees(numberOfTrees).dimensions(dimensions).shingleSize(shingleSize)
                 .boundingBoxCacheFraction(1).internalShinglingEnabled(true).randomSeed(200).outputAfter(1)
                 .initialAcceptFraction(0.1).precision(Precision.FLOAT_32).sampleSize(256).build();
-        DynamicScoringRandomCutForest otherForest = DynamicScoringRandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .dimensions(dimensions).shingleSize(shingleSize).boundingBoxCacheFraction(0.1).randomSeed(200)
-                .outputAfter(1).initialAcceptFraction(0.1).precision(Precision.FLOAT_32).sampleSize(256).build();
+        RandomCutForest otherForest = RandomCutForest.builder().numberOfTrees(numberOfTrees).dimensions(dimensions)
+                .shingleSize(shingleSize).boundingBoxCacheFraction(0.1).randomSeed(200).outputAfter(1)
+                .initialAcceptFraction(0.1).precision(Precision.FLOAT_32).sampleSize(256).build();
 
         int count = 0;
         for (int j = 0; j < shingleSize - 1; j++) {

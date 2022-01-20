@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.inspect;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -34,7 +36,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.tree.Node;
+import com.amazon.randomcutforest.tree.INodeView;
+import com.amazon.randomcutforest.tree.NodeView;
 
 public class NearNeighborVisitorTest {
 
@@ -52,12 +55,13 @@ public class NearNeighborVisitorTest {
     @Test
     public void acceptLeafNear() {
         double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
-        Node leafNode = spy(new Node(leafPoint));
+        INodeView leafNode = spy(new NodeView(null, null, Null));
 
         Set<Long> sequenceIndexes = new HashSet<>();
         sequenceIndexes.add(1234L);
         sequenceIndexes.add(5678L);
         when(leafNode.getSequenceIndexes()).thenReturn(sequenceIndexes);
+        when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
 
         int depth = 12;
         visitor.acceptLeaf(leafNode, depth);
@@ -76,9 +80,9 @@ public class NearNeighborVisitorTest {
     @Test
     public void acceptLeafNearTimestampsDisabled() {
         double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
-        Node leafNode = new Node(leafPoint);
+        INodeView leafNode = spy(new NodeView(null, null, Null));
         assertEquals(0, leafNode.getSequenceIndexes().size());
-
+        when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
         int depth = 12;
         visitor.acceptLeaf(leafNode, depth);
 
@@ -95,11 +99,12 @@ public class NearNeighborVisitorTest {
     @Test
     public void acceptLeafNotNear() {
         double[] leafPoint = new double[] { 108.8, 209.9, -305.5 };
-        Node leafNode = spy(new Node(leafPoint));
+        INodeView leafNode = spy(new NodeView(null, null, Null));
 
         Set<Long> sequenceIndexes = new HashSet<>();
         sequenceIndexes.add(1234L);
         sequenceIndexes.add(5678L);
+        when(leafNode.getLeafPoint()).thenReturn(leafPoint);
         when(leafNode.getSequenceIndexes()).thenReturn(sequenceIndexes);
 
         int depth = 12;

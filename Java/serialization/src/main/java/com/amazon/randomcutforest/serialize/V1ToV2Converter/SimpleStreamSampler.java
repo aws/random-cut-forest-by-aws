@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.sampler;
+package com.amazon.randomcutforest.serialize.V1ToV2Converter;
 
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 
@@ -23,6 +23,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
+
+import com.amazon.randomcutforest.sampler.AbstractStreamSampler;
+import com.amazon.randomcutforest.sampler.AcceptPointState;
+import com.amazon.randomcutforest.sampler.ISampled;
+import com.amazon.randomcutforest.sampler.Weighted;
 
 /**
  * <p>
@@ -51,10 +56,6 @@ import java.util.Queue;
  * The coefficient function used by SimpleStreamSampler is:
  * <code>c(i) = exp(timeDecay * sequenceIndex(i))</code>.
  * </p>
- * <p>
- * For a specialized version of this algorithm that uses less runtime memory,
- * see {@link CompactSampler}.
- * </p>
  */
 public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
 
@@ -72,7 +73,7 @@ public class SimpleStreamSampler<P> extends AbstractStreamSampler<P> {
     protected SimpleStreamSampler(Builder<P> builder) {
         super(builder);
         sample = new PriorityQueue<>(Comparator.comparingDouble(Weighted<P>::getWeight).reversed());
-        this.timeDecay = builder.timeDecay;
+        this.timeDecay = builder.getTimeDecay();
     }
 
     /**

@@ -41,7 +41,7 @@ import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.IComponentModel;
 import com.amazon.randomcutforest.TestUtils;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
+import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 
@@ -54,17 +54,17 @@ public class ForestTraversalExecutorTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
 
-            ComponentList<double[], double[]> sequentialExecutors = new ComponentList<>();
-            ComponentList<double[], double[]> parallelExecutors = new ComponentList<>();
+            ComponentList<Integer, float[]> sequentialExecutors = new ComponentList<>();
+            ComponentList<Integer, float[]> parallelExecutors = new ComponentList<>();
 
             for (int i = 0; i < numberOfTrees; i++) {
-                SimpleStreamSampler<double[]> sampler = mock(SimpleStreamSampler.class);
+                CompactSampler sampler = mock(CompactSampler.class);
                 RandomCutTree tree = mock(RandomCutTree.class);
                 sequentialExecutors.add(spy(new SamplerPlusTree<>(sampler, tree)));
             }
 
             for (int i = 0; i < numberOfTrees; i++) {
-                SimpleStreamSampler<double[]> sampler = mock(SimpleStreamSampler.class);
+                CompactSampler sampler = mock(CompactSampler.class);
                 RandomCutTree tree = mock(RandomCutTree.class);
                 parallelExecutors.add(spy(new SamplerPlusTree<>(sampler, tree)));
             }

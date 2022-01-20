@@ -43,8 +43,6 @@ import com.amazon.randomcutforest.store.IndexIntervalManager;
  * is a Node), then this class is analogous to a column-oriented database of
  * Nodes.
  *
- * Note that a NodeStore does not store instances of the
- * {@link com.amazon.randomcutforest.tree.Node} class.
  */
 public abstract class AbstractNodeStore {
 

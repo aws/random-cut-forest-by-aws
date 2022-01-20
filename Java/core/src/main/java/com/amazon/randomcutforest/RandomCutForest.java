@@ -25,12 +25,16 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.anomalydetection.DynamicAttributionVisitor;
+import com.amazon.randomcutforest.anomalydetection.DynamicScoreVisitor;
+import com.amazon.randomcutforest.anomalydetection.SimulatedTransductiveScalarScoreVisitor;
 import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
@@ -38,7 +42,6 @@ import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.IStateCoordinator;
 import com.amazon.randomcutforest.executor.ParallelForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.ParallelForestUpdateExecutor;
-import com.amazon.randomcutforest.executor.PassThroughCoordinator;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
@@ -55,12 +58,12 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumula
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
 import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ArrayUtils;
@@ -109,11 +112,6 @@ public class RandomCutForest {
     public static final boolean DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED = false;
 
     /**
-     * By default, trees will not create indexed references.
-     */
-    public static final boolean DEFAULT_COMPACT = true;
-
-    /**
      * By default, trees will accept every point until full.
      */
     public static final double DEFAULT_INITIAL_ACCEPT_FRACTION = 1.0;
@@ -145,8 +143,7 @@ public class RandomCutForest {
     public static final Precision DEFAULT_PRECISION = Precision.FLOAT_64;
 
     /**
-     * By default, bounding boxes will be used. Disabling this will force
-     * enableCompact .
+     * fraction of bounding boxes maintained by each tree
      */
     public static final double DEFAULT_BOUNDING_BOX_CACHE_FRACTION = 1.0;
 
@@ -207,10 +204,7 @@ public class RandomCutForest {
      * Store the time information
      */
     protected final boolean storeSequenceIndexesEnabled;
-    /**
-     * Enable compact representation
-     */
-    protected final boolean compact;
+
     /**
      * enables internal shingling
      */
@@ -288,10 +282,8 @@ public class RandomCutForest {
         random = builder.getRandom();
         if (precision == Precision.FLOAT_32) {
             initCompactFloat(builder);
-        } else if (compact) {
-            initCompactDouble(builder);
         } else {
-            initNonCompact();
+            initCompactDouble(builder);
         }
     }
 
@@ -349,24 +341,6 @@ public class RandomCutForest {
         initExecutors(stateCoordinator, components);
     }
 
-    private void initNonCompact() {
-        IStateCoordinator<double[], double[]> stateCoordinator = new PassThroughCoordinator();
-        ComponentList<double[], double[]> components = new ComponentList<>(numberOfTrees);
-        for (int i = 0; i < numberOfTrees; i++) {
-            ITree<double[], double[]> tree = RandomCutTree.builder().randomSeed(random.nextLong())
-                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
-                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
-
-            IStreamSampler<double[]> sampler = SimpleStreamSampler.<double[]>builder().capacity(sampleSize)
-                    .timeDecay(timeDecay).randomSeed(random.nextLong()).build();
-
-            components.add(new SamplerPlusTree<>(sampler, tree));
-        }
-        this.stateCoordinator = stateCoordinator;
-        this.components = components;
-        initExecutors(stateCoordinator, components);
-    }
-
     protected <PointReference, Point> void initExecutors(IStateCoordinator<PointReference, Point> updateCoordinator,
             ComponentList<PointReference, Point> components) {
         if (parallelExecutionEnabled) {
@@ -402,21 +376,17 @@ public class RandomCutForest {
         });
         builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
                 "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
-        checkArgument(builder.precision == Precision.FLOAT_64 || builder.compact,
-                "single precision is only supported for compact trees");
         checkArgument(builder.internalShinglingEnabled || builder.shingleSize == 1
                 || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
         // checkArgument(!builder.internalShinglingEnabled || builder.shingleSize > 1,
         // " need shingle size > 1 for internal shingling");
         if (builder.internalRotationEnabled) {
             checkArgument(builder.internalShinglingEnabled, " enable internal shingling");
-            checkArgument(builder.compact, " option not supported, enable compact trees");
         }
         builder.initialPointStoreSize.ifPresent(n -> {
             checkArgument(n > 0, "initial point store must be greater than 0");
             checkArgument(n > builder.sampleSize * builder.numberOfTrees || builder.dynamicResizingEnabled,
                     " enable dynamic resizing ");
-            checkArgument(builder.compact, " enable compact trees ");
         });
         checkArgument(builder.boundingBoxCacheFraction >= 0 && builder.boundingBoxCacheFraction <= 1,
                 "incorrect cache fraction range");
@@ -430,7 +400,6 @@ public class RandomCutForest {
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
-        compact = builder.compact;
         precision = builder.precision;
         boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
@@ -536,11 +505,9 @@ public class RandomCutForest {
         return precision;
     }
 
-    /**
-     * @return true if points are saved with sequence indexes, false otherwise.
-     */
+    @Deprecated
     public boolean isCompact() {
-        return compact;
+        return true;
     }
 
     /**
@@ -1304,7 +1271,6 @@ public class RandomCutForest {
         private int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         private Optional<Double> timeDecay = Optional.empty();
         private Optional<Long> randomSeed = Optional.empty();
-        private boolean compact = DEFAULT_COMPACT;
         private boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         private boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
@@ -1379,8 +1345,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
+        @Deprecated
         public T compact(boolean compact) {
-            this.compact = compact;
             return (T) this;
         }
 
@@ -1423,5 +1389,184 @@ public class RandomCutForest {
             // the 0-argument constructor
             return randomSeed.map(Random::new).orElseGet(Random::new);
         }
+    }
+
+    /**
+     * Score a point using the given scoring functions.
+     *
+     * @param point                   input point being scored
+     * @param ignoreLeafMassThreshold said threshold
+     * @param seen                    the function that applies if input is equal to
+     *                                a previously seen sample in a leaf
+     * @param unseen                  if the input does not have a match in the
+     *                                leaves
+     * @param damp                    damping function based on the duplicity of the
+     *                                previously seen samples
+     * @return anomaly score
+     */
+    public double getDynamicScore(double[] point, int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
+            BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp) {
+
+        checkArgument(ignoreLeafMassThreshold >= 0, "ignoreLeafMassThreshold should be greater than or equal to 0");
+
+        if (!isOutputReady()) {
+            return 0.0;
+        }
+
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicScoreVisitor(
+                tree.projectToTree(y), tree.getMass(), ignoreLeafMassThreshold, seen, unseen, damp));
+        BinaryOperator<Double> accumulator = Double::sum;
+
+        Function<Double, Double> finisher = sum -> sum / numberOfTrees;
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
+    }
+
+    /**
+     * Similar to above but now the scoring takes in a function of Bounding Box to
+     * probabilities (vector over the dimensions); and produces a score af-if the
+     * tree were built using that function (when in reality the tree is an RCF).
+     * Changing the defaultRCFgVec function to some other function f() will provide
+     * a mechanism of dynamic scoring for trees that are built using f() which is
+     * the purpose of TransductiveScalarScore visitor. Note that the answer is an
+     * MCMC simulation and is not normalized (because the scoring functions are
+     * flexible and unknown) and over a small number of trees the errors can be
+     * large specially if vecSep is very far from defaultRCFgVec
+     *
+     * Given the large number of possible sources of distortion, ignoreLeafThreshold
+     * is not supported.
+     *
+     * @param point  point to be scored
+     * @param seen   the score function for seen point
+     * @param unseen score function for unseen points
+     * @param damp   dampening the score for duplicates
+     * @param vecSep the function of (BoundingBox) -&gt; array of probabilities
+     * @return the simuated score
+     */
+
+    public double getDynamicSimulatedScore(double[] point, BiFunction<Double, Double, Double> seen,
+            BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp,
+            Function<IBoundingBoxView, double[]> vecSep) {
+
+        if (!isOutputReady()) {
+            return 0.0;
+        }
+
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new SimulatedTransductiveScalarScoreVisitor(tree.projectToTree(y), tree.getMass(), seen,
+                        unseen, damp, CommonUtils::defaultRCFgVecFunction, vecSep));
+        BinaryOperator<Double> accumulator = Double::sum;
+
+        Function<Double, Double> finisher = sum -> sum / numberOfTrees;
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
+    }
+
+    /**
+     * Score a point using the given scoring functions. This method will
+     * short-circuit before visiting all trees if the scores that are returned from
+     * a subset of trees appears to be converging to a given value. See
+     * {@link OneSidedConvergingDoubleAccumulator} for more about convergence.
+     *
+     * @param point                   input point
+     * @param precision               controls early convergence
+     * @param highIsCritical          this is true for the default scoring function.
+     *                                If the user wishes to use a different scoring
+     *                                function where anomaly scores are low values
+     *                                (for example, height in tree) then this should
+     *                                be set to false.
+     * @param ignoreLeafMassThreshold said threshold
+     * @param seen                    scoring function when the input matches some
+     *                                tuple in the leaves
+     * @param unseen                  scoring function when the input is not found
+     * @param damp                    dampening function for duplicates which are
+     *                                same as input (applies with seen)
+     * @return the dynamic score under sequential early stopping
+     */
+    public double getApproximateDynamicScore(double[] point, double precision, boolean highIsCritical,
+            int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
+            BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp) {
+
+        checkArgument(ignoreLeafMassThreshold >= 0, "ignoreLeafMassThreshold should be greater than or equal to 0");
+
+        if (!isOutputReady()) {
+            return 0.0;
+        }
+
+        VisitorFactory<Double> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicScoreVisitor(
+                tree.projectToTree(y), tree.getMass(), ignoreLeafMassThreshold, seen, unseen, damp));
+
+        ConvergingAccumulator<Double> accumulator = new OneSidedConvergingDoubleAccumulator(highIsCritical, precision,
+                DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
+
+        Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
+    }
+
+    /**
+     * Same as above, but for dynamic scoring. See the params of
+     * getDynamicScoreParallel
+     *
+     * @param point                   point to be scored
+     * @param ignoreLeafMassThreshold said threshold
+     * @param seen                    score function for seen points
+     * @param unseen                  score function for unseen points
+     * @param newDamp                 dampening function for duplicates in the seen
+     *                                function
+     * @return dynamic scoring attribution DiVector
+     */
+    public DiVector getDynamicAttribution(double[] point, int ignoreLeafMassThreshold,
+            BiFunction<Double, Double, Double> seen, BiFunction<Double, Double, Double> unseen,
+            BiFunction<Double, Double, Double> newDamp) {
+
+        if (!isOutputReady()) {
+            return new DiVector(dimensions);
+        }
+
+        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>(
+                (tree, y) -> new DynamicAttributionVisitor(tree.projectToTree(y), tree.getMass(),
+                        ignoreLeafMassThreshold, seen, unseen, newDamp),
+                (tree, x) -> x.lift(tree::liftFromTree));
+        BinaryOperator<DiVector> accumulator = DiVector::addToLeft;
+        Function<DiVector, DiVector> finisher = x -> x.scale(1.0 / numberOfTrees);
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
+    }
+
+    /**
+     * Atrribution for dynamic sequential scoring; getL1Norm() should agree with
+     * getDynamicScoringSequential
+     *
+     * @param point                   input
+     * @param precision               parameter to stop early stopping
+     * @param highIsCritical          are high values anomalous (otherwise low
+     *                                values are anomalous)
+     * @param ignoreLeafMassThreshold we ignore leaves with mass equal/below *
+     *                                threshold
+     * @param seen                    function for scoring points that have been
+     *                                seen before
+     * @param unseen                  function for scoring points not seen in tree
+     * @param newDamp                 dampening function based on duplicates
+     * @return attribution DiVector of the score
+     */
+    public DiVector getApproximateDynamicAttribution(double[] point, double precision, boolean highIsCritical,
+            int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
+            BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> newDamp) {
+
+        if (!isOutputReady()) {
+            return new DiVector(dimensions);
+        }
+
+        VisitorFactory<DiVector> visitorFactory = new VisitorFactory<>((tree, y) -> new DynamicAttributionVisitor(y,
+                tree.getMass(), ignoreLeafMassThreshold, seen, unseen, newDamp),
+                (tree, x) -> x.lift(tree::liftFromTree));
+
+        ConvergingAccumulator<DiVector> accumulator = new OneSidedConvergingDiVectorAccumulator(dimensions,
+                highIsCritical, precision, DEFAULT_APPROXIMATE_DYNAMIC_SCORE_MIN_VALUES_ACCEPTED, numberOfTrees);
+
+        Function<DiVector, DiVector> finisher = vector -> vector.scale(1.0 / accumulator.getValuesAccepted());
+
+        return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 }

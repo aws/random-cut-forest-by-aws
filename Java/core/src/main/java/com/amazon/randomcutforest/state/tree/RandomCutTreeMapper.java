@@ -23,15 +23,15 @@ import lombok.Setter;
 import com.amazon.randomcutforest.state.IContextualStateMapper;
 import com.amazon.randomcutforest.state.Version;
 import com.amazon.randomcutforest.tree.AbstractNodeStore;
-import com.amazon.randomcutforest.tree.NewRandomCutTree;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 
 @Getter
 @Setter
 public class RandomCutTreeMapper
-        implements IContextualStateMapper<NewRandomCutTree, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
+        implements IContextualStateMapper<RandomCutTree, CompactRandomCutTreeState, CompactRandomCutTreeContext> {
 
     @Override
-    public NewRandomCutTree toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context, long seed) {
+    public RandomCutTree toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context, long seed) {
 
         AbstractNodeStoreMapper nodeStoreMapper = new AbstractNodeStoreMapper();
         nodeStoreMapper.setRoot(state.getRoot());
@@ -40,7 +40,7 @@ public class RandomCutTreeMapper
         int dimension = (state.getDimensions() != 0) ? state.getDimensions() : context.getPointStore().getDimensions();
         // boundingBoxcache is not set deliberately;
         // it should be set after the partial tree is complete
-        NewRandomCutTree tree = new NewRandomCutTree.Builder().dimension(dimension)
+        RandomCutTree tree = new RandomCutTree.Builder().dimension(dimension)
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).capacity(state.getMaxSize())
                 .setRoot(state.getRoot()).randomSeed(state.getSeed()).pointStoreView(context.getPointStore())
                 .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
@@ -49,7 +49,7 @@ public class RandomCutTreeMapper
     }
 
     @Override
-    public CompactRandomCutTreeState toState(NewRandomCutTree model) {
+    public CompactRandomCutTreeState toState(RandomCutTree model) {
         CompactRandomCutTreeState state = new CompactRandomCutTreeState();
         state.setVersion(Version.V3_0);
         int root = model.getRoot();

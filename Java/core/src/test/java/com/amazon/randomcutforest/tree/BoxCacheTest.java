@@ -32,7 +32,7 @@ public class BoxCacheTest {
         int dimensions = 4;
         int numberOfTrees = 1;
         int sampleSize = 64;
-        int dataSize = 100000 * sampleSize;
+        int dataSize = 1000 * sampleSize;
         Random random = new Random();
         long seed = random.nextLong();
         double[][] big = RandomCutForestTest.generateShingledData(dataSize, dimensions, 2);
@@ -59,7 +59,7 @@ public class BoxCacheTest {
         int dimensions = 10;
         int numberOfTrees = 1;
         int sampleSize = 256;
-        int dataSize = 4000 * sampleSize;
+        int dataSize = 400 * sampleSize;
         Random random = new Random();
         double[][] big = RandomCutForestTest.generateShingledData(dataSize, dimensions, 2);
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)

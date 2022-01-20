@@ -28,9 +28,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.CommonUtils;
-import com.amazon.randomcutforest.DynamicScoringRandomCutForest;
+import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.VisitorFactory;
 import com.amazon.randomcutforest.anomalydetection.TransductiveScalarScoreVisitor;
+import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 public class HyperTreeTest {
@@ -99,6 +100,7 @@ public class HyperTreeTest {
         int sampleSize;
         int numberOfTrees;
 
+        PointStore pointStore;
         ArrayList<HyperTree> trees;
 
         public HyperForest(int dimensions, int numberOfTrees, int sampleSize, int seed,
@@ -107,10 +109,13 @@ public class HyperTreeTest {
             this.seed = seed;
             this.sampleSize = sampleSize;
             this.dimensions = dimensions;
+            pointStore = PointStore.builder().capacity(numberOfTrees * sampleSize).dimensions(dimensions).shingleSize(1)
+                    .build();
             trees = new ArrayList<>();
             random = new Random(seed);
             for (int i = 0; i < numberOfTrees; i++) {
-                trees.add(new HyperTree.Builder().buildGVec(vecSeparation).randomSeed(random.nextInt()).build());
+                trees.add(new HyperTree.Builder().pointStoreView(pointStore).dimension(dimensions)
+                        .buildGVec(vecSeparation).randomSeed(random.nextInt()).build());
             }
         }
 
@@ -165,43 +170,61 @@ public class HyperTreeTest {
         }
 
         void makeForest(double[][] pointList, int prefix) {
+            for (int i = 0; i < pointList.length; i++) {
+                if (pointList[i].length != dimensions) {
+                    throw new IllegalArgumentException("Points have incorrect dimensions");
+                }
+            }
+            boolean[][] status = new boolean[numberOfTrees + 1][pointList.length];
             for (int i = 0; i < numberOfTrees; i++) {
-                List<double[]> samples = new ArrayList<>();
-                boolean[] status = new boolean[pointList.length];
                 int y = 0;
-
                 while (y < sampleSize) {
                     int z = random.nextInt(prefix);
-                    if (!status[z]) {
-                        status[z] = true;
-                        if (pointList[z].length == dimensions) {
-                            samples.add(pointList[z]);
-                        } else {
-                            throw new IllegalArgumentException("Points have incorrect dimensions");
-                        }
+                    if (!status[i][z]) {
+                        status[i + 1][z] = true;
+                        status[0][z] = true; // will compute union across trees
                         ++y;
                     }
                 }
-                trees.get(i).makeTree(samples, random.nextInt());
+            }
+            int[] reference = new int[pointList.length];
+            List<Integer>[] lists = new List[numberOfTrees];
+            for (int i = 0; i < numberOfTrees; i++) {
+                lists[i] = new ArrayList<>();
+            }
+            for (int i = 0; i < pointList.length; i++) {
+                if (status[0][i]) {
+                    reference[i] = pointStore.add(pointList[i], 0L);
+                    for (int j = 0; j < numberOfTrees; j++) {
+                        if (status[j + 1][i]) {
+                            lists[j].add(reference[i]);
+                        }
+                    }
+                }
+                ;
+            }
+            for (int i = 0; i < numberOfTrees; i++) {
+                trees.get(i).makeTree(lists[i], random.nextInt());
             }
         }
 
     }
+
     // ===========================================================
 
-    public static double getSimulatedAnomalyScore(DynamicScoringRandomCutForest forest, double[] point,
+    public static double getSimulatedAnomalyScore(RandomCutForest forest, double[] point,
             Function<IBoundingBoxView, double[]> gVec) {
         return forest.getDynamicSimulatedScore(point, CommonUtils::defaultScoreSeenFunction,
                 CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction, gVec);
     }
 
-    public static double getSimulatedHeightScore(DynamicScoringRandomCutForest forest, double[] point,
+    public static double getSimulatedHeightScore(RandomCutForest forest, double[] point,
             Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x,
                 (x, y) -> 1.0, gvec);
     }
 
-    public static double getSimulatedDisplacementScore(DynamicScoringRandomCutForest forest, double[] point,
+    public static double getSimulatedDisplacementScore(RandomCutForest forest, double[] point,
             Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0, gvec);
     }
@@ -242,8 +265,8 @@ public class HyperTreeTest {
         for (int trials = 0; trials < numTrials; trials++) {
             double[][] data = generator.generateTestData(dataSize + numTest, dimensions, 100 + trials);
 
-            DynamicScoringRandomCutForest newForest = DynamicScoringRandomCutForest.builder().dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).sampleSize(sampleSize).randomSeed(prg.nextInt()).build();
+            RandomCutForest newForest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(numberOfTrees)
+                    .sampleSize(sampleSize).randomSeed(prg.nextInt()).build();
 
             for (int i = 0; i < dataSize; i++) {
                 // shrink, shift at random

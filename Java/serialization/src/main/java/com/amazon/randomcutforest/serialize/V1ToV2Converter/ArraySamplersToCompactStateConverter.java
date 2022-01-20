@@ -13,15 +13,15 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state.sampler;
+package com.amazon.randomcutforest.serialize.V1ToV2Converter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazon.randomcutforest.sampler.SimpleStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
+import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
 import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.PointStoreDouble;

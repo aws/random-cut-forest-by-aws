@@ -112,12 +112,11 @@ public class RandomCutForestFunctionalTest {
     // unseen function is (x,y) -> y which corresponds to mass of sibling
     // damp function is (x,y) -> 1 which is no dampening
 
-    public static double getDisplacementScore(DynamicScoringRandomCutForest forest, double[] point) {
+    public static double getDisplacementScore(RandomCutForest forest, double[] point) {
         return forest.getDynamicScore(point, 0, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
     }
 
-    public double getDisplacementScoreApproximate(DynamicScoringRandomCutForest forest, double[] point,
-            double precision) {
+    public double getDisplacementScoreApproximate(RandomCutForest forest, double[] point, double precision) {
         return forest.getApproximateDynamicScore(point, precision, true, 0, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
     }
 
@@ -133,18 +132,18 @@ public class RandomCutForestFunctionalTest {
     // that "what would have happened had the point been available during
     // the construction of the forest"
 
-    public static double getHeightScore(DynamicScoringRandomCutForest forest, double[] point) {
+    public static double getHeightScore(RandomCutForest forest, double[] point) {
         return forest.getDynamicScore(point, 0, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x, (x, y) -> 1.0);
     }
 
-    public double getHeightScoreApproximate(DynamicScoringRandomCutForest forest, double[] point, double precision) {
+    public double getHeightScoreApproximate(RandomCutForest forest, double[] point, double precision) {
         return forest.getApproximateDynamicScore(point, precision, false, 0, (x, y) -> 1.0 * (x + Math.log(y)),
                 (x, y) -> 1.0 * x, (x, y) -> 1.0);
     }
 
     @ParameterizedTest
     @ArgumentsSource(TestForestProvider.class)
-    private void testGetAnomalyScore(DynamicScoringRandomCutForest forest) {
+    private void testGetAnomalyScore(RandomCutForest forest) {
         double[] point = { 0.0, 0.0, 0.0 };
         double score = forest.getAnomalyScore(point);
         assertTrue(score < 1);

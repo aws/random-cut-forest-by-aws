@@ -29,7 +29,7 @@ import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.ISampled;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.tree.ITree;
-import com.amazon.randomcutforest.tree.NewRandomCutTree;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 
 /**
  * A SamplerPlusTree corresponds to a combination of sampler and tree where the
@@ -141,7 +141,7 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
-        return ((NewRandomCutTree) tree).scalarScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);
+        return ((RandomCutTree) tree).scalarScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);
     }
 
 }
