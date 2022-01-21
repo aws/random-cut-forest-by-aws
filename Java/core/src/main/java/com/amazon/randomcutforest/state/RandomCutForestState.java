@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.state;
 
-import static com.amazon.randomcutforest.state.Version.V2_0;
+import static com.amazon.randomcutforest.state.Version.V3_0;
 
 import java.util.List;
 
@@ -32,7 +32,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 @Data
 public class RandomCutForestState {
 
-    private String version = V2_0;
+    private String version = V3_0;
 
     private long totalUpdates;
 

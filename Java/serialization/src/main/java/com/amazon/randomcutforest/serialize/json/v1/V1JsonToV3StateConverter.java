@@ -30,22 +30,20 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.ExecutionContext;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.store.PointStoreDoubleMapper;
-import com.amazon.randomcutforest.state.store.PointStoreFloatMapper;
+import com.amazon.randomcutforest.state.store.PointStoreMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
-import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.ITree;
+import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class V1JsonToV2StateConverter {
+public class V1JsonToV3StateConverter {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
     public RandomCutForestState convert(String json, Precision precision) throws IOException {
+        checkArgument(precision == Precision.FLOAT_32, "float 64 is deprecated in v3");
         V1SerializedRandomCutForest forest = mapper.readValue(json, V1SerializedRandomCutForest.class);
         return convert(forest, precision);
     }
@@ -67,11 +65,13 @@ public class V1JsonToV2StateConverter {
     }
 
     public RandomCutForestState convert(Reader reader, Precision precision) throws IOException {
+        checkArgument(precision == Precision.FLOAT_32, "float 64 is deprecated in v3");
         V1SerializedRandomCutForest forest = mapper.readValue(reader, V1SerializedRandomCutForest.class);
         return convert(forest, precision);
     }
 
     public RandomCutForestState convert(URL url, Precision precision) throws IOException {
+        checkArgument(precision == Precision.FLOAT_32, "float 64 is deprecated in v3");
         V1SerializedRandomCutForest forest = mapper.readValue(url, V1SerializedRandomCutForest.class);
         return convert(forest, precision);
     }
@@ -88,29 +88,20 @@ public class V1JsonToV2StateConverter {
         private final int maxNumberOfTrees;
 
         public SamplerConverter(int dimensions, int capacity, Precision precision, int maxNumberOfTrees) {
-            if (precision == Precision.FLOAT_64) {
-                pointStore = new PointStoreDouble(dimensions, capacity);
-                globalTree = new CompactRandomCutTreeDouble.Builder().pointStore(pointStore)
-                        .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
-                        .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
-            } else {
-                pointStore = PointStore.builder().dimensions(dimensions).capacity(capacity).shingleSize(1)
-                        .initialSize(capacity).build();
-                globalTree = new CompactRandomCutTreeFloat.Builder().pointStore(pointStore)
-                        .maxSize(pointStore.getCapacity() + 1).storeSequenceIndexesEnabled(false)
-                        .centerOfMassEnabled(false).boundingBoxCacheFraction(1.0).build();
-            }
+            pointStore = PointStore.builder().dimensions(dimensions).capacity(capacity).shingleSize(1)
+                    .initialSize(capacity).build();
+            globalTree = new RandomCutTree.Builder().pointStoreView(pointStore).capacity(pointStore.getCapacity() + 1)
+                    .storeSequenceIndexesEnabled(false).centerOfMassEnabled(false).boundingBoxCacheFraction(1.0)
+                    .build();
+
             compactSamplerStates = new ArrayList<>();
             this.maxNumberOfTrees = maxNumberOfTrees;
             this.precision = precision;
         }
 
         public PointStoreState getPointStoreState(Precision precision) {
-            if (precision == Precision.FLOAT_64) {
-                return new PointStoreDoubleMapper().toState((PointStoreDouble) pointStore);
-            } else {
-                return new PointStoreFloatMapper().toState((PointStore) pointStore);
-            }
+            return new PointStoreMapper().toState((PointStore) pointStore);
+
         }
 
         public void addSampler(V1SerializedRandomCutForest.Sampler sampler) {
