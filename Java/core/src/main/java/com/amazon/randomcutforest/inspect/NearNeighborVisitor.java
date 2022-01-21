@@ -87,7 +87,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
         }
 
         if (Math.sqrt(distanceSquared) < distanceThreshold) {
-            List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes());
+            List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes().keySet());
 
             neighbor = new Neighbor(leafPoint, Math.sqrt(distanceSquared), sequenceIndexes);
         }

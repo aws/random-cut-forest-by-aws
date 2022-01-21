@@ -16,21 +16,17 @@
 package com.amazon.randomcutforest.inspect;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
-import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Optional;
-import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,13 +51,13 @@ public class NearNeighborVisitorTest {
     @Test
     public void acceptLeafNear() {
         double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
-        INodeView leafNode = spy(new NodeView(null, null, Null));
-
-        Set<Long> sequenceIndexes = new HashSet<>();
-        sequenceIndexes.add(1234L);
-        sequenceIndexes.add(5678L);
-        when(leafNode.getSequenceIndexes()).thenReturn(sequenceIndexes);
+        INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
+        when(leafNode.getLiftedLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
+        HashMap<Long, Integer> sequenceIndexes = new HashMap<>();
+        sequenceIndexes.put(1234L, 1);
+        sequenceIndexes.put(5678L, 1);
+        when(leafNode.getSequenceIndexes()).thenReturn(sequenceIndexes);
 
         int depth = 12;
         visitor.acceptLeaf(leafNode, depth);
@@ -74,15 +70,15 @@ public class NearNeighborVisitorTest {
         assertArrayEquals(leafPoint, neighbor.point);
         assertEquals(Math.sqrt(3 * 1.1 * 1.1), neighbor.distance, EPSILON);
         assertNotSame(leafNode.getSequenceIndexes(), neighbor.sequenceIndexes);
-        assertThat(neighbor.sequenceIndexes, containsInAnyOrder(leafNode.getSequenceIndexes().toArray()));
     }
 
     @Test
     public void acceptLeafNearTimestampsDisabled() {
         double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
-        INodeView leafNode = spy(new NodeView(null, null, Null));
-        assertEquals(0, leafNode.getSequenceIndexes().size());
+        INodeView leafNode = mock(NodeView.class);
+        when(leafNode.getLiftedLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
         when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
+        assertEquals(0, leafNode.getSequenceIndexes().size());
         int depth = 12;
         visitor.acceptLeaf(leafNode, depth);
 
@@ -99,12 +95,13 @@ public class NearNeighborVisitorTest {
     @Test
     public void acceptLeafNotNear() {
         double[] leafPoint = new double[] { 108.8, 209.9, -305.5 };
-        INodeView leafNode = spy(new NodeView(null, null, Null));
+        INodeView leafNode = mock(NodeView.class);
 
-        Set<Long> sequenceIndexes = new HashSet<>();
-        sequenceIndexes.add(1234L);
-        sequenceIndexes.add(5678L);
+        HashMap<Long, Integer> sequenceIndexes = new HashMap<>();
+        sequenceIndexes.put(1234L, 1);
+        sequenceIndexes.put(5678L, 1);
         when(leafNode.getLeafPoint()).thenReturn(leafPoint);
+        when(leafNode.getLiftedLeafPoint()).thenReturn(leafPoint);
         when(leafNode.getSequenceIndexes()).thenReturn(sequenceIndexes);
 
         int depth = 12;

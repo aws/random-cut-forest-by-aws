@@ -91,7 +91,7 @@ public class AttributionExamplesFunctionalTest {
         DiVector originalAttrTwo = newForest.getAnomalyAttribution(queryTwo);
 
         assertTrue(originalScoreTwo > 3.0);
-        assertEquals(originalScoreTwo, originalAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(originalScoreTwo, originalAttrTwo.getHighLowSum(), 1E-5);
 
         assertTrue(originalAttrTwo.high[0] > 1.0); // due to -5 cluster
         assertTrue(originalAttrTwo.low[0] > 1.0); // due to +5 cluster
@@ -107,7 +107,7 @@ public class AttributionExamplesFunctionalTest {
             // verify
             assertTrue(score > 2.0);
             assertTrue(score2 > 2.0);
-            assertEquals(attr2.getHighLowSum(), score2, 1E-10);
+            assertEquals(attr2.getHighLowSum(), score2, 1E-5);
 
             for (int j = 0; j < newDimensions; j++)
                 data[i][j] *= 0.01;
@@ -119,7 +119,7 @@ public class AttributionExamplesFunctionalTest {
         DiVector midAttrTwo = newForest.getAnomalyAttribution(queryTwo);
 
         assertTrue(midScoreTwo > 2.4);
-        assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-5);
 
         assertTrue(midAttrTwo.high[0] < 1); // due to -5 cluster !!!
         assertTrue(midAttrTwo.low[0] < 1); // due to +5 cluster !!!
@@ -136,7 +136,7 @@ public class AttributionExamplesFunctionalTest {
         double finalScoreTwo = newForest.getAnomalyScore(queryTwo);
         DiVector finalAttrTwo = newForest.getAnomalyAttribution(queryTwo);
         assertTrue(finalScoreTwo > 2.4);
-        assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-5);
         assertTrue(finalAttrTwo.high[0] < 0.5); // due to -5 cluster !!!
         assertTrue(finalAttrTwo.low[0] < 0.5); // due to +5 cluster !!!
         assertTrue(finalAttrTwo.high[1] > 1); // due to +1 in query
@@ -199,7 +199,7 @@ public class AttributionExamplesFunctionalTest {
         originalAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
         assertTrue(originalScoreTwo > 3.0);
 
-        assertEquals(originalScoreTwo, originalAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(originalScoreTwo, originalAttrTwo.getHighLowSum(), 1E-5);
 
         assertTrue(originalAttrTwo.high[0] > 0.75); // due to -5 cluster
         assertTrue(originalAttrTwo.low[0] > 0.75); // due to +5 cluster
@@ -214,7 +214,7 @@ public class AttributionExamplesFunctionalTest {
                         .getApproximateDynamicAttribution(queryTwo, 0.1, true, 0, CommonUtils::defaultScoreSeenFunction,
                                 CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction)
                         .getHighLowSum(),
-                1e-10);
+                1e-5);
 
         // we insert queryOne a few times to make sure it is sampled
         for (int i = 2000; i < 2000 + 5; i++) {
@@ -235,8 +235,8 @@ public class AttributionExamplesFunctionalTest {
             assertTrue(score > 2.0);
             assertTrue(score2 > 2.0);
             assertTrue(score3 > 2.0);
-            assertEquals(attr2.getHighLowSum(), score2, 1E-10);
-            assertEquals(attr3.getHighLowSum(), score3, 1E-10);
+            assertEquals(attr2.getHighLowSum(), score2, 1E-5);
+            assertEquals(attr3.getHighLowSum(), score3, 1E-5);
 
             for (int j = 0; j < newDimensions; j++)
                 data[i][j] *= 0.01;
@@ -250,7 +250,7 @@ public class AttributionExamplesFunctionalTest {
         midAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(midScoreTwo > 2.5);
-        assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(midScoreTwo, midAttrTwo.getHighLowSum(), 1E-5);
 
         assertTrue(midAttrTwo.high[1] > 1); // due to +1 in query
         assertTrue(midAttrTwo.getHighLowSum(0) < 1.2 * midAttrTwo.high[1]);
@@ -265,7 +265,7 @@ public class AttributionExamplesFunctionalTest {
         midUnmaskedAttr.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(midUnmaskedScore > 3.0);
-        assertEquals(midUnmaskedScore, midUnmaskedAttr.getHighLowSum(), 1E-10);
+        assertEquals(midUnmaskedScore, midUnmaskedAttr.getHighLowSum(), 1E-5);
 
         assertTrue(midUnmaskedAttr.high[1] > 1); // due to +1 in query
         assertTrue(midUnmaskedAttr.getHighLowSum(0) > midUnmaskedAttr.getHighLowSum(1));
@@ -283,7 +283,7 @@ public class AttributionExamplesFunctionalTest {
                 CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
         finalAttrTwo.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
         assertTrue(finalScoreTwo > 2.5);
-        assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-10);
+        assertEquals(finalScoreTwo, finalAttrTwo.getHighLowSum(), 1E-5);
 
         assertTrue(finalAttrTwo.high[1] > 1); // due to +1 in query
         assertTrue(2 * finalAttrTwo.getHighLowSum(0) < finalAttrTwo.high[1]);
@@ -298,7 +298,7 @@ public class AttributionExamplesFunctionalTest {
         finalUnmaskedAttr.componentwiseTransform(x -> CommonUtils.defaultScalarNormalizerFunction(x, sampleSize));
 
         assertTrue(finalUnmaskedScore > 3.0);
-        assertEquals(finalUnmaskedScore, finalUnmaskedAttr.getHighLowSum(), 1E-10);
+        assertEquals(finalUnmaskedScore, finalUnmaskedAttr.getHighLowSum(), 1E-5);
 
         assertTrue(finalUnmaskedAttr.high[1] > 1); // due to +1 in query
         assertTrue(finalUnmaskedAttr.getHighLowSum(0) > 0.8 * finalUnmaskedAttr.getHighLowSum(1));

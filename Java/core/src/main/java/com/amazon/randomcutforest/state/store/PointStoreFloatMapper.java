@@ -56,8 +56,9 @@ public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStor
         if (!state.getVersion().equals(Version.V3_0)) {
             System.arraycopy(tempList, 0, locationList, 0, tempList.length);
         } else {
-            int[] duplicateRefs = state.getDuplicateRefs();
-            if (duplicateRefs != null) {
+            int[] duplicateRefs = null;
+            if (state.getDuplicateRefs() != null) {
+                duplicateRefs = ArrayPacking.unpackInts(state.getDuplicateRefs(), state.isCompressed());
                 checkArgument(duplicateRefs.length % 2 == 0, " corrupt duplicates");
                 for (int i = 0; i < duplicateRefs.length; i += 2) {
                     refCount[duplicateRefs[i]] += duplicateRefs[i + 1];

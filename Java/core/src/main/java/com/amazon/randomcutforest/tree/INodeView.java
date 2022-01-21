@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
-import java.util.Set;
+import java.util.HashMap;
 
 public interface INodeView {
     int getMass();
@@ -34,6 +34,6 @@ public interface INodeView {
         return getLeafPoint();
     };
 
-    Set<Long> getSequenceIndexes();
+    HashMap<Long, Integer> getSequenceIndexes();
 
 }

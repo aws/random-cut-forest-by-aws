@@ -41,17 +41,22 @@ public class AbstractNodeStoreMapper
     public AbstractNodeStore toModel(NodeStoreState state, CompactRandomCutTreeContext compactRandomCutTreeContext,
             long seed) {
         int capacity = state.getCapacity();
-        int[] cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), state.isCompressed());
-        float[] cutValue = ArrayPacking.unpackFloats(state.getCutValueData());
-        int[] leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), state.isCompressed());
-        int[] rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), state.isCompressed());
-        if (state.isCanonicalAndNotALeaf()) {
-            reverseBits(state.getSize(), leftIndex, rightIndex, capacity);
-        } else {
-            replaceLeaves(leftIndex, capacity);
-            replaceLeaves(rightIndex, capacity);
+        int[] cutDimension = null;
+        int[] leftIndex = null;
+        int[] rightIndex = null;
+        float[] cutValue = null;
+        if (root != Null && root < capacity) {
+            cutDimension = ArrayPacking.unpackInts(state.getCutDimension(), capacity, state.isCompressed());
+            cutValue = ArrayPacking.unpackFloats(state.getCutValueData(), capacity);
+            leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), capacity, state.isCompressed());
+            rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), capacity, state.isCompressed());
+            if (state.isCanonicalAndNotALeaf()) {
+                reverseBits(state.getSize(), leftIndex, rightIndex, capacity);
+            } else {
+                replaceLeaves(leftIndex, capacity);
+                replaceLeaves(rightIndex, capacity);
+            }
         }
-
         // note boundingBoxCache is not set deliberately
         return AbstractNodeStore.builder().capacity(capacity).useRoot(root).leftIndex(leftIndex).rightIndex(rightIndex)
                 .cutDimension(cutDimension).cutValues(cutValue)

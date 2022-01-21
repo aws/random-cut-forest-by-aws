@@ -95,8 +95,8 @@ public abstract class AbstractNodeStore {
         }
     }
 
-    protected abstract int addNode(Stack<int[]> pathToRoot, float[] point, long sequenceIndex, int pointIndex,
-            int childIndex, int cutDimension, float cutValue, BoundingBoxFloat box);
+    protected abstract int addNode(Stack<int[]> pathToRoot, float[] point, long sendex, int pointIndex, int childIndex,
+            int cutDimension, float cutValue, BoundingBoxFloat box);
 
     protected int addLeaf(int pointIndex, long sequenceIndex) {
         if (storeSequenceIndexesEnabled) {
@@ -516,6 +516,10 @@ public abstract class AbstractNodeStore {
         return answer;
     }
 
+    public HashMap<Integer, HashMap<Long, Integer>> getSequenceMap() {
+        return sequenceMap;
+    }
+
     public abstract int getCutDimension(int index);
 
     public double getCutValue(int index) {
@@ -703,7 +707,7 @@ public abstract class AbstractNodeStore {
                 checkArgument(cutValues == null, "incorrect option of cut values");
                 checkArgument(cutDimension == null, " incorrect option of cut dimensions");
             } else {
-                checkArgument(leftIndex.length == capacity, " incorrect length of right indices");
+                checkArgument(rightIndex.length == capacity, " incorrect length of right indices");
                 checkArgument(cutValues.length == capacity, "incorrect length of cut values");
                 checkArgument(cutDimension.length == capacity, " incorrect length of cut dimensions");
             }

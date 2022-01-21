@@ -474,7 +474,7 @@ public class RandomCutForestFunctionalTest {
         double[] point = new double[] { -8.0, -8.0, 0.0 };
         DiVector result = newForest.getAnomalyAttribution(point);
         double score = newForest.getAnomalyScore(point);
-        assertEquals(score, result.getHighLowSum(), 1E-10);
+        assertEquals(score, result.getHighLowSum(), 1E-5);
         assertTrue(score > 2);
         assertTrue(result.getHighLowSum(2) < 0.2);
         // the third dimension has little influence in classification
@@ -490,7 +490,7 @@ public class RandomCutForestFunctionalTest {
         DiVector newResult = newForest.getAnomalyAttribution(point);
         double newScore = newForest.getAnomalyScore(point);
 
-        assertEquals(newScore, newResult.getHighLowSum(), 1E-10);
+        assertEquals(newScore, newResult.getHighLowSum(), 1E-5);
         assertTrue(newScore < score);
         for (int j = 0; j < 3; j++) {
             // relationship holds at larger values
@@ -515,7 +515,7 @@ public class RandomCutForestFunctionalTest {
         DiVector finalResult = newForest.getAnomalyAttribution(point);
         double finalScore = newForest.getAnomalyScore(point);
         assertTrue(finalScore < 1);
-        assertEquals(finalScore, finalResult.getHighLowSum(), 1E-10);
+        assertEquals(finalScore, finalResult.getHighLowSum(), 1E-5);
 
         for (int j = 0; j < 3; j++) {
             // relationship holds at larger values
