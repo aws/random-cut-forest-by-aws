@@ -190,8 +190,9 @@ public abstract class AbstractNodeStore {
             boundingBoxData = null;
         } else {
             int limit = (int) Math.floor(fraction * capacity);
-            rangeSumData = Arrays.copyOf(rangeSumData, limit);
-            boundingBoxData = Arrays.copyOf(boundingBoxData, limit * 2 * dimensions);
+            rangeSumData = (rangeSumData == null) ? new double[limit] : Arrays.copyOf(rangeSumData, limit);
+            boundingBoxData = (boundingBoxData == null) ? new float[limit * 2 * dimensions]
+                    : Arrays.copyOf(boundingBoxData, limit * 2 * dimensions);
         }
         boundingboxCacheFraction = fraction;
     }
