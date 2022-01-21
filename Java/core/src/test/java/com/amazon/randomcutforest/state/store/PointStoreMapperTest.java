@@ -24,12 +24,12 @@ import org.junit.jupiter.api.Test;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreSmall;
 
-public class PointStoreFloatMapperTest {
-    private PointStoreFloatMapper mapper;
+public class PointStoreMapperTest {
+    private PointStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        mapper = new PointStoreFloatMapper();
+        mapper = new PointStoreMapper();
     }
 
     @Test
