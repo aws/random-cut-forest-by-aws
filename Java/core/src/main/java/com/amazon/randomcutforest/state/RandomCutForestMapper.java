@@ -38,7 +38,7 @@ import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.sampler.Weighted;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerMapper;
 import com.amazon.randomcutforest.state.sampler.CompactSamplerState;
-import com.amazon.randomcutforest.state.store.PointStoreFloatMapper;
+import com.amazon.randomcutforest.state.store.PointStoreMapper;
 import com.amazon.randomcutforest.state.store.PointStoreState;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeContext;
 import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
@@ -150,7 +150,7 @@ public class RandomCutForestMapper
 
         if (saveCoordinatorStateEnabled) {
             PointStoreCoordinator<?> pointStoreCoordinator = (PointStoreCoordinator<?>) forest.getUpdateCoordinator();
-            PointStoreFloatMapper mapper = new PointStoreFloatMapper();
+            PointStoreMapper mapper = new PointStoreMapper();
             mapper.setCompressionEnabled(compressionEnabled);
             mapper.setNumberOfTrees(forest.getNumberOfTrees());
             PointStoreState pointStoreState = mapper.toState((PointStore) pointStoreCoordinator.getStore());
@@ -232,7 +232,7 @@ public class RandomCutForestMapper
         }
 
         Random random = builder.getRandom();
-        PointStore pointStore = new PointStoreFloatMapper().convertFromDouble(state.getPointStoreState());
+        PointStore pointStore = new PointStoreMapper().convertFromDouble(state.getPointStoreState());
         ComponentList<Integer, float[]> components = new ComponentList<>();
 
         PointStoreCoordinator<float[]> coordinator = new PointStoreCoordinator<>(pointStore);
@@ -314,7 +314,7 @@ public class RandomCutForestMapper
         ComponentList<Integer, float[]> components = new ComponentList<>();
         CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
         IPointStore<float[]> pointStore = (extPointStore == null)
-                ? new PointStoreFloatMapper().toModel(state.getPointStoreState())
+                ? new PointStoreMapper().toModel(state.getPointStoreState())
                 : extPointStore;
         PointStoreCoordinator<float[]> coordinator = new PointStoreCoordinator<>(pointStore);
         coordinator.setTotalUpdates(state.getTotalUpdates());

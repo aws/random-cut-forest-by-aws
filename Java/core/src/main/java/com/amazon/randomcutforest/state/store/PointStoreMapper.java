@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.util.ArrayPacking;
 
 @Getter
 @Setter
-public class PointStoreFloatMapper implements IStateMapper<PointStore, PointStoreState> {
+public class PointStoreMapper implements IStateMapper<PointStore, PointStoreState> {
 
     /**
      * If true, then the arrays are compressed via simple data dependent scheme
