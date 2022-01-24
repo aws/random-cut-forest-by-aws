@@ -15,10 +15,10 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.HashMap;
 
 import com.amazon.randomcutforest.store.IPointStoreView;
 
@@ -63,8 +63,13 @@ public class NodeView implements INodeView {
         return leafPoint;
     }
 
-    public Set<Long> getSequenceIndexes() {
-        return Collections.emptySet();
+    public HashMap<Long, Integer> getSequenceIndexes() {
+        checkArgument(nodeStore.isLeaf(currentNodeOffset), "can only be invoked for a leaf");
+        if (nodeStore.storeSequenceIndexesEnabled) {
+            return nodeStore.sequenceMap.get(nodeStore.getPointIndex(currentNodeOffset));
+        } else {
+            return new HashMap<>();
+        }
     }
 
     public boolean isLeaf() {

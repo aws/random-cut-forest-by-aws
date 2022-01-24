@@ -21,7 +21,6 @@ import lombok.Data;
 
 /**
  * A class for storing the state of a
- * {@link com.amazon.randomcutforest.store.PointStoreDouble} or a
  * {@link com.amazon.randomcutforest.store.PointStore}. Depending on which kind
  * of point store was serialized, one of the fields {@code doubleData} or
  * {@code floatData} will be null.

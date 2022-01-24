@@ -39,20 +39,20 @@ import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class V1JsonToV2StateConverterTest {
+public class V1JsonToV3StateConverterTest {
 
-    private V1JsonToV2StateConverter converter;
+    private V1JsonToV3StateConverter converter;
 
     @BeforeEach
     public void setUp() {
-        converter = new V1JsonToV2StateConverter();
+        converter = new V1JsonToV3StateConverter();
     }
 
     @ParameterizedTest
     @MethodSource("args")
     public void testConvert(V1JsonResource jsonResource, Precision precision) {
         String resource = jsonResource.getResource();
-        try (InputStream is = V1JsonToV2StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
+        try (InputStream is = V1JsonToV3StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
                 BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
 
             StringBuilder b = new StringBuilder();
@@ -95,7 +95,7 @@ public class V1JsonToV2StateConverterTest {
     @MethodSource("args")
     public void testMerge(V1JsonResource jsonResource, Precision precision) {
         String resource = jsonResource.getResource();
-        try (InputStream is = V1JsonToV2StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
+        try (InputStream is = V1JsonToV3StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
                 BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
 
             StringBuilder b = new StringBuilder();
@@ -160,7 +160,7 @@ public class V1JsonToV2StateConverterTest {
     }
 
     static Stream<Precision> precision() {
-        return Stream.of(Precision.FLOAT_32, Precision.FLOAT_64);
+        return Stream.of(Precision.FLOAT_32);
     }
 
     static Stream<V1JsonResource> jsonParams() {

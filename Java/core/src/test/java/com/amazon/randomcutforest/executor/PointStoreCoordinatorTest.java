@@ -30,16 +30,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.PointStore;
 
 public class PointStoreCoordinatorTest {
 
-    private PointStoreDouble store;
+    private PointStore store;
     private PointStoreCoordinator coordinator;
 
     @BeforeEach
     public void setUp() {
-        store = mock(PointStoreDouble.class);
+        store = mock(PointStore.class);
         coordinator = new PointStoreCoordinator(store);
     }
 

@@ -17,6 +17,7 @@ package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,9 +61,6 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
-import com.amazon.randomcutforest.store.PointStoreDouble;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeDouble;
-import com.amazon.randomcutforest.tree.CompactRandomCutTreeFloat;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
@@ -211,11 +209,6 @@ public class RandomCutForest {
     protected final boolean internalShinglingEnabled;
 
     /**
-     * The preferred floating point precision to use in internal data structures.
-     * This will affect runtime memory and the size of a serialized model.
-     */
-    protected final Precision precision;
-    /**
      * The following can be set between 0 and 1 (inclusive) to achieve tradeoff
      * between smaller space, lower throughput and larger space, larger throughput
      */
@@ -280,41 +273,7 @@ public class RandomCutForest {
     public RandomCutForest(Builder<?> builder) {
         this(builder, false);
         random = builder.getRandom();
-        if (precision == Precision.FLOAT_32) {
-            initCompactFloat(builder);
-        } else {
-            initCompactDouble(builder);
-        }
-    }
 
-    private void initCompactDouble(Builder<?> builder) {
-        PointStoreDouble tempStore = PointStoreDouble.builder().internalRotationEnabled(builder.internalRotationEnabled)
-                .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
-                .directLocationEnabled(builder.directLocationMapEnabled)
-                .internalShinglingEnabled(internalShinglingEnabled)
-                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
-                .build();
-
-        IStateCoordinator<Integer, double[]> stateCoordinator = new PointStoreCoordinator(tempStore);
-        ComponentList<Integer, double[]> components = new ComponentList<>(numberOfTrees);
-        for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer, double[]> tree = new CompactRandomCutTreeDouble.Builder().maxSize(sampleSize)
-                    .randomSeed(random.nextLong()).pointStore(tempStore)
-                    .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
-                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
-
-            IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
-                    .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
-                    .initialAcceptFraction(builder.initialAcceptFraction).build();
-
-            components.add(new SamplerPlusTree<>(sampler, tree));
-        }
-        this.stateCoordinator = stateCoordinator;
-        this.components = components;
-        initExecutors(stateCoordinator, components);
-    }
-
-    private void initCompactFloat(Builder<?> builder) {
         PointStore tempStore = PointStore.builder().internalRotationEnabled(builder.internalRotationEnabled)
                 .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
                 .directLocationEnabled(builder.directLocationMapEnabled)
@@ -325,8 +284,8 @@ public class RandomCutForest {
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
         ComponentList<Integer, float[]> components = new ComponentList<>(numberOfTrees);
         for (int i = 0; i < numberOfTrees; i++) {
-            ITree<Integer, float[]> tree = new CompactRandomCutTreeFloat.Builder().maxSize(sampleSize)
-                    .randomSeed(random.nextLong()).pointStore(tempStore)
+            ITree<Integer, float[]> tree = new RandomCutTree.Builder().capacity(sampleSize)
+                    .randomSeed(random.nextLong()).pointStoreView(tempStore)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
                     .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
 
@@ -400,12 +359,11 @@ public class RandomCutForest {
         storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         centerOfMassEnabled = builder.centerOfMassEnabled;
         parallelExecutionEnabled = builder.parallelExecutionEnabled;
-        precision = builder.precision;
         boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         builder.directLocationMapEnabled = builder.directLocationMapEnabled || shingleSize == 1;
         inputDimensions = (internalShinglingEnabled) ? dimensions / shingleSize : dimensions;
-        pointStoreCapacity = sampleSize * numberOfTrees + 1;
-        initialPointStoreSize = builder.initialPointStoreSize.orElse(Math.min(2 * sampleSize, pointStoreCapacity));
+        pointStoreCapacity = max(sampleSize * numberOfTrees + 1, 2 * sampleSize);
+        initialPointStoreSize = builder.initialPointStoreSize.orElse(2 * sampleSize);
 
         if (parallelExecutionEnabled) {
             threadPoolSize = builder.threadPoolSize.orElse(Runtime.getRuntime().availableProcessors() - 1);
@@ -502,7 +460,7 @@ public class RandomCutForest {
      * @return the desired precision to use internally to store points.
      */
     public Precision getPrecision() {
-        return precision;
+        return Precision.FLOAT_32;
     }
 
     @Deprecated
@@ -1276,7 +1234,6 @@ public class RandomCutForest {
         private boolean parallelExecutionEnabled = DEFAULT_PARALLEL_EXECUTION_ENABLED;
         private Optional<Integer> threadPoolSize = Optional.empty();
         private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
-        private Precision precision = DEFAULT_PRECISION;
         private double boundingBoxCacheFraction = DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         private int shingleSize = DEFAULT_SHINGLE_SIZE;
         protected boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
@@ -1365,8 +1322,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
+        @Deprecated
         public T precision(Precision precision) {
-            this.precision = precision;
             return (T) this;
         }
 

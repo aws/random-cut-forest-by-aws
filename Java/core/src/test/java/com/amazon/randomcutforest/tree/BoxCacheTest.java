@@ -54,22 +54,4 @@ public class BoxCacheTest {
         }
     }
 
-    @Test
-    public void testChangingBoundingBoxFloat64() {
-        int dimensions = 10;
-        int numberOfTrees = 1;
-        int sampleSize = 256;
-        int dataSize = 400 * sampleSize;
-        Random random = new Random();
-        double[][] big = RandomCutForestTest.generateShingledData(dataSize, dimensions, 2);
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(Precision.FLOAT_64)
-                .randomSeed(random.nextLong()).boundingBoxCacheFraction(random.nextDouble()).build();
-
-        for (double[] point : big) {
-            forest.setBoundingBoxCacheFraction(random.nextDouble());
-            forest.update(point);
-        }
-    }
-
 }

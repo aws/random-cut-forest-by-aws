@@ -70,6 +70,7 @@ import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumula
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
@@ -845,29 +846,22 @@ public class RandomCutForestTest {
                     .build();
 
             Random r = new Random();
-            for (int i = 0; i < new Random(trials).nextInt(300); i++) {
+            for (int i = 0; i < new Random(trials).nextInt(3000); i++) {
                 forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
             // serialize + deserialize
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveExecutorContextEnabled(true);
-            mapper.setSaveTreeStateEnabled(false);
+            mapper.setSaveTreeStateEnabled(true);
             RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
             // update re-instantiated forest
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                // this will not be an exact replica and the scores can vary
-                // it is possible that the test fails with low probability
-                // in that case rerun the test. Reduce number of trials or fix the seed
-                // for deterministic tests
+
                 double score = forest.getAnomalyScore(point);
-                if (score > 1.5) {
-                    assertEquals(score, forest2.getAnomalyScore(point), 0.1);
-                } else if (score < 1) {
-                    assert (forest2.getAnomalyScore(point) < 1.25);
-                }
+                assertEquals(score, forest2.getAnomalyScore(point), 1e-5);
                 forest2.update(point);
                 forest.update(point);
             }
@@ -875,13 +869,14 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testUpdateAfterRoundTripDouble() {
-        int dimensions = 10;
+    public void testUpdateAfterRoundTripLargeNodeStore() {
+        int dimensions = 5;
         for (int trials = 0; trials < 10; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64).build();
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
+                    .sampleSize(20000).precision(Precision.FLOAT_32).build();
 
             Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(300); i++) {
+            for (int i = 0; i < 30000 + new Random().nextInt(300); i++) {
                 forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
@@ -889,51 +884,14 @@ public class RandomCutForestTest {
             RandomCutForestMapper mapper = new RandomCutForestMapper();
             mapper.setSaveTreeStateEnabled(true);
             mapper.setSaveExecutorContextEnabled(true);
-            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            RandomCutForestState state = mapper.toState(forest);
+            RandomCutForest forest2 = mapper.toModel(state);
 
             // update re-instantiated forest
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                // this will not be an exact replica and the scores can vary
-                // it is possible that the test fails with low probability
-                // in that case rerun the test. Reduce number of trials or fix the seed
-                // for deterministic tests
-                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
-                forest2.update(point);
-                forest.update(point);
-            }
-        }
-    }
-
-    @Test
-    public void testUpdateAfterRoundTripFloat() {
-        int dimensions = 10;
-        for (int trials = 0; trials < 10; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64)
-                    .precision(Precision.FLOAT_32).internalShinglingEnabled(true).shingleSize(1).build();
-            // internal shingling enabled with shinglesize 1 should not affect anything, but
-            // tests input path
-
-            Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(300); i++) {
-                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
-            }
-
-            // serialize + deserialize
-            RandomCutForestMapper mapper = new RandomCutForestMapper();
-            mapper.setSaveTreeStateEnabled(true);
-            mapper.setSaveExecutorContextEnabled(true);
-            mapper.setPartialTreeStateEnabled(true);
-            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
-
-            // update re-instantiated forest
-            for (int i = 0; i < 100; i++) {
-                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
-                // this will not be an exact replica and the scores can vary
-                // it is possible that the test fails with low probability
-                // in that case rerun the test. Reduce number of trials or fix the seed
-                // for deterministic tests
-                assertEquals(forest.getAnomalyScore(point), forest2.getAnomalyScore(point), 1E-10);
+                double score = forest.getAnomalyScore(point);
+                assertEquals(score, forest2.getAnomalyScore(point), 1E-10);
                 forest2.update(point);
                 forest.update(point);
             }

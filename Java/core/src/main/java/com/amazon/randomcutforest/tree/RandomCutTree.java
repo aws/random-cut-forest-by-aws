@@ -74,6 +74,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         pointStoreView = builder.pointStoreView;
         numberOfLeaves = builder.capacity;
         randomSeed = builder.randomSeed;
+        testRandom = builder.random;
         outputAfter = builder.outputAfter.orElse(numberOfLeaves / 4);
         dimension = (builder.dimension != 0) ? builder.dimension : pointStoreView.getDimensions();
         nodeStore = (builder.nodeStore != null) ? builder.nodeStore
@@ -216,8 +217,13 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                 BoundingBoxFloat currentBox = new BoundingBoxFloat(oldPoint, oldPoint);
                 BoundingBoxFloat savedBox = currentBox.newCopy();
                 int savedDim = Integer.MAX_VALUE;
-                Random rng = new Random(randomSeed);
-                randomSeed = rng.nextLong();
+                Random rng;
+                if (testRandom == null) {
+                    rng = new Random(randomSeed);
+                    randomSeed = rng.nextLong();
+                } else {
+                    rng = testRandom;
+                }
                 while (true) {
                     double factor = rng.nextDouble();
                     Cut cut = randomCut(factor, point, currentBox);
@@ -481,6 +487,11 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
         public T randomSeed(long randomSeed) {
             this.randomSeed = randomSeed;
+            return (T) this;
+        }
+
+        public T random(Random random) {
+            this.random = random;
             return (T) this;
         }
 

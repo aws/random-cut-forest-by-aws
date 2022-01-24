@@ -30,7 +30,6 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.store.PointStore;
-import com.amazon.randomcutforest.store.PointStoreDouble;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 public class RandomCutForestMapperTest {
@@ -77,23 +76,13 @@ public class RandomCutForestMapperTest {
         PointStoreCoordinator coordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
         PointStoreCoordinator coordinator2 = (PointStoreCoordinator) forest2.getUpdateCoordinator();
 
-        if (forest.getPrecision() == Precision.FLOAT_64) {
-            PointStoreDouble store = (PointStoreDouble) coordinator.getStore();
-            PointStoreDouble store2 = (PointStoreDouble) coordinator2.getStore();
-            assertArrayEquals(store.getRefCount(), store2.getRefCount());
-            assertArrayEquals(store.getStore(), store2.getStore());
-            assertEquals(store.getCapacity(), store2.getCapacity());
-            assertEquals(store.size(), store2.size());
+        PointStore store = (PointStore) coordinator.getStore();
+        PointStore store2 = (PointStore) coordinator2.getStore();
+        assertArrayEquals(store.getRefCount(), store2.getRefCount());
+        assertArrayEquals(store.getStore(), store2.getStore());
+        assertEquals(store.getCapacity(), store2.getCapacity());
+        assertEquals(store.size(), store2.size());
 
-        } else {
-            PointStore store = (PointStore) coordinator.getStore();
-            PointStore store2 = (PointStore) coordinator2.getStore();
-            assertArrayEquals(store.getRefCount(), store2.getRefCount());
-            assertArrayEquals(store.getStore(), store2.getStore());
-            assertEquals(store.getCapacity(), store2.getCapacity());
-            assertEquals(store.size(), store2.size());
-
-        }
     }
 
     @ParameterizedTest
@@ -129,7 +118,7 @@ public class RandomCutForestMapperTest {
         Precision precision = Precision.FLOAT_64;
 
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
-                .precision(precision).build();
+                .precision(precision).numberOfTrees(1).build();
 
         mapper.setSaveTreeStateEnabled(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
