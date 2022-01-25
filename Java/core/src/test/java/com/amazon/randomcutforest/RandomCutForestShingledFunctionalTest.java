@@ -293,8 +293,8 @@ public class RandomCutForestShingledFunctionalTest {
         assertArrayEquals(answer, yetAnotherAnswer, 1e-10);
         double[] othershingle = toDoubleArray(newforestB.lastShingledPoint());
         assertEquals(entryIndex, newforestB.nextSequenceIndex() % shinglesize);
-        assertArrayEquals(record, othershingle, 1e-10);
-        assertArrayEquals(answer, anotherAnswer, 1e-10);
+        assertArrayEquals(record, othershingle, 1e-5);
+        assertArrayEquals(answer, anotherAnswer, 1e-5);
         error = 0;
         for (int j = 0; j < 200; j++) {
             double prediction = amplitude * cos((j + 850 - 50) * 2 * PI / 120);

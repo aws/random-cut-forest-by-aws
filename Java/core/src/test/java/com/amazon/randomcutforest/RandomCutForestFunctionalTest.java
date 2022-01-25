@@ -568,7 +568,7 @@ public class RandomCutForestFunctionalTest {
         int[] missingIndexes = new int[] { 0 };
 
         double[] imputedPoint = forest.imputeMissingValues(queryPoint, numberOfMissingValues, missingIndexes);
-        assertEquals(queryPoint[1], imputedPoint[1]);
+        assertEquals(queryPoint[1], imputedPoint[1], 1e-5);
         assertTrue(Math.abs(imputedPoint[0]) < 0.5);
     }
 
