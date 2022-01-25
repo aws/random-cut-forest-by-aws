@@ -35,7 +35,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
         R unnormalizedResult = components.stream().map(c -> c.traverse(point, visitorFactory)).reduce(accumulator)
@@ -45,13 +45,13 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         return components.stream().map(c -> c.traverse(point, visitorFactory)).collect(collector);
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         for (IComponentModel<?, ?> component : components) {
@@ -65,7 +65,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         R unnormalizedResult = components.stream().map(c -> c.traverseMulti(point, visitorFactory)).reduce(accumulator)
@@ -75,7 +75,7 @@ public class SequentialForestTraversalExecutor extends AbstractForestTraversalEx
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         return components.stream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector);

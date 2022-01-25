@@ -53,7 +53,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -76,7 +76,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector);
 
     /**
@@ -103,7 +103,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -127,7 +127,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher);
 
     /**
@@ -150,7 +150,7 @@ public abstract class AbstractForestTraversalExecutor {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public abstract <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public abstract <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector);
 
 }

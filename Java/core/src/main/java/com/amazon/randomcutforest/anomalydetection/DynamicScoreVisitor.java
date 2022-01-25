@@ -57,7 +57,7 @@ public class DynamicScoreVisitor extends AbstractScalarScoreVisitor {
      * @param scoreUnseen             part of the score for unseen values
      * @param damp                    dampening function for seen points
      */
-    public DynamicScoreVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
+    public DynamicScoreVisitor(float[] point, int treeMass, int ignoreLeafMassThreshold,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             BiFunction<Double, Double, Double> damp) {
         super(point, treeMass, ignoreLeafMassThreshold);

@@ -100,7 +100,7 @@ public class CommonUtils {
      * @return the probability of separation choosing a random cut
      */
 
-    public static double getProbabilityOfSeparation(final IBoundingBoxView boundingBox, double[] queryPoint) {
+    public static double getProbabilityOfSeparation(final IBoundingBoxView boundingBox, float[] queryPoint) {
         double sumOfNewRange = 0d;
         double sumOfDifferenceInRange = 0d;
 

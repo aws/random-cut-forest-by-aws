@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -127,7 +128,7 @@ public class HyperTreeTest {
         // unseen function is (x,y) -> y which corresponds to mass of sibling
         // damp function is (x,y) -> 1 which is no dampening
 
-        public double getDisplacementScore(double[] point) {
+        public double getDisplacementScore(float[] point) {
             return getDynamicScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
         }
 
@@ -143,16 +144,16 @@ public class HyperTreeTest {
         // that "what would have happened had the point been available during
         // the construction of the forest"
 
-        public double getHeightScore(double[] point) {
+        public double getHeightScore(float[] point) {
             return getDynamicScore(point, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x, (x, y) -> 1.0);
         }
 
-        public double getAnomalyScore(double[] point) {
+        public double getAnomalyScore(float[] point) {
             return getDynamicScore(point, CommonUtils::defaultScoreSeenFunction,
                     CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction);
         }
 
-        public double getDynamicScore(double[] point, BiFunction<Double, Double, Double> seen,
+        public double getDynamicScore(float[] point, BiFunction<Double, Double, Double> seen,
                 BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> newDamp) {
 
             checkArgument(dimensions == point.length, "incorrect dimensions");
@@ -194,7 +195,7 @@ public class HyperTreeTest {
             }
             for (int i = 0; i < pointList.length; i++) {
                 if (status[0][i]) {
-                    reference[i] = pointStore.add(pointList[i], 0L);
+                    reference[i] = pointStore.add(toFloatArray(pointList[i]), 0L);
                     for (int j = 0; j < numberOfTrees; j++) {
                         if (status[j + 1][i]) {
                             lists[j].add(reference[i]);
@@ -212,19 +213,19 @@ public class HyperTreeTest {
 
     // ===========================================================
 
-    public static double getSimulatedAnomalyScore(RandomCutForest forest, double[] point,
+    public static double getSimulatedAnomalyScore(RandomCutForest forest, float[] point,
             Function<IBoundingBoxView, double[]> gVec) {
         return forest.getDynamicSimulatedScore(point, CommonUtils::defaultScoreSeenFunction,
                 CommonUtils::defaultScoreUnseenFunction, CommonUtils::defaultDampFunction, gVec);
     }
 
-    public static double getSimulatedHeightScore(RandomCutForest forest, double[] point,
+    public static double getSimulatedHeightScore(RandomCutForest forest, float[] point,
             Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x,
                 (x, y) -> 1.0, gvec);
     }
 
-    public static double getSimulatedDisplacementScore(RandomCutForest forest, double[] point,
+    public static double getSimulatedDisplacementScore(RandomCutForest forest, float[] point,
             Function<IBoundingBoxView, double[]> gvec) {
         return forest.getDynamicSimulatedScore(point, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0, gvec);
     }
@@ -283,21 +284,21 @@ public class HyperTreeTest {
             for (int i = dataSize; i < dataSize + numTest; i++) {
                 for (int j = 0; j < dimensions; j++)
                     data[i][j] *= 0.01;
-                testScore.sumCenterScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
-                testScore.sumCenterHeight += getSimulatedHeightScore(newForest, data[i], gVec);
-                testScore.sumCenterDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
+                testScore.sumCenterScore += getSimulatedAnomalyScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumCenterHeight += getSimulatedHeightScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumCenterDisp += getSimulatedDisplacementScore(newForest, toFloatArray(data[i]), gVec);
 
                 data[i][0] += 5; // move to right cluster
 
-                testScore.sumRightScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
-                testScore.sumRightHeight += getSimulatedHeightScore(newForest, data[i], gVec);
-                testScore.sumRightDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
+                testScore.sumRightScore += getSimulatedAnomalyScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumRightHeight += getSimulatedHeightScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumRightDisp += getSimulatedDisplacementScore(newForest, toFloatArray(data[i]), gVec);
 
                 data[i][0] -= 10; // move to left cluster
 
-                testScore.sumLeftScore += getSimulatedAnomalyScore(newForest, data[i], gVec);
-                testScore.sumLeftHeight += getSimulatedHeightScore(newForest, data[i], gVec);
-                testScore.sumLeftDisp += getSimulatedDisplacementScore(newForest, data[i], gVec);
+                testScore.sumLeftScore += getSimulatedAnomalyScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumLeftHeight += getSimulatedHeightScore(newForest, toFloatArray(data[i]), gVec);
+                testScore.sumLeftDisp += getSimulatedDisplacementScore(newForest, toFloatArray(data[i]), gVec);
             }
         }
         assert (testScore.sumCenterScore > 2 * testScore.sumLeftScore);
@@ -338,21 +339,21 @@ public class HyperTreeTest {
             for (int i = dataSize; i < dataSize + numTest; i++) {
                 for (int j = 0; j < dimensions; j++)
                     data[i][j] *= 0.01;
-                testScore.sumCenterScore += newForest.getAnomalyScore(data[i]);
-                testScore.sumCenterHeight += newForest.getHeightScore(data[i]);
-                testScore.sumCenterDisp += newForest.getDisplacementScore(data[i]);
+                testScore.sumCenterScore += newForest.getAnomalyScore(toFloatArray(data[i]));
+                testScore.sumCenterHeight += newForest.getHeightScore(toFloatArray(data[i]));
+                testScore.sumCenterDisp += newForest.getDisplacementScore(toFloatArray(data[i]));
 
                 data[i][0] += 5; // move to right cluster
 
-                testScore.sumRightScore += newForest.getAnomalyScore(data[i]);
-                testScore.sumRightHeight += newForest.getHeightScore(data[i]);
-                testScore.sumRightDisp += newForest.getDisplacementScore(data[i]);
+                testScore.sumRightScore += newForest.getAnomalyScore(toFloatArray(data[i]));
+                testScore.sumRightHeight += newForest.getHeightScore(toFloatArray(data[i]));
+                testScore.sumRightDisp += newForest.getDisplacementScore(toFloatArray(data[i]));
 
                 data[i][0] -= 10; // move to left cluster
 
-                testScore.sumLeftScore += newForest.getAnomalyScore(data[i]);
-                testScore.sumLeftHeight += newForest.getHeightScore(data[i]);
-                testScore.sumLeftDisp += newForest.getDisplacementScore(data[i]);
+                testScore.sumLeftScore += newForest.getAnomalyScore(toFloatArray(data[i]));
+                testScore.sumLeftHeight += newForest.getHeightScore(toFloatArray(data[i]));
+                testScore.sumLeftDisp += newForest.getDisplacementScore(toFloatArray(data[i]));
 
             }
         }

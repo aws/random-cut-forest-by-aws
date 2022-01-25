@@ -38,7 +38,7 @@ public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Inte
     }
 
     @Override
-    public Integer initUpdate(double[] point, long sequenceNumber) {
+    public Integer initUpdate(float[] point, long sequenceNumber) {
         int index = store.add(point, sequenceNumber);
         return (index == PointStore.INFEASIBLE_POINTSTORE_INDEX) ? null : index;
     }

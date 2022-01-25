@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
@@ -290,7 +291,7 @@ public class RandomCutForestShingledFunctionalTest {
         double[] anotherAnswer = newforestB.extrapolate(200);
         double[] yetAnotherAnswer = newforestC.extrapolateBasic(record, 200, 1, true, entryIndex);
         assertArrayEquals(answer, yetAnotherAnswer, 1e-10);
-        double[] othershingle = newforestB.lastShingledPoint();
+        double[] othershingle = toDoubleArray(newforestB.lastShingledPoint());
         assertEquals(entryIndex, newforestB.nextSequenceIndex() % shinglesize);
         assertArrayEquals(record, othershingle, 1e-10);
         assertArrayEquals(answer, anotherAnswer, 1e-10);

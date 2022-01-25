@@ -42,7 +42,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     public static final int DEFAULT_IGNORE_LEAF_MASS_THRESHOLD = 0;
 
     protected final double[] differenceInRangeVector;
-    protected final double[] pointToScore;
+    protected final float[] pointToScore;
     protected final int treeMass;
     protected final DiVector directionalAttribution;
     protected boolean hitDuplicates;
@@ -67,7 +67,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
     protected boolean[] coordInsideBox;
     protected IBoundingBoxView shadowBox;
 
-    public AbstractAttributionVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
+    public AbstractAttributionVisitor(float[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
 
         this.pointToScore = Arrays.copyOf(pointToScore, pointToScore.length);
         this.treeMass = treeMass;
@@ -84,7 +84,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
         differenceInRangeVector = new double[2 * pointToScore.length];
     }
 
-    public AbstractAttributionVisitor(double[] pointToScore, int treeMass) {
+    public AbstractAttributionVisitor(float[] pointToScore, int treeMass) {
         this(pointToScore, treeMass, DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
     }
 

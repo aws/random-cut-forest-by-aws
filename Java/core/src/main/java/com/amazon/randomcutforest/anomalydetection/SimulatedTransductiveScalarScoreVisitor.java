@@ -42,7 +42,7 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
      * @param vecSepScore  A function that corresponds to importance of dimensions
      *                     during scoring
      */
-    public SimulatedTransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
+    public SimulatedTransductiveScalarScoreVisitor(float[] pointToScore, int treeMass,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSepBuild,
             Function<IBoundingBoxView, double[]> vecSepScore) {

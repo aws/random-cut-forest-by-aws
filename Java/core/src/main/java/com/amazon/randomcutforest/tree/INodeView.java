@@ -18,19 +18,22 @@ package com.amazon.randomcutforest.tree;
 import java.util.HashMap;
 
 public interface INodeView {
+
+    boolean isLeaf();
+
     int getMass();
 
     IBoundingBoxView getBoundingBox();
 
-    IBoundingBoxView getSiblingBoundingBox(double[] point);
+    IBoundingBoxView getSiblingBoundingBox(float[] point);
 
     int getCutDimension();
 
     double getCutValue();
 
-    double[] getLeafPoint();
+    float[] getLeafPoint();
 
-    default double[] getLiftedLeafPoint() {
+    default float[] getLiftedLeafPoint() {
         return getLeafPoint();
     };
 

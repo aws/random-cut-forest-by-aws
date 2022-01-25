@@ -19,7 +19,7 @@ import com.amazon.randomcutforest.tree.ITree;
 
 @FunctionalInterface
 public interface IMultiVisitorFactory<R> {
-    MultiVisitor<R> newVisitor(ITree<?, ?> tree, double[] point);
+    MultiVisitor<R> newVisitor(ITree<?, ?> tree, float[] point);
 
     default R liftResult(ITree<?, ?> tree, R result) {
         return result;

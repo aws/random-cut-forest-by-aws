@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.HashMap;
 
@@ -25,9 +24,9 @@ import com.amazon.randomcutforest.store.IPointStoreView;
 public class NodeView implements INodeView {
     AbstractNodeStore nodeStore;
     int currentNodeOffset;
-    double[] leafPoint;
+    float[] leafPoint;
     IPointStoreView<float[]> pointStoreView;
-    BoundingBoxFloat currentBox;
+    BoundingBox currentBox;
 
     public NodeView(AbstractNodeStore nodeStore, IPointStoreView<float[]> pointStoreView, int root) {
         this.currentNodeOffset = root;
@@ -46,7 +45,7 @@ public class NodeView implements INodeView {
         return currentBox;
     }
 
-    public IBoundingBoxView getSiblingBoundingBox(double[] point) {
+    public IBoundingBoxView getSiblingBoundingBox(float[] point) {
         return (toLeft(point)) ? nodeStore.getRightBox(currentNodeOffset) : nodeStore.getLeftBox(currentNodeOffset);
     }
 
@@ -59,7 +58,7 @@ public class NodeView implements INodeView {
         return nodeStore.getCutValue(currentNodeOffset);
     }
 
-    public double[] getLeafPoint() {
+    public float[] getLeafPoint() {
         return leafPoint;
     }
 
@@ -78,8 +77,7 @@ public class NodeView implements INodeView {
 
     protected void setCurrentNode(int newNode, int index, boolean setBox) {
         currentNodeOffset = newNode;
-        float[] point = pointStoreView.get(index);
-        leafPoint = toDoubleArray(point);
+        leafPoint = pointStoreView.get(index);
     }
 
     protected void setCurrentNodeOnly(int newNode) {
@@ -92,7 +90,7 @@ public class NodeView implements INodeView {
 
     // this function exists for matching the behavior of RCF2.0 and will be replaced
     // this function explicitly uses the encoding of the new nodestore
-    protected boolean toLeft(double[] point) {
+    protected boolean toLeft(float[] point) {
         return point[nodeStore.getCutDimension(currentNodeOffset)] <= nodeStore.getCutValue(currentNodeOffset);
     }
 }

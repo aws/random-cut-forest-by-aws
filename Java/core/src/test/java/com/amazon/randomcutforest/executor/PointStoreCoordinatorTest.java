@@ -45,10 +45,10 @@ public class PointStoreCoordinatorTest {
 
     @Test
     public void testInitUpdate() {
-        double[] point = { 1.2, -3.4 };
+        float[] point = { 1.2f, -3.4f };
         int index = 123;
 
-        ArgumentCaptor<double[]> captor = ArgumentCaptor.forClass(double[].class);
+        ArgumentCaptor<float[]> captor = ArgumentCaptor.forClass(float[].class);
         when(store.add(captor.capture(), anyLong())).thenReturn(index);
 
         int result = coordinator.initUpdate(point, 0);

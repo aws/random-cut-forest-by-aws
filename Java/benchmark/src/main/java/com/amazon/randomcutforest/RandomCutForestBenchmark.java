@@ -49,7 +49,7 @@ public class RandomCutForestBenchmark {
         @Param({ "50" })
         int numberOfTrees;
 
-        @Param({ "false", "true" })
+        @Param({ "true" })
         boolean compact;
 
         double[][] data;
@@ -110,7 +110,7 @@ public class RandomCutForestBenchmark {
         double score = 0.0;
 
         for (int i = 0; i < data.length; i++) {
-            score = forest.getAnomalyScore(data[i]);
+            score = forest.getAnomalyScore(data[1]);
             forest.update(data[i]);
         }
 

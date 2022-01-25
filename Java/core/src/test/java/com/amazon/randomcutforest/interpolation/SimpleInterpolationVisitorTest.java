@@ -37,7 +37,7 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testNew() {
-        double[] point = { 1.0, 2.0 };
+        float[] point = { 1.0f, 2.0f };
         int sampleSize = 9;
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(point, sampleSize, 1, false);
 
@@ -62,7 +62,7 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = { 1.0, 2.0, 3.0 };
+        float[] point = { 1.0f, 2.0f, 3.0f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
@@ -92,8 +92,8 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = { 1.0, 9.0, 4.0 };
-        double[] anotherPoint = { 4.0, 5.0, 6.0 };
+        float[] point = { 1.0f, 9.0f, 4.0f };
+        float[] anotherPoint = { 4.0f, 5.0f, 6.0f };
 
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
@@ -135,11 +135,11 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAcceptEqualsLeafPoint() {
-        double[] pointToScore = { 0.0, 0.0 };
+        float[] pointToScore = { 0.0f, 0.0f };
         int sampleSize = 50;
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
-        double[] point = Arrays.copyOf(pointToScore, pointToScore.length);
+        float[] point = Arrays.copyOf(pointToScore, pointToScore.length);
         INodeView node = mock(NodeView.class);
         when(node.getLeafPoint()).thenReturn(point);
         when(node.getBoundingBox()).thenReturn(new BoundingBox(point, point));
@@ -162,7 +162,7 @@ public class SimpleInterpolationVisitorTest {
         assertArrayEquals(expected, result.distances.low);
 
         depth--;
-        double[] siblingPoint = { 1.0, -2.0 };
+        float[] siblingPoint = { 1.0f, -2.0f };
         INodeView sibling = mock(NodeView.class);
         int siblingMass = 2;
         when(sibling.getMass()).thenReturn(siblingMass);
@@ -211,12 +211,12 @@ public class SimpleInterpolationVisitorTest {
 
     @Test
     public void testAccept() {
-        double[] pointToScore = { 0.0, 0.0 };
+        float[] pointToScore = { 0.0f, 0.0f };
         int sampleSize = 50;
         SimpleInterpolationVisitor visitor = new SimpleInterpolationVisitor(pointToScore, sampleSize, 1, false);
 
         INodeView leafNode = mock(NodeView.class);
-        double[] point = new double[] { 1.0, -2.0 };
+        float[] point = new float[] { 1.0f, -2.0f };
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
         int leafMass = 3;
@@ -260,7 +260,7 @@ public class SimpleInterpolationVisitorTest {
         INodeView parent = mock(NodeView.class);
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
-        when(parent.getBoundingBox()).thenReturn(new BoundingBox(point, new double[] { 2.0, -0.5 }));
+        when(parent.getBoundingBox()).thenReturn(new BoundingBox(point, new float[] { 2.0f, -0.5f }));
         visitor.accept(parent, depth);
         result = visitor.getResult();
 

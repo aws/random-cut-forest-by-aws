@@ -42,7 +42,7 @@ public interface ITraversable {
      * @return the value of {@link Visitor#getResult()} after visiting each node in
      *         the path.
      */
-    <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory);
+    <R> R traverse(float[] point, IVisitorFactory<R> visitorFactory);
 
     /**
      * Traverse the paths defined by {@code point} and the multi-visitor, and invoke
@@ -65,7 +65,7 @@ public interface ITraversable {
      * @return the value of {@link MultiVisitor#getResult()} after traversing all
      *         paths.
      */
-    <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory);
+    <R> R traverseMulti(float[] point, IMultiVisitorFactory<R> visitorFactory);
 
     /**
      * After a new traversable model is initialized, it will not be able to return

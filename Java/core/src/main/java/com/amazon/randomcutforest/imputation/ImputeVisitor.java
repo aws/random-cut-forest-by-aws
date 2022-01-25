@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.imputation;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.Arrays;
 
@@ -50,13 +51,13 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * the query point in the tree space, where the missing entries (in tree space)
      * would be overwritten
      */
-    protected double[] queryPoint;
+    protected float[] queryPoint;
 
     /**
      * the query point in the forest space, where the missing entries (in forest
      * space) would be overwritten
      */
-    protected double[] liftedPoint;
+    protected float[] liftedPoint;
 
     /**
      * the unnormalized anomaly score of a point, should be interpreted as -ve
@@ -84,7 +85,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param missingIndexes       The indexes of the missing values in the tree
      *                             space
      */
-    public ImputeVisitor(double[] liftedPoint, double[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
+    public ImputeVisitor(float[] liftedPoint, float[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
             double centrality) {
         this.liftedPoint = Arrays.copyOf(liftedPoint, liftedPoint.length);
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
@@ -114,7 +115,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         distance = DEFAULT_INIT_VALUE;
     }
 
-    public ImputeVisitor(double[] queryPoint, int numberOfMissingIndices, int[] missingIndexes) {
+    public ImputeVisitor(float[] queryPoint, int numberOfMissingIndices, int[] missingIndexes) {
         this(queryPoint, Arrays.copyOf(queryPoint, queryPoint.length),
                 Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)),
                 Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)), 1.0);
@@ -165,13 +166,13 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     @Override
     public void acceptLeaf(final INodeView leafNode, final int depthOfNode) {
-        double[] leafPoint = leafNode.getLeafPoint();
+        float[] leafPoint = leafNode.getLeafPoint();
         for (int i = 0; i < queryPoint.length; i++) {
             if (missing[i]) {
                 queryPoint[i] = leafPoint[i];
             }
         }
-        double[] liftedLeafPoint = leafNode.getLiftedLeafPoint();
+        float[] liftedLeafPoint = leafNode.getLiftedLeafPoint();
         double squaredDistance = 0;
         for (int i = 0; i < liftedLeafPoint.length; i++) {
             if (liftedMissing[i]) {
@@ -199,7 +200,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     @Override
     public double[] getResult() {
-        return liftedPoint;
+        return toDoubleArray(liftedPoint);
     }
 
     /**

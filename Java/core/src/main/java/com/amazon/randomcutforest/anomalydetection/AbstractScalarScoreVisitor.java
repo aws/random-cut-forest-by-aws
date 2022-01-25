@@ -49,7 +49,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
     /**
      * The point whose anomaly score is being computed.
      */
-    protected final double[] pointToScore;
+    protected final float[] pointToScore;
 
     /**
      * The mass of the tree being visited. This value is used to normalize the final
@@ -108,7 +108,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param ignoreLeafMassThreshold Is the maximum mass of the leaf which can be
      *                                ignored
      */
-    public AbstractScalarScoreVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
+    public AbstractScalarScoreVisitor(float[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
         this.pointToScore = Arrays.copyOf(pointToScore, pointToScore.length);
         this.treeMass = treeMass;
         pointInsideBox = false;
@@ -127,7 +127,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
      * @param treeMass     The total mass of the RandomCutTree that is scoring the
      *                     point
      */
-    public AbstractScalarScoreVisitor(double[] pointToScore, int treeMass) {
+    public AbstractScalarScoreVisitor(float[] pointToScore, int treeMass) {
         this(pointToScore, treeMass, DEFAULT_IGNORE_LEAF_MASS_THRESHOLD);
     }
 

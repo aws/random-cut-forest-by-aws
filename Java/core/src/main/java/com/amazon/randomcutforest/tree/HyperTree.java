@@ -70,9 +70,9 @@ public class HyperTree extends RandomCutTree {
         if (pointList.size() == 0)
             return Null;
 
-        BoundingBoxFloat thisBox = new BoundingBoxFloat(pointStoreView.get(pointList.get(0)));
+        BoundingBox thisBox = new BoundingBox(pointStoreView.get(pointList.get(0)));
         for (int i = 1; i < pointList.size(); i++) {
-            thisBox = (BoundingBoxFloat) thisBox.getMergedBox(pointStoreView.get(pointList.get(i)));
+            thisBox = (BoundingBox) thisBox.getMergedBox(pointStoreView.get(pointList.get(i)));
         }
         if (thisBox.getRangeSum() <= 0) {
             return pointList.get(0) + nodeStore.getCapacity() + 1;

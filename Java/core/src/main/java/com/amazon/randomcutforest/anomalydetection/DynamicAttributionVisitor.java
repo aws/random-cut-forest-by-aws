@@ -57,7 +57,7 @@ public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
      * @param scoreUnseen             part of the score for unseen point
      * @param damp                    dampening function for seen points
      */
-    public DynamicAttributionVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
+    public DynamicAttributionVisitor(float[] point, int treeMass, int ignoreLeafMassThreshold,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             BiFunction<Double, Double, Double> damp) {
         super(point, treeMass, ignoreLeafMassThreshold);
@@ -75,7 +75,7 @@ public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
      * @param scoreSeen               score when point has been seen
      * @param scoreUnseen             score when point has not been seen
      */
-    public DynamicAttributionVisitor(double[] point, int treeMass, int ignoreLeafMassThreshold,
+    public DynamicAttributionVisitor(float[] point, int treeMass, int ignoreLeafMassThreshold,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen) {
         super(point, treeMass, ignoreLeafMassThreshold);
         this.scoreSeen = scoreSeen;

@@ -31,7 +31,7 @@ public interface IBoundingBoxView {
     IBoundingBoxView copy();
 
     // below keeps the older box unchanged
-    IBoundingBoxView getMergedBox(double[] point);
+    IBoundingBoxView getMergedBox(float[] point);
 
     // merges and keeps the older box unchaged
     IBoundingBoxView getMergedBox(IBoundingBoxView otherBox);

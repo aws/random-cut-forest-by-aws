@@ -21,33 +21,50 @@ import static com.amazon.randomcutforest.CommonUtils.checkState;
 import java.util.Arrays;
 
 /**
- * A BoundingBox is an n-dimensional rectangle. Formally, for i = 1, ..., n
- * there are min and max values a_i and b_i, with a_i less than or equal to b_i,
- * such that the bounding box is equal to the set of points x whose ith
- * coordinate is between a_i and b_i.
- *
- * A node in a {@link RandomCutTree} contain a BoundingBox (possibly generated
- * on demand), which is always the smallest BoundingBox that contains all leaf
- * points which are descendents of the Node.
+ * A single precision implementation of AbstractBoundingBox which also satisfies
+ * the interface for Visitor classes
  */
-public class BoundingBox extends AbstractBoundingBox<double[]> {
+public class BoundingBox implements IBoundingBoxView {
 
-    public BoundingBox(double[] point) {
-        super(point);
-    }
+    /**
+     * An array containing the minimum value corresponding to each dimension.
+     */
+    protected final float[] minValues;
 
-    BoundingBox(final double[] minValues, final double[] maxValues, double sum) {
-        super(minValues, maxValues, sum);
+    /**
+     * An array containing the maximum value corresponding to each dimensions
+     */
+    protected final float[] maxValues;
+
+    /**
+     * The sum of side lengths defined by this bounding box.
+     */
+    protected double rangeSum;
+
+    public BoundingBox(float[] point) {
+        minValues = maxValues = point;
+        // a copy in not needed because mergedBox would create a copy
+        // addPoint, addBox would also create copies
+        rangeSum = 0.0;
     }
 
     /**
-     * creates a box out of the union of two points
-     * 
-     * @param first  first point
-     * @param second second point
+     * Create a new BoundingBox with the given minimum values and maximum values.
+     *
+     * @param minValues The minimum values for each coordinate.
+     * @param maxValues The maximum values for each coordinate
      */
-    public BoundingBox(final double[] first, final double[] second) {
-        super(new double[first.length], new double[second.length], 0.0);
+    public BoundingBox(final float[] minValues, final float[] maxValues, double sum) {
+        this.minValues = minValues;
+        this.maxValues = maxValues;
+        rangeSum = sum;
+    }
+
+    public BoundingBox(final float[] first, final float[] second) {
+        checkArgument(first.length == second.length, " incorrect lengths in box");
+        minValues = new float[first.length];
+        maxValues = new float[first.length];
+        rangeSum = 0;
         for (int i = 0; i < minValues.length; ++i) {
             minValues[i] = Math.min(first[i], second[i]);
             maxValues[i] = Math.max(first[i], second[i]);
@@ -56,78 +73,152 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
 
     }
 
-    @Override
     public BoundingBox copy() {
         return new BoundingBox(Arrays.copyOf(minValues, minValues.length), Arrays.copyOf(maxValues, maxValues.length),
                 rangeSum);
     }
 
-    // the following needs to output BoundingBox for the older tests
-    public BoundingBox getMergedBox(double[] point) {
-        checkArgument(point.length == minValues.length, "incorrect length");
-        return copy().addPoint(point);
-    }
-
-    // the following needs to output BoundingBox for the older tests
-    // TODO: Clean up tests
-    @Override
     public BoundingBox getMergedBox(IBoundingBoxView otherBox) {
-        double[] minValuesMerged = new double[minValues.length];
-        double[] maxValuesMerged = new double[minValues.length];
+        float[] minValuesMerged = new float[minValues.length];
+        float[] maxValuesMerged = new float[minValues.length];
         double sum = 0.0;
 
         for (int i = 0; i < minValues.length; ++i) {
-            minValuesMerged[i] = Math.min(minValues[i], otherBox.getMinValue(i));
-            maxValuesMerged[i] = Math.max(maxValues[i], otherBox.getMaxValue(i));
+            minValuesMerged[i] = Math.min(minValues[i], (float) otherBox.getMinValue(i));
+            maxValuesMerged[i] = Math.max(maxValues[i], (float) otherBox.getMaxValue(i));
             sum += maxValuesMerged[i] - minValuesMerged[i];
         }
         return new BoundingBox(minValuesMerged, maxValuesMerged, sum);
     }
 
-    @Override
-    public BoundingBox addPoint(double[] point) {
+    public void replaceBox(float[] point) {
+        System.arraycopy(point, 0, minValues, 0, point.length);
+        System.arraycopy(point, 0, maxValues, 0, point.length);
+        rangeSum = 0;
+    }
+
+    public void copyFrom(BoundingBox otherBox) {
+        System.arraycopy(otherBox.minValues, 0, minValues, 0, otherBox.minValues.length);
+        System.arraycopy(otherBox.maxValues, 0, maxValues, 0, otherBox.maxValues.length);
+        rangeSum = otherBox.rangeSum;
+    }
+
+    public double probabilityOfCut(float[] point) {
+        double range = 0;
+        for (int i = 0; i < point.length; i++) {
+            range += Math.max(minValues[i] - point[i], 0);
+        }
+        for (int i = 0; i < point.length; i++) {
+            range += Math.max(point[i] - maxValues[i], 0);
+        }
+        if (range == 0) {
+            return 0;
+        } else if (rangeSum == 0) {
+            return 1;
+        } else {
+            return range / (range + rangeSum);
+        }
+    }
+
+    public BoundingBox getMergedBox(float[] point) {
+        checkArgument(point.length == minValues.length, "incorrect length");
+        return copy().addPoint(point);
+    }
+
+    public float[] getMaxValues() {
+        return maxValues;
+    }
+
+    public float[] getMinValues() {
+        return minValues;
+    }
+
+    public BoundingBox addPoint(float[] point) {
         checkArgument(minValues.length == point.length, "incorrect length");
         checkArgument(minValues != maxValues, "not a mutable box");
         rangeSum = 0;
         for (int i = 0; i < point.length; ++i) {
             minValues[i] = Math.min(minValues[i], point[i]);
+        }
+        for (int i = 0; i < point.length; ++i) {
             maxValues[i] = Math.max(maxValues[i], point[i]);
+        }
+        for (int i = 0; i < point.length; ++i) {
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;
     }
 
-    @Override
-    public BoundingBox addBox(AbstractBoundingBox<double[]> otherBox) {
+    public BoundingBox addBox(BoundingBox otherBox) {
         checkState(minValues != maxValues, "not a mutable box");
         rangeSum = 0;
         for (int i = 0; i < minValues.length; ++i) {
             minValues[i] = Math.min(minValues[i], otherBox.minValues[i]);
+        }
+        for (int i = 0; i < minValues.length; ++i) {
             maxValues[i] = Math.max(maxValues[i], otherBox.maxValues[i]);
+        }
+        for (int i = 0; i < minValues.length; ++i) {
             rangeSum += maxValues[i] - minValues[i];
         }
         return this;
     }
 
-    @Override
     public int getDimensions() {
         return minValues.length;
     }
 
+    /**
+     * @return the sum of side lengths for this BoundingBox.
+     */
+    public double getRangeSum() {
+        return rangeSum;
+    }
+
+    /**
+     * Gets the max value of the specified dimension.
+     *
+     * @param dimension the dimension for which we need the max value
+     * @return the max value of the specified dimension
+     */
     public double getMaxValue(final int dimension) {
         return maxValues[dimension];
     }
 
+    /**
+     * Gets the min value of the specified dimension.
+     *
+     * @param dimension the dimension for which we need the min value
+     * @return the min value of the specified dimension
+     */
     public double getMinValue(final int dimension) {
         return minValues[dimension];
     }
 
     /**
-     * Gets the range for a given dimensions.
+     * Returns true if the given point is contained in this bounding box. This is
+     * equivalent to the point being a member of the set defined by this bounding
+     * box.
      *
-     * @param dimension for which we need the range
-     * @return the range for the specified dimension
+     * @param point with which we're performing the comparison
+     * @return whether the point is contained by the bounding box
      */
+    public boolean contains(float[] point) {
+        checkArgument(point.length == minValues.length, " incorrect lengths");
+        for (int i = 0; i < minValues.length; i++) {
+            if (minValues[i] > point[i] || maxValues[i] < point[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean contains(BoundingBox otherBox) {
+        checkArgument(otherBox.minValues.length == minValues.length, " incorrect lengths");
+        return contains(otherBox.minValues) && contains(otherBox.maxValues);
+    }
+
     public double getRange(final int dimension) {
         return maxValues[dimension] - minValues[dimension];
     }
@@ -135,17 +226,6 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
     @Override
     public String toString() {
         return String.format("BoundingBox(%s, %s)", Arrays.toString(minValues), Arrays.toString(maxValues));
-    }
-
-    @Override
-    public boolean contains(double[] point) {
-        checkArgument(point.length == getDimensions(), " incorrect lengths");
-        for (int i = 0; i < point.length; i++) {
-            if (minValues[i] > point[i] || maxValues[i] < point[i]) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
@@ -163,7 +243,7 @@ public class BoundingBox extends AbstractBoundingBox<double[]> {
             return false;
         }
 
-        AbstractBoundingBox<double[]> otherBox = (BoundingBox) other;
+        BoundingBox otherBox = (BoundingBox) other;
         return Arrays.equals(minValues, otherBox.minValues) && Arrays.equals(maxValues, otherBox.maxValues);
     }
 

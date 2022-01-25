@@ -29,7 +29,7 @@ import com.amazon.randomcutforest.tree.INodeView;
  **/
 public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure> {
 
-    private final double[] pointToScore;
+    private final float[] pointToScore;
     private final long sampleSize;
     private final boolean centerOfMass;
     public InterpolationMeasure stored;
@@ -63,7 +63,7 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      * @param pointMass    indicates the mass/duplicity of the current point
      * @param centerOfMass indicates if the tree has centerOfMass
      */
-    public SimpleInterpolationVisitor(double[] pointToScore, int sampleSize, double pointMass, boolean centerOfMass) {
+    public SimpleInterpolationVisitor(float[] pointToScore, int sampleSize, double pointMass, boolean centerOfMass) {
         this.pointToScore = Arrays.copyOf(pointToScore, pointToScore.length);
         this.sampleSize = sampleSize;
         // the samplesize may be useful to scale
@@ -223,19 +223,19 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
      *         different Kernels can be expressed in this decomposed manner.
      */
 
-    double fieldExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double fieldExt(INodeView node, boolean centerOfMass, double thisMass, float[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influenceExt(INodeView node, boolean centerOfMass, double thisMass, double[] thislocation) {
+    double influenceExt(INodeView node, boolean centerOfMass, double thisMass, float[] thislocation) {
         return 1.0;
     }
 
-    double fieldPoint(INodeView node, double thisMass, double[] thislocation) {
+    double fieldPoint(INodeView node, double thisMass, float[] thislocation) {
         return (node.getMass() + thisMass);
     }
 
-    double influencePoint(INodeView node, double thisMass, double[] thislocation) {
+    double influencePoint(INodeView node, double thisMass, float[] thislocation) {
         return 1.0;
     }
 

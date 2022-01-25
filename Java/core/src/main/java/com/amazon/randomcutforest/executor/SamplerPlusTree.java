@@ -99,12 +99,12 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
     }
 
     @Override
-    public <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory) {
+    public <R> R traverse(float[] point, IVisitorFactory<R> visitorFactory) {
         return tree.traverse(point, visitorFactory);
     }
 
     @Override
-    public <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory) {
+    public <R> R traverseMulti(float[] point, IMultiVisitorFactory<R> visitorFactory) {
         return tree.traverseMulti(point, visitorFactory);
     }
 
@@ -138,7 +138,7 @@ public class SamplerPlusTree<P, Q> implements IComponentModel<P, Q> {
 
     // the following is for testing RCF3.0 alongside RCF2.0 and will be merged into
     // getAnomalyScore()
-    public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+    public double scalarScore(float[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
         return ((RandomCutTree) tree).scalarScore(point, ignoreMass, scoreSeen, scoreUnseen, damp, normalizer);

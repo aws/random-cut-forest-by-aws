@@ -39,7 +39,7 @@ public class AnomalyScoreVisitor extends AbstractScalarScoreVisitor {
      * @param treeMass     The total mass of the RandomCutTree that is scoring the
      *                     point
      */
-    public AnomalyScoreVisitor(double[] pointToScore, int treeMass) {
+    public AnomalyScoreVisitor(float[] pointToScore, int treeMass) {
         super(pointToScore, treeMass);
     }
 
@@ -52,7 +52,7 @@ public class AnomalyScoreVisitor extends AbstractScalarScoreVisitor {
      * @param ignoreLeafMassThreshold Is the maximum mass of the leaf which can be
      *                                ignored
      */
-    public AnomalyScoreVisitor(double[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
+    public AnomalyScoreVisitor(float[] pointToScore, int treeMass, int ignoreLeafMassThreshold) {
         super(pointToScore, treeMass, ignoreLeafMassThreshold);
     }
 

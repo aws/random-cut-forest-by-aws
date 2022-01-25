@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -116,20 +117,21 @@ public class RandomCutForestTest {
 
     @Test
     public void testUpdate() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
         forest.update(point);
         verify(updateExecutor, times(1)).update(point);
     }
 
     @Test
     public void testUpdateInvalid() {
-        assertThrows(NullPointerException.class, () -> forest.update(null));
+        assertThrows(NullPointerException.class, () -> forest.update((double[]) null));
+        assertThrows(NullPointerException.class, () -> forest.update((float[]) null));
         assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 1.2, 3.4, -5.6 }));
     }
 
     @Test
     public void testTraverseForestBinaryAccumulator() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
@@ -144,7 +146,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTranverseForestBinaryAccumulatorInvalid() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
@@ -154,7 +156,7 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForest(null, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
-        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new double[] { 2.2, -1.1, 3.3 },
+        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new float[] { 2.2f, -1.1f, 3.3f },
                 TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForest(point, null, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForest(point,
@@ -165,7 +167,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTraverseForestCollector() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
 
         components.forEach(c -> {
             doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class));
@@ -178,7 +180,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTranverseForestCollectorInvalid() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
 
         components.forEach(c -> {
             when(c.traverse(aryEq(point), any())).thenReturn(0.0);
@@ -186,7 +188,7 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class, () -> forest.traverseForest(null,
                 TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
-        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new double[] { 2.2, -1.1, 3.3 },
+        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new float[] { 2.2f, -1.1f, 3.3f },
                 TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForest(point, null, TestUtils.SORTED_LIST_COLLECTOR));
@@ -196,7 +198,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTraverseForestConverging() {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
 
         int convergenceThreshold = numberOfTrees / 2;
         ConvergingAccumulator<Double> accumulator = TestUtils.convergeAfter(convergenceThreshold);
@@ -214,7 +216,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTraverseForestConvergingInvalid() {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
 
         int convergenceThreshold = numberOfTrees / 2;
         ConvergingAccumulator<Double> accumulator = TestUtils.convergeAfter(convergenceThreshold);
@@ -227,7 +229,7 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForest(null, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
-        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new double[] { 1.2, -3.4, 5.6 },
+        assertThrows(IllegalArgumentException.class, () -> forest.traverseForest(new float[] { 1.2f, -3.4f, 5.6f },
                 TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForest(point, null, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForest(point,
@@ -238,7 +240,7 @@ public class RandomCutForestTest {
 
     @Test
     public void traverseForestMultiBinaryAccumulator() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
@@ -253,7 +255,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTranverseForestMultiBinaryAccumulatorInvalid() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
@@ -263,7 +265,7 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher));
-        assertThrows(IllegalArgumentException.class, () -> forest.traverseForestMulti(new double[] { 2.2, -1.1, 3.3 },
+        assertThrows(IllegalArgumentException.class, () -> forest.traverseForestMulti(new float[] { 2.2f, -1.1f, 3.3f },
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(point, null, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(point,
@@ -274,7 +276,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTraverseForestMultiCollector() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
 
         components.forEach(c -> {
             doReturn(0.0).when(c).traverseMulti(aryEq(point), any(MultiVisitorFactory.class));
@@ -288,7 +290,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testTranverseForestCollectorMultiInvalid() {
-        double[] point = { 2.2, -1.1 };
+        float[] point = { 2.2f, -1.1f };
 
         components.forEach(c -> {
             when(c.traverse(aryEq(point), any())).thenReturn(0.0);
@@ -296,7 +298,7 @@ public class RandomCutForestTest {
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
-        assertThrows(IllegalArgumentException.class, () -> forest.traverseForestMulti(new double[] { 2.2, -1.1, 3.3 },
+        assertThrows(IllegalArgumentException.class, () -> forest.traverseForestMulti(new float[] { 2.2f, -1.1f, 3.3f },
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForestMulti(point, null, TestUtils.SORTED_LIST_COLLECTOR));
@@ -306,7 +308,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetAnomalyScore() {
-        double[] point = { 1.2, -3.4 };
+        float[] point = { 1.2f, -3.4f };
 
         assertFalse(forest.isOutputReady());
         assertEquals(0.0, forest.getAnomalyScore(point));
@@ -331,7 +333,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetApproximateAnomalyScore() {
-        double[] point = { 1.2, -3.4 };
+        float[] point = { 1.2f, -3.4f };
 
         assertFalse(forest.isOutputReady());
         assertEquals(0.0, forest.getApproximateAnomalyScore(point));
@@ -362,7 +364,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetAnomalyAttribution() {
-        double[] point = { 1.2, -3.4 };
+        float[] point = { 1.2f, -3.4f };
 
         assertFalse(forest.isOutputReady());
         DiVector zero = new DiVector(dimensions);
@@ -397,7 +399,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetApproximateAnomalyAttribution() {
-        double[] point = { 1.2, -3.4 };
+        float[] point = { 1.2f, -3.4f };
         DiVector zero = new DiVector(dimensions);
         DiVector result = forest.getApproximateAnomalyAttribution(point);
 
@@ -439,7 +441,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetSimpleDensity() {
-        double[] point = { 12.3, -45.6 };
+        float[] point = { 12.3f, -45.6f };
         DensityOutput zero = new DensityOutput(dimensions, sampleSize);
         assertFalse(forest.samplersFull());
         DensityOutput result = forest.getSimpleDensity(point);
@@ -474,7 +476,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testImputeMissingValuesInvalid() {
-        double[] point = { 12.3, -45.6 };
+        float[] point = { 12.3f, -45.6f };
         int numberOfMissingValues = 1;
         int[] missingIndexes = { 0, 1 };
 
@@ -483,7 +485,7 @@ public class RandomCutForestTest {
         assertThrows(NullPointerException.class, () -> forest.imputeMissingValues(point, numberOfMissingValues, null));
 
         assertThrows(IllegalArgumentException.class,
-                () -> forest.imputeMissingValues(null, numberOfMissingValues, missingIndexes));
+                () -> forest.imputeMissingValues((float[]) null, numberOfMissingValues, missingIndexes));
 
         int invalidNumberOfMissingValues = 99;
         assertThrows(IllegalArgumentException.class,
@@ -492,7 +494,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testImputeMissingValuesWithNoMissingValues() {
-        double[] point = { 12.3, -45.6 };
+        float[] point = { 12.3f, -45.6f };
         int[] missingIndexes = { 1, 1000 }; // second value doesn't matter since numberOfMissingValues is 1o
 
         double[] result = forest.imputeMissingValues(point, 0, missingIndexes);
@@ -518,7 +520,7 @@ public class RandomCutForestTest {
         }
         double expectedResult = returnValues.get(numberOfTrees / 2);
         Collections.shuffle(returnValues);
-        double[] point = { 12.3, -45.6 };
+        float[] point = { 12.3f, -45.6f };
 
         int numberOfMissingValues = 1;
         int[] missingIndexes = { 1, 999 };
@@ -526,7 +528,7 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             SamplerPlusTree<Integer, float[]> component = (SamplerPlusTree<Integer, float[]>) components.get(i);
             ITree<Integer, float[]> tree = component.getTree();
-            double[] treeResult = Arrays.copyOf(point, point.length);
+            double[] treeResult = toDoubleArray(point);
             treeResult[missingIndexes[0]] = returnValues.get(i);
             when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
         }
@@ -545,7 +547,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testImputeMissingValuesWithMultipleMissingIndexes() {
-        double[] point = { 12.3, -45.6 };
+        float[] point = { 12.3f, -45.6f };
         List<Double> anomalyScores = new ArrayList<>();
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -711,26 +713,26 @@ public class RandomCutForestTest {
         indexes5.add(4L);
 
         Neighbor neighbor1 = new Neighbor(new double[] { 1, 2 }, 5, indexes1);
-        when(((SamplerPlusTree<?, ?>) components.get(0)).getTree().traverse(any(double[].class),
+        when(((SamplerPlusTree<?, ?>) components.get(0)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor1));
 
         Neighbor neighbor2 = new Neighbor(new double[] { 1, 2 }, 5, indexes2);
-        when(((SamplerPlusTree<?, ?>) components.get(1)).getTree().traverse(any(double[].class),
+        when(((SamplerPlusTree<?, ?>) components.get(1)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor2));
 
-        when(((SamplerPlusTree<?, ?>) components.get(2)).getTree().traverse(any(double[].class),
+        when(((SamplerPlusTree<?, ?>) components.get(2)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.empty());
 
         Neighbor neighbor4 = new Neighbor(new double[] { 2, 3 }, 4, indexes4);
-        when(((SamplerPlusTree<?, ?>) components.get(3)).getTree().traverse(any(double[].class),
+        when(((SamplerPlusTree<?, ?>) components.get(3)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor4));
 
         Neighbor neighbor5 = new Neighbor(new double[] { 2, 3 }, 4, indexes5);
-        when(((SamplerPlusTree<?, ?>) components.get(4)).getTree().traverse(any(double[].class),
+        when(((SamplerPlusTree<?, ?>) components.get(4)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor5));
 
         for (int i = 5; i < components.size(); i++) {
-            when(((SamplerPlusTree<?, ?>) components.get(i)).getTree().traverse(any(double[].class),
+            when(((SamplerPlusTree<?, ?>) components.get(i)).getTree().traverse(any(float[].class),
                     any(IVisitorFactory.class))).thenReturn(Optional.empty());
         }
 
@@ -767,7 +769,7 @@ public class RandomCutForestTest {
 
     @Test
     public void testGetNearNeighborsInSampleInvalid() {
-        assertThrows(NullPointerException.class, () -> forest.getNearNeighborsInSample(null, 101.1));
+        assertThrows(NullPointerException.class, () -> forest.getNearNeighborsInSample((double[]) null, 101.1));
         assertThrows(IllegalArgumentException.class,
                 () -> forest.getNearNeighborsInSample(new double[] { 1.1, 2.2 }, -101.1));
         assertThrows(IllegalArgumentException.class,
@@ -904,13 +906,13 @@ public class RandomCutForestTest {
                 .internalRotationEnabled(true).shingleSize(2).dimensions(4).numberOfTrees(1).build();
         assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0 }));
         forest.update(new double[] { 0.0, -0.0 });
-        assertArrayEquals(forest.lastShingledPoint(), new double[] { 0, 0, 0, 0 });
+        assertArrayEquals(forest.lastShingledPoint(), new float[] { 0, 0, 0, 0 });
         forest.update(new double[] { 1.0, -1.0 });
         assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 0, 1 });
         forest.update(new double[] { 2.0, -2.0 });
         assertEquals(forest.nextSequenceIndex(), 3);
-        assertArrayEquals(forest.lastShingledPoint(), new double[] { 2, -2, 1, -1 });
-        assertArrayEquals(forest.transformToShingledPoint(new double[] { 7, 8 }), new double[] { 2, -2, 7, 8 });
+        assertArrayEquals(forest.lastShingledPoint(), new float[] { 2, -2, 1, -1 });
+        assertArrayEquals(forest.transformToShingledPoint(new float[] { 7, 8 }), new float[] { 2, -2, 7, 8 });
         assertArrayEquals(forest.transformIndices(new int[] { 0, 1 }, 2), new int[] { 2, 3 });
         assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 0, 0, 0, 0 }));
     }

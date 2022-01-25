@@ -55,7 +55,7 @@ public class TransductiveScalarScoreVisitor extends DynamicScoreVisitor {
      *                     DynamicScoreVisitor
      */
 
-    public TransductiveScalarScoreVisitor(double[] pointToScore, int treeMass,
+    public TransductiveScalarScoreVisitor(float[] pointToScore, int treeMass,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             BiFunction<Double, Double, Double> damp, Function<IBoundingBoxView, double[]> vecSep) {
         super(pointToScore, treeMass, 0, scoreSeen, scoreUnseen, damp);

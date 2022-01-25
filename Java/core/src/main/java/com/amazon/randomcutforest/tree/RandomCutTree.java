@@ -131,7 +131,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    protected Cut randomCut(double factor, float[] point, BoundingBoxFloat box) {
+    protected Cut randomCut(double factor, float[] point, BoundingBox box) {
         double range = 0.0;
 
         for (int i = 0; i < point.length; i++) {
@@ -214,8 +214,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                 int savedNode = node;
                 int parent = savedParent;
                 float savedCutValue = (float) 0.0;
-                BoundingBoxFloat currentBox = new BoundingBoxFloat(oldPoint, oldPoint);
-                BoundingBoxFloat savedBox = currentBox.newCopy();
+                BoundingBox currentBox = new BoundingBox(oldPoint, oldPoint);
+                BoundingBox savedBox = currentBox.copy();
                 int savedDim = Integer.MAX_VALUE;
                 Random rng;
                 if (testRandom == null) {
@@ -238,7 +238,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                         savedDim = dim;
                         savedParent = parent;
                         savedNode = node;
-                        savedBox = currentBox.newCopy();
+                        savedBox = currentBox.copy();
                         parentPath.clear();
                     } else {
                         parentPath.push(new int[] { node, sibling });
@@ -318,7 +318,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         return leafPointIndex;
     }
 
-    public double scalarScore(double[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+    public double scalarScore(float[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
             BiFunction<Double, Double, Double> normalizer) {
         Function<Double, Double> treeDamp = x -> damp.apply(x, getMass() * 1.0);
@@ -348,7 +348,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
      * @return the value of {@link Visitor#getResult()}} after the traversal.
      */
     @Override
-    public <R> R traverse(double[] point, IVisitorFactory<R> visitorFactory) {
+    public <R> R traverse(float[] point, IVisitorFactory<R> visitorFactory) {
         checkState(root != Null, "this tree doesn't contain any nodes");
         Visitor<R> visitor = visitorFactory.newVisitor(this, point);
         nodeStore.traversePathToLeafAndVisitNodes(projectToTree(point), visitor, root, pointStoreView,
@@ -358,7 +358,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     /**
      * This is a traversal method which follows the standard traversal path (defined
-     * in {@link #traverse(double[], IVisitorFactory)}) but at Node in checks to see
+     * in {@link #traverse(float[], IVisitorFactory)}) but at Node in checks to see
      * whether the visitor should split. If a split is triggered, then independent
      * copies of the visitor are sent down each branch of the tree and then merged
      * before propagating the result.
@@ -372,7 +372,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
      */
 
     @Override
-    public <R> R traverseMulti(double[] point, IMultiVisitorFactory<R> visitorFactory) {
+    public <R> R traverseMulti(float[] point, IMultiVisitorFactory<R> visitorFactory) {
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
         checkState(root != Null, "this tree doesn't contain any nodes");
@@ -432,8 +432,12 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         return getMass() >= outputAfter;
     }
 
-    public double[] projectToTree(double[] point) {
+    public float[] projectToTree(float[] point) {
         return Arrays.copyOf(point, point.length);
+    }
+
+    public float[] liftFromTree(float[] result) {
+        return Arrays.copyOf(result, result.length);
     }
 
     public double[] liftFromTree(double[] result) {

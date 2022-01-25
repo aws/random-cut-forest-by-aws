@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.inspect;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,20 +38,20 @@ import com.amazon.randomcutforest.tree.NodeView;
 
 public class NearNeighborVisitorTest {
 
-    private double[] queryPoint;
+    private float[] queryPoint;
     private double distanceThreshold;
     private NearNeighborVisitor visitor;
 
     @BeforeEach
     public void setUp() {
-        queryPoint = new double[] { 7.7, 8.8, -6.6 };
+        queryPoint = new float[] { 7.7f, 8.8f, -6.6f };
         distanceThreshold = 10.0;
         visitor = new NearNeighborVisitor(queryPoint, distanceThreshold);
     }
 
     @Test
     public void acceptLeafNear() {
-        double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
+        float[] leafPoint = new float[] { 8.8f, 9.9f, -5.5f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
         when(leafNode.getLiftedLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
@@ -67,14 +68,14 @@ public class NearNeighborVisitorTest {
 
         Neighbor neighbor = optional.get();
         assertNotSame(leafPoint, neighbor.point);
-        assertArrayEquals(leafPoint, neighbor.point);
+        assertArrayEquals(toDoubleArray(leafPoint), neighbor.point);
         assertEquals(Math.sqrt(3 * 1.1 * 1.1), neighbor.distance, EPSILON);
         assertNotSame(leafNode.getSequenceIndexes(), neighbor.sequenceIndexes);
     }
 
     @Test
     public void acceptLeafNearTimestampsDisabled() {
-        double[] leafPoint = new double[] { 8.8, 9.9, -5.5 };
+        float[] leafPoint = new float[] { 8.8f, 9.9f, -5.5f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLiftedLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
         when(leafNode.getLeafPoint()).thenReturn(Arrays.copyOf(leafPoint, leafPoint.length));
@@ -87,14 +88,14 @@ public class NearNeighborVisitorTest {
 
         Neighbor neighbor = optional.get();
         assertNotSame(leafPoint, neighbor.point);
-        assertArrayEquals(leafPoint, neighbor.point);
+        assertArrayEquals(toDoubleArray(leafPoint), neighbor.point);
         assertEquals(Math.sqrt(3 * 1.1 * 1.1), neighbor.distance, EPSILON);
         assertTrue(neighbor.sequenceIndexes.isEmpty());
     }
 
     @Test
     public void acceptLeafNotNear() {
-        double[] leafPoint = new double[] { 108.8, 209.9, -305.5 };
+        float[] leafPoint = new float[] { 108.8f, 209.9f, -305.5f };
         INodeView leafNode = mock(NodeView.class);
 
         HashMap<Long, Integer> sequenceIndexes = new HashMap<>();

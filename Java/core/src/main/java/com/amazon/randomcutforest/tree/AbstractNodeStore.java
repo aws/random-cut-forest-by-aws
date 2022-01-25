@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -96,7 +95,7 @@ public abstract class AbstractNodeStore {
     }
 
     protected abstract int addNode(Stack<int[]> pathToRoot, float[] point, long sendex, int pointIndex, int childIndex,
-            int cutDimension, float cutValue, BoundingBoxFloat box);
+            int cutDimension, float cutValue, BoundingBox box);
 
     protected int addLeaf(int pointIndex, long sequenceIndex) {
         if (storeSequenceIndexesEnabled) {
@@ -205,7 +204,7 @@ public abstract class AbstractNodeStore {
         }
     }
 
-    void copyBoxToData(int idx, BoundingBoxFloat box) {
+    void copyBoxToData(int idx, BoundingBox box) {
         int base = 2 * idx * dimensions;
         int mid = base + dimensions;
         System.arraycopy(box.getMinValues(), 0, boundingBoxData, base, dimensions);
@@ -235,10 +234,10 @@ public abstract class AbstractNodeStore {
         return false;
     }
 
-    public BoundingBoxFloat getBox(int index) {
+    public BoundingBox getBox(int index) {
         if (isLeaf(index)) {
             float[] point = pointStoreView.get(getPointIndex(index));
-            return new BoundingBoxFloat(point, point);
+            return new BoundingBox(point, point);
         } else {
             checkArgument(isInternal(index), " incomplete state");
             int idx = translate(index);
@@ -247,7 +246,7 @@ public abstract class AbstractNodeStore {
                     // return non-trivial boxes
                     return getBoxFromData(idx);
                 } else {
-                    BoundingBoxFloat box = reconstructBox(index, pointStoreView);
+                    BoundingBox box = reconstructBox(index, pointStoreView);
                     copyBoxToData(idx, box);
                     return box;
                 }
@@ -256,8 +255,8 @@ public abstract class AbstractNodeStore {
         }
     }
 
-    public BoundingBoxFloat reconstructBox(int index, IPointStoreView<float[]> pointStoreView) {
-        BoundingBoxFloat mutatedBoundingBox = getBox(getLeftIndex(index));
+    public BoundingBox reconstructBox(int index, IPointStoreView<float[]> pointStoreView) {
+        BoundingBox mutatedBoundingBox = getBox(getLeftIndex(index));
         growNodeBox(mutatedBoundingBox, pointStoreView, index, getRightIndex(index));
         return mutatedBoundingBox;
     }
@@ -282,7 +281,7 @@ public abstract class AbstractNodeStore {
         int idx = translate(index);
         if (idx != Integer.MAX_VALUE && rangeSumData[idx] != 0) {
             if (!checkStrictlyContains(index, point)) {
-                BoundingBoxFloat mutatedBoundingBox = reconstructBox(index, pointStoreView);
+                BoundingBox mutatedBoundingBox = reconstructBox(index, pointStoreView);
                 copyBoxToData(idx, mutatedBoundingBox);
                 return false;
             }
@@ -291,15 +290,15 @@ public abstract class AbstractNodeStore {
         return false;
     }
 
-    public BoundingBoxFloat getBoxFromData(int idx) {
+    public BoundingBox getBoxFromData(int idx) {
         int base = 2 * idx * dimensions;
         int mid = base + dimensions;
 
-        return new BoundingBoxFloat(Arrays.copyOfRange(boundingBoxData, base, base + dimensions),
+        return new BoundingBox(Arrays.copyOfRange(boundingBoxData, base, base + dimensions),
                 Arrays.copyOfRange(boundingBoxData, mid, mid + dimensions));
     }
 
-    protected void addBox(int index, float[] point, BoundingBoxFloat box) {
+    protected void addBox(int index, float[] point, BoundingBox box) {
         if (isInternal(index)) {
             int idx = translate(index);
             if (idx != Integer.MAX_VALUE) { // always add irrespective of rangesum
@@ -309,7 +308,7 @@ public abstract class AbstractNodeStore {
         }
     }
 
-    public void growNodeBox(BoundingBoxFloat box, IPointStoreView<float[]> pointStoreView, int node, int sibling) {
+    public void growNodeBox(BoundingBox box, IPointStoreView<float[]> pointStoreView, int node, int sibling) {
         if (isLeaf(sibling)) {
             float[] point = pointStoreView.get(getPointIndex(sibling));
             box.addPoint(point);
@@ -320,7 +319,7 @@ public abstract class AbstractNodeStore {
                 if (rangeSumData[siblingIdx] != 0) {
                     box.addBox(getBoxFromData(siblingIdx));
                 } else {
-                    BoundingBoxFloat newBox = getBox(siblingIdx);
+                    BoundingBox newBox = getBox(siblingIdx);
                     copyBoxToData(siblingIdx, newBox);
                     box.addBox(newBox);
                 }
@@ -333,7 +332,7 @@ public abstract class AbstractNodeStore {
     }
 
     public double probabilityOfCut(int node, float[] point, IPointStoreView<float[]> pointStoreView,
-            BoundingBoxFloat otherBox) {
+            BoundingBox otherBox) {
         int nodeIdx = translate(node);
         if (nodeIdx != Integer.MAX_VALUE && rangeSumData[nodeIdx] != 0) {
             int base = 2 * nodeIdx * dimensions;
@@ -355,7 +354,7 @@ public abstract class AbstractNodeStore {
         } else if (otherBox != null) {
             return otherBox.probabilityOfCut(point);
         } else {
-            BoundingBoxFloat box = getBox(node);
+            BoundingBox box = getBox(node);
             return box.probabilityOfCut(point);
         }
     }
@@ -449,22 +448,22 @@ public abstract class AbstractNodeStore {
 
     public abstract void replaceParentBySibling(int grandParent, int parent, int node);
 
-    public double dynamicScore(int root, int ignoreMass, double[] point, IPointStoreView<float[]> pointStoreView,
+    public double dynamicScore(int root, int ignoreMass, float[] point, IPointStoreView<float[]> pointStoreView,
             BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
             Function<Double, Double> treeDamp) {
         if (root == Null) {
             return 0.0;
         }
-        BoundingBoxFloat boundingBox = null;
+        BoundingBox boundingBox = null;
         if (boundingboxCacheFraction < SWITCH_FRACTION || ignoreMass > 0) {
             float[] fakePoint = new float[point.length];
-            boundingBox = new BoundingBoxFloat(fakePoint, fakePoint);
+            boundingBox = new BoundingBox(fakePoint, fakePoint);
         }
-        return scoreScalar(root, 0, boundingBox, ignoreMass, toFloatArray(point), pointStoreView, scoreSeen,
-                scoreUnseen, treeDamp)[1];
+        return scoreScalar(root, 0, boundingBox, ignoreMass, point, pointStoreView, scoreSeen, scoreUnseen,
+                treeDamp)[1];
     }
 
-    public double[] scoreScalar(int node, int depth, BoundingBoxFloat box, int ignoreMass, float[] point,
+    public double[] scoreScalar(int node, int depth, BoundingBox box, int ignoreMass, float[] point,
             IPointStoreView<float[]> pointStoreView, BiFunction<Double, Double, Double> scoreSeen,
             BiFunction<Double, Double, Double> scoreUnseen, Function<Double, Double> treeDamp) {
         if (isLeaf(node)) {
@@ -531,25 +530,25 @@ public abstract class AbstractNodeStore {
         return boundingboxCacheFraction;
     }
 
-    protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, int root,
-            IPointStoreView<float[]> pointStoreView, Function<double[], double[]> projectToTree) {
+    protected <R> void traversePathToLeafAndVisitNodes(float[] point, Visitor<R> visitor, int root,
+            IPointStoreView<float[]> pointStoreView, Function<float[], float[]> projectToTree) {
         NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, root, 0);
     }
 
-    protected boolean toLeft(double[] point, int currentNodeOffset) {
+    protected boolean toLeft(float[] point, int currentNodeOffset) {
         return point[getCutDimension(currentNodeOffset)] <= cutValue[currentNodeOffset];
     }
 
-    BoundingBoxFloat getLeftBox(int index) {
+    BoundingBox getLeftBox(int index) {
         return getBox(getLeftIndex(index));
     }
 
-    BoundingBoxFloat getRightBox(int index) {
+    BoundingBox getRightBox(int index) {
         return getBox(getRightIndex(index));
     }
 
-    protected <R> void traversePathToLeafAndVisitNodes(double[] point, Visitor<R> visitor, NodeView currentNodeView,
+    protected <R> void traversePathToLeafAndVisitNodes(float[] point, Visitor<R> visitor, NodeView currentNodeView,
             int node, int depthOfNode) {
         if (isLeaf(node)) {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
@@ -567,13 +566,13 @@ public abstract class AbstractNodeStore {
         }
     }
 
-    protected <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, int root,
-            IPointStoreView<float[]> pointStoreView, Function<double[], double[]> liftToTree) {
+    protected <R> void traverseTreeMulti(float[] point, MultiVisitor<R> visitor, int root,
+            IPointStoreView<float[]> pointStoreView, Function<float[], float[]> liftToTree) {
         NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traverseTreeMulti(point, visitor, currentNodeView, root, 0);
     }
 
-    protected <R> void traverseTreeMulti(double[] point, MultiVisitor<R> visitor, NodeView currentNodeView, int node,
+    protected <R> void traverseTreeMulti(float[] point, MultiVisitor<R> visitor, NodeView currentNodeView, int node,
             int depthOfNode) {
         if (isLeaf(node)) {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);

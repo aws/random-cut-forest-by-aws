@@ -93,7 +93,7 @@ public class NodeStoreMedium extends AbstractNodeStore {
 
     @Override
     public int addNode(Stack<int[]> pathToRoot, float[] point, long sequenceIndex, int pointIndex, int childIndex,
-            int cutDimension, float cutValue, BoundingBoxFloat box) {
+            int cutDimension, float cutValue, BoundingBox box) {
         int index = freeNodeManager.takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = (char) cutDimension;
