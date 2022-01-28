@@ -38,7 +38,7 @@ public interface IStateCoordinator<PointReference, Point> {
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    PointReference initUpdate(double[] point, long sequenceNumber);
+    PointReference initUpdate(float[] point, long sequenceNumber);
 
     /**
      * Complete the update. This method is called by IStateCoordinator after all

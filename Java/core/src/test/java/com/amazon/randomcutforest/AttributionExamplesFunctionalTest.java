@@ -187,8 +187,8 @@ public class AttributionExamplesFunctionalTest {
             newForest.update(data[i]);
         }
 
-        double[] queryOne = new double[30];
-        double[] queryTwo = new double[30];
+        float[] queryOne = new float[30];
+        float[] queryTwo = new float[30];
         queryTwo[1] = 1;
         double originalScoreTwo = newForest.getAnomalyScore(queryTwo);
         // testing approximation with precision 0 (no approximation)

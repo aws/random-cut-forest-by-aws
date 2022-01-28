@@ -33,6 +33,8 @@ public interface IPointStore<Point> extends IPointStoreView<Point> {
      * @param sequenceNum sequence number of the point
      * @return index of the stored point
      */
+    int add(float[] point, long sequenceNum);
+
     int add(double[] point, long sequenceNum);
 
     // increments and returns the incremented value

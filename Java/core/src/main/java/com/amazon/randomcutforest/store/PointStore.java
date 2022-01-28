@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static java.lang.Math.max;
 
 import java.util.Arrays;
@@ -40,7 +41,7 @@ public abstract class PointStore implements IPointStore<float[]> {
     /**
      * generic internal shingle, note that input is doubles
      */
-    protected double[] internalShingle;
+    protected float[] internalShingle;
     /**
      * enable rotation of shingles; use a cyclic buffer instead of sliding window
      */
@@ -158,7 +159,7 @@ public abstract class PointStore implements IPointStore<float[]> {
         return indexManager.takeIndex();
     }
 
-    protected int getAmountToWrite(double[] tempPoint) {
+    protected int getAmountToWrite(float[] tempPoint) {
         if (checkShingleAlignment(startOfFreeSegment, tempPoint)) {
             if (!rotationEnabled
                     || startOfFreeSegment % dimensions == (nextSequenceIndex - 1) * baseDimension % dimensions) {
@@ -189,12 +190,16 @@ public abstract class PointStore implements IPointStore<float[]> {
      * @throws IllegalStateException    if the point store is full.
      */
     public int add(double[] point, long sequenceNum) {
+        return add(toFloatArray(point), sequenceNum);
+    }
+
+    public int add(float[] point, long sequenceNum) {
         checkArgument(internalShinglingEnabled || point.length == dimensions,
                 "point.length must be equal to dimensions");
         checkArgument(!internalShinglingEnabled || point.length == baseDimension,
                 "point.length must be equal to dimensions");
 
-        double[] tempPoint = point;
+        float[] tempPoint = point;
         nextSequenceIndex++;
         if (internalShinglingEnabled) {
             // rotation is supported via the output and input is unchanged
@@ -358,7 +363,7 @@ public abstract class PointStore implements IPointStore<float[]> {
      *
      * @return for internal shingling, returns the last seen shingle
      */
-    public double[] getInternalShingle() {
+    public float[] getInternalShingle() {
         checkState(internalShinglingEnabled, "internal shingling is not enabled");
         return copyShingle();
     }
@@ -473,17 +478,17 @@ public abstract class PointStore implements IPointStore<float[]> {
      * @return shingled point
      */
     @Override
-    public double[] transformToShingledPoint(double[] point) {
+    public float[] transformToShingledPoint(float[] point) {
         checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
         checkArgument(point.length == baseDimension, " incorrect length");
         return constructShingleInPlace(copyShingle(), point, rotationEnabled);
     }
 
-    private double[] copyShingle() {
+    private float[] copyShingle() {
         if (!rotationEnabled) {
             return Arrays.copyOf(internalShingle, dimensions);
         } else {
-            double[] answer = new double[dimensions];
+            float[] answer = new float[dimensions];
             int offset = (int) (nextSequenceIndex * baseDimension);
             for (int i = 0; i < dimensions; i++) {
                 answer[(offset + i) % dimensions] = internalShingle[i];
@@ -500,18 +505,18 @@ public abstract class PointStore implements IPointStore<float[]> {
      * @param point  the new values
      * @return the array which now contains the updated shingle
      */
-    protected double[] constructShingleInPlace(double[] target, double[] point, boolean rotationEnabled) {
+    protected float[] constructShingleInPlace(float[] target, float[] point, boolean rotationEnabled) {
         if (!rotationEnabled) {
             for (int i = 0; i < dimensions - baseDimension; i++) {
                 target[i] = target[i + baseDimension];
             }
             for (int i = 0; i < baseDimension; i++) {
-                target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0 : point[i];
+                target[dimensions - baseDimension + i] = (point[i] == 0.0) ? 0.0f : point[i];
             }
         } else {
             int offset = ((int) (nextSequenceIndex * baseDimension) % dimensions);
             for (int i = 0; i < baseDimension; i++) {
-                target[offset + i] = (point[i] == 0.0) ? 0.0 : point[i];
+                target[offset + i] = (point[i] == 0.0) ? 0.0f : point[i];
             }
         }
         return target;
@@ -717,7 +722,7 @@ public abstract class PointStore implements IPointStore<float[]> {
             refCount = new byte[size];
             if (internalShinglingEnabled) {
                 nextSequenceIndex = 0;
-                internalShingle = new double[dimensions];
+                internalShingle = new float[dimensions];
             }
             store = new float[currentStoreCapacity * dimensions];
         } else {
@@ -734,8 +739,9 @@ public abstract class PointStore implements IPointStore<float[]> {
             this.nextSequenceIndex = builder.nextTimeStamp;
             this.currentStoreCapacity = builder.currentStoreCapacity;
             if (internalShinglingEnabled) {
-                this.internalShingle = (builder.knownShingle != null) ? Arrays.copyOf(builder.knownShingle, dimensions)
-                        : new double[dimensions];
+                this.internalShingle = (builder.knownShingle != null)
+                        ? Arrays.copyOf(toFloatArray(builder.knownShingle), dimensions)
+                        : new float[dimensions];
             }
 
             indexManager = new IndexIntervalManager(builder.refCount, builder.indexCapacity);
@@ -754,7 +760,7 @@ public abstract class PointStore implements IPointStore<float[]> {
         }
     }
 
-    boolean checkShingleAlignment(int location, double[] point) {
+    boolean checkShingleAlignment(int location, float[] point) {
         boolean test = (location - dimensions + baseDimension >= 0);
         for (int i = 0; i < dimensions - baseDimension && test; i++) {
             test = (((float) point[i]) == store[location - dimensions + baseDimension + i]);
@@ -762,9 +768,9 @@ public abstract class PointStore implements IPointStore<float[]> {
         return test;
     }
 
-    void copyPoint(double[] point, int src, int location, int length) {
+    void copyPoint(float[] point, int src, int location, int length) {
         for (int i = 0; i < length; i++) {
-            store[location + i] = (float) point[src + i];
+            store[location + i] = point[src + i];
         }
     }
 

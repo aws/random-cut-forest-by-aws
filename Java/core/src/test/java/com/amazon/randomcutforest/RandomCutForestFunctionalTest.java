@@ -112,11 +112,11 @@ public class RandomCutForestFunctionalTest {
     // unseen function is (x,y) -> y which corresponds to mass of sibling
     // damp function is (x,y) -> 1 which is no dampening
 
-    public static double getDisplacementScore(RandomCutForest forest, double[] point) {
+    public static double getDisplacementScore(RandomCutForest forest, float[] point) {
         return forest.getDynamicScore(point, 0, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
     }
 
-    public double getDisplacementScoreApproximate(RandomCutForest forest, double[] point, double precision) {
+    public double getDisplacementScoreApproximate(RandomCutForest forest, float[] point, double precision) {
         return forest.getApproximateDynamicScore(point, precision, true, 0, (x, y) -> 1.0, (x, y) -> y, (x, y) -> 1.0);
     }
 
@@ -132,11 +132,11 @@ public class RandomCutForestFunctionalTest {
     // that "what would have happened had the point been available during
     // the construction of the forest"
 
-    public static double getHeightScore(RandomCutForest forest, double[] point) {
+    public static double getHeightScore(RandomCutForest forest, float[] point) {
         return forest.getDynamicScore(point, 0, (x, y) -> 1.0 * (x + Math.log(y)), (x, y) -> 1.0 * x, (x, y) -> 1.0);
     }
 
-    public double getHeightScoreApproximate(RandomCutForest forest, double[] point, double precision) {
+    public double getHeightScoreApproximate(RandomCutForest forest, float[] point, double precision) {
         return forest.getApproximateDynamicScore(point, precision, false, 0, (x, y) -> 1.0 * (x + Math.log(y)),
                 (x, y) -> 1.0 * x, (x, y) -> 1.0);
     }
@@ -144,7 +144,7 @@ public class RandomCutForestFunctionalTest {
     @ParameterizedTest
     @ArgumentsSource(TestForestProvider.class)
     private void testGetAnomalyScore(RandomCutForest forest) {
-        double[] point = { 0.0, 0.0, 0.0 };
+        float[] point = { 0.0f, 0.0f, 0.0f };
         double score = forest.getAnomalyScore(point);
         assertTrue(score < 1);
         assertTrue(forest.getApproximateAnomalyScore(point) < 1);
@@ -187,7 +187,7 @@ public class RandomCutForestFunctionalTest {
         // larger variance of the probabilistic test
         assertEquals(score, otherScore, 0.3 * score + 0.1);
 
-        point = new double[] { 8.0, 8.0, 8.0 };
+        point = new float[] { 8.0f, 8.0f, 8.0f };
         score = forest.getAnomalyScore(point);
         assertTrue(score > 1);
         assertTrue(forest.getApproximateAnomalyScore(point) > 1);
@@ -568,7 +568,7 @@ public class RandomCutForestFunctionalTest {
         int[] missingIndexes = new int[] { 0 };
 
         double[] imputedPoint = forest.imputeMissingValues(queryPoint, numberOfMissingValues, missingIndexes);
-        assertEquals(queryPoint[1], imputedPoint[1]);
+        assertEquals(queryPoint[1], imputedPoint[1], 1e-5);
         assertTrue(Math.abs(imputedPoint[0]) < 0.5);
     }
 

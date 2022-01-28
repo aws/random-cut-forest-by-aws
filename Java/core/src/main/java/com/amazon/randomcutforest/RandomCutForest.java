@@ -17,6 +17,8 @@ package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static java.lang.Math.max;
 
 import java.util.ArrayList;
@@ -516,8 +518,14 @@ public class RandomCutForest {
      * @param point input point
      * @return a shingled copy or a clean copy
      */
-
     public double[] transformToShingledPoint(double[] point) {
+        checkNotNull(point, "point must not be null");
+        return (internalShinglingEnabled && point.length == inputDimensions)
+                ? toDoubleArray(stateCoordinator.getStore().transformToShingledPoint(toFloatArray(point)))
+                : ArrayUtils.cleanCopy(point);
+    }
+
+    public float[] transformToShingledPoint(float[] point) {
         checkNotNull(point, "point must not be null");
         return (internalShinglingEnabled && point.length == inputDimensions)
                 ? stateCoordinator.getStore().transformToShingledPoint(point)
@@ -551,7 +559,7 @@ public class RandomCutForest {
      *
      * @return the last known shingled point seen
      */
-    public double[] lastShingledPoint() {
+    public float[] lastShingledPoint() {
         checkArgument(internalShinglingEnabled, "incorrect use");
         return stateCoordinator.getStore().getInternalShingle();
     }
@@ -573,6 +581,10 @@ public class RandomCutForest {
      * @param point The point used to update the forest.
      */
     public void update(double[] point) {
+        update(toFloatArray(point));
+    }
+
+    public void update(float[] point) {
         checkNotNull(point, "point must not be null");
         checkArgument(internalShinglingEnabled || point.length == dimensions,
                 String.format("point.length must equal %d", dimensions));
@@ -592,6 +604,10 @@ public class RandomCutForest {
      * @param sequenceNum The timestamp of the corresponding point
      */
     public void update(double[] point, long sequenceNum) {
+        update(toFloatArray(point), sequenceNum);
+    }
+
+    public void update(float[] point, long sequenceNum) {
         checkNotNull(point, "point must not be null");
         checkArgument(!internalShinglingEnabled, "cannot be applied with internal shingling");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -625,7 +641,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(float[], IVisitorFactory)}. The results from
      * all the trees are combined using the accumulator and then transformed using
      * the finisher before being returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -644,7 +660,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -660,7 +676,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A visitor is constructed for each tree using the visitor
      * factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(float[], IVisitorFactory)}. The results from
      * individual trees are collected using the {@link java.util.stream.Collector}
      * and returned. Trees are visited in parallel using
      * {@link java.util.Collection#parallelStream()}.
@@ -677,7 +693,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
         checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
@@ -691,7 +707,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest sequentially and combine the individual
      * results into an aggregate result. A visitor is constructed for each tree
      * using the visitor factory, and then submitted to
-     * {@link RandomCutTree#traverse(double[], IVisitorFactory)}. The results from
+     * {@link RandomCutTree#traverse(float[], IVisitorFactory)}. The results from
      * all the trees are combined using the {@link ConvergingAccumulator}, and the
      * method stops visiting trees after convergence is reached. The result is
      * transformed using the finisher before being returned.
@@ -712,7 +728,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -728,7 +744,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
+     * {@link RandomCutTree#traverseMulti(float[], IMultiVisitorFactory)}. The
      * results from all the trees are combined using the accumulator and then
      * transformed using the finisher before being returned.
      *
@@ -746,7 +762,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
@@ -762,7 +778,7 @@ public class RandomCutForest {
      * Visit each of the trees in the forest and combine the individual results into
      * an aggregate result. A multi-visitor is constructed for each tree using the
      * visitor factory, and then submitted to
-     * {@link RandomCutTree#traverseMulti(double[], IMultiVisitorFactory)}. The
+     * {@link RandomCutTree#traverseMulti(float[], IMultiVisitorFactory)}. The
      * results from individual trees are collected using the
      * {@link java.util.stream.Collector} and returned. Trees are visited in
      * parallel using {@link java.util.Collection#parallelStream()}.
@@ -779,7 +795,7 @@ public class RandomCutForest {
      * @return The aggregated and finalized result after sending a visitor through
      *         each tree in the forest.
      */
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
@@ -803,7 +819,12 @@ public class RandomCutForest {
      * @param point The point being scored.
      * @return an anomaly score for the given point.
      */
+    @Deprecated
     public double getAnomalyScore(double[] point) {
+        return getAnomalyScore(toFloatArray(point));
+    }
+
+    public double getAnomalyScore(float[] point) {
         if (!isOutputReady()) {
             return 0.0;
         }
@@ -829,8 +850,12 @@ public class RandomCutForest {
      * @param point input point q
      * @return anomaly score with early stopping with z=0.1
      */
-
+    @Deprecated
     public double getApproximateAnomalyScore(double[] point) {
+        return getApproximateAnomalyScore(toFloatArray(point));
+    }
+
+    public double getApproximateAnomalyScore(float[] point) {
         if (!isOutputReady()) {
             return 0.0;
         }
@@ -860,6 +885,10 @@ public class RandomCutForest {
      * @return an anomaly score for the given point.
      */
     public DiVector getAnomalyAttribution(double[] point) {
+        return getAnomalyAttribution(toFloatArray(point));
+    }
+
+    public DiVector getAnomalyAttribution(float[] point) {
         // this will return the same (modulo floating point summation) L1Norm as
         // getAnomalyScore
         if (!isOutputReady()) {
@@ -884,6 +913,10 @@ public class RandomCutForest {
      * @return anomaly attribution for the given point.
      */
     public DiVector getApproximateAnomalyAttribution(double[] point) {
+        return getApproximateAnomalyAttribution(toFloatArray(point));
+    }
+
+    public DiVector getApproximateAnomalyAttribution(float[] point) {
         if (!isOutputReady()) {
             return new DiVector(dimensions);
         }
@@ -910,7 +943,12 @@ public class RandomCutForest {
      * @param point The point where the density estimate is made.
      * @return A density estimate.
      */
+    @Deprecated
     public DensityOutput getSimpleDensity(double[] point) {
+        return getSimpleDensity(toFloatArray(point));
+    }
+
+    public DensityOutput getSimpleDensity(float[] point) {
 
         // density estimation should use sufficiently larger number of samples
         // and only return answers when full
@@ -948,6 +986,11 @@ public class RandomCutForest {
      * @return A point with the missing values imputed.
      */
     public List<double[]> getConditionalField(double[] point, int numberOfMissingValues, int[] missingIndexes,
+            double centrality) {
+        return getConditionalField(toFloatArray(point), numberOfMissingValues, missingIndexes, centrality);
+    }
+
+    public List<double[]> getConditionalField(float[] point, int numberOfMissingValues, int[] missingIndexes,
             double centrality) {
         checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
@@ -988,6 +1031,10 @@ public class RandomCutForest {
      * @return A point with the missing values imputed.
      */
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
+        return imputeMissingValues(toFloatArray(point), numberOfMissingValues, missingIndexes);
+    }
+
+    public double[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
         checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater or equal than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
@@ -1003,7 +1050,7 @@ public class RandomCutForest {
         if (numberOfMissingValues == 1) {
             // when there is 1 missing value, we sort all the imputed values and return the
             // median
-            double[] returnPoint = Arrays.copyOf(point, point.length);
+            double[] returnPoint = toDoubleArray(point);
             double[] basicList = conditionalField.stream()
                     .mapToDouble(array -> array[transformIndices(missingIndexes, point.length)[0]]).sorted().toArray();
             returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
@@ -1142,8 +1189,8 @@ public class RandomCutForest {
     public double[] extrapolate(int horizon) {
         checkArgument(internalShinglingEnabled, "incorrect use");
         IPointStore<?> store = stateCoordinator.getStore();
-        return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
-                ((int) nextSequenceIndex()) % shingleSize);
+        return extrapolateBasic(toDoubleArray(lastShingledPoint()), horizon, inputDimensions,
+                store.isInternalRotationEnabled(), ((int) nextSequenceIndex()) % shingleSize);
     }
 
     /**
@@ -1164,6 +1211,10 @@ public class RandomCutForest {
      * @return a list of Neighbors, ordered from closest to furthest.
      */
     public List<Neighbor> getNearNeighborsInSample(double[] point, double distanceThreshold) {
+        return getNearNeighborsInSample(toFloatArray(point), distanceThreshold);
+    }
+
+    public List<Neighbor> getNearNeighborsInSample(float[] point, double distanceThreshold) {
         checkNotNull(point, "point must not be null");
         checkArgument(distanceThreshold > 0, "distanceThreshold must be greater than 0");
 
@@ -1361,7 +1412,7 @@ public class RandomCutForest {
      *                                previously seen samples
      * @return anomaly score
      */
-    public double getDynamicScore(double[] point, int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
+    public double getDynamicScore(float[] point, int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp) {
 
         checkArgument(ignoreLeafMassThreshold >= 0, "ignoreLeafMassThreshold should be greater than or equal to 0");
@@ -1401,7 +1452,7 @@ public class RandomCutForest {
      * @return the simuated score
      */
 
-    public double getDynamicSimulatedScore(double[] point, BiFunction<Double, Double, Double> seen,
+    public double getDynamicSimulatedScore(float[] point, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp,
             Function<IBoundingBoxView, double[]> vecSep) {
 
@@ -1440,7 +1491,7 @@ public class RandomCutForest {
      *                                same as input (applies with seen)
      * @return the dynamic score under sequential early stopping
      */
-    public double getApproximateDynamicScore(double[] point, double precision, boolean highIsCritical,
+    public double getApproximateDynamicScore(float[] point, double precision, boolean highIsCritical,
             int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> damp) {
 
@@ -1473,7 +1524,7 @@ public class RandomCutForest {
      *                                function
      * @return dynamic scoring attribution DiVector
      */
-    public DiVector getDynamicAttribution(double[] point, int ignoreLeafMassThreshold,
+    public DiVector getDynamicAttribution(float[] point, int ignoreLeafMassThreshold,
             BiFunction<Double, Double, Double> seen, BiFunction<Double, Double, Double> unseen,
             BiFunction<Double, Double, Double> newDamp) {
 
@@ -1507,7 +1558,7 @@ public class RandomCutForest {
      * @param newDamp                 dampening function based on duplicates
      * @return attribution DiVector of the score
      */
-    public DiVector getApproximateDynamicAttribution(double[] point, double precision, boolean highIsCritical,
+    public DiVector getApproximateDynamicAttribution(float[] point, double precision, boolean highIsCritical,
             int ignoreLeafMassThreshold, BiFunction<Double, Double, Double> seen,
             BiFunction<Double, Double, Double> unseen, BiFunction<Double, Double, Double> newDamp) {
 
@@ -1525,5 +1576,31 @@ public class RandomCutForest {
         Function<DiVector, DiVector> finisher = vector -> vector.scale(1.0 / accumulator.getValuesAccepted());
 
         return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
+    }
+
+    public double dynamicScore(float[] point) {
+        return dynamicScore(point, 0, CommonUtils::defaultScoreSeenFunction, CommonUtils::defaultScoreUnseenFunction,
+                CommonUtils::defaultDampFunction, CommonUtils::defaultScalarNormalizerFunction);
+    }
+
+    public double dynamicScore(float[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
+            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
+            BiFunction<Double, Double, Double> normalizer) {
+        double result = 0;
+        float[] changedPoint = transformToShingledPoint(point);
+
+        if (parallelExecutionEnabled) {
+            result = updateExecutor.getComponents().parallelStream()
+                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
+                            normalizer))
+                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
+        } else {
+            result = updateExecutor.getComponents().stream()
+                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
+                            normalizer))
+                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
+        }
+        return result / numberOfTrees;
+
     }
 }

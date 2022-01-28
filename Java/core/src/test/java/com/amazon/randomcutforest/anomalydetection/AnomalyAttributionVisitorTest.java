@@ -37,7 +37,7 @@ public class AnomalyAttributionVisitorTest {
 
     @Test
     public void testNew() {
-        double[] point = new double[] { 1.1, -2.2, 3.3 };
+        float[] point = new float[] { 1.1f, -2.2f, 3.3f };
         int treeMass = 99;
         AnomalyAttributionVisitor visitor = new AnomalyAttributionVisitor(point, treeMass);
 
@@ -56,7 +56,7 @@ public class AnomalyAttributionVisitorTest {
 
     @Test
     public void testNewWithIgnoreOptions() {
-        double[] point = new double[] { 1.1, -2.2, 3.3 };
+        float[] point = new float[] { 1.1f, -2.2f, 3.3f };
         int treeMass = 99;
         AnomalyAttributionVisitor visitor = new AnomalyAttributionVisitor(point, treeMass, 7);
 
@@ -75,7 +75,7 @@ public class AnomalyAttributionVisitorTest {
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = { 1.1, -2.2, 3.3 };
+        float[] point = { 1.1f, -2.2f, 3.3f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
@@ -101,8 +101,8 @@ public class AnomalyAttributionVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = new double[] { 1.1, -2.2, 3.3 };
-        double[] anotherPoint = new double[] { -4.0, 5.0, 6.0 };
+        float[] point = new float[] { 1.1f, -2.2f, 3.3f };
+        float[] anotherPoint = new float[] { -4.0f, 5.0f, 6.0f };
 
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
@@ -154,12 +154,12 @@ public class AnomalyAttributionVisitorTest {
 
     @Test
     public void testAccept() {
-        double[] pointToScore = { 0.0, 0.0 };
+        float[] pointToScore = { 0.0f, 0.0f };
         int treeMass = 50;
         AnomalyAttributionVisitor visitor = new AnomalyAttributionVisitor(pointToScore, treeMass, 0);
 
         INodeView leafNode = mock(NodeView.class);
-        double[] point = new double[] { 1.0, -2.0 };
+        float[] point = new float[] { 1.0f, -2.0f };
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
 
@@ -190,7 +190,7 @@ public class AnomalyAttributionVisitorTest {
         INodeView parent = mock(NodeView.class);
         int parentMass = leafMass + siblingMass;
         when(parent.getMass()).thenReturn(parentMass);
-        BoundingBox boundingBox = new BoundingBox(point, new double[] { 2.0, -0.5 });
+        BoundingBox boundingBox = new BoundingBox(point, new float[] { 2.0f, -0.5f });
         when(parent.getBoundingBox()).thenReturn(boundingBox);
         visitor.accept(parent, depth);
         result = visitor.getResult();
@@ -228,7 +228,7 @@ public class AnomalyAttributionVisitorTest {
 
         when(grandParent.getMass()).thenReturn(parentMass + 2);
         when(grandParent.getBoundingBox()).thenReturn(boundingBox
-                .getMergedBox(new BoundingBox(new double[] { -1.0, 1.0 }).getMergedBox(new double[] { -0.5, -1.5 })));
+                .getMergedBox(new BoundingBox(new float[] { -1.0f, 1.0f }).getMergedBox(new float[] { -0.5f, -1.5f })));
         visitor.accept(grandParent, depth);
         result = visitor.getResult();
 

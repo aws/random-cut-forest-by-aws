@@ -27,15 +27,15 @@ import org.junit.jupiter.api.Test;
 
 public class BoundingBoxTest {
 
-    private double[] point1;
-    private double[] point2;
+    private float[] point1;
+    private float[] point2;
     private BoundingBox box1;
     private BoundingBox box2;
 
     @BeforeEach
     public void setUp() {
-        point1 = new double[] { 1.5, 2.7 };
-        point2 = new double[] { 3.0, 1.2 };
+        point1 = new float[] { 1.5f, 2.7f };
+        point2 = new float[] { 3.0f, 1.2f };
         box1 = new BoundingBox(point1);
         box2 = new BoundingBox(point2);
     }
@@ -43,20 +43,20 @@ public class BoundingBoxTest {
     @Test
     public void testNewFromSinglePoint() {
         assertThat(box1.getDimensions(), is(2));
-        assertThat(box1.getMinValue(0), is(point1[0]));
-        assertThat(box1.getMaxValue(0), is(point1[0]));
+        assertThat((float) box1.getMinValue(0), is(point1[0]));
+        assertThat((float) box1.getMaxValue(0), is(point1[0]));
         assertThat(box1.getRange(0), is(0.0));
-        assertThat(box1.getMinValue(1), is(point1[1]));
-        assertThat(box1.getMaxValue(1), is(point1[1]));
+        assertThat((float) box1.getMinValue(1), is(point1[1]));
+        assertThat((float) box1.getMaxValue(1), is(point1[1]));
         assertThat(box1.getRange(1), is(0.0));
         assertThat(box1.getRangeSum(), is(0.0));
 
         assertThat(box2.getDimensions(), is(2));
-        assertThat(box2.getMinValue(0), is(point2[0]));
-        assertThat(box2.getMaxValue(0), is(point2[0]));
+        assertThat((float) box2.getMinValue(0), is(point2[0]));
+        assertThat((float) box2.getMaxValue(0), is(point2[0]));
         assertThat(box2.getRange(0), is(0.0));
-        assertThat(box2.getMinValue(1), is(point2[1]));
-        assertThat(box2.getMaxValue(1), is(point2[1]));
+        assertThat((float) box2.getMinValue(1), is(point2[1]));
+        assertThat((float) box2.getMaxValue(1), is(point2[1]));
         assertThat(box2.getRange(1), is(0.0));
         assertThat(box2.getRangeSum(), is(0.0));
     }
@@ -66,11 +66,11 @@ public class BoundingBoxTest {
         BoundingBox mergedBox = box1.getMergedBox(box2);
 
         assertThat(mergedBox.getDimensions(), is(2));
-        assertThat(mergedBox.getMinValue(0), is(1.5));
-        assertThat(mergedBox.getMaxValue(0), is(3.0));
+        assertThat((float) mergedBox.getMinValue(0), is(1.5f));
+        assertThat((float) mergedBox.getMaxValue(0), is(3.0f));
         assertThat(mergedBox.getRange(0), closeTo(3.0 - 1.5, EPSILON));
-        assertThat(mergedBox.getMinValue(1), is(1.2));
-        assertThat(mergedBox.getMaxValue(1), is(2.7));
+        assertThat((float) mergedBox.getMinValue(1), is(1.2f));
+        assertThat((float) mergedBox.getMaxValue(1), is(2.7f));
         assertThat(mergedBox.getRange(1), closeTo(2.7 - 1.2, EPSILON));
 
         double rangeSum = (3.0 - 1.5) + (2.7 - 1.2);
@@ -79,37 +79,37 @@ public class BoundingBoxTest {
         // check that box1 and box2 were not changed
 
         assertThat(box1.getDimensions(), is(2));
-        assertThat(box1.getMinValue(0), is(point1[0]));
-        assertThat(box1.getMaxValue(0), is(point1[0]));
+        assertThat((float) box1.getMinValue(0), is(point1[0]));
+        assertThat((float) box1.getMaxValue(0), is(point1[0]));
         assertThat(box1.getRange(0), is(0.0));
-        assertThat(box1.getMinValue(1), is(point1[1]));
-        assertThat(box1.getMaxValue(1), is(point1[1]));
+        assertThat((float) box1.getMinValue(1), is(point1[1]));
+        assertThat((float) box1.getMaxValue(1), is(point1[1]));
         assertThat(box1.getRange(1), is(0.0));
         assertThat(box1.getRangeSum(), is(0.0));
 
         assertThat(box2.getDimensions(), is(2));
-        assertThat(box2.getMinValue(0), is(point2[0]));
-        assertThat(box2.getMaxValue(0), is(point2[0]));
+        assertThat((float) box2.getMinValue(0), is(point2[0]));
+        assertThat((float) box2.getMaxValue(0), is(point2[0]));
         assertThat(box2.getRange(0), is(0.0));
-        assertThat(box2.getMinValue(1), is(point2[1]));
-        assertThat(box2.getMaxValue(1), is(point2[1]));
+        assertThat((float) box2.getMinValue(1), is(point2[1]));
+        assertThat((float) box2.getMaxValue(1), is(point2[1]));
         assertThat(box2.getRange(1), is(0.0));
         assertThat(box2.getRangeSum(), is(0.0));
     }
 
     @Test
     public void testContainsBoundingBox() {
-        BoundingBox box1 = new BoundingBox(new double[] { 0.0, 0.0 })
-                .getMergedBox(new BoundingBox(new double[] { 10.0, 10.0 }));
+        BoundingBox box1 = new BoundingBox(new float[] { 0.0f, 0.0f })
+                .getMergedBox(new BoundingBox(new float[] { 10.0f, 10.0f }));
 
-        BoundingBox box2 = new BoundingBox(new double[] { 2.0, 2.0 })
-                .getMergedBox(new BoundingBox(new double[] { 8.0, 8.0 }));
+        BoundingBox box2 = new BoundingBox(new float[] { 2.0f, 2.0f })
+                .getMergedBox(new BoundingBox(new float[] { 8.0f, 8.0f }));
 
-        BoundingBox box3 = new BoundingBox(new double[] { -4.0, -4.0 })
-                .getMergedBox(new BoundingBox(new double[] { -1.0, -1.0 }));
+        BoundingBox box3 = new BoundingBox(new float[] { -4.0f, -4.0f })
+                .getMergedBox(new BoundingBox(new float[] { -1.0f, -1.0f }));
 
-        BoundingBox box4 = new BoundingBox(new double[] { 1.0, -1.0 })
-                .getMergedBox(new BoundingBox(new double[] { 5.0, 5.0 }));
+        BoundingBox box4 = new BoundingBox(new float[] { 1.0f, -1.0f })
+                .getMergedBox(new BoundingBox(new float[] { 5.0f, 5.0f }));
 
         // completely contains
         assertTrue(box1.contains(box2));
@@ -126,13 +126,13 @@ public class BoundingBoxTest {
 
     @Test
     public void testContainsPoint() {
-        BoundingBox box1 = new BoundingBox(new double[] { 0.0, 0.0 })
-                .getMergedBox(new BoundingBox(new double[] { 10.0, 10.0 }));
+        BoundingBox box1 = new BoundingBox(new float[] { 0.0f, 0.0f })
+                .getMergedBox(new BoundingBox(new float[] { 10.0f, 10.0f }));
 
-        assertTrue(box1.contains(new double[] { 0.0, 0.1 }));
-        assertTrue(box1.contains(new double[] { 5.5, 6.5 }));
-        assertFalse(box1.contains(new double[] { -0.7, -4.5 }));
-        assertFalse(box1.contains(new double[] { 5.0, 11.0 }));
+        assertTrue(box1.contains(new float[] { 0.0f, 0.1f }));
+        assertTrue(box1.contains(new float[] { 5.5f, 6.5f }));
+        assertFalse(box1.contains(new float[] { -0.7f, -4.5f }));
+        assertFalse(box1.contains(new float[] { 5.0f, 11.0f }));
     }
 
 }

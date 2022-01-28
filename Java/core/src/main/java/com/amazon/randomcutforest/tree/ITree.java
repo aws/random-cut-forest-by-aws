@@ -28,7 +28,9 @@ import com.amazon.randomcutforest.executor.ITraversable;
 public interface ITree<PointReference, Point> extends ITraversable, IDynamicConfig {
     int getMass();
 
-    double[] projectToTree(double[] point);
+    float[] projectToTree(float[] point);
+
+    float[] liftFromTree(float[] result);
 
     double[] liftFromTree(double[] result);
 

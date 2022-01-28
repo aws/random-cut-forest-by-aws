@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.inspect;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +31,7 @@ import com.amazon.randomcutforest.tree.INodeView;
  */
 public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
 
-    private final double[] queryPoint;
+    private final float[] queryPoint;
     private final double distanceThreshold;
     private Neighbor neighbor;
 
@@ -40,7 +42,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
      * @param distanceThreshold Leaf points whose distance from the query point is
      *                          less than this value are considered near neighbors.
      */
-    public NearNeighborVisitor(double[] queryPoint, double distanceThreshold) {
+    public NearNeighborVisitor(float[] queryPoint, double distanceThreshold) {
         this.queryPoint = queryPoint;
         this.distanceThreshold = distanceThreshold;
         neighbor = null;
@@ -52,7 +54,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
      *
      * @param queryPoint The point whose neighbors we are looking for.
      */
-    public NearNeighborVisitor(double[] queryPoint) {
+    public NearNeighborVisitor(float[] queryPoint) {
         this(queryPoint, Double.POSITIVE_INFINITY);
     }
 
@@ -79,7 +81,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
      */
     @Override
     public void acceptLeaf(INodeView leafNode, int depthOfNode) {
-        double[] leafPoint = leafNode.getLiftedLeafPoint();
+        float[] leafPoint = leafNode.getLiftedLeafPoint();
         double distanceSquared = 0.0;
         for (int i = 0; i < leafPoint.length; i++) {
             double diff = queryPoint[i] - leafPoint[i];
@@ -89,7 +91,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
         if (Math.sqrt(distanceSquared) < distanceThreshold) {
             List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes().keySet());
 
-            neighbor = new Neighbor(leafPoint, Math.sqrt(distanceSquared), sequenceIndexes);
+            neighbor = new Neighbor(toDoubleArray(leafPoint), Math.sqrt(distanceSquared), sequenceIndexes);
         }
     }
 

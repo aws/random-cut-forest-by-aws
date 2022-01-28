@@ -33,11 +33,11 @@ import com.amazon.randomcutforest.CommonUtils;
  **/
 public class AnomalyAttributionVisitor extends AbstractAttributionVisitor {
 
-    public AnomalyAttributionVisitor(double[] pointToScore, int treeMass, int ignoreThreshold) {
+    public AnomalyAttributionVisitor(float[] pointToScore, int treeMass, int ignoreThreshold) {
         super(pointToScore, treeMass, ignoreThreshold);
     }
 
-    public AnomalyAttributionVisitor(double[] pointToScore, int treeMass) {
+    public AnomalyAttributionVisitor(float[] pointToScore, int treeMass) {
         super(pointToScore, treeMass);
     }
 

@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.executor;
 
+import static com.amazon.randomcutforest.util.ArrayUtils.cleanCopy;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -104,7 +105,7 @@ public class ForestUpdateExecutorTest {
             when(model.update(any(), anyLong())).thenReturn(UpdateResult.noop());
         }
 
-        double[] point = new double[] { 1.0 };
+        float[] point = new float[] { 1.0f };
         executor.update(point);
 
         executor.components.forEach(model -> verify(model).update(any(), eq(0L)));
@@ -133,17 +134,17 @@ public class ForestUpdateExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testCleanCopy(AbstractForestUpdateExecutor<double[], ?> executor) {
-        double[] point1 = new double[] { 1.0, -22.2, 30.9 };
-        double[] point1Copy = executor.cleanCopy(point1);
+        float[] point1 = new float[] { 1.0f, -22.2f, 30.9f };
+        float[] point1Copy = cleanCopy(point1);
         assertNotSame(point1, point1Copy);
         assertArrayEquals(point1, point1Copy);
 
-        double[] point2 = new double[] { -0.0, -22.2, 30.9 };
-        double[] point2Copy = executor.cleanCopy(point2);
+        float[] point2 = new float[] { -0.0f, -22.2f, 30.9f };
+        float[] point2Copy = cleanCopy(point2);
         assertNotSame(point2, point2Copy);
         assertEquals(0.0, point2Copy[0]);
 
-        point2Copy[0] = -0.0;
+        point2Copy[0] = -0.0f;
         assertArrayEquals(point2, point2Copy);
     }
 }

@@ -39,4 +39,14 @@ public class ArrayUtils {
         return pointCopy;
     }
 
+    public static float[] cleanCopy(float[] point) {
+        float[] pointCopy = Arrays.copyOf(point, point.length);
+        for (int i = 0; i < point.length; i++) {
+            if (pointCopy[i] == 0.0) {
+                pointCopy[i] = 0.0f;
+            }
+        }
+        return pointCopy;
+    }
+
 }

@@ -15,7 +15,8 @@
 
 package com.amazon.randomcutforest.executor;
 
-import java.util.Arrays;
+import static com.amazon.randomcutforest.util.ArrayUtils.cleanCopy;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -59,7 +60,7 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      *
      * @param point The point used to update the forest.
      */
-    public void update(double[] point) {
+    public void update(float[] point) {
         long internalSequenceNumber = updateCoordinator.getTotalUpdates();
         IPointStore<?> store = updateCoordinator.getStore();
         if (store != null && store.isInternalShinglingEnabled()) {
@@ -68,8 +69,8 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
         update(point, internalSequenceNumber);
     }
 
-    public void update(double[] point, long sequenceNumber) {
-        double[] pointCopy = cleanCopy(point);
+    public void update(float[] point, long sequenceNumber) {
+        float[] pointCopy = cleanCopy(point);
         PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
         List<UpdateResult<PointReference>> results = (updateInput == null) ? Collections.emptyList()
                 : update(updateInput, sequenceNumber);
@@ -88,21 +89,4 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      */
     protected abstract List<UpdateResult<PointReference>> update(PointReference updateInput, long currentIndex);
 
-    /**
-     * Returns a clean deep copy of the point.
-     *
-     * Current clean-ups include changing negative zero -0.0 to positive zero 0.0.
-     *
-     * @param point The original data point.
-     * @return a clean deep copy of the original point.
-     */
-    protected double[] cleanCopy(double[] point) {
-        double[] pointCopy = Arrays.copyOf(point, point.length);
-        for (int i = 0; i < point.length; i++) {
-            if (pointCopy[i] == 0.0) {
-                pointCopy[i] = 0.0;
-            }
-        }
-        return pointCopy;
-    }
 }

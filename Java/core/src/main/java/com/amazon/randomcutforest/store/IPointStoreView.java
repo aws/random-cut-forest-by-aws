@@ -27,11 +27,11 @@ public interface IPointStoreView<Point> {
 
     Point get(int index);
 
-    double[] getInternalShingle();
+    float[] getInternalShingle();
 
     long getNextSequenceIndex();
 
-    double[] transformToShingledPoint(double[] input);
+    float[] transformToShingledPoint(float[] input);
 
     boolean isInternalRotationEnabled();
 

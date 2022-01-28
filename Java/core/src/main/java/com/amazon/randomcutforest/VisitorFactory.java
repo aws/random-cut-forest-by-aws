@@ -24,21 +24,21 @@ import com.amazon.randomcutforest.tree.ITree;
  * mapping a (tree,point) pair to a visitor and a mapping for the inverse result
  */
 public class VisitorFactory<R> implements IVisitorFactory<R> {
-    private final BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor;
+    private final BiFunction<ITree<?, ?>, float[], Visitor<R>> newVisitor;
     private final BiFunction<ITree<?, ?>, R, R> liftResult;
 
-    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor,
+    public VisitorFactory(BiFunction<ITree<?, ?>, float[], Visitor<R>> newVisitor,
             BiFunction<ITree<?, ?>, R, R> liftResult) {
         this.newVisitor = newVisitor;
         this.liftResult = liftResult;
     }
 
-    public VisitorFactory(BiFunction<ITree<?, ?>, double[], Visitor<R>> newVisitor) {
+    public VisitorFactory(BiFunction<ITree<?, ?>, float[], Visitor<R>> newVisitor) {
         this(newVisitor, (tree, x) -> x);
     }
 
     @Override
-    public Visitor<R> newVisitor(ITree<?, ?> tree, double[] point) {
+    public Visitor<R> newVisitor(ITree<?, ?> tree, float[] point) {
         return newVisitor.apply(tree, point);
     }
 

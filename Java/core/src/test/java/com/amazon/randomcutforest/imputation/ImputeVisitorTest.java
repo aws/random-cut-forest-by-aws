@@ -17,6 +17,8 @@ package com.amazon.randomcutforest.imputation;
 
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreSeenFunction;
 import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +38,7 @@ import com.amazon.randomcutforest.tree.NodeView;
 
 public class ImputeVisitorTest {
 
-    private double[] queryPoint;
+    private float[] queryPoint;
     private int numberOfMissingValues;
     private int[] missingIndexes;
     private ImputeVisitor visitor;
@@ -47,7 +49,7 @@ public class ImputeVisitorTest {
         // The second value of queryPoint and the 2nd and 3rd values of missingIndexes
         // should be ignored in all tests
 
-        queryPoint = new double[] { -1.0, 1000.0, 3.0 };
+        queryPoint = new float[] { -1.0f, 1000.0f, 3.0f };
         numberOfMissingValues = 1;
         missingIndexes = new int[] { 1, 99, -888 };
 
@@ -56,7 +58,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testNew() {
-        assertArrayEquals(queryPoint, visitor.getResult());
+        assertArrayEquals(toDoubleArray(queryPoint), visitor.getResult());
         assertNotSame(queryPoint, visitor.getResult());
         assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
@@ -64,14 +66,14 @@ public class ImputeVisitorTest {
     @Test
     public void testCopyConstructor() {
         ImputeVisitor copy = new ImputeVisitor(visitor);
-        assertArrayEquals(queryPoint, copy.getResult());
+        assertArrayEquals(toDoubleArray(queryPoint), copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
         assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = { queryPoint[0], 2.0, queryPoint[2] };
+        float[] point = { queryPoint[0], 2.0f, queryPoint[2] };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getLiftedLeafPoint()).thenReturn(point);
@@ -91,7 +93,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testAcceptLeafEqualsZeroDepth() {
-        double[] point = { queryPoint[0], 2.0, queryPoint[2] };
+        float[] point = { queryPoint[0], 2.0f, queryPoint[2] };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getLiftedLeafPoint()).thenReturn(point);
@@ -111,7 +113,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = { queryPoint[0], 2.0, -111.11 };
+        float[] point = { queryPoint[0], 2.0f, -111.11f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getLiftedLeafPoint()).thenReturn(point);
@@ -122,8 +124,8 @@ public class ImputeVisitorTest {
 
         visitor.acceptLeaf(leafNode, leafDepth);
 
-        double[] expected = new double[] { -1.0, 2.0, 3.0 };
-        assertArrayEquals(expected, visitor.getResult());
+        float[] expected = new float[] { -1.0f, 2.0f, 3.0f };
+        assertArrayEquals(toDoubleArray(expected), visitor.getResult());
 
         assertEquals(defaultScoreUnseenFunction(leafDepth, leafMass), visitor.getAnomalyRank());
     }
@@ -131,7 +133,7 @@ public class ImputeVisitorTest {
     @Test
     public void testAccept() {
 
-        double[] point = { queryPoint[0], 2.0, -111.11 };
+        float[] point = { queryPoint[0], 2.0f, -111.11f };
         INodeView node = mock(NodeView.class);
         when(node.getLeafPoint()).thenReturn(point);
         when(node.getLiftedLeafPoint()).thenReturn(point);
@@ -148,7 +150,7 @@ public class ImputeVisitorTest {
         assertEquals(defaultScoreUnseenFunction(depth, leafMass), visitor.getAnomalyRank());
 
         depth--;
-        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 99.0, 4.0, -19.0 });
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new float[] { 99.0f, 4.0f, -19.0f });
         when(node.getBoundingBox()).thenReturn(boundingBox);
         when(node.getMass()).thenReturn(leafMass + 2);
 
@@ -156,7 +158,7 @@ public class ImputeVisitorTest {
         visitor.accept(node, depth);
         assertArrayEquals(expected, visitor.getResult());
 
-        double p = CommonUtils.getProbabilityOfSeparation(boundingBox, expected);
+        double p = CommonUtils.getProbabilityOfSeparation(boundingBox, toFloatArray(expected));
         double expectedRank = p * defaultScoreUnseenFunction(depth, node.getMass()) + (1 - p) * oldRank;
         assertEquals(expectedRank, visitor.getAnomalyRank(), EPSILON);
     }
@@ -164,29 +166,29 @@ public class ImputeVisitorTest {
     @Test
     public void testNewCopy() {
         ImputeVisitor copy = (ImputeVisitor) visitor.newCopy();
-        assertArrayEquals(queryPoint, copy.getResult());
+        assertArrayEquals(toDoubleArray(queryPoint), copy.getResult());
         assertNotSame(copy.getResult(), visitor.getResult());
         assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
     }
 
     @Test
     public void testMerge() {
-        double[] otherPoint = new double[] { 99, 100, 101 };
+        float[] otherPoint = new float[] { 99, 100, 101 };
         ImputeVisitor other = new ImputeVisitor(otherPoint, 0, new int[0]);
 
         // set other.rank to a small value
         NodeView node = mock(NodeView.class);
-        when(node.getLeafPoint()).thenReturn(new double[] { 0, 0, 0 });
-        when(node.getLiftedLeafPoint()).thenReturn(new double[] { 0, 0, 0 });
-        when(node.getBoundingBox()).thenReturn(new BoundingBox(new double[] { 0, 0, 0 }));
+        when(node.getLeafPoint()).thenReturn(new float[] { 0, 0, 0 });
+        when(node.getLiftedLeafPoint()).thenReturn(new float[] { 0, 0, 0 });
+        when(node.getBoundingBox()).thenReturn(new BoundingBox(new float[] { 0, 0, 0 }));
         other.acceptLeaf(node, 99);
 
         assertTrue(other.getAnomalyRank() < visitor.getAnomalyRank());
 
         other.combine(visitor);
-        assertArrayEquals(otherPoint, other.getResult());
+        assertArrayEquals(toDoubleArray(otherPoint), other.getResult());
 
         visitor.combine(other);
-        assertArrayEquals(otherPoint, visitor.getResult());
+        assertArrayEquals(toDoubleArray(otherPoint), visitor.getResult());
     }
 }

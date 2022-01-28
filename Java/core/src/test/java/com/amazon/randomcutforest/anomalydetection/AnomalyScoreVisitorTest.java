@@ -41,7 +41,7 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testNew() {
-        double[] point = new double[] { 1.0, 2.0 };
+        float[] point = new float[] { 1.0f, 2.0f };
         int sampleSize = 9;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, sampleSize);
 
@@ -57,7 +57,7 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testNewWithIgnoreOptions() {
-        double[] point = new double[] { 1.0, 2.0 };
+        float[] point = new float[] { 1.0f, 2.0f };
         int sampleSize = 9;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, sampleSize, 7);
 
@@ -73,7 +73,7 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testAcceptLeafEquals() {
-        double[] point = { 1.0, 2.0, 3.0 };
+        float[] point = { 1.0f, 2.0f, 3.0f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(point);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(point, point));
@@ -102,8 +102,8 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testAcceptLeafNotEquals() {
-        double[] point = new double[] { 1.0, 2.0, 3.0 };
-        double[] anotherPoint = new double[] { 4.0, 5.0, 6.0 };
+        float[] point = new float[] { 1.0f, 2.0f, 3.0f };
+        float[] anotherPoint = new float[] { 4.0f, 5.0f, 6.0f };
         INodeView leafNode = mock(NodeView.class);
         when(leafNode.getLeafPoint()).thenReturn(anotherPoint);
         when(leafNode.getBoundingBox()).thenReturn(new BoundingBox(anotherPoint, anotherPoint));
@@ -120,11 +120,11 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testAcceptEqualsLeafPoint() {
-        double[] pointToScore = { 0.0, 0.0 };
+        float[] pointToScore = { 0.0f, 0.0f };
         int sampleSize = 50;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(pointToScore, sampleSize);
 
-        double[] point = Arrays.copyOf(pointToScore, pointToScore.length);
+        float[] point = Arrays.copyOf(pointToScore, pointToScore.length);
         INodeView node = mock(NodeView.class);
         when(node.getLeafPoint()).thenReturn(point);
         when(node.getBoundingBox()).thenReturn(new BoundingBox(point, point));
@@ -137,14 +137,14 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 1.0, 1.0 });
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new float[] { 1.0f, 1.0f });
         node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         assertThat(visitor.getResult(),
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        boundingBox = boundingBox.getMergedBox(new double[] { -1.0, -1.0 });
+        boundingBox = boundingBox.getMergedBox(new float[] { -1.0f, -1.0f });
         node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         assertThat(visitor.getResult(),
@@ -153,12 +153,12 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testAccept() {
-        double[] pointToScore = new double[] { 0.0, 0.0 };
+        float[] pointToScore = new float[] { 0.0f, 0.0f };
         int sampleSize = 50;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(pointToScore, sampleSize);
 
         INodeView node = mock(NodeView.class);
-        double[] otherPoint = new double[] { 1.0, 1.0 };
+        float[] otherPoint = new float[] { 1.0f, 1.0f };
         when(node.getLeafPoint()).thenReturn(otherPoint);
         when(node.getBoundingBox()).thenReturn(new BoundingBox(otherPoint, otherPoint));
         int depth = 4;
@@ -168,7 +168,7 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new double[] { 2.0, 0.0 });
+        IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new float[] { 2.0f, 0.0f });
         when(node.getBoundingBox()).thenReturn(boundingBox);
 
         visitor.accept(node, depth);
@@ -178,7 +178,7 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        boundingBox = boundingBox.getMergedBox(new double[] { -1.0, 0.0 });
+        boundingBox = boundingBox.getMergedBox(new float[] { -1.0f, 0.0f });
 
         when(node.getBoundingBox()).thenReturn(boundingBox);
         visitor.accept(node, depth);
@@ -188,7 +188,7 @@ public class AnomalyScoreVisitorTest {
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, sampleSize), EPSILON));
 
         depth--;
-        boundingBox = boundingBox.getMergedBox(new double[] { -1.0, -1.0 });
+        boundingBox = boundingBox.getMergedBox(new float[] { -1.0f, -1.0f });
         node = new NodeView(null, null, Null);
         visitor.accept(node, depth);
         p = visitor.getProbabilityOfSeparation(boundingBox);
@@ -199,12 +199,12 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void testGetProbabilityOfSeparation() {
-        double[] minPoint = { 0.0, 0.0, 0.0 };
-        double[] maxPoint = { 1.0, 2.0, 3.0 };
-        BoundingBox boundingBox = new BoundingBox(minPoint);
+        float[] minPoint = { 0.0f, 0.0f, 0.0f };
+        float[] maxPoint = { 1.0f, 2.0f, 3.0f };
+        IBoundingBoxView boundingBox = new BoundingBox(minPoint);
         boundingBox = boundingBox.getMergedBox(maxPoint);
 
-        double[] point = { 0.5, 0.5, 0.5 };
+        float[] point = { 0.5f, 0.5f, 0.5f };
         int sampleSize = 2;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, sampleSize);
 
@@ -222,7 +222,7 @@ public class AnomalyScoreVisitorTest {
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
 
-        point = new double[] { 2.0, 0.5, 0.5 };
+        point = new float[] { 2.0f, 0.5f, 0.5f };
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         assertThat(p, closeTo(1.0 / (2.0 + 2.0 + 3.0), EPSILON));
@@ -238,7 +238,7 @@ public class AnomalyScoreVisitorTest {
         assertTrue(visitor.coordInsideBox[1]);
         assertTrue(visitor.coordInsideBox[2]);
 
-        point = new double[] { 0.5, -3.0, 4.0 };
+        point = new float[] { 0.5f, -3.0f, 4.0f };
         visitor = new AnomalyScoreVisitor(point, sampleSize);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         assertThat(p, closeTo((3.0 + 1.0) / (1.0 + 5.0 + 4.0), EPSILON));
@@ -257,8 +257,8 @@ public class AnomalyScoreVisitorTest {
 
     @Test
     public void test_getProbabilityOfSeparation_leafNode() {
-        double[] point = new double[] { 1.0, 2.0, 3.0 };
-        double[] leafPoint = Arrays.copyOf(point, point.length);
+        float[] point = new float[] { 1.0f, 2.0f, 3.0f };
+        float[] leafPoint = Arrays.copyOf(point, point.length);
         BoundingBox boundingBox = new BoundingBox(leafPoint);
 
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, 2);

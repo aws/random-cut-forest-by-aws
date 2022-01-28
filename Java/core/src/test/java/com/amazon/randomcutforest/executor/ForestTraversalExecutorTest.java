@@ -82,7 +82,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestBinaryAccumulator(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
         double expectedResult = 0.0;
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -107,7 +107,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestCollector(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
         double[] expectedResult = new double[numberOfTrees];
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -135,7 +135,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestConverging(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
 
         for (int i = 0; i < numberOfTrees; i++) {
             double treeResult = Math.random();
@@ -161,7 +161,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestMultiBinaryAccumulator(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
         double expectedResult = 0.0;
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -186,7 +186,7 @@ public class ForestTraversalExecutorTest {
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
     public void testTraverseForestMultiCollector(AbstractForestTraversalExecutor executor) {
-        double[] point = new double[] { 1.2, -3.4 };
+        float[] point = new float[] { 1.2f, -3.4f };
         double[] expectedResult = new double[numberOfTrees];
 
         for (int i = 0; i < numberOfTrees; i++) {

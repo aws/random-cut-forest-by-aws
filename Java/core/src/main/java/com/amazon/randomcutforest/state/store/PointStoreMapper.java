@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import lombok.Getter;
@@ -99,7 +100,7 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
         state.setInternalShinglingEnabled(model.isInternalShinglingEnabled());
         state.setLastTimeStamp(model.getNextSequenceIndex());
         if (model.isInternalShinglingEnabled()) {
-            state.setInternalShingle(model.getInternalShingle());
+            state.setInternalShingle(toDoubleArray(model.getInternalShingle()));
             state.setRotationEnabled(model.isInternalRotationEnabled());
         }
         state.setDynamicResizingEnabled(true);

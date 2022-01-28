@@ -44,7 +44,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, BinaryOperator<R> accumulator,
             Function<R, S> finisher) {
 
         return submitAndJoin(() -> components.parallelStream().map(c -> c.traverse(point, visitorFactory))
@@ -53,14 +53,14 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         return submitAndJoin(
                 () -> components.parallelStream().map(c -> c.traverse(point, visitorFactory)).collect(collector));
     }
 
     @Override
-    public <R, S> S traverseForest(double[] point, IVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory,
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         for (int i = 0; i < components.size(); i += threadPoolSize) {
@@ -80,7 +80,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         return submitAndJoin(() -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory))
@@ -89,7 +89,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
     }
 
     @Override
-    public <R, S> S traverseForestMulti(double[] point, IMultiVisitorFactory<R> visitorFactory,
+    public <R, S> S traverseForestMulti(float[] point, IMultiVisitorFactory<R> visitorFactory,
             Collector<R, ?, S> collector) {
 
         return submitAndJoin(
