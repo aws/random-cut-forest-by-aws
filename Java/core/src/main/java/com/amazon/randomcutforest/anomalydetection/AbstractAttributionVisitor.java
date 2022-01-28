@@ -31,11 +31,11 @@ import com.amazon.randomcutforest.tree.INodeView;
  * duplicate points seen by the forest, so that the attribution does not change
  * is a sequence of duplicate points are seen. For non-duplicate points, if the
  * boolean turned on, reduces effects of masking (when anomalous points are
- * included in the forest (which will be true with a few samples or when the
+ * included in the forest -- which will be true with a few samples or when the
  * samples are not refreshed appropriately). It is worth remembering that
- * disallowing anomalous points from being included in the forest forest
- * explicitly will render the algorithm incapable of adjusting to a new normal
- * -- which is a strength of this algorithm.
+ * disallowing anomalous points from being included in the forest explicitly
+ * will render the algorithm incapable of adjusting to a new normal -- which is
+ * a strength of this algorithm.
  **/
 public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
 
@@ -264,5 +264,10 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
                 coordInsideBox[i] = true;
             }
         }
+    }
+
+    @Override
+    public boolean hasConverged() {
+        return pointInsideBox;
     }
 }

@@ -54,4 +54,8 @@ public interface Visitor<R> {
      * @return the result value computed by the visitor.
      */
     R getResult();
+
+    default boolean hasConverged() {
+        return false;
+    };
 }

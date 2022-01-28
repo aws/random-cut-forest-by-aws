@@ -105,4 +105,10 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
     public Optional<Neighbor> getResult() {
         return Optional.ofNullable(neighbor);
     }
+
+    @Override
+    public boolean hasConverged() {
+        return true;
+    }
+
 }

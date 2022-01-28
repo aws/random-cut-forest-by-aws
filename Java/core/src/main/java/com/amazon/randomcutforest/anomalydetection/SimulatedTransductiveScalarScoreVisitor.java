@@ -78,4 +78,8 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
     // weight
     // computation and when the weight function is used.
 
+    @Override
+    public boolean hasConverged() {
+        return false;
+    }
 }

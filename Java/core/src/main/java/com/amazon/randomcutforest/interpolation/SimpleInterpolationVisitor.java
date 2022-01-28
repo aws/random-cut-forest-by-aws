@@ -247,4 +247,9 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
         return 1.0;
     }
 
+    @Override
+    public boolean hasConverged() {
+        return pointInsideBox;
+    }
+
 }

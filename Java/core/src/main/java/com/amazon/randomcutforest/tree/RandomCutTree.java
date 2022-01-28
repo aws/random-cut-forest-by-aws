@@ -24,8 +24,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Stack;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import com.amazon.randomcutforest.IMultiVisitorFactory;
 import com.amazon.randomcutforest.IVisitorFactory;
@@ -316,16 +314,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             nodeStore.manageAncestorsDelete(pathToRoot, point, pointStoreView);
         }
         return leafPointIndex;
-    }
-
-    public double scalarScore(float[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
-            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
-            BiFunction<Double, Double, Double> normalizer) {
-        Function<Double, Double> treeDamp = x -> damp.apply(x, getMass() * 1.0);
-
-        return normalizer.apply(
-                nodeStore.dynamicScore(root, ignoreMass, point, pointStoreView, scoreSeen, scoreUnseen, treeDamp),
-                getMass() * 1.0);
     }
 
     /**
