@@ -15,10 +15,9 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import java.util.List;
+import java.util.Random;
+
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,8 +31,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.List;
-import java.util.Random;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
@@ -58,7 +59,7 @@ public class RandomCutForestShingledBenchmark {
         @Param({ "1.0", "0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0.0" })
         double boundingBoxCacheFraction;
 
-        @Param({ "false" })
+        @Param({ "false", "true" })
         boolean parallel;
 
         double[][] data;

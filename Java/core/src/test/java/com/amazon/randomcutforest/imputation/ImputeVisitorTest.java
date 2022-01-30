@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -152,6 +153,8 @@ public class ImputeVisitorTest {
         depth--;
         IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new float[] { 99.0f, 4.0f, -19.0f });
         when(node.getBoundingBox()).thenReturn(boundingBox);
+        when(node.probailityOfSeparation(any()))
+                .thenReturn(CommonUtils.getProbabilityOfSeparation(boundingBox, toFloatArray(expected)));
         when(node.getMass()).thenReturn(leafMass + 2);
 
         double oldRank = visitor.getAnomalyRank();

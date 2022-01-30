@@ -47,10 +47,10 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "40" })
+        @Param({ "5" })
         int baseDimensions;
 
-        @Param({ "1" })
+        @Param({ "8" })
         int shingleSize;
 
         @Param({ "30" })
@@ -59,7 +59,7 @@ public class RandomCutForestBenchmark {
         @Param({ "1.0", "0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0.0" })
         double boundingBoxCacheFraction;
 
-        @Param({ "false" })
+        @Param({ "false", "true" })
         boolean parallel;
 
         double[][] data;
