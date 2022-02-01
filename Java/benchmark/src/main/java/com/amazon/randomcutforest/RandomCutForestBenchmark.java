@@ -15,9 +15,10 @@
 
 package com.amazon.randomcutforest;
 
-import java.util.List;
-import java.util.Random;
-
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -31,10 +32,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.List;
+import java.util.Random;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
@@ -187,13 +186,13 @@ public class RandomCutForestBenchmark {
     }
 
     @Benchmark
-    @OperationsPerInvocation(100)
+    @OperationsPerInvocation(DATA_SIZE)
     public RandomCutForest basicExtrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         double[] output = null;
 
-        for (int i = INITIAL_DATA_SIZE; i < INITIAL_DATA_SIZE + 100; i++) {
+        for (int i = INITIAL_DATA_SIZE; i < data.length; i++) {
             output = forest.extrapolate(1);
             forest.update(data[i]);
         }

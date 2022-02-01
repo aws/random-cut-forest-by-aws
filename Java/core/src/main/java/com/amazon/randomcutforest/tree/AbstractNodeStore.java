@@ -15,17 +15,17 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.store.IPointStoreView;
+import com.amazon.randomcutforest.store.IndexIntervalManager;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.function.Function;
 
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.store.IPointStoreView;
-import com.amazon.randomcutforest.store.IndexIntervalManager;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -488,10 +488,10 @@ public abstract class AbstractNodeStore {
             checkArgument(isInternal(node), " incomplete state " + node + " " + depthOfNode);
             if (toLeft(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, getLeftIndex(node), depthOfNode + 1);
-                currentNodeView.updateToParent(node, getRightIndex(node), !visitor.hasConverged());
+                currentNodeView.updateToParent(node, getRightIndex(node), !visitor.isConverged());
             } else {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, getRightIndex(node), depthOfNode + 1);
-                currentNodeView.updateToParent(node, getLeftIndex(node), !visitor.hasConverged());
+                currentNodeView.updateToParent(node, getLeftIndex(node), !visitor.isConverged());
             }
             visitor.accept(currentNodeView, depthOfNode);
         }
