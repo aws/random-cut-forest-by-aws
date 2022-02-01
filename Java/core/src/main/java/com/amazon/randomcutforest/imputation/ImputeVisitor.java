@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.imputation;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values
@@ -271,7 +271,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     }
 
     @Override
-    public boolean hasConverged() {
+    public boolean isConverged() {
         return converged;
     }
 }
