@@ -15,13 +15,13 @@
 
 package com.amazon.randomcutforest.interpolation;
 
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.Arrays;
 
 /**
  * A Visitor which computes several geometric measures that related a given
@@ -245,6 +245,11 @@ public class SimpleInterpolationVisitor implements Visitor<InterpolationMeasure>
 
     double selfInfluence(INodeView leafnode, double mass) {
         return 1.0;
+    }
+
+    @Override
+    public boolean isConverged() {
+        return pointInsideBox;
     }
 
 }

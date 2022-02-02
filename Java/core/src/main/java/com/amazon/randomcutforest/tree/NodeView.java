@@ -71,6 +71,11 @@ public class NodeView implements INodeView {
         }
     }
 
+    @Override
+    public double probailityOfSeparation(float[] point) {
+        return nodeStore.probabilityOfCut(currentNodeOffset, point, pointStoreView, currentBox);
+    }
+
     public boolean isLeaf() {
         return nodeStore.isLeaf(currentNodeOffset);
     }
@@ -78,6 +83,9 @@ public class NodeView implements INodeView {
     protected void setCurrentNode(int newNode, int index, boolean setBox) {
         currentNodeOffset = newNode;
         leafPoint = pointStoreView.get(index);
+        if (setBox && nodeStore.boundingboxCacheFraction < AbstractNodeStore.SWITCH_FRACTION) {
+            currentBox = new BoundingBox(leafPoint, leafPoint);
+        }
     }
 
     protected void setCurrentNodeOnly(int newNode) {
@@ -86,6 +94,9 @@ public class NodeView implements INodeView {
 
     public void updateToParent(int parent, int currentSibling, boolean updateBox) {
         currentNodeOffset = parent;
+        if (updateBox && nodeStore.boundingboxCacheFraction < AbstractNodeStore.SWITCH_FRACTION) {
+            nodeStore.growNodeBox(currentBox, pointStoreView, parent, currentSibling);
+        }
     }
 
     // this function exists for matching the behavior of RCF2.0 and will be replaced

@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.Arrays;
 
 /**
  * This abstract visitor encodes a standard method for computing a scalar result
@@ -152,7 +152,7 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
         }
         double probabilityOfSeparation;
         if (!ignoreLeafEquals) {
-            probabilityOfSeparation = getProbabilityOfSeparation(node.getBoundingBox());
+            probabilityOfSeparation = node.probailityOfSeparation(pointToScore);
             if (probabilityOfSeparation <= 0) {
                 pointInsideBox = true;
                 return;
@@ -266,4 +266,9 @@ public abstract class AbstractScalarScoreVisitor implements Visitor<Double> {
 
         return sumOfDifferenceInRange / sumOfNewRange;
     }
+
+    public boolean isConverged() {
+        return pointInsideBox;
+    }
+
 }

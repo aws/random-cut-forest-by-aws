@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.imputation;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values
@@ -75,6 +75,8 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * over entire range ( = 0.0 )
      */
     protected double centrality;
+
+    protected boolean converged;
 
     /**
      * Create a new ImputeVisitor.
@@ -146,12 +148,13 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     public void accept(final INodeView node, final int depthOfNode) {
 
-        double probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(node.getBoundingBox(), queryPoint);
+        double probabilityOfSeparation = node.probailityOfSeparation(queryPoint);
 
         if (probabilityOfSeparation <= 0) {
             return;
         }
 
+        converged = (probabilityOfSeparation == 0);
         anomalyRank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
                 + (1 - probabilityOfSeparation) * anomalyRank;
     }
@@ -183,8 +186,8 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
             }
         }
         distance = Math.sqrt(squaredDistance);
-        double probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(leafNode.getBoundingBox(), queryPoint);
-        if (probabilityOfSeparation <= 0) {
+        if (distance <= 0) {
+            converged = true;
             if (depthOfNode == 0) {
                 anomalyRank = 0;
             } else {
@@ -255,6 +258,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         System.arraycopy(visitor.queryPoint, 0, queryPoint, 0, queryPoint.length);
         System.arraycopy(visitor.liftedPoint, 0, liftedPoint, 0, liftedPoint.length);
         anomalyRank = visitor.anomalyRank;
+        converged = visitor.converged;
         distance = visitor.distance;
     }
 
@@ -264,5 +268,10 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
 
     protected double scoreUnseen(int depth, int mass) {
         return CommonUtils.defaultScoreUnseenFunction(depth, mass);
+    }
+
+    @Override
+    public boolean isConverged() {
+        return converged;
     }
 }

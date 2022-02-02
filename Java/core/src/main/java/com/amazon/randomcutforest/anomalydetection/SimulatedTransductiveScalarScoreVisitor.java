@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
+
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarScoreVisitor {
 
@@ -78,4 +78,8 @@ public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarS
     // weight
     // computation and when the weight function is used.
 
+    @Override
+    public boolean isConverged() {
+        return false;
+    }
 }

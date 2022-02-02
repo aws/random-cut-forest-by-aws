@@ -15,18 +15,17 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Stack;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
 import com.amazon.randomcutforest.MultiVisitor;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.store.IPointStoreView;
 import com.amazon.randomcutforest.store.IndexIntervalManager;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Stack;
+import java.util.function.Function;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is
@@ -448,74 +447,6 @@ public abstract class AbstractNodeStore {
 
     public abstract void replaceParentBySibling(int grandParent, int parent, int node);
 
-    public double dynamicScore(int root, int ignoreMass, float[] point, IPointStoreView<float[]> pointStoreView,
-            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen,
-            Function<Double, Double> treeDamp) {
-        if (root == Null) {
-            return 0.0;
-        }
-        BoundingBox boundingBox = null;
-        if (boundingboxCacheFraction < SWITCH_FRACTION || ignoreMass > 0) {
-            float[] fakePoint = new float[point.length];
-            boundingBox = new BoundingBox(fakePoint, fakePoint);
-        }
-        return scoreScalar(root, 0, boundingBox, ignoreMass, point, pointStoreView, scoreSeen, scoreUnseen,
-                treeDamp)[1];
-    }
-
-    public double[] scoreScalar(int node, int depth, BoundingBox box, int ignoreMass, float[] point,
-            IPointStoreView<float[]> pointStoreView, BiFunction<Double, Double, Double> scoreSeen,
-            BiFunction<Double, Double, Double> scoreUnseen, Function<Double, Double> treeDamp) {
-        if (isLeaf(node)) {
-            double mass = getMass(node);
-            float[] oldPoint = pointStoreView.get(getPointIndex(node));
-            int ignoreFlag = (mass > ignoreMass) ? 1 : 0;
-            if (box != null) {
-                box.replaceBox(oldPoint);
-            }
-            if (Arrays.equals(point, oldPoint) && ignoreFlag == 1) {
-                return new double[] { 0.0, treeDamp.apply(mass) * scoreSeen.apply(depth * 1.0, mass), ignoreFlag };
-            } else {
-                return new double[] { 1.0, scoreUnseen.apply(1.0 * depth, mass), ignoreFlag };
-            }
-        }
-        checkArgument(isInternal(node), " incomplete state" + depth + " " + node);
-        double[] answer;
-        if (leftOf(node, point)) {
-            answer = scoreScalar(getLeftIndex(node), depth + 1, box, ignoreMass, point, pointStoreView, scoreSeen,
-                    scoreUnseen, treeDamp);
-            if (answer[0] != 0.0 && box != null) {
-                if (answer[2] == 1) {
-                    growNodeBox(box, pointStoreView, node, getRightIndex(node));
-                } else {
-                    box.copyFrom(getBox(getRightIndex(node)));
-                    answer[2] = 1;
-                }
-            }
-        } else {
-            answer = scoreScalar(getRightIndex(node), depth + 1, box, ignoreMass, point, pointStoreView, scoreSeen,
-                    scoreUnseen, treeDamp);
-            if (answer[0] != 0.0 && box != null) {
-                if (answer[2] == 1) {
-                    growNodeBox(box, pointStoreView, node, getLeftIndex(node));
-                } else {
-                    box.copyFrom(getBox(getLeftIndex(node)));
-                    answer[2] = 1;
-                }
-            }
-        }
-
-        if (answer[0] == 0.0) {
-            return answer;
-        }
-
-        double prob = (ignoreMass == 0) ? probabilityOfCut(node, point, pointStoreView, box)
-                : box.probabilityOfCut(point);
-        answer[0] = prob;
-        answer[1] = answer[1] * (1.0 - prob) + prob * scoreUnseen.apply(1.0 * depth, 1.0 * getMass(node));
-        return answer;
-    }
-
     public HashMap<Integer, HashMap<Long, Integer>> getSequenceMap() {
         return sequenceMap;
     }
@@ -551,16 +482,16 @@ public abstract class AbstractNodeStore {
     protected <R> void traversePathToLeafAndVisitNodes(float[] point, Visitor<R> visitor, NodeView currentNodeView,
             int node, int depthOfNode) {
         if (isLeaf(node)) {
-            currentNodeView.setCurrentNode(node, getPointIndex(node), false);
+            currentNodeView.setCurrentNode(node, getPointIndex(node), true);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
             checkArgument(isInternal(node), " incomplete state " + node + " " + depthOfNode);
             if (toLeft(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, getLeftIndex(node), depthOfNode + 1);
-                currentNodeView.updateToParent(node, getRightIndex(node), false);
+                currentNodeView.updateToParent(node, getRightIndex(node), !visitor.isConverged());
             } else {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, getRightIndex(node), depthOfNode + 1);
-                currentNodeView.updateToParent(node, getLeftIndex(node), false);
+                currentNodeView.updateToParent(node, getLeftIndex(node), !visitor.isConverged());
             }
             visitor.accept(currentNodeView, depthOfNode);
         }
@@ -610,10 +541,6 @@ public abstract class AbstractNodeStore {
 
     public int getCapacity() {
         return capacity;
-    }
-
-    public boolean isCanonicalAndNotALeaf() {
-        return false;
     }
 
     public int size() {

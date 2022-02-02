@@ -18,7 +18,7 @@ package com.amazon.randomcutforest;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -39,7 +39,7 @@ import java.util.Random;
 @Measurement(iterations = 5)
 @Fork(value = 1)
 @State(Scope.Thread)
-public class RandomCutForestBenchmark {
+public class RandomCutForestShingledBenchmark {
 
     public final static int DATA_SIZE = 50_000;
     public final static int INITIAL_DATA_SIZE = 25_000;
@@ -66,9 +66,8 @@ public class RandomCutForestBenchmark {
 
         @Setup(Level.Trial)
         public void setUpData() {
-            int dimensions = baseDimensions * shingleSize;
-            NormalMixtureTestData gen = new NormalMixtureTestData();
-            data = gen.generateTestData(INITIAL_DATA_SIZE + DATA_SIZE, dimensions);
+            data = ShingledMultiDimDataWithKeys.getMultiDimData(DATA_SIZE + INITIAL_DATA_SIZE, 50, 100, 5, 17,
+                    baseDimensions).data;
         }
 
         @Setup(Level.Invocation)
@@ -77,7 +76,7 @@ public class RandomCutForestBenchmark {
                     .internalShinglingEnabled(true).shingleSize(shingleSize).parallelExecutionEnabled(parallel)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).randomSeed(99).build();
 
-            for (int i = 0; i < INITIAL_DATA_SIZE; i++) {
+            for (int i = INITIAL_DATA_SIZE; i < data.length; i++) {
                 forest.update(data[i]);
             }
         }

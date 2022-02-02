@@ -39,4 +39,6 @@ public interface INodeView {
 
     HashMap<Long, Integer> getSequenceIndexes();
 
+    double probailityOfSeparation(float[] point);
+
 }

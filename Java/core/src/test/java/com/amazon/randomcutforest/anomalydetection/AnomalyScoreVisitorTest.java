@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -157,7 +158,7 @@ public class AnomalyScoreVisitorTest {
         int sampleSize = 50;
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(pointToScore, sampleSize);
 
-        INodeView node = mock(NodeView.class);
+        NodeView node = mock(NodeView.class);
         float[] otherPoint = new float[] { 1.0f, 1.0f };
         when(node.getLeafPoint()).thenReturn(otherPoint);
         when(node.getBoundingBox()).thenReturn(new BoundingBox(otherPoint, otherPoint));
@@ -170,7 +171,7 @@ public class AnomalyScoreVisitorTest {
         depth--;
         IBoundingBoxView boundingBox = node.getBoundingBox().getMergedBox(new float[] { 2.0f, 0.0f });
         when(node.getBoundingBox()).thenReturn(boundingBox);
-
+        when(node.probailityOfSeparation(any())).thenReturn(1.0 / 3);
         visitor.accept(node, depth);
         double p = visitor.getProbabilityOfSeparation(boundingBox);
         expectedScore = p * (1.0 / (depth + 1)) + (1 - p) * expectedScore;
@@ -181,6 +182,7 @@ public class AnomalyScoreVisitorTest {
         boundingBox = boundingBox.getMergedBox(new float[] { -1.0f, 0.0f });
 
         when(node.getBoundingBox()).thenReturn(boundingBox);
+        when(node.probailityOfSeparation(any())).thenReturn(0.0);
         visitor.accept(node, depth);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         expectedScore = p * (1.0 / (depth + 1)) + (1 - p) * expectedScore;
@@ -189,7 +191,7 @@ public class AnomalyScoreVisitorTest {
 
         depth--;
         boundingBox = boundingBox.getMergedBox(new float[] { -1.0f, -1.0f });
-        node = new NodeView(null, null, Null);
+        when(node.probailityOfSeparation(any())).thenReturn(0.0);
         visitor.accept(node, depth);
         p = visitor.getProbabilityOfSeparation(boundingBox);
         assertThat(visitor.getResult(),

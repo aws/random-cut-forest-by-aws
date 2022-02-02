@@ -1578,29 +1578,4 @@ public class RandomCutForest {
         return traverseForest(transformToShingledPoint(point), visitorFactory, accumulator, finisher);
     }
 
-    public double dynamicScore(float[] point) {
-        return dynamicScore(point, 0, CommonUtils::defaultScoreSeenFunction, CommonUtils::defaultScoreUnseenFunction,
-                CommonUtils::defaultDampFunction, CommonUtils::defaultScalarNormalizerFunction);
-    }
-
-    public double dynamicScore(float[] point, int ignoreMass, BiFunction<Double, Double, Double> scoreSeen,
-            BiFunction<Double, Double, Double> scoreUnseen, BiFunction<Double, Double, Double> damp,
-            BiFunction<Double, Double, Double> normalizer) {
-        double result = 0;
-        float[] changedPoint = transformToShingledPoint(point);
-
-        if (parallelExecutionEnabled) {
-            result = updateExecutor.getComponents().parallelStream()
-                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
-                            normalizer))
-                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
-        } else {
-            result = updateExecutor.getComponents().stream()
-                    .map(x -> ((SamplerPlusTree) x).scalarScore(changedPoint, ignoreMass, scoreSeen, scoreUnseen, damp,
-                            normalizer))
-                    .reduce(Double::sum).orElseThrow(() -> new IllegalStateException("trees returned an empty result"));
-        }
-        return result / numberOfTrees;
-
-    }
 }
