@@ -41,4 +41,6 @@ public interface INodeView {
 
     double probailityOfSeparation(float[] point);
 
+    int getLeafPointIndex();
+
 }

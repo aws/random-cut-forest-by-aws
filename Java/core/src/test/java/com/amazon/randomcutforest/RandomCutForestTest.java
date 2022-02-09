@@ -41,7 +41,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -497,7 +496,7 @@ public class RandomCutForestTest {
         float[] point = { 12.3f, -45.6f };
         int[] missingIndexes = { 1, 1000 }; // second value doesn't matter since numberOfMissingValues is 1o
 
-        double[] result = forest.imputeMissingValues(point, 0, missingIndexes);
+        double[] result = forest.imputeMissingValues(toDoubleArray(point), 0, missingIndexes);
         assertArrayEquals(new double[] { 0.0, 0.0 }, result);
     }
 
@@ -510,74 +509,6 @@ public class RandomCutForestTest {
         assertFalse(forest.isOutputReady());
         double[] zero = new double[dimensions];
         assertArrayEquals(zero, forest.imputeMissingValues(point, numberOfMissingValues, missingIndexes));
-    }
-
-    @Test
-    public void testImputeMissingValuesWithSingleMissingIndex() {
-        List<Double> returnValues = new ArrayList<>();
-        for (int i = 0; i < numberOfTrees; i++) {
-            returnValues.add((double) i);
-        }
-        double expectedResult = returnValues.get(numberOfTrees / 2);
-        Collections.shuffle(returnValues);
-        float[] point = { 12.3f, -45.6f };
-
-        int numberOfMissingValues = 1;
-        int[] missingIndexes = { 1, 999 };
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            SamplerPlusTree<Integer, float[]> component = (SamplerPlusTree<Integer, float[]>) components.get(i);
-            ITree<Integer, float[]> tree = component.getTree();
-            double[] treeResult = toDoubleArray(point);
-            treeResult[missingIndexes[0]] = returnValues.get(i);
-            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
-        }
-
-        doReturn(true).when(forest).isOutputReady();
-        double[] result = forest.imputeMissingValues(point, numberOfMissingValues, missingIndexes);
-
-        for (int j = 0; j < dimensions; j++) {
-            if (j == missingIndexes[0]) {
-                assertEquals(expectedResult, result[j]);
-            } else {
-                assertEquals(point[j], result[j]);
-            }
-        }
-    }
-
-    @Test
-    public void testImputeMissingValuesWithMultipleMissingIndexes() {
-        float[] point = { 12.3f, -45.6f };
-        List<Double> anomalyScores = new ArrayList<>();
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            anomalyScores.add((double) i);
-        }
-
-        double selectScore = anomalyScores.get(numberOfTrees / 4); // 25th percentile score
-        Collections.shuffle(anomalyScores);
-
-        int numberOfMissingValues = 2;
-        int[] missingIndexes = { 1, 0 };
-        double[] expectedResult = null;
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            SamplerPlusTree<Integer, float[]> component = (SamplerPlusTree<Integer, float[]>) components.get(i);
-            ITree<Integer, float[]> tree = component.getTree();
-            double[] treeResult = { Math.random(), Math.random() };
-            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
-
-            double anomalyScore = anomalyScores.get(i);
-            doReturn(anomalyScore).when(forest).getAnomalyScore(aryEq(treeResult));
-            if (anomalyScore == selectScore) {
-                expectedResult = treeResult;
-            }
-        }
-
-        doReturn(true).when(forest).isOutputReady();
-        double[] result = forest.imputeMissingValues(point, numberOfMissingValues, missingIndexes);
-
-        assertArrayEquals(expectedResult, result);
     }
 
     @Test

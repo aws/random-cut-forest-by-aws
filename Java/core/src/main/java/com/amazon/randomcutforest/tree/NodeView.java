@@ -76,6 +76,12 @@ public class NodeView implements INodeView {
         return nodeStore.probabilityOfCut(currentNodeOffset, point, pointStoreView, currentBox);
     }
 
+    @Override
+    public int getLeafPointIndex() {
+        checkArgument(isLeaf(), "incorrect call");
+        return nodeStore.getPointIndex(currentNodeOffset);
+    }
+
     public boolean isLeaf() {
         return nodeStore.isLeaf(currentNodeOffset);
     }

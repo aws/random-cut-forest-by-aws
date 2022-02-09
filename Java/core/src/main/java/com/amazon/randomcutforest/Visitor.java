@@ -56,12 +56,14 @@ public interface Visitor<R> {
     R getResult();
 
     /**
-     * This method short-circuits the evaluation of the Visitor at nodes on the traversal path. By default, the
-     * accept (or acceptLeaf) method will be invoked for each Node in the traversal path. But the NodeView has to prepare
-     * information to support that visitor invocation. Before invocation, the value of isConverged will be checked.
-     * If it is true, some of that preparation can be skipped -- because the visitor would not be upodated.
-     * This method can be overriden to optimize visitors that do not need to visit every node on the root to leaf path
-     * before returning a value.
+     * This method short-circuits the evaluation of the Visitor at nodes on the
+     * traversal path. By default, the accept (or acceptLeaf) method will be invoked
+     * for each Node in the traversal path. But the NodeView has to prepare
+     * information to support that visitor invocation. Before invocation, the value
+     * of isConverged will be checked. If it is true, some of that preparation can
+     * be skipped -- because the visitor would not be upodated. This method can be
+     * overriden to optimize visitors that do not need to visit every node on the
+     * root to leaf path before returning a value.
      **/
     default boolean isConverged() {
         return false;

@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
+import java.util.Arrays;
+
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.Visitor;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.INodeView;
-
-import java.util.Arrays;
 
 /**
  * This abstract visitor encodes a standard method for computing a scalar result

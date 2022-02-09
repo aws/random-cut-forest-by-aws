@@ -15,17 +15,17 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.store.IPointStoreView;
-import com.amazon.randomcutforest.store.IndexIntervalManager;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.store.IPointStoreView;
+import com.amazon.randomcutforest.store.IndexIntervalManager;
 
 /**
  * A fixed-size buffer for storing interior tree nodes. An interior node is

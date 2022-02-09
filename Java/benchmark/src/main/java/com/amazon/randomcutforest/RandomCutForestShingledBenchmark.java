@@ -170,7 +170,7 @@ public class RandomCutForestShingledBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest basicNeighborAndUpdate(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest neighborAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         List<Neighbor> output = null;
@@ -186,7 +186,23 @@ public class RandomCutForestShingledBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest basicExtrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest imputeAndUpdate(BenchmarkState state, Blackhole blackhole) {
+        double[][] data = state.data;
+        forest = state.forest;
+        double[] output = null;
+
+        for (int i = INITIAL_DATA_SIZE; i < data.length; i++) {
+            output = forest.imputeMissingValues(data[i], 1, new int[] { state.baseDimensions - 1 });
+            forest.update(data[i]);
+        }
+
+        blackhole.consume(output);
+        return forest;
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(DATA_SIZE)
+    public RandomCutForest extrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         double[] output = null;

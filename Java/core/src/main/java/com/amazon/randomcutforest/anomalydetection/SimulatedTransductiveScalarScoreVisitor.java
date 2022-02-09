@@ -15,11 +15,11 @@
 
 package com.amazon.randomcutforest.anomalydetection;
 
-import com.amazon.randomcutforest.tree.IBoundingBoxView;
-import com.amazon.randomcutforest.tree.INodeView;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import com.amazon.randomcutforest.tree.IBoundingBoxView;
+import com.amazon.randomcutforest.tree.INodeView;
 
 public class SimulatedTransductiveScalarScoreVisitor extends TransductiveScalarScoreVisitor {
 

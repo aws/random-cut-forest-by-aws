@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.imputation;
 
-import com.amazon.randomcutforest.CommonUtils;
-import com.amazon.randomcutforest.MultiVisitor;
-import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
-import com.amazon.randomcutforest.tree.INodeView;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import com.amazon.randomcutforest.CommonUtils;
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.anomalydetection.AnomalyScoreVisitor;
+import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
+import com.amazon.randomcutforest.tree.BoundingBox;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * A MultiVisitor which imputes missing values in a point. The missing values
@@ -32,7 +33,7 @@ import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
  * MultiVisitor, we keep the imputed values with a lower rank, where the rank
  * value is the anomaly score for the imputed point.
  */
-public class ImputeVisitor implements MultiVisitor<double[]> {
+public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
 
     // default large values for initialization; consider -ve log( 0 )
     public static double DEFAULT_INIT_VALUE = Double.MAX_VALUE / 4;
@@ -43,21 +44,10 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     protected final boolean[] missing;
 
     /**
-     * an array that helps indicate the missing entires in the forest space
-     */
-    protected final boolean[] liftedMissing;
-
-    /**
      * the query point in the tree space, where the missing entries (in tree space)
      * would be overwritten
      */
     protected float[] queryPoint;
-
-    /**
-     * the query point in the forest space, where the missing entries (in forest
-     * space) would be overwritten
-     */
-    protected float[] liftedPoint;
 
     /**
      * the unnormalized anomaly score of a point, should be interpreted as -ve
@@ -78,6 +68,12 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
 
     protected boolean converged;
 
+    protected int pointIndex;
+
+    protected int[] dimensionsUsed;
+
+    protected BoundingBox box;
+
     /**
      * Create a new ImputeVisitor.
      *
@@ -89,11 +85,10 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     public ImputeVisitor(float[] liftedPoint, float[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
             double centrality) {
-        this.liftedPoint = Arrays.copyOf(liftedPoint, liftedPoint.length);
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.missing = new boolean[queryPoint.length];
-        this.liftedMissing = new boolean[liftedPoint.length];
         this.centrality = centrality;
+        this.dimensionsUsed = new int[queryPoint.length];
 
         if (missingIndexes == null) {
             missingIndexes = new int[0];
@@ -104,13 +99,6 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
                     "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
 
             missing[missingIndexes[i]] = true;
-        }
-
-        for (int i = 0; i < liftedMissingIndexes.length; i++) {
-            checkArgument(0 <= liftedMissingIndexes[i] && liftedMissingIndexes[i] < liftedPoint.length,
-                    "Missing value indexes must be between 0 (inclusive) and liftedPoint.length (exclusive)");
-
-            liftedMissing[liftedMissingIndexes[i]] = true;
         }
 
         anomalyRank = DEFAULT_INIT_VALUE;
@@ -132,8 +120,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
         int length = original.queryPoint.length;
         this.queryPoint = Arrays.copyOf(original.queryPoint, length);
         this.missing = Arrays.copyOf(original.missing, length);
-        this.liftedPoint = Arrays.copyOf(original.liftedPoint, original.liftedPoint.length);
-        this.liftedMissing = Arrays.copyOf(original.liftedMissing, original.liftedPoint.length);
+        this.dimensionsUsed = new int[original.dimensionsUsed.length];
         anomalyRank = DEFAULT_INIT_VALUE;
         distance = DEFAULT_INIT_VALUE;
     }
@@ -148,13 +135,19 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     public void accept(final INodeView node, final int depthOfNode) {
 
-        double probabilityOfSeparation = node.probailityOfSeparation(queryPoint);
+        double probabilityOfSeparation;
+        if (box == null) {
+            box = (BoundingBox) node.getBoundingBox();
+            probabilityOfSeparation = CommonUtils.getProbabilityOfSeparation(box, queryPoint);
+        } else {
+            probabilityOfSeparation = node.probailityOfSeparation(queryPoint);
+        }
+        converged = (probabilityOfSeparation == 0);
 
         if (probabilityOfSeparation <= 0) {
             return;
         }
 
-        converged = (probabilityOfSeparation == 0);
         anomalyRank = probabilityOfSeparation * scoreUnseen(depthOfNode, node.getMass())
                 + (1 - probabilityOfSeparation) * anomalyRank;
     }
@@ -170,22 +163,18 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
     @Override
     public void acceptLeaf(final INodeView leafNode, final int depthOfNode) {
         float[] leafPoint = leafNode.getLeafPoint();
+        pointIndex = leafNode.getLeafPointIndex();
+        double distance = 0;
         for (int i = 0; i < queryPoint.length; i++) {
             if (missing[i]) {
                 queryPoint[i] = leafPoint[i];
-            }
-        }
-        float[] liftedLeafPoint = leafNode.getLiftedLeafPoint();
-        double squaredDistance = 0;
-        for (int i = 0; i < liftedLeafPoint.length; i++) {
-            if (liftedMissing[i]) {
-                liftedPoint[i] = liftedLeafPoint[i];
             } else {
-                double t = (liftedLeafPoint[i] - liftedPoint[i]);
-                squaredDistance += t * t;
+                double t = (queryPoint[i] - leafPoint[i]);
+                distance += Math.abs(t);
             }
         }
-        distance = Math.sqrt(squaredDistance);
+
+        this.distance = distance;
         if (distance <= 0) {
             converged = true;
             if (depthOfNode == 0) {
@@ -202,8 +191,8 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @return the imputed point.
      */
     @Override
-    public double[] getResult() {
-        return toDoubleArray(liftedPoint);
+    public ConditionalTreeSample getResult() {
+        return new ConditionalTreeSample(pointIndex, box, distance, queryPoint);
     }
 
     /**
@@ -216,7 +205,9 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      */
     @Override
     public boolean trigger(final INodeView node) {
-        return missing[node.getCutDimension()];
+        int index = node.getCutDimension();
+        ++dimensionsUsed[index];
+        return missing[index];
     }
 
     protected double getAnomalyRank() {
@@ -231,7 +222,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @return a copy of this visitor.
      */
     @Override
-    public MultiVisitor<double[]> newCopy() {
+    public MultiVisitor<ConditionalTreeSample> newCopy() {
         return new ImputeVisitor(this);
     }
 
@@ -247,7 +238,7 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
      * @param other A second visitor
      */
     @Override
-    public void combine(MultiVisitor<double[]> other) {
+    public void combine(MultiVisitor<ConditionalTreeSample> other) {
         ImputeVisitor visitor = (ImputeVisitor) other;
         if (updateCombine(visitor)) {
             updateFrom(visitor);
@@ -256,8 +247,9 @@ public class ImputeVisitor implements MultiVisitor<double[]> {
 
     protected void updateFrom(ImputeVisitor visitor) {
         System.arraycopy(visitor.queryPoint, 0, queryPoint, 0, queryPoint.length);
-        System.arraycopy(visitor.liftedPoint, 0, liftedPoint, 0, liftedPoint.length);
+        pointIndex = visitor.pointIndex;
         anomalyRank = visitor.anomalyRank;
+        box = visitor.box;
         converged = visitor.converged;
         distance = visitor.distance;
     }
