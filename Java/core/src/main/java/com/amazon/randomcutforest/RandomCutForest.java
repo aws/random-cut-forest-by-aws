@@ -1043,6 +1043,7 @@ public class RandomCutForest {
      * @return A point with the missing values imputed.
      */
 
+    @Deprecated
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
         return toDoubleArray(imputeMissingValues(toFloatArray(point), numberOfMissingValues, missingIndexes));
     }
@@ -1065,41 +1066,26 @@ public class RandomCutForest {
      *                     then this value is not used.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
+        return toDoubleArray(extrapolateBasic(toFloatArray(point), horizon, blockSize, cyclic, shingleIndex));
+    }
+
+    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
         checkArgument(0 < blockSize && blockSize < dimensions,
                 "blockSize must be between 0 and dimensions (exclusive)");
         checkArgument(dimensions % blockSize == 0, "dimensions must be evenly divisible by blockSize");
         checkArgument(0 <= shingleIndex && shingleIndex < dimensions / blockSize,
                 "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
 
-        double[] result = new double[blockSize * horizon];
+        float[] result = new float[blockSize * horizon];
         int[] missingIndexes = new int[blockSize];
-        double[] queryPoint = Arrays.copyOf(point, dimensions);
+        float[] queryPoint = Arrays.copyOf(point, dimensions);
 
         if (cyclic) {
             extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
         } else {
             extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes);
-        }
-
-        return result;
-    }
-
-    public double[] extrapolateBasicNew(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
-        checkArgument(0 < blockSize && blockSize < dimensions,
-                "blockSize must be between 0 and dimensions (exclusive)");
-        checkArgument(dimensions % blockSize == 0, "dimensions must be evenly divisible by blockSize");
-        checkArgument(0 <= shingleIndex && shingleIndex < dimensions / blockSize,
-                "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
-
-        double[] result = new double[blockSize * horizon];
-        int[] missingIndexes = new int[blockSize];
-        double[] queryPoint = Arrays.copyOf(point, dimensions);
-
-        if (cyclic) {
-            extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
-        } else {
-            extrapolateBasicSlidingNew(result, horizon, blockSize, queryPoint, missingIndexes);
         }
 
         return result;
@@ -1119,7 +1105,12 @@ public class RandomCutForest {
      *                  sliding shingle.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic) {
+        return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
+    }
+
+    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic) {
         return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
     }
 
@@ -1133,13 +1124,13 @@ public class RandomCutForest {
      * @param horizon The number of blocks to forecast.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(ShingleBuilder builder, int horizon) {
         return extrapolateBasic(builder.getShingle(), horizon, builder.getInputPointSize(), builder.isCyclic(),
                 builder.getShingleIndex());
     }
 
-    void extrapolateBasicSliding(double[] result, int horizon, int blockSize, double[] queryPoint,
-            int[] missingIndexes) {
+    void extrapolateBasicSliding(float[] result, int horizon, int blockSize, float[] queryPoint, int[] missingIndexes) {
         int resultIndex = 0;
 
         Arrays.fill(missingIndexes, 0);
@@ -1151,7 +1142,7 @@ public class RandomCutForest {
             // shift all entries in the query point left by 1 block
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
-            double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
             for (int y = 0; y < blockSize; y++) {
                 result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize
                         + y];
@@ -1159,29 +1150,7 @@ public class RandomCutForest {
         }
     }
 
-    void extrapolateBasicSlidingNew(double[] result, int horizon, int blockSize, double[] queryPoint,
-            int[] missingIndexes) {
-        int resultIndex = 0;
-
-        Arrays.fill(missingIndexes, 0);
-        for (int y = 0; y < blockSize; y++) {
-            missingIndexes[y] = dimensions - blockSize + y;
-        }
-
-        for (int k = 0; k < horizon; k++) {
-            // shift all entries in the query point left by 1 block
-            System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
-
-            double[] imputedPoint = toDoubleArray(
-                    imputeMissingValues(toFloatArray(queryPoint), blockSize, missingIndexes));
-            for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize
-                        + y];
-            }
-        }
-    }
-
-    void extrapolateBasicCyclic(double[] result, int horizon, int blockSize, int shingleIndex, double[] queryPoint,
+    void extrapolateBasicCyclic(float[] result, int horizon, int blockSize, int shingleIndex, float[] queryPoint,
             int[] missingIndexes) {
 
         int resultIndex = 0;
@@ -1193,7 +1162,7 @@ public class RandomCutForest {
                 missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
-            double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
 
             for (int y = 0; y < blockSize; y++) {
                 result[resultIndex++] = queryPoint[(currentPosition + y)
@@ -1213,10 +1182,14 @@ public class RandomCutForest {
      * @return a forecasted time series.
      */
     public double[] extrapolate(int horizon) {
+        return toDoubleArray(extrapolateFromCurrentTime(horizon));
+    }
+
+    public float[] extrapolateFromCurrentTime(int horizon) {
         checkArgument(internalShinglingEnabled, "incorrect use");
         IPointStore<?> store = stateCoordinator.getStore();
-        return extrapolateBasic(toDoubleArray(lastShingledPoint()), horizon, inputDimensions,
-                store.isInternalRotationEnabled(), ((int) nextSequenceIndex()) % shingleSize);
+        return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
+                ((int) nextSequenceIndex()) % shingleSize);
     }
 
     /**
