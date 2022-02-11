@@ -24,8 +24,10 @@ import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderS
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
+import java.io.Serializable;
+
 @Data
-public class ThresholdedRandomCutForestState {
+public class ThresholdedRandomCutForestState implements Serializable {
     private String version = V2_1;
     RandomCutForestState forestState;
     private BasicThresholderState thresholderState;

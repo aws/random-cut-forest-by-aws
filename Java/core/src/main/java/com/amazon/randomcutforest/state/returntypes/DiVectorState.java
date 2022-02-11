@@ -20,6 +20,8 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
 
+import java.io.Serializable;
+
 /**
  * A DiVector is used when we want to track a quantity in both the positive and
  * negative directions for each dimension in a manifold. For example, when using
@@ -32,7 +34,7 @@ import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
  */
 @Getter
 @Setter
-public class DiVectorState {
+public class DiVectorState implements Serializable {
     double[] high;
     double[] low;
 }

@@ -17,8 +17,10 @@ package com.amazon.randomcutforest.state;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class ExecutionContext {
+public class ExecutionContext implements Serializable {
     private boolean parallelExecutionEnabled;
     private int threadPoolSize;
 

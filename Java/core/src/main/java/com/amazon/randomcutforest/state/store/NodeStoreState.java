@@ -19,8 +19,10 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class NodeStoreState {
+public class NodeStoreState implements Serializable {
 
     private String version = V2_0;
 

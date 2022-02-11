@@ -19,8 +19,10 @@ import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
+import java.io.Serializable;
+
 @Data
-public class BasicThresholderState {
+public class BasicThresholderState implements Serializable {
 
     private long randomseed;
 

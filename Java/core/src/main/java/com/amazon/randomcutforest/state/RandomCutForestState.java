@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.state;
 
 import static com.amazon.randomcutforest.state.Version.V3_0;
 
+import java.io.Serializable;
 import java.util.List;
 
 import lombok.Data;
@@ -30,7 +31,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
  * that the forest can be serialized and deserialized.
  */
 @Data
-public class RandomCutForestState {
+public class RandomCutForestState implements Serializable {
 
     private String version = V3_0;
 

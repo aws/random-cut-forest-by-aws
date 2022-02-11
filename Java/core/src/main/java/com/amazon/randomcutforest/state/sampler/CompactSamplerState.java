@@ -19,12 +19,14 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * A data object representing the state of a
  * {@link com.amazon.randomcutforest.sampler.CompactSampler}.
  */
 @Data
-public class CompactSamplerState {
+public class CompactSamplerState implements Serializable {
     /**
      * a version string for extensibility
      */

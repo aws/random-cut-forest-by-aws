@@ -19,6 +19,8 @@ import static com.amazon.randomcutforest.state.Version.V2_0;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * A class for storing the state of a
  * {@link com.amazon.randomcutforest.store.PointStore}. Depending on which kind
@@ -26,7 +28,7 @@ import lombok.Data;
  * {@code floatData} will be null.
  */
 @Data
-public class PointStoreState {
+public class PointStoreState implements Serializable {
     /**
      * version string for future extensibility
      */

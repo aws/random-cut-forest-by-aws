@@ -21,8 +21,10 @@ import lombok.Data;
 
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 
+import java.io.Serializable;
+
 @Data
-public class CompactRandomCutTreeState {
+public class CompactRandomCutTreeState implements Serializable {
     private String version = V2_0;
     private int root;
     private int maxSize;

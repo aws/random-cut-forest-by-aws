@@ -17,8 +17,10 @@ package com.amazon.randomcutforest.parkservices.state.statistics;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class DeviationState {
+public class DeviationState implements Serializable {
     private double discount;
 
     private double weight;

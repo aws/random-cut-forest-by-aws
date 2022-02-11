@@ -21,8 +21,10 @@ import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
+import java.io.Serializable;
+
 @Data
-public class PreprocessorState {
+public class PreprocessorState implements Serializable {
 
     private String version = V2_1;
     private double useImputedFraction;
