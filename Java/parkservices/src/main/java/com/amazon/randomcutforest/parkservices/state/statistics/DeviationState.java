@@ -15,12 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices.state.statistics;
 
-import lombok.Data;
-
 import java.io.Serializable;
+
+import lombok.Data;
 
 @Data
 public class DeviationState implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private double discount;
 
     private double weight;

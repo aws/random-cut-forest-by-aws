@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.state.returntypes;
 
+import java.io.Serializable;
+
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
-
-import java.io.Serializable;
 
 /**
  * A DiVector is used when we want to track a quantity in both the positive and
@@ -35,6 +35,8 @@ import java.io.Serializable;
 @Getter
 @Setter
 public class DiVectorState implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     double[] high;
     double[] low;
 }

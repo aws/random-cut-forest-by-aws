@@ -15,14 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.state.threshold;
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
-import java.io.Serializable;
-
 @Data
 public class BasicThresholderState implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private long randomseed;
 

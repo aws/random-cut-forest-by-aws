@@ -32,6 +32,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
  */
 @Data
 public class RandomCutForestState implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private String version = V3_0;
 

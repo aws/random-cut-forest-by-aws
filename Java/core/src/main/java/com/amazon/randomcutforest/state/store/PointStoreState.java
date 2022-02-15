@@ -17,9 +17,9 @@ package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import lombok.Data;
-
 import java.io.Serializable;
+
+import lombok.Data;
 
 /**
  * A class for storing the state of a
@@ -29,6 +29,8 @@ import java.io.Serializable;
  */
 @Data
 public class PointStoreState implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     /**
      * version string for future extensibility
      */
