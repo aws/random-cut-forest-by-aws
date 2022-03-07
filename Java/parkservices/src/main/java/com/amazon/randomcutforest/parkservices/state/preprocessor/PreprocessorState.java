@@ -17,12 +17,15 @@ package com.amazon.randomcutforest.parkservices.state.preprocessor;
 
 import static com.amazon.randomcutforest.state.Version.V2_1;
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 
 @Data
-public class PreprocessorState {
+public class PreprocessorState implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private String version = V2_1;
     private double useImputedFraction;
