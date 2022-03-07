@@ -36,7 +36,7 @@ import com.amazon.randomcutforest.tree.INodeView;
 public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
 
     // default large values for initialization; consider -ve log( 0 )
-    public static double DEFAULT_INIT_VALUE = Double.MAX_VALUE / 4;
+    public static double DEFAULT_INIT_VALUE = Double.MAX_VALUE;
 
     /**
      * an array that helps indicate the missing entires in the tree space

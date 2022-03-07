@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 import java.util.HashMap;
 
@@ -63,7 +63,7 @@ public class NodeView implements INodeView {
     }
 
     public HashMap<Long, Integer> getSequenceIndexes() {
-        checkArgument(nodeStore.isLeaf(currentNodeOffset), "can only be invoked for a leaf");
+        checkState(isLeaf(), "can only be invoked for a leaf");
         if (nodeStore.storeSequenceIndexesEnabled) {
             return nodeStore.sequenceMap.get(nodeStore.getPointIndex(currentNodeOffset));
         } else {
@@ -78,7 +78,7 @@ public class NodeView implements INodeView {
 
     @Override
     public int getLeafPointIndex() {
-        checkArgument(isLeaf(), "incorrect call");
+        checkState(isLeaf(), "cannot invoke 'getLeafPointIndex' from a non-leaf node");
         return nodeStore.getPointIndex(currentNodeOffset);
     }
 

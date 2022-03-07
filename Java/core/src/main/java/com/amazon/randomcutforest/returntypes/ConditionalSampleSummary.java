@@ -21,8 +21,12 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 public class ConditionalSampleSummary {
 
     /**
-     * a collection of typical points (in the shingled, input space) seen from the
-     * sampling
+     * a collection of typical points (from the perspective of information theory)
+     * which should be the mean/median of a spatially continuous distribution with
+     * central tendency. If the input is a collection of samples that correspond to
+     * an union of two such well separated distributions, for example as in the
+     * example data of RCF paper then the output should be the two corresponding
+     * central points.
      */
     public float[][] typicalPoints;
 

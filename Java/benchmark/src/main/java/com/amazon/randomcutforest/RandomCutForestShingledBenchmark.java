@@ -15,10 +15,9 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import java.util.List;
+import java.util.Random;
+
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,8 +31,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.List;
-import java.util.Random;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
