@@ -81,25 +81,25 @@ public class ConditionalFieldTest {
         queryTwo[1] = 1;
         ConditionalSampleSummary summary = newForest.getConditionalFieldSummary(queryOne, 1, new int[] { 0 }, 1);
 
-        assert (summary.typicalPoints.length == 2);
+        assert (summary.summaryPoints.length == 2);
         assert (summary.relativeLikelihood.length == 2);
-        assert (Math.abs(summary.typicalPoints[0][0] - 5.0) < 0.01
-                || Math.abs(summary.typicalPoints[0][0] + 5.0) < 0.01);
-        assert (Math.abs(summary.typicalPoints[1][0] - 5.0) < 0.01
-                || Math.abs(summary.typicalPoints[1][0] + 5.0) < 0.01);
+        assert (Math.abs(summary.summaryPoints[0][0] - 5.0) < 0.01
+                || Math.abs(summary.summaryPoints[0][0] + 5.0) < 0.01);
+        assert (Math.abs(summary.summaryPoints[1][0] - 5.0) < 0.01
+                || Math.abs(summary.summaryPoints[1][0] + 5.0) < 0.01);
         assert (summary.relativeLikelihood[0] > 0.25);
         assert (summary.relativeLikelihood[1] > 0.25);
 
         summary = newForest.getConditionalFieldSummary(queryTwo, 1, new int[] { 0 }, 1);
 
-        assert (summary.typicalPoints.length == 2);
+        assert (summary.summaryPoints.length == 2);
         assert (summary.relativeLikelihood.length == 2);
-        assertEquals(summary.typicalPoints[0][1], 1, 1e-6);
-        assertEquals(summary.typicalPoints[1][1], 1, 1e-6);
-        assert (Math.abs(summary.typicalPoints[0][0] - 5.0) < 0.01
-                || Math.abs(summary.typicalPoints[0][0] + 5.0) < 0.01);
-        assert (Math.abs(summary.typicalPoints[1][0] - 5.0) < 0.01
-                || Math.abs(summary.typicalPoints[1][0] + 5.0) < 0.01);
+        assertEquals(summary.summaryPoints[0][1], 1, 1e-6);
+        assertEquals(summary.summaryPoints[1][1], 1, 1e-6);
+        assert (Math.abs(summary.summaryPoints[0][0] - 5.0) < 0.01
+                || Math.abs(summary.summaryPoints[0][0] + 5.0) < 0.01);
+        assert (Math.abs(summary.summaryPoints[1][0] - 5.0) < 0.01
+                || Math.abs(summary.summaryPoints[1][0] + 5.0) < 0.01);
         assert (summary.relativeLikelihood[0] > 0.25);
         assert (summary.relativeLikelihood[1] > 0.25);
 

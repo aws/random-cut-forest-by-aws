@@ -21,14 +21,14 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 public class ConditionalSampleSummary {
 
     /**
-     * a collection of typical points (from the perspective of information theory)
-     * which should be the mean/median of a spatially continuous distribution with
-     * central tendency. If the input is a collection of samples that correspond to
-     * an union of two such well separated distributions, for example as in the
-     * example data of RCF paper then the output should be the two corresponding
-     * central points.
+     * a collection of summarized points (reminiscent of typical sets from the
+     * perspective of information theory, Cover and Thomas, Chapter 3) which should
+     * be the mean/median of a spatially continuous distribution with central
+     * tendency. If the input is a collection of samples that correspond to an union
+     * of two such well separated distributions, for example as in the example data
+     * of RCF paper then the output should be the two corresponding central points.
      */
-    public float[][] typicalPoints;
+    public float[][] summaryPoints;
 
     /**
      * a measure of comparison among the typical points;
@@ -55,7 +55,7 @@ public class ConditionalSampleSummary {
             float[] median, float[] mean, float[] deviation) {
         checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
         this.weightOfSamples = weightOfSamples;
-        this.typicalPoints = typicalPoints;
+        this.summaryPoints = typicalPoints;
         this.relativeLikelihood = relativeLikelihood;
         this.mean = mean;
         this.median = median;
@@ -64,8 +64,8 @@ public class ConditionalSampleSummary {
 
     public ConditionalSampleSummary(int dimensions) {
         this.weightOfSamples = 0;
-        this.typicalPoints = new float[1][];
-        typicalPoints[0] = new float[dimensions];
+        this.summaryPoints = new float[1][];
+        this.summaryPoints[0] = new float[dimensions];
         this.relativeLikelihood = new float[] { 0.0f };
         this.median = new float[dimensions];
         this.mean = new float[dimensions];
@@ -75,8 +75,8 @@ public class ConditionalSampleSummary {
     // for older tests
     public ConditionalSampleSummary(double[] point) {
         this.weightOfSamples = 0;
-        this.typicalPoints = new float[1][];
-        typicalPoints[0] = new float[point.length];
+        this.summaryPoints = new float[1][];
+        this.summaryPoints[0] = new float[point.length];
         this.relativeLikelihood = new float[] { 0.0f };
         this.median = toFloatArray(point);
         this.mean = toFloatArray(point);
