@@ -37,8 +37,27 @@ public interface INodeView {
         return getLeafPoint();
     };
 
+    /**
+     * for a leaf node, return the sequence indices corresponding leaf point. If
+     * this method is invoked on a non-leaf node then it throws an
+     * IllegalStateException.
+     */
     HashMap<Long, Integer> getSequenceIndexes();
 
+    /**
+     * provides the probability of separation vis-a-vis the bounding box at the node
+     * 
+     * @param point input piint being evaluated
+     * @return the probability of separation
+     */
+
     double probailityOfSeparation(float[] point);
+
+    /**
+     * for a leaf node, return the index in the point store for the leaf point. If
+     * this method is invoked on a non-leaf node then it throws an
+     * IllegalStateException.
+     */
+    int getLeafPointIndex();
 
 }

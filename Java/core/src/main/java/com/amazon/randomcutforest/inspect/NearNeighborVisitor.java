@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.inspect;
 
-import com.amazon.randomcutforest.Visitor;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.tree.INodeView;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import com.amazon.randomcutforest.Visitor;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.tree.INodeView;
 
 /**
  * A visitor that returns the leaf node in a traversal if the distance between

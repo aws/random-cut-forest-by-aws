@@ -24,7 +24,6 @@ import static java.lang.Math.max;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -49,9 +48,12 @@ import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
+import com.amazon.randomcutforest.imputation.ConditionalSampleSummarizer;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
+import com.amazon.randomcutforest.returntypes.ConditionalSampleSummary;
+import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
@@ -985,13 +987,8 @@ public class RandomCutForest {
      *                              versus a more random estimation
      * @return A point with the missing values imputed.
      */
-    public List<double[]> getConditionalField(double[] point, int numberOfMissingValues, int[] missingIndexes,
-            double centrality) {
-        return getConditionalField(toFloatArray(point), numberOfMissingValues, missingIndexes, centrality);
-    }
-
-    public List<double[]> getConditionalField(float[] point, int numberOfMissingValues, int[] missingIndexes,
-            double centrality) {
+    public List<ConditionalTreeSample> getConditionalField(float[] point, int numberOfMissingValues,
+            int[] missingIndexes, double centrality) {
         checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
@@ -1003,16 +1000,31 @@ public class RandomCutForest {
         }
 
         int[] liftedIndices = transformIndices(missingIndexes, point.length);
-        IMultiVisitorFactory<double[]> visitorFactory = (tree, y) -> new ImputeVisitor(y, tree.projectToTree(y),
-                liftedIndices, tree.projectMissingIndices(liftedIndices), 1.0);
+        IMultiVisitorFactory<ConditionalTreeSample> visitorFactory = (tree, y) -> new ImputeVisitor(y,
+                tree.projectToTree(y), liftedIndices, tree.projectMissingIndices(liftedIndices), centrality);
+        return traverseForestMulti(transformToShingledPoint(point), visitorFactory, ConditionalTreeSample.collector);
+    }
 
-        Collector<double[], ArrayList<double[]>, ArrayList<double[]>> collector = Collector.of(ArrayList::new,
-                ArrayList::add, (left, right) -> {
-                    left.addAll(right);
-                    return left;
-                }, list -> list);
+    public ConditionalSampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues,
+            int[] missingIndexes, double centrality) {
+        checkArgument(numberOfMissingValues >= 0, "cannot be negative");
+        checkNotNull(missingIndexes, "missingIndexes must not be null");
+        checkArgument(numberOfMissingValues <= missingIndexes.length,
+                "numberOfMissingValues must be less than or equal to missingIndexes.length");
+        checkArgument(centrality >= 0 && centrality <= 1, "centrality needs to be in range [0,1]");
+        checkArgument(point != null, " cannot be null");
+        if (!isOutputReady()) {
+            return new ConditionalSampleSummary(dimensions);
+        }
 
-        return traverseForestMulti(transformToShingledPoint(point), visitorFactory, collector);
+        int[] liftedIndices = transformIndices(missingIndexes, point.length);
+        ConditionalSampleSummarizer summarizer = new ConditionalSampleSummarizer(liftedIndices,
+                transformToShingledPoint(point), centrality);
+        return summarizer.summarize(getConditionalField(point, numberOfMissingValues, missingIndexes, centrality));
+    }
+
+    public float[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
+        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1.0).median;
     }
 
     /**
@@ -1030,37 +1042,10 @@ public class RandomCutForest {
      *                              missing values.
      * @return A point with the missing values imputed.
      */
+
+    @Deprecated
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
-        return imputeMissingValues(toFloatArray(point), numberOfMissingValues, missingIndexes);
-    }
-
-    public double[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
-        checkArgument(numberOfMissingValues >= 0, "numberOfMissingValues must be greater or equal than 0");
-        checkNotNull(missingIndexes, "missingIndexes must not be null");
-        checkArgument(numberOfMissingValues <= missingIndexes.length,
-                "numberOfMissingValues must be less than or equal to missingIndexes.length");
-        checkArgument(point != null, " cannot be null");
-
-        if (!isOutputReady()) {
-            return new double[dimensions];
-        }
-        // checks will be performed in the function call
-        List<double[]> conditionalField = getConditionalField(point, numberOfMissingValues, missingIndexes, 1.0);
-
-        if (numberOfMissingValues == 1) {
-            // when there is 1 missing value, we sort all the imputed values and return the
-            // median
-            double[] returnPoint = toDoubleArray(point);
-            double[] basicList = conditionalField.stream()
-                    .mapToDouble(array -> array[transformIndices(missingIndexes, point.length)[0]]).sorted().toArray();
-            returnPoint[missingIndexes[0]] = basicList[numberOfTrees / 2];
-            return returnPoint;
-        } else {
-            // when there is more than 1 missing value, we sort the imputed points by
-            // anomaly score and return the point with the 25th percentile anomaly score
-            conditionalField.sort(Comparator.comparing(this::getAnomalyScore));
-            return conditionalField.get(numberOfTrees / 4);
-        }
+        return toDoubleArray(imputeMissingValues(toFloatArray(point), numberOfMissingValues, missingIndexes));
     }
 
     /**
@@ -1081,16 +1066,21 @@ public class RandomCutForest {
      *                     then this value is not used.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
+        return toDoubleArray(extrapolateBasic(toFloatArray(point), horizon, blockSize, cyclic, shingleIndex));
+    }
+
+    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
         checkArgument(0 < blockSize && blockSize < dimensions,
                 "blockSize must be between 0 and dimensions (exclusive)");
         checkArgument(dimensions % blockSize == 0, "dimensions must be evenly divisible by blockSize");
         checkArgument(0 <= shingleIndex && shingleIndex < dimensions / blockSize,
                 "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
 
-        double[] result = new double[blockSize * horizon];
+        float[] result = new float[blockSize * horizon];
         int[] missingIndexes = new int[blockSize];
-        double[] queryPoint = Arrays.copyOf(point, dimensions);
+        float[] queryPoint = Arrays.copyOf(point, dimensions);
 
         if (cyclic) {
             extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
@@ -1115,7 +1105,12 @@ public class RandomCutForest {
      *                  sliding shingle.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic) {
+        return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
+    }
+
+    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic) {
         return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
     }
 
@@ -1129,13 +1124,13 @@ public class RandomCutForest {
      * @param horizon The number of blocks to forecast.
      * @return a forecasted time series.
      */
+    @Deprecated
     public double[] extrapolateBasic(ShingleBuilder builder, int horizon) {
         return extrapolateBasic(builder.getShingle(), horizon, builder.getInputPointSize(), builder.isCyclic(),
                 builder.getShingleIndex());
     }
 
-    void extrapolateBasicSliding(double[] result, int horizon, int blockSize, double[] queryPoint,
-            int[] missingIndexes) {
+    void extrapolateBasicSliding(float[] result, int horizon, int blockSize, float[] queryPoint, int[] missingIndexes) {
         int resultIndex = 0;
 
         Arrays.fill(missingIndexes, 0);
@@ -1147,7 +1142,7 @@ public class RandomCutForest {
             // shift all entries in the query point left by 1 block
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
-            double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
             for (int y = 0; y < blockSize; y++) {
                 result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize
                         + y];
@@ -1155,7 +1150,7 @@ public class RandomCutForest {
         }
     }
 
-    void extrapolateBasicCyclic(double[] result, int horizon, int blockSize, int shingleIndex, double[] queryPoint,
+    void extrapolateBasicCyclic(float[] result, int horizon, int blockSize, int shingleIndex, float[] queryPoint,
             int[] missingIndexes) {
 
         int resultIndex = 0;
@@ -1167,7 +1162,7 @@ public class RandomCutForest {
                 missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
-            double[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
 
             for (int y = 0; y < blockSize; y++) {
                 result[resultIndex++] = queryPoint[(currentPosition + y)
@@ -1187,10 +1182,14 @@ public class RandomCutForest {
      * @return a forecasted time series.
      */
     public double[] extrapolate(int horizon) {
+        return toDoubleArray(extrapolateFromCurrentTime(horizon));
+    }
+
+    public float[] extrapolateFromCurrentTime(int horizon) {
         checkArgument(internalShinglingEnabled, "incorrect use");
         IPointStore<?> store = stateCoordinator.getStore();
-        return extrapolateBasic(toDoubleArray(lastShingledPoint()), horizon, inputDimensions,
-                store.isInternalRotationEnabled(), ((int) nextSequenceIndex()) % shingleSize);
+        return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
+                ((int) nextSequenceIndex()) % shingleSize);
     }
 
     /**

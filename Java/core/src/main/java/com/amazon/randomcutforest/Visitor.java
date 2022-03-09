@@ -37,7 +37,7 @@ public interface Visitor<R> {
     void accept(INodeView node, int depthOfNode);
 
     /**
-     * Visit the leaf node in the traversal path. By default this method proxies to
+     * Visit the leaf node in the traversal path. By default, this method proxies to
      * {@link #accept(INodeView, int)}.
      *
      * @param leafNode    the leaf node being visited
@@ -56,14 +56,21 @@ public interface Visitor<R> {
     R getResult();
 
     /**
-     * This method short-circuits the evaluation of the Visitor at nodes on the traversal path. By default, the
-     * accept (or acceptLeaf) method will be invoked for each Node in the traversal path. But the NodeView has to prepare
-     * information to support that visitor invocation. Before invocation, the value of isConverged will be checked.
-     * If it is true, some of that preparation can be skipped -- because the visitor would not be upodated.
-     * This method can be overriden to optimize visitors that do not need to visit every node on the root to leaf path
-     * before returning a value.
+     * This method short-circuits the evaluation of the Visitor at nodes on the
+     * traversal path. By default, the accept (or acceptLeaf) method will be invoked
+     * for each Node in the traversal path. But the NodeView has to prepare
+     * information to support that visitor invocation. Before invocation, the value
+     * of isConverged will be checked. If it is true, some of that preparation can
+     * be skipped -- because the visitor would not be updated. This method can be
+     * overwritten to optimize visitors that do not need to visit every node on the
+     * root to leaf path before returning a value.
+     *
+     * Mote that this convergence applies to a single visitor computation and is
+     * expected to be a speedup without any change in the value of the answer. This
+     * is different from converging accumulator which corresponds to sequential
+     * evaluation of different visitors and early stopping.
      **/
     default boolean isConverged() {
         return false;
-    };
+    }
 }

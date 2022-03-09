@@ -61,7 +61,7 @@ public class ThresholdedInternalShinglingExample implements Example {
 
         long count = 0;
         int dimensions = baseDimensions * shingleSize;
-        TransformMethod transformMethod = TransformMethod.NONE;
+        TransformMethod transformMethod = TransformMethod.NORMALIZE_DIFFERENCE;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                 .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)

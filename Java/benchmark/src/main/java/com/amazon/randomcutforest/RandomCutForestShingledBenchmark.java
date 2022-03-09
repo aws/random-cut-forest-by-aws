@@ -15,10 +15,9 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import java.util.List;
+import java.util.Random;
+
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,8 +31,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.List;
-import java.util.Random;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
@@ -170,7 +171,7 @@ public class RandomCutForestShingledBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest basicNeighborAndUpdate(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest neighborAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         List<Neighbor> output = null;
@@ -186,7 +187,23 @@ public class RandomCutForestShingledBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest basicExtrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest imputeAndUpdate(BenchmarkState state, Blackhole blackhole) {
+        double[][] data = state.data;
+        forest = state.forest;
+        double[] output = null;
+
+        for (int i = INITIAL_DATA_SIZE; i < data.length; i++) {
+            output = forest.imputeMissingValues(data[i], 1, new int[] { state.baseDimensions - 1 });
+            forest.update(data[i]);
+        }
+
+        blackhole.consume(output);
+        return forest;
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(DATA_SIZE)
+    public RandomCutForest extrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         double[] output = null;

@@ -41,7 +41,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -497,7 +496,7 @@ public class RandomCutForestTest {
         float[] point = { 12.3f, -45.6f };
         int[] missingIndexes = { 1, 1000 }; // second value doesn't matter since numberOfMissingValues is 1o
 
-        double[] result = forest.imputeMissingValues(point, 0, missingIndexes);
+        double[] result = forest.imputeMissingValues(toDoubleArray(point), 0, missingIndexes);
         assertArrayEquals(new double[] { 0.0, 0.0 }, result);
     }
 
@@ -513,78 +512,10 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testImputeMissingValuesWithSingleMissingIndex() {
-        List<Double> returnValues = new ArrayList<>();
-        for (int i = 0; i < numberOfTrees; i++) {
-            returnValues.add((double) i);
-        }
-        double expectedResult = returnValues.get(numberOfTrees / 2);
-        Collections.shuffle(returnValues);
-        float[] point = { 12.3f, -45.6f };
-
-        int numberOfMissingValues = 1;
-        int[] missingIndexes = { 1, 999 };
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            SamplerPlusTree<Integer, float[]> component = (SamplerPlusTree<Integer, float[]>) components.get(i);
-            ITree<Integer, float[]> tree = component.getTree();
-            double[] treeResult = toDoubleArray(point);
-            treeResult[missingIndexes[0]] = returnValues.get(i);
-            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
-        }
-
-        doReturn(true).when(forest).isOutputReady();
-        double[] result = forest.imputeMissingValues(point, numberOfMissingValues, missingIndexes);
-
-        for (int j = 0; j < dimensions; j++) {
-            if (j == missingIndexes[0]) {
-                assertEquals(expectedResult, result[j]);
-            } else {
-                assertEquals(point[j], result[j]);
-            }
-        }
-    }
-
-    @Test
-    public void testImputeMissingValuesWithMultipleMissingIndexes() {
-        float[] point = { 12.3f, -45.6f };
-        List<Double> anomalyScores = new ArrayList<>();
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            anomalyScores.add((double) i);
-        }
-
-        double selectScore = anomalyScores.get(numberOfTrees / 4); // 25th percentile score
-        Collections.shuffle(anomalyScores);
-
-        int numberOfMissingValues = 2;
-        int[] missingIndexes = { 1, 0 };
-        double[] expectedResult = null;
-
-        for (int i = 0; i < numberOfTrees; i++) {
-            SamplerPlusTree<Integer, float[]> component = (SamplerPlusTree<Integer, float[]>) components.get(i);
-            ITree<Integer, float[]> tree = component.getTree();
-            double[] treeResult = { Math.random(), Math.random() };
-            when(tree.traverseMulti(aryEq(point), any(IMultiVisitorFactory.class))).thenReturn(treeResult);
-
-            double anomalyScore = anomalyScores.get(i);
-            doReturn(anomalyScore).when(forest).getAnomalyScore(aryEq(treeResult));
-            if (anomalyScore == selectScore) {
-                expectedResult = treeResult;
-            }
-        }
-
-        doReturn(true).when(forest).isOutputReady();
-        double[] result = forest.imputeMissingValues(point, numberOfMissingValues, missingIndexes);
-
-        assertArrayEquals(expectedResult, result);
-    }
-
-    @Test
     public void testExtrapolateBasic() {
-        doNothing().when(forest).extrapolateBasicCyclic(any(double[].class), anyInt(), anyInt(), anyInt(),
-                any(double[].class), any(int[].class));
-        doNothing().when(forest).extrapolateBasicSliding(any(double[].class), anyInt(), anyInt(), any(double[].class),
+        doNothing().when(forest).extrapolateBasicCyclic(any(float[].class), anyInt(), anyInt(), anyInt(),
+                any(float[].class), any(int[].class));
+        doNothing().when(forest).extrapolateBasicSliding(any(float[].class), anyInt(), anyInt(), any(float[].class),
                 any(int[].class));
 
         double[] point = new double[] { 2.0, -3.0 };
@@ -594,18 +525,18 @@ public class RandomCutForestTest {
         int shingleIndex = 1;
 
         forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
-        verify(forest).extrapolateBasicCyclic(any(double[].class), eq(horizon), eq(blockSize), eq(shingleIndex),
-                any(double[].class), any(int[].class));
+        verify(forest).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(blockSize), eq(shingleIndex),
+                any(float[].class), any(int[].class));
 
         forest.extrapolateBasic(point, horizon, blockSize, cyclic);
-        verify(forest).extrapolateBasicCyclic(any(double[].class), eq(horizon), eq(blockSize), eq(0),
-                any(double[].class), any(int[].class));
+        verify(forest).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(blockSize), eq(0), any(float[].class),
+                any(int[].class));
 
         cyclic = false;
         forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
         forest.extrapolateBasic(point, horizon, blockSize, cyclic);
-        verify(forest, times(2)).extrapolateBasicSliding(any(double[].class), eq(horizon), eq(blockSize),
-                any(double[].class), any(int[].class));
+        verify(forest, times(2)).extrapolateBasicSliding(any(float[].class), eq(horizon), eq(blockSize),
+                any(float[].class), any(int[].class));
     }
 
     @Test
@@ -625,7 +556,7 @@ public class RandomCutForestTest {
         assertThrows(IllegalArgumentException.class,
                 () -> forest.extrapolateBasic(point, horizon, dimensions * 2, cyclic, shingleIndex));
         assertThrows(NullPointerException.class,
-                () -> forest.extrapolateBasic(null, horizon, blockSize, cyclic, shingleIndex));
+                () -> forest.extrapolateBasic((double[]) null, horizon, blockSize, cyclic, shingleIndex));
 
         RandomCutForest f = RandomCutForest.defaultForest(20);
         double[] p = new double[20];
@@ -641,21 +572,21 @@ public class RandomCutForestTest {
 
     @Test
     public void testExrapolateBasicWithShingleBuilder() {
-        doNothing().when(forest).extrapolateBasicCyclic(any(double[].class), anyInt(), anyInt(), anyInt(),
-                any(double[].class), any(int[].class));
-        doNothing().when(forest).extrapolateBasicSliding(any(double[].class), anyInt(), anyInt(), any(double[].class),
+        doNothing().when(forest).extrapolateBasicCyclic(any(float[].class), anyInt(), anyInt(), anyInt(),
+                any(float[].class), any(int[].class));
+        doNothing().when(forest).extrapolateBasicSliding(any(float[].class), anyInt(), anyInt(), any(float[].class),
                 any(int[].class));
 
         ShingleBuilder shingleBuilder = new ShingleBuilder(1, 2, true);
         int horizon = 3;
 
         forest.extrapolateBasic(shingleBuilder, horizon);
-        verify(forest, times(1)).extrapolateBasicCyclic(any(double[].class), eq(horizon), eq(1), eq(0),
-                any(double[].class), any(int[].class));
+        verify(forest, times(1)).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(1), eq(0),
+                any(float[].class), any(int[].class));
 
         shingleBuilder = new ShingleBuilder(1, 2, false);
         forest.extrapolateBasic(shingleBuilder, horizon);
-        verify(forest, times(1)).extrapolateBasicSliding(any(double[].class), eq(horizon), eq(1), any(double[].class),
+        verify(forest, times(1)).extrapolateBasicSliding(any(float[].class), eq(horizon), eq(1), any(float[].class),
                 any(int[].class));
     }
 
@@ -663,16 +594,17 @@ public class RandomCutForestTest {
     public void testExtrapolateBasicSliding() {
         int horizon = 3;
         int blockSize = 2;
-        double[] result = new double[dimensions * horizon];
-        double[] queryPoint = new double[] { 1.0, -2.0 };
+        float[] result = new float[dimensions * horizon];
+        float[] queryPoint = new float[] { 1.0f, -2.0f };
         int[] missingIndexes = new int[blockSize];
 
-        doReturn(new double[] { 2.0, -3.0 }).doReturn(new double[] { 4.0, -5.0 }).doReturn(new double[] { 6.0, -7.0 })
-                .when(forest).imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+        doReturn(new float[] { 2.0f, -3.0f }).doReturn(new float[] { 4.0f, -5.0f })
+                .doReturn(new float[] { 6.0f, -7.0f }).when(forest)
+                .imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
 
         forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes);
 
-        double[] expectedResult = new double[] { 2.0, -3.0, 4.0, -5.0, 6.0, -7.0 };
+        float[] expectedResult = new float[] { 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f };
         assertArrayEquals(expectedResult, result);
     }
 
@@ -680,17 +612,18 @@ public class RandomCutForestTest {
     public void testExtrapolateBasicCyclic() {
         int horizon = 3;
         int blockSize = 2;
-        double[] result = new double[dimensions * horizon];
+        float[] result = new float[dimensions * horizon];
         int shingleIndex = 1;
-        double[] queryPoint = new double[] { 1.0, -2.0 };
+        float[] queryPoint = new float[] { 1.0f, -2.0f };
         int[] missingIndexes = new int[blockSize];
 
-        doReturn(new double[] { 2.0, -3.0 }).doReturn(new double[] { 4.0, -5.0 }).doReturn(new double[] { 6.0, -7.0 })
-                .when(forest).imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+        doReturn(new float[] { 2.0f, -3.0f }).doReturn(new float[] { 4.0f, -5.0f })
+                .doReturn(new float[] { 6.0f, -7.0f }).when(forest)
+                .imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
 
         forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
 
-        double[] expectedResult = new double[] { -3.0, 2.0, -5.0, 4.0, -7.0, 6.0 };
+        float[] expectedResult = new float[] { -3.0f, 2.0f, -5.0f, 4.0f, -7.0f, 6.0f };
         assertArrayEquals(expectedResult, result);
     }
 

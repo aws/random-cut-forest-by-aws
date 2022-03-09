@@ -15,10 +15,9 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.returntypes.DensityOutput;
-import com.amazon.randomcutforest.returntypes.DiVector;
-import com.amazon.randomcutforest.returntypes.Neighbor;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import java.util.List;
+import java.util.Random;
+
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,8 +31,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.List;
-import java.util.Random;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Warmup(iterations = 2)
 @Measurement(iterations = 5)
@@ -46,10 +47,10 @@ public class RandomCutForestBenchmark {
 
     @State(Scope.Benchmark)
     public static class BenchmarkState {
-        @Param({ "5" })
+        @Param({ "40" })
         int baseDimensions;
 
-        @Param({ "8" })
+        @Param({ "1" })
         int shingleSize;
 
         @Param({ "30" })
@@ -187,13 +188,13 @@ public class RandomCutForestBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(DATA_SIZE)
-    public RandomCutForest basicExtrapolateAndUpdate(BenchmarkState state, Blackhole blackhole) {
+    public RandomCutForest imputeAndUpdate(BenchmarkState state, Blackhole blackhole) {
         double[][] data = state.data;
         forest = state.forest;
         double[] output = null;
 
         for (int i = INITIAL_DATA_SIZE; i < data.length; i++) {
-            output = forest.extrapolate(1);
+            output = forest.imputeMissingValues(data[i], 1, new int[] { forest.dimensions - 1 });
             forest.update(data[i]);
         }
 
