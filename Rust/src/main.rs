@@ -15,6 +15,7 @@ mod types;
 mod visitor;
 
 extern crate rand;
+
 use crate::rcf::{create_rcf, RCF};
 extern crate rand_chacha;
 
@@ -34,6 +35,7 @@ fn main() {
     let store_attributes: bool = false;
     let internal_shingling: bool = true;
     let internal_rotation = false;
+    let noise = 5.0;
 
     let mut forest: Box<dyn RCF> = create_rcf(
         dimensions,
@@ -53,15 +55,24 @@ fn main() {
         data_size,
         60,
         100.0,
-        5.0,
+        noise,
         0,
         base_dimension.into(),
     );
 
     let mut score: f64 = 0.0;
     let _next_index = 0;
+    let mut error = 0.0;
+    let mut count = 0;
 
     for i in 0..data_with_key.data.len() {
+        if (i > 200) {
+            let next_values = forest.extrapolate(1);
+            assert!(next_values.len() == base_dimension);
+            error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();
+            count += base_dimension;
+        }
+
         let new_score = forest.score(&data_with_key.data[i]);
         //println!("{} {} score {}",y,i,new_score);
         /*
@@ -70,6 +81,7 @@ fn main() {
             next_index += 1;
         }
         */
+
         score += new_score;
         forest.update(&data_with_key.data[i], 0);
     }
@@ -81,4 +93,5 @@ fn main() {
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());
+    println!(" RMSE {},  noise {} ", f64::sqrt(error/count as f64), noise);
 }

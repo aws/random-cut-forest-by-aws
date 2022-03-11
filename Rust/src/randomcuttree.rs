@@ -62,19 +62,21 @@ where
         random_seed: u64,
     ) -> Self {
         let project_to_tree: fn(Vec<f32>) -> Vec<f32> = { |x| x };
+        let node_store= VectorNodeStore::<C, P, N>::new(
+            capacity,
+            dimensions,
+            using_transforms,
+            project_to_tree,
+            bounding_box_cache_fraction,
+        );
+        let root = node_store.null_node();
         RCFTree {
             dimensions,
             capacity,
             using_transforms,
             random_seed,
-            node_store: VectorNodeStore::<C, P, N>::new(
-                capacity,
-                dimensions,
-                using_transforms,
-                project_to_tree,
-                bounding_box_cache_fraction,
-            ),
-            root: 0,
+            node_store,
+            root,
             tree_mass: 0,
         }
     }
@@ -85,7 +87,7 @@ where
         _point_attribute: usize,
         point_store: &dyn PointStore,
     ) -> usize {
-        if self.root == 0 {
+        if self.root == self.node_store.null_node() {
             self.root = self.node_store.leaf_index(point_index);
             self.tree_mass = 1;
             point_index
@@ -107,7 +109,7 @@ where
                 let mut saved_parent = if path_to_root.len() != 0 {
                     path_to_root.last().unwrap().0
                 } else {
-                    0
+                    self.node_store.null_node()
                 };
                 let mut saved_node = node;
                 let mut current_box = BoundingBox::new(old_point, old_point);
@@ -134,7 +136,7 @@ where
                     }
                     assert!(saved_cut.dimension != usize::MAX);
 
-                    if parent == 0 {
+                    if parent == self.node_store.null_node() {
                         break;
                     } else {
                         self.node_store.grow_node_box(
@@ -149,12 +151,12 @@ where
                         parent = if path_to_root.len() != 0 {
                             path_to_root.last().unwrap().0
                         } else {
-                            0
+                            self.node_store.null_node()
                         };
                     }
                 }
 
-                if saved_parent != 0 {
+                if saved_parent != self.node_store.null_node() {
                     while !parent_path.is_empty() {
                         path_to_root.push(parent_path.pop().unwrap());
                     }
@@ -171,7 +173,7 @@ where
                     &saved_box,
                 );
 
-                if saved_parent != 0 {
+                if saved_parent != self.node_store.null_node() {
                     self.node_store.manage_ancestors_add(
                         &mut path_to_root,
                         point,
@@ -192,7 +194,7 @@ where
         _point_attribute: usize,
         point_store: &dyn PointStore,
     ) -> usize {
-        if self.root == 0 {
+        if self.root == self.node_store.null_node() {
             println!(" deleting from an empty tree");
             panic!();
         }
@@ -219,16 +221,16 @@ where
 
         if self.node_store.decrease_leaf_mass(leaf_node) == 0 {
             if leaf_path.len() == 0 {
-                self.root = 0;
+                self.root = self.node_store.null_node();
             } else {
                 let (parent, _sibling) = leaf_path.pop().unwrap();
                 let grand_parent = if leaf_path.len() == 0 {
-                    0
+                    self.node_store.null_node()
                 } else {
                     leaf_path.last().unwrap().0
                 };
 
-                if grand_parent == 0 {
+                if grand_parent == self.node_store.null_node() {
                     self.root = leaf_saved_sibling;
                     self.node_store.set_root(self.root);
                 } else {
@@ -261,7 +263,7 @@ where
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
     ) -> f64 {
-        if self.root == 0 {
+        if self.root == self.node_store.null_node() {
             return 0.0;
         }
 
@@ -296,7 +298,7 @@ where
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
     ) -> usize {
-        if self.root == 0 {
+        if self.root == self.node_store.null_node() {
             return usize::MAX;
         }
 

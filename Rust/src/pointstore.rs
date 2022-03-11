@@ -6,7 +6,8 @@ use crate::{intervalstoremanager::IntervalStoreManager, types::Location};
 pub trait PointStore {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32>;
     fn get_size(&self) -> usize;
-    fn get_missing_values(&self, values: &[usize]) -> Vec<usize>;
+    fn get_missing_indices(&self, look_ahead: usize, values: &[usize]) -> Vec<usize>;
+    fn get_next_indices(&self,look_ahead : usize) -> Vec<usize>;
     fn get_copy(&self, index: usize) -> Vec<f32>;
     fn is_equal(&self, point: &[f32], index: usize) -> bool;
     fn get_reference_and_offset(&self, index: usize) -> (&[f32], usize);
@@ -96,9 +97,10 @@ where
 {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32> {
         let mut new_point = vec![0.0; self.dimensions];
-        if self.internal_shingling {
-            let base = self.dimensions / self.shingle_size;
-            if point.len() != base {
+        let base = self.dimensions / self.shingle_size;
+        if point.len() == base {
+            if !self.internal_shingling {
+
                 println!("The point must be '{}' floats long", self.dimensions);
                 panic!();
             }
@@ -138,8 +140,18 @@ where
             + std::mem::size_of::<VectorizedPointStore<L>>()
     }
 
-    fn get_missing_values(&self, values: &[usize]) -> Vec<usize> {
+    fn get_next_indices(&self,look_ahead : usize) -> Vec<usize> {
+        let base = self.dimensions / self.shingle_size;
+        let mut vec = Vec::new();
+        for i in 0..base {
+            vec.push(i);
+        }
+         self.get_missing_indices(look_ahead, &vec)
+    }
+
+    fn get_missing_indices(&self, look_ahead: usize, values: &[usize]) -> Vec<usize> {
         if !self.internal_shingling {
+            assert!(look_ahead == 0, "look ahead is meaningless for external shingling");
             return Vec::from(values);
         }
         let mut answer = Vec::new();
@@ -147,7 +159,7 @@ where
         for i in 0..values.len() {
             assert!(values[i] < base);
             if self.internal_rotation {
-                answer.push((self.next_sequence_index * base) % self.dimensions + values[i]);
+                answer.push(((self.next_sequence_index + look_ahead) * base + values[i]) %self.dimensions);
             } else {
                 answer.push(self.dimensions - base + values[i]);
             }
