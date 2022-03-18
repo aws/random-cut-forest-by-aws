@@ -1,3 +1,4 @@
+/*
 mod boundingbox;
 mod cut;
 mod imputevisitor;
@@ -10,14 +11,18 @@ mod randomcuttree;
 mod rcf;
 mod sampler;
 mod samplerplustree;
+mod samplesummary;
 mod scalarscorevisitor;
 mod types;
 mod visitor;
-
+*/
 extern crate rand;
-
-use crate::rcf::{create_rcf, RCF};
 extern crate rand_chacha;
+extern crate rcflib;
+
+use rcflib::multidimdatawithkey;
+use rcflib::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::rcf::{create_rcf, RCF};
 
 fn main() {
     let shingle_size = 8;
@@ -66,6 +71,7 @@ fn main() {
     let mut count = 0;
 
     for i in 0..data_with_key.data.len() {
+
         if (i > 200) {
             let next_values = forest.extrapolate(1);
             assert!(next_values.len() == base_dimension);

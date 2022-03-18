@@ -297,9 +297,9 @@ where
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> usize {
+    ) -> (usize,f32) {
         if self.root == self.node_store.null_node() {
-            return usize::MAX;
+            return (usize::MAX,0.0);
         }
 
         let mut visitor = ImputeVisitor::new(

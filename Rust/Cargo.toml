@@ -3,6 +3,13 @@ name = "rcf"
 version = "3.0.0"
 edition = "2021"
 
+[lib]
+name = "rcflib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "example"
+path = "src/example.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

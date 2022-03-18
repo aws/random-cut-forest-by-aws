@@ -142,10 +142,7 @@ where
 
     fn get_next_indices(&self,look_ahead : usize) -> Vec<usize> {
         let base = self.dimensions / self.shingle_size;
-        let mut vec = Vec::new();
-        for i in 0..base {
-            vec.push(i);
-        }
+        let vec : Vec<usize> = (0..base).collect();
          self.get_missing_indices(look_ahead, &vec)
     }
 

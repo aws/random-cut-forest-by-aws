@@ -1,3 +1,4 @@
+use num::abs;
 use crate::{
     nodestore::NodeStore,
     nodeview::NodeView,
@@ -14,7 +15,7 @@ pub struct ImputeVisitor {
     centrality: f64,
     tree_mass: usize,
     missing: Vec<usize>,
-    values: Vec<(bool, f64, usize, Vec<f32>)>,
+    values: Vec<(bool, f64, usize, Vec<f32>, f32)>,
 }
 
 impl ImputeVisitor {
@@ -59,13 +60,13 @@ impl Visitor<f64> for ImputeVisitor {
         } else {
             score = (self.score_unseen)(node_view.get_depth(), mass);
         }
-
+        let dist = new_point.iter().zip(leaf_point).map(|(a,b)| abs(a-b)).sum();
         self.values
-            .push((converged, score, node_view.get_leaf_index(), new_point));
+            .push((converged, score, node_view.get_leaf_index(), new_point, dist));
     }
 
     fn accept(&mut self, _point: &[f32], node_view: &dyn NodeView) {
-        let (converged, score, index, result) = self.values.pop().unwrap();
+        let (converged, score, index, result,dist) = self.values.pop().unwrap();
         if !converged {
             let prob = if self.ignore_mass == 0 {
                 node_view.get_probability_of_cut(&result)
@@ -73,11 +74,11 @@ impl Visitor<f64> for ImputeVisitor {
                 node_view.get_shadow_box().probability_of_cut(&result)
             };
             if prob == 0.0 {
-                self.values.push((true, score, index, result));
+                self.values.push((true, score, index, result,dist));
             } else {
                 let new_score = (1.0 - prob) * score
                     + prob * (self.score_unseen)(node_view.get_depth(), node_view.get_mass());
-                self.values.push((false, new_score, index, result));
+                self.values.push((false, new_score, index, result,dist));
             }
         }
     }
@@ -105,10 +106,10 @@ impl Visitor<f64> for ImputeVisitor {
     }
 }
 
-impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
-    fn get_arguments(&self) -> usize {
+impl UniqueMultiVisitor<f64, (usize,f32)> for ImputeVisitor {
+    fn get_arguments(&self) -> (usize,f32) {
         assert_eq!(self.values.len(), 1, "incorrect state");
-        self.values.last().unwrap().2
+        (self.values.last().unwrap().2,self.values.last().unwrap().4)
     }
 
     fn trigger(&self, _point: &[f32], node_view: &dyn NodeView) -> bool {
@@ -117,8 +118,8 @@ impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
 
     fn combine_branches(&mut self, _point: &[f32], _node_view: &dyn NodeView) {
         assert!(self.values.len() >= 2, "incorrect state");
-        let (first_converged, first_score, first_index, first_result) = self.values.pop().unwrap();
-        let (second_converged, second_score, second_index, second_result) =
+        let (first_converged, first_score, first_index, first_result, first_dist) = self.values.pop().unwrap();
+        let (second_converged, second_score, second_index, second_result, second_dist) =
             self.values.pop().unwrap();
         if first_score < second_score {
             self.values.push((
@@ -126,6 +127,7 @@ impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
                 first_score,
                 first_index,
                 first_result,
+                first_dist
             ));
         } else {
             self.values.push((
@@ -133,6 +135,7 @@ impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
                 second_score,
                 second_index,
                 second_result,
+                second_dist
             ));
         }
     }

@@ -8,20 +8,20 @@ use crate::{
     types::{Location, Max},
 };
 
-/**
-* capacity is the number of leaves in the tree
-* this is the (per tree) samplesize in RCF
-* in the encoding below, the leaves are point_index + capacity
-* the value capacity - 1 stands for null
-* the values 0..(capacity-2) corresponds to the internal nodes; note that a regular binary tree
-* where each node has 0 or 2 children, has (capacity - 1) internal nodes
-*
-* the nodestore does not need to save the parent information; it is saved if the bounding box cache is
-* more than 0.
-*
-* Note that the mass of each node (in use) is at least 1. Subtracting 1 from each node implicitly
-* makes the values between [0..(capacity-1)] which is very convenient for 2^8 and 2^16.
-*/
+///
+/// capacity is the number of leaves in the tree
+/// this is the (per tree) samplesize in RCF
+/// in the encoding below, the leaves are point_index + capacity
+/// the value capacity - 1 stands for null
+/// the values 0..(capacity-2) corresponds to the internal nodes; note that a regular binary tree
+/// where each node has 0 or 2 children, has (capacity - 1) internal nodes
+///
+/// the nodestore does not need to save the parent information; it is saved if the bounding box cache is
+/// more than 0.
+///
+/// Note that the mass of each node (in use) is at least 1. Subtracting 1 from each node implicitly
+/// makes the values between [0..(capacity-1)] which is very convenient for 2^8 and 2^16.
+///
 
 #[repr(C)]
 pub struct VectorNodeStore<C, P, N>
@@ -118,7 +118,7 @@ where
             panic!();
         }
         let cache_limit: usize = (bounding_box_cache_fraction * capacity as f64) as usize;
-        let null_node = capacity - 1;
+        let null_node = Self::null_value(capacity);
         VectorNodeStore {
             capacity,
             dimensions,
@@ -142,8 +142,8 @@ where
         }
     }
 
-    // 0 is indicative of null given unsigned representation
-    // otherwise index X uses slot X-1
+    /// 0 is indicative of null given unsigned representation
+    /// otherwise index X uses slot X-1
 
     fn translate(&self, index: usize) -> usize {
         if index != self.null_node() && self.range_sum_data.len() <= index {
@@ -451,6 +451,10 @@ where
             + (self.bounding_box_data.len() + 2 * self.range_sum_data.len()) * mem::size_of::<f32>()
             + std::mem::size_of::<VectorNodeStore<C, P, N>>()
     }
+
+    fn null_value(capacity:usize) -> usize {
+        capacity - 1
+    }
 }
 
 impl<C, P, N> NodeStore for VectorNodeStore<C, P, N>
@@ -722,6 +726,6 @@ where
     }
 
     fn null_node(&self) -> usize {
-        self.capacity - 1
+        Self::null_value(self.capacity)
     }
 }
