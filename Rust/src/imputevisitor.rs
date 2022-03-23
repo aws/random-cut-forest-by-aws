@@ -1,5 +1,5 @@
 use num::abs;
-use rand::{Rng, SeedableRng};
+use rand::{random, Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use crate::{L1distance, nodestore::NodeStore, nodeview::NodeView, visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor}};
 
@@ -16,6 +16,16 @@ pub struct ImputeVisitor {
     rng : ChaCha20Rng,
     missing: Vec<usize>,
     stack: Vec<ImputeVisitorStackElement>,
+}
+
+#[repr(C)]
+struct ImputeVisitorStackElement{
+    converged: bool,
+    score : f64,
+    random : f32,
+    index : usize,
+    imputed_point : Vec<f32>,
+    distance : f32
 }
 
 impl ImputeVisitor {
@@ -43,17 +53,19 @@ impl ImputeVisitor {
             stack : Vec::new()
         }
     }
+
+    /// the following function allows the score to vary between the score used in
+    /// anomaly detection and fully random sample based on the parameter centrality
+    /// these two cases correspond to centrality = 1 and centrality = 0 respectively
+
+    fn adjusted_score(&self, e : &ImputeVisitorStackElement)->f64{
+           self.centrality * (self.normalizer) (e.score,self.tree_mass) +
+               (1.0 - self.centrality) * e.random as f64
+    }
 }
 
 
-#[repr(C)]
-struct ImputeVisitorStackElement{
-    converged: bool,
-    score : f64,
-    index : usize,
-    imputed_point : Vec<f32>,
-    distance : f32
-}
+
 
 impl Visitor<f64> for ImputeVisitor {
     fn accept_leaf(&mut self, point: &[f32], node_view: &dyn NodeView) {
@@ -78,6 +90,7 @@ impl Visitor<f64> for ImputeVisitor {
                 converged,
                 score,
                 index: node_view.get_leaf_index(),
+                random : self.rng.gen::<f32>(),
                 imputed_point: new_point,
                 distance : dist});
     }
@@ -140,7 +153,8 @@ impl UniqueMultiVisitor<f64, (usize,f32)> for ImputeVisitor {
         assert!(self.stack.len() >= 2, "incorrect state");
         let mut top_of_stack = self.stack.pop().unwrap();
         let mut next_of_stack = self.stack.pop().unwrap();
-        if top_of_stack.score < next_of_stack.score {
+
+        if self.adjusted_score(&top_of_stack) < self.adjusted_score(&next_of_stack) {
             top_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
             self.stack.push(top_of_stack);
         } else {

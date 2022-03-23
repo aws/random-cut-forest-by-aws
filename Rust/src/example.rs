@@ -45,7 +45,7 @@ fn main() {
 
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude =  Vec::new();
-    for i in 0..base_dimension {
+    for _i in 0..base_dimension {
         amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*60.0);
     }
 

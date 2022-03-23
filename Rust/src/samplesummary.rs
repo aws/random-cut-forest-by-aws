@@ -1,5 +1,7 @@
 use std::cmp::min;
 use num::abs;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 
 ///
 /// The goal of the summarization below is as follows: on being provided a collection of sampled weighted points
@@ -119,6 +121,26 @@ impl Center {
         }
     }
 
+    fn median(points:&[(Vec<f32>,f32)], list: &mut[ProjectedPoint], dimensions:usize) -> Vec<f32>{
+        let mut answer = vec![0.0f32;dimensions];
+        let total : f64 = list.iter().map(|a| a.weight as f64).sum();
+        for i in 0..dimensions {
+            list.sort_by(|a, b| points[a.index].0[i].partial_cmp(&points[b.index].0[i]).unwrap());
+            let mut running_weight = total / 2.0;
+            let mut position = 0;
+            while running_weight >= 0.0 && position < list.len() {
+                if running_weight as f32 >= list[position].weight {
+                    running_weight -= list[position].weight as f64;
+                    position += 1;
+                } else {
+                    break;
+                }
+            }
+            answer[i] = points[list[position].index].0[i];
+        }
+        answer
+    }
+
     pub fn recompute(&mut self,points:&[(Vec<f32>,f32)],distance : fn(&[f32],&[f32]) -> f64){
         self.sum_of_radii  = 0.0;
         if self.weight == 0.0 {
@@ -126,19 +148,22 @@ impl Center {
             self.coordinate = vec![0.0;self.coordinate.len()];
             return;
         }
-        for i in 0..self.coordinate.len() {
-            self.points.sort_by(|a, b| points[a.index].0[i].partial_cmp(&points[b.index].0[i]).unwrap());
-            let mut running_weight = self.weight / 2.0;
-            let mut position = 0;
-            while running_weight >= 0.0 && position < self.points.len() {
-                if running_weight as f32 >= self.points[position].weight {
-                    running_weight -= self.points[position].weight as f64;
-                    position += 1;
-                } else {
-                    break;
+
+        let new_center = if (self.points.len() < 500) {
+            Self::median(points,&mut self.points,self.coordinate.len())
+        } else {
+            let mut samples = Vec::new();
+            let mut rng =ChaCha20Rng::seed_from_u64(0);
+            for i in 0..self.points.len() {
+                if rng.gen::<f64>()  < (200.0 * self.points[i].weight as f64)/self.weight {
+                    samples.push(ProjectedPoint::new(self.points[i].index,1.0));
                 }
-            }
-            self.coordinate[i] = points[self.points[position].index].0[i];
+            };
+            Self::median(points,&mut samples,self.coordinate.len())
+        };
+
+        for i in 0..self.coordinate.len() {
+            self.coordinate[i] = new_center[i];
         }
 
         for j in 0..self.points.len() {
@@ -149,7 +174,6 @@ impl Center {
 }
 
 const weight_threshold : f64 = 1.25;
-
 
 
 fn assign(points : &[(Vec<f32>,f32)], centers: &mut[Center], distance : fn(&[f32],&[f32]) -> f64) {
