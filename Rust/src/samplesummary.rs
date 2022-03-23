@@ -149,7 +149,8 @@ impl Center {
             return;
         }
 
-        let new_center = if (self.points.len() < 500) {
+        // the following computes an approximate median
+        let new_center = if self.points.len() < 500 {
             Self::median(points,&mut self.points,self.coordinate.len())
         } else {
             let mut samples = Vec::new();

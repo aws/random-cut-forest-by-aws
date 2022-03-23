@@ -29,7 +29,7 @@ pub fn LInfinitydistance(a: &[f32], b : &[f32]) -> f64{
     let mut dist = 0.0;
     for i in 0..a.len(){
         let t= abs(a[i] - b[i]) as f64;
-        if (dist < t) {
+        if dist < t {
             dist = t;
         };
     }
