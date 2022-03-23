@@ -73,10 +73,6 @@ struct Center {
 }
 
 
-fn distance(a: &[f32], b : &[f32]) -> f64{
-    a.iter().zip(b).map(|(x,y)| abs(x-y) as f64).sum()
-}
-
 impl ProjectedPoint {
     pub fn new (index:usize, weight : f32) -> Self {
         ProjectedPoint {
@@ -123,7 +119,7 @@ impl Center {
         }
     }
 
-    pub fn recompute(&mut self,points:&[(Vec<f32>,f32)]){
+    pub fn recompute(&mut self,points:&[(Vec<f32>,f32)],distance : fn(&[f32],&[f32]) -> f64){
         self.sum_of_radii  = 0.0;
         if self.weight == 0.0 {
             assert!(self.points.len() > 0, "adding no points? ");
@@ -132,10 +128,10 @@ impl Center {
         }
         for i in 0..self.coordinate.len() {
             self.points.sort_by(|a, b| points[a.index].0[i].partial_cmp(&points[b.index].0[i]).unwrap());
-            let mut running_weight = self.weight/2.0;
+            let mut running_weight = self.weight / 2.0;
             let mut position = 0;
-            while (running_weight >= 0.0 && position < self.points.len()) {
-                if (running_weight as f32 >= self.points[position].weight ) {
+            while running_weight >= 0.0 && position < self.points.len() {
+                if running_weight as f32 >= self.points[position].weight {
                     running_weight -= self.points[position].weight as f64;
                     position += 1;
                 } else {
@@ -143,9 +139,10 @@ impl Center {
                 }
             }
             self.coordinate[i] = points[self.points[position].index].0[i];
-            for j in 0..self.points.len() {
-                self.sum_of_radii += (self.points[j].weight * abs(self.coordinate[i] - points[self.points[j].index].0[i])) as f64;
-            }
+        }
+
+        for j in 0..self.points.len() {
+                self.sum_of_radii += self.points[j].weight as f64 * distance(&self.coordinate,&points[self.points[j].index].0) as f64;
         }
     }
 
@@ -155,7 +152,7 @@ const weight_threshold : f64 = 1.25;
 
 
 
-fn assign(points : &[(Vec<f32>,f32)], centers: &mut[Center]) {
+fn assign(points : &[(Vec<f32>,f32)], centers: &mut[Center], distance : fn(&[f32],&[f32]) -> f64) {
 
     for j in 0..centers.len() {
         centers[j].reset();
@@ -166,25 +163,25 @@ fn assign(points : &[(Vec<f32>,f32)], centers: &mut[Center]) {
         let mut min_distance = f64::MAX;
         for j in 0..centers.len() {
             dist[j] = distance(&centers[j].coordinate, &points[i].0);
-            if (min_distance <dist[j]){
+            if min_distance > dist[j] {
                 min_distance = dist[j];
             }
         }
-        if (min_distance == 0.0) {
+        if min_distance == 0.0 {
             for j in 0..centers.len() {
-                if (dist[j] == 0.0) {
+                if dist[j] == 0.0 {
                     centers[j].add(i, points[i].1);
                 }
             }
         } else {
             let mut sum = 0.0;
             for j in 0..centers.len() {
-                if (dist[j] <= weight_threshold * min_distance) {
+                if dist[j] <= weight_threshold * min_distance {
                     sum += min_distance / dist[j];
                 }
             }
             for j in 0..centers.len() {
-                if (dist[j] <= weight_threshold * min_distance) {
+                if dist[j] <= weight_threshold * min_distance {
                     centers[j].add(i, (points[j].1 as f64 * min_distance / (sum * dist[j])) as f32);
                 }
             }
@@ -194,7 +191,7 @@ fn assign(points : &[(Vec<f32>,f32)], centers: &mut[Center]) {
 
 const separation_ratio_for_merge : f64 = 0.8;
 
-pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummary {
+pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64, max_number : usize) -> SampleSummary {
     if max_number == 0 {
         return SampleSummary{
             summary_points: vec![],
@@ -223,7 +220,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummar
     for j in 0..dimensions {
         mean[j] = (sum_values[j] / total_weight as f64) as f32;
         let t: f64 = sum_values_sq[j] / total_weight as f64 - sum_values[j] * sum_values[j] / (total_weight as f64 * total_weight as f64);
-        deviation[j] = f64::sqrt(if (t > 0.0) { t } else { 0.0 }) as f32;
+        deviation[j] = f64::sqrt(if t > 0.0 { t } else { 0.0 }) as f32;
     };
     let mut median = vec![0.0f32; dimensions];
     let num = points.len();
@@ -232,6 +229,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummar
         v.sort_by(|a, b| a.partial_cmp(b).unwrap());
         median[j] = v[num / 2];
     };
+
     let mut centers: Vec<Center> = Vec::new();
     centers.push(Center::initial(&median));
     let max_allowed = min(dimensions * max_number_per_dimension,
@@ -247,7 +245,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummar
                     min_dist = t;
                 };
             }
-            if (min_dist > max_dist) {
+            if min_dist > max_dist {
                 max_dist = min_dist;
                 max_index = j;
             }
@@ -259,14 +257,14 @@ pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummar
         };
     };
 
-    assign(points,&mut centers);
+    assign(points,&mut centers,distance);
 
     for i in 0..centers.len() {
-        centers[i].recompute(points);
+        centers[i].recompute(points,distance);
     }
 
     let mut measure = 2.0 * separation_ratio_for_merge;
-    while (measure > 2.0 * separation_ratio_for_merge || centers.len() > max_allowed) {
+    while measure > 2.0 * separation_ratio_for_merge || centers.len() > max_allowed {
         let mut first = usize::MAX;
         let mut second = usize::MAX;
         measure = 0.0;
@@ -274,28 +272,28 @@ pub fn summarize(points : &[(Vec<f32>,f32)], max_number : usize) -> SampleSummar
             for j in i + 1..centers.len() {
                 let dist = distance(&centers[i].coordinate, &centers[j].coordinate);
                 let temp_measure = (centers[i].average_radius() + centers[j].average_radius()) / dist;
-                if (measure < temp_measure) {
+                if measure < temp_measure {
                     first = i;
                     second = j;
                     measure = temp_measure;
                 }
             }
         };
-        if (measure >= separation_ratio_for_merge) {
-            if (centers[first].weight < centers[second].weight) {
+        if measure >= separation_ratio_for_merge {
+            if centers[first].weight < centers[second].weight {
                 centers.swap_remove(first);
             } else {
                 centers.swap_remove(second);
             }
-        } else if (centers.len() > max_allowed) {
+        } else if centers.len() > max_allowed {
             // not well separated, remove small weight cluster centers
             // increasing order of weight
             centers.sort_by(|o1, o2| o1.weight.partial_cmp(&o2.weight).unwrap());
             centers.swap_remove(0);
         }
-        assign(points,&mut centers);
+        assign(points,&mut centers,distance);
         for i in 0..centers.len() {
-            centers[i].recompute(points);
+            centers[i].recompute(points,distance);
         }
     };
 

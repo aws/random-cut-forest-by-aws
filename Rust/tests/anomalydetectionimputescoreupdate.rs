@@ -2,15 +2,20 @@
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
-use rand_chacha::ChaCha20Rng;
+
 use rand::{Rng, SeedableRng};
-
-
+use rand_chacha::ChaCha20Rng;
 use rcflib::multidimdatawithkey;
 use rcflib::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
 
-fn main() {
+/// try cargo test --release
+/// these tests are designed to be longish
+
+
+
+#[test]
+fn anomalydetection_impute_score_and_update() {
     let shingle_size = 8;
     let base_dimension = 5;
     let data_size = 100000;
@@ -42,13 +47,11 @@ fn main() {
         initial_accept_fraction,
         bounding_box_cache_fraction,
     );
-
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude =  Vec::new();
-    for i in 0..base_dimension {
-        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*60.0);
+    for _i in 0..base_dimension {
+        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
-
     let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
         data_size,
         &vec![60;base_dimension],

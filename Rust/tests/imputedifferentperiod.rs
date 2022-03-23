@@ -2,19 +2,23 @@
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
-use rand_chacha::ChaCha20Rng;
+
 use rand::{Rng, SeedableRng};
-
-
+use rand_chacha::ChaCha20Rng;
 use rcflib::multidimdatawithkey;
 use rcflib::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
 
-fn main() {
-    let shingle_size = 8;
-    let base_dimension = 5;
+/// try cargo test --release
+/// these tests are designed to be longish
+
+
+#[test]
+fn impute_different_period() {
+    let shingle_size = 30;
+    let base_dimension = 3;
     let data_size = 100000;
-    let number_of_trees = 30;
+    let number_of_trees = 100;
     let capacity = 256;
     let initial_accept_fraction = 0.1;
     let dimensions = shingle_size * base_dimension;
@@ -42,16 +46,19 @@ fn main() {
         initial_accept_fraction,
         bounding_box_cache_fraction,
     );
-
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude =  Vec::new();
     for i in 0..base_dimension {
-        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*60.0);
+        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
-
+    let mut period_rng = ChaCha20Rng::seed_from_u64(7);
+    let mut period =  Vec::new();
+    for _i in 0..base_dimension {
+        period.push( ((1.0 + 0.2 * period_rng.gen::<f32>())*60.0) as usize);
+    }
     let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
         data_size,
-        &vec![60;base_dimension],
+        &period,
         &amplitude,
         noise,
         0,
@@ -71,24 +78,9 @@ fn main() {
             error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();
             count += base_dimension;
         }
-
-        let new_score = forest.score(&data_with_key.data[i]);
-        //println!("{} {} score {}",y,i,new_score);
-        /*
-        if next_index < data_with_key.change_indices.len() && data_with_key.change_indices[next_index] == i {
-            println!(" score at change {} position {} ", new_score, i);
-            next_index += 1;
-        }
-        */
-
-        score += new_score;
         forest.update(&data_with_key.data[i], 0);
     }
 
-    println!(
-        "Average score {} ",
-        (score / data_with_key.data.len() as f64)
-    );
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());

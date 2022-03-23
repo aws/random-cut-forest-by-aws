@@ -2,15 +2,18 @@
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
-use rand_chacha::ChaCha20Rng;
+
 use rand::{Rng, SeedableRng};
-
-
+use rand_chacha::ChaCha20Rng;
 use rcflib::multidimdatawithkey;
 use rcflib::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
 
-fn main() {
+/// try cargo test --release
+/// these tests are designed to be longish
+
+#[test]
+fn anomalydetection_score_and_update() {
     let shingle_size = 8;
     let base_dimension = 5;
     let data_size = 100000;
@@ -42,13 +45,11 @@ fn main() {
         initial_accept_fraction,
         bounding_box_cache_fraction,
     );
-
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude =  Vec::new();
-    for i in 0..base_dimension {
-        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*60.0);
+    for _i in 0..base_dimension {
+        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
-
     let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
         data_size,
         &vec![60;base_dimension],
@@ -60,18 +61,8 @@ fn main() {
 
     let mut score: f64 = 0.0;
     let _next_index = 0;
-    let mut error = 0.0;
-    let mut count = 0;
 
     for i in 0..data_with_key.data.len() {
-
-        if (i > 200) {
-            let next_values = forest.extrapolate(1);
-            assert!(next_values.len() == base_dimension);
-            error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();
-            count += base_dimension;
-        }
-
         let new_score = forest.score(&data_with_key.data[i]);
         //println!("{} {} score {}",y,i,new_score);
         /*
@@ -89,8 +80,8 @@ fn main() {
         "Average score {} ",
         (score / data_with_key.data.len() as f64)
     );
+    assert!(score < data_with_key.data.len() as f64, " average score is above 1");
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());
-    println!(" RMSE {},  noise {} ", f64::sqrt(error/count as f64), noise);
 }

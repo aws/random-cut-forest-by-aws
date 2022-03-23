@@ -1,9 +1,8 @@
 use num::abs;
-use crate::{
-    nodestore::NodeStore,
-    nodeview::NodeView,
-    visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor},
-};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use crate::{L1distance, nodestore::NodeStore, nodeview::NodeView, visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor}};
+
 
 #[repr(C)]
 pub struct ImputeVisitor {
@@ -14,8 +13,9 @@ pub struct ImputeVisitor {
     ignore_mass: usize,
     centrality: f64,
     tree_mass: usize,
+    rng : ChaCha20Rng,
     missing: Vec<usize>,
-    values: Vec<(bool, f64, usize, Vec<f32>, f32)>,
+    stack: Vec<ImputeVisitorStackElement>,
 }
 
 impl ImputeVisitor {
@@ -23,6 +23,7 @@ impl ImputeVisitor {
         missing: &[usize],
         centrality: f64,
         tree_mass: usize,
+        seed : u64,
         ignore_mass: usize,
         damp: fn(usize, usize) -> f64,
         score_seen: fn(usize, usize) -> f64,
@@ -32,15 +33,26 @@ impl ImputeVisitor {
         ImputeVisitor {
             centrality,
             tree_mass,
+            rng : ChaCha20Rng::seed_from_u64(seed),
             ignore_mass,
             damp,
             score_seen,
             score_unseen,
             normalizer,
             missing: Vec::from(missing),
-            values: Vec::new(),
+            stack : Vec::new()
         }
     }
+}
+
+
+#[repr(C)]
+struct ImputeVisitorStackElement{
+    converged: bool,
+    score : f64,
+    index : usize,
+    imputed_point : Vec<f32>,
+    distance : f32
 }
 
 impl Visitor<f64> for ImputeVisitor {
@@ -60,35 +72,42 @@ impl Visitor<f64> for ImputeVisitor {
         } else {
             score = (self.score_unseen)(node_view.get_depth(), mass);
         }
-        let dist = new_point.iter().zip(leaf_point).map(|(a,b)| abs(a-b)).sum();
-        self.values
-            .push((converged, score, node_view.get_leaf_index(), new_point, dist));
+        let dist = L1distance(&new_point,&leaf_point) as f32;
+        self.stack
+            .push(ImputeVisitorStackElement{
+                converged,
+                score,
+                index: node_view.get_leaf_index(),
+                imputed_point: new_point,
+                distance : dist});
     }
 
     fn accept(&mut self, _point: &[f32], node_view: &dyn NodeView) {
-        let (converged, score, index, result,dist) = self.values.pop().unwrap();
-        if !converged {
+        let mut top_of_stack = self.stack.pop().unwrap();
+        if !top_of_stack.converged {
             let prob = if self.ignore_mass == 0 {
-                node_view.get_probability_of_cut(&result)
+                node_view.get_probability_of_cut(&top_of_stack.imputed_point)
             } else {
-                node_view.get_shadow_box().probability_of_cut(&result)
+                node_view.get_shadow_box().probability_of_cut(&top_of_stack.imputed_point)
             };
             if prob == 0.0 {
-                self.values.push((true, score, index, result,dist));
+                top_of_stack.converged = true;
             } else {
-                let new_score = (1.0 - prob) * score
+                let new_score = (1.0 - prob) * top_of_stack.score
                     + prob * (self.score_unseen)(node_view.get_depth(), node_view.get_mass());
-                self.values.push((false, new_score, index, result,dist));
+                top_of_stack.converged = false;
+                top_of_stack.score = new_score;
             }
+            self.stack.push(top_of_stack);
         }
     }
 
     fn get_result(&self) -> f64 {
-        self.values.last().unwrap().1
+        self.stack.last().unwrap().score
     }
 
     fn has_converged(&self) -> bool {
-        self.values.last().unwrap().0
+        self.stack.last().unwrap().converged
     }
 
     fn descriptor(&self) -> VisitorDescriptor {
@@ -108,8 +127,9 @@ impl Visitor<f64> for ImputeVisitor {
 
 impl UniqueMultiVisitor<f64, (usize,f32)> for ImputeVisitor {
     fn get_arguments(&self) -> (usize,f32) {
-        assert_eq!(self.values.len(), 1, "incorrect state");
-        (self.values.last().unwrap().2,self.values.last().unwrap().4)
+        assert_eq!(self.stack.len(), 1, "incorrect state");
+        let top_of_stack = self.stack.last().unwrap();
+        (top_of_stack.index,top_of_stack.distance)
     }
 
     fn trigger(&self, _point: &[f32], node_view: &dyn NodeView) -> bool {
@@ -117,34 +137,23 @@ impl UniqueMultiVisitor<f64, (usize,f32)> for ImputeVisitor {
     }
 
     fn combine_branches(&mut self, _point: &[f32], _node_view: &dyn NodeView) {
-        assert!(self.values.len() >= 2, "incorrect state");
-        let (first_converged, first_score, first_index, first_result, first_dist) = self.values.pop().unwrap();
-        let (second_converged, second_score, second_index, second_result, second_dist) =
-            self.values.pop().unwrap();
-        if first_score < second_score {
-            self.values.push((
-                first_converged || second_converged,
-                first_score,
-                first_index,
-                first_result,
-                first_dist
-            ));
+        assert!(self.stack.len() >= 2, "incorrect state");
+        let mut top_of_stack = self.stack.pop().unwrap();
+        let mut next_of_stack = self.stack.pop().unwrap();
+        if top_of_stack.score < next_of_stack.score {
+            top_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
+            self.stack.push(top_of_stack);
         } else {
-            self.values.push((
-                first_converged || second_converged,
-                second_score,
-                second_index,
-                second_result,
-                second_dist
-            ));
+            next_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
+            self.stack.push(next_of_stack);
         }
     }
 
     fn unique_answer(&self) -> &[f32] {
         assert!(
-            self.values.len() >= 1,
+            self.stack.len() >= 1,
             "incorrect state, at least one leaf must have been visited"
         );
-        &self.values.last().unwrap().3
+        &self.stack.last().unwrap().imputed_point
     }
 }

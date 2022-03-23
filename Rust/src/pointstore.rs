@@ -98,10 +98,9 @@ where
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32> {
         let mut new_point = vec![0.0; self.dimensions];
         let base = self.dimensions / self.shingle_size;
-        if point.len() == base {
+        if point.len() == base && self.shingle_size > 1 {
             if !self.internal_shingling {
-
-                println!("The point must be '{}' floats long", self.dimensions);
+                println!("The point must be '{}' floats long, got {} ", self.dimensions, point.len());
                 panic!();
             }
             if !self.internal_rotation {
@@ -121,9 +120,8 @@ where
                 }
             }
             return new_point;
-        }
-        if point.len() != self.dimensions {
-            println!("The point must be '{}' floats long", self.dimensions);
+        } else if point.len() != self.dimensions {
+            println!("The point must be '{}' floats long, got {}", self.dimensions, point.len());
             panic!();
         }
         for i in 0..self.dimensions {

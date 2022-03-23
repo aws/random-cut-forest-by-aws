@@ -168,6 +168,7 @@ where
             point,
             point_store,
             centrality,
+            self.random_seed,
             ignore_mass,
             score_seen,
             score_unseen,

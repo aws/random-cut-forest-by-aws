@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::{pointstore::{PointStore, VectorizedPointStore}, samplerplustree::SamplerPlusTree, samplesummary::{SampleSummary,summarize}};
+use crate::{L1distance, pointstore::{PointStore, VectorizedPointStore}, samplerplustree::SamplerPlusTree, samplesummary::{SampleSummary, summarize}};
 extern crate num;
 extern crate rand;
 use rand::SeedableRng;
@@ -478,7 +478,7 @@ where
         };
 
         let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, ignore_mass, score_seen, score_unseen, damp, normalizer);
-        field_summarizer(&self.point_store,&raw_list,&new_positions,centrality,project,max_number)
+        field_summarizer(&self.point_store,&raw_list,&new_positions,centrality,project,max_number,L1distance)
     }
 
     fn extrapolate(&self, look_ahead: usize) -> Vec<f32> {
