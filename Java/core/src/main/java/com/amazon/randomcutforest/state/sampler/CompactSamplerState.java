@@ -17,8 +17,6 @@ package com.amazon.randomcutforest.state.sampler;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import java.io.Serializable;
-
 import lombok.Data;
 
 /**
@@ -26,9 +24,7 @@ import lombok.Data;
  * {@link com.amazon.randomcutforest.sampler.CompactSampler}.
  */
 @Data
-public class CompactSamplerState implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+public class CompactSamplerState {
     /**
      * a version string for extensibility
      */

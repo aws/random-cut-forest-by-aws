@@ -17,16 +17,12 @@ package com.amazon.randomcutforest.state.tree;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import java.io.Serializable;
-
 import lombok.Data;
 
 import com.amazon.randomcutforest.state.store.NodeStoreState;
 
 @Data
-public class CompactRandomCutTreeState implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+public class CompactRandomCutTreeState {
     private String version = V2_0;
     private int root;
     private int maxSize;

@@ -17,8 +17,6 @@ package com.amazon.randomcutforest.state.store;
 
 import static com.amazon.randomcutforest.state.Version.V2_0;
 
-import java.io.Serializable;
-
 import lombok.Data;
 
 /**
@@ -28,9 +26,7 @@ import lombok.Data;
  * {@code floatData} will be null.
  */
 @Data
-public class PointStoreState implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+public class PointStoreState {
     /**
      * version string for future extensibility
      */

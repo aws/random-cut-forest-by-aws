@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.state.returntypes;
 
-import java.io.Serializable;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,9 +32,7 @@ import com.amazon.randomcutforest.anomalydetection.AnomalyAttributionVisitor;
  */
 @Getter
 @Setter
-public class DiVectorState implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+public class DiVectorState {
     double[] high;
     double[] low;
 }
