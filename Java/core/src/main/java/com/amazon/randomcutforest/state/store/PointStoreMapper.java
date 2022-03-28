@@ -55,7 +55,12 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
         int[] locationList = new int[indexCapacity];
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         if (!state.getVersion().equals(Version.V3_0)) {
-            System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+            int shingleSize = state.getShingleSize();
+            int baseDimension = dimensions / shingleSize;
+            for (int i = 0; i < tempList.length; i++) {
+                checkArgument(tempList[i] % baseDimension == 0, " incorrect state");
+                locationList[i] = tempList[i] / baseDimension;
+            }
         } else {
             int[] duplicateRefs = null;
             if (state.getDuplicateRefs() != null) {
