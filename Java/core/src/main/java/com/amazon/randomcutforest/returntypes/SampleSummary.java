@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.returntypes;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
-public class ConditionalSampleSummary {
+public class SampleSummary {
 
     /**
      * a collection of summarized points (reminiscent of typical sets from the
@@ -33,7 +33,7 @@ public class ConditionalSampleSummary {
     /**
      * a measure of comparison among the typical points;
      */
-    public float[] relativeLikelihood;
+    public float[] relativeWeight;
 
     /**
      * number of samples, often the number of summary
@@ -51,33 +51,33 @@ public class ConditionalSampleSummary {
      */
     public float[] deviation;
 
-    public ConditionalSampleSummary(double weightOfSamples, float[][] typicalPoints, float[] relativeLikelihood,
-            float[] median, float[] mean, float[] deviation) {
+    public SampleSummary(double weightOfSamples, float[][] typicalPoints, float[] relativeLikelihood, float[] median,
+            float[] mean, float[] deviation) {
         checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
         this.weightOfSamples = weightOfSamples;
         this.summaryPoints = typicalPoints;
-        this.relativeLikelihood = relativeLikelihood;
+        this.relativeWeight = relativeLikelihood;
         this.mean = mean;
         this.median = median;
         this.deviation = deviation;
     }
 
-    public ConditionalSampleSummary(int dimensions) {
+    public SampleSummary(int dimensions) {
         this.weightOfSamples = 0;
         this.summaryPoints = new float[1][];
         this.summaryPoints[0] = new float[dimensions];
-        this.relativeLikelihood = new float[] { 0.0f };
+        this.relativeWeight = new float[] { 0.0f };
         this.median = new float[dimensions];
         this.mean = new float[dimensions];
         this.deviation = new float[dimensions];
     }
 
     // for older tests
-    public ConditionalSampleSummary(double[] point) {
+    public SampleSummary(double[] point) {
         this.weightOfSamples = 0;
         this.summaryPoints = new float[1][];
         this.summaryPoints[0] = new float[point.length];
-        this.relativeLikelihood = new float[] { 0.0f };
+        this.relativeWeight = new float[] { 0.0f };
         this.median = toFloatArray(point);
         this.mean = toFloatArray(point);
         this.deviation = new float[point.length];

@@ -52,7 +52,6 @@ import com.amazon.randomcutforest.imputation.ConditionalSampleSummarizer;
 import com.amazon.randomcutforest.imputation.ImputeVisitor;
 import com.amazon.randomcutforest.inspect.NearNeighborVisitor;
 import com.amazon.randomcutforest.interpolation.SimpleInterpolationVisitor;
-import com.amazon.randomcutforest.returntypes.ConditionalSampleSummary;
 import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
@@ -61,6 +60,7 @@ import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
@@ -1005,8 +1005,8 @@ public class RandomCutForest {
         return traverseForestMulti(transformToShingledPoint(point), visitorFactory, ConditionalTreeSample.collector);
     }
 
-    public ConditionalSampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues,
-            int[] missingIndexes, double centrality) {
+    public SampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues, int[] missingIndexes,
+            double centrality) {
         checkArgument(numberOfMissingValues >= 0, "cannot be negative");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
@@ -1014,7 +1014,7 @@ public class RandomCutForest {
         checkArgument(centrality >= 0 && centrality <= 1, "centrality needs to be in range [0,1]");
         checkArgument(point != null, " cannot be null");
         if (!isOutputReady()) {
-            return new ConditionalSampleSummary(dimensions);
+            return new SampleSummary(dimensions);
         }
 
         int[] liftedIndices = transformIndices(missingIndexes, point.length);
