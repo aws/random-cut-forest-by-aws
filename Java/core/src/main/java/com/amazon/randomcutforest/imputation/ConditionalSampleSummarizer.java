@@ -24,8 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.amazon.randomcutforest.returntypes.ConditionalSampleSummary;
 import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
 
 public class ConditionalSampleSummarizer {
 
@@ -78,7 +78,7 @@ public class ConditionalSampleSummarizer {
         this.centrality = centrality;
     }
 
-    public ConditionalSampleSummary summarize(List<ConditionalTreeSample> alist) {
+    public SampleSummary summarize(List<ConditionalTreeSample> alist) {
         checkArgument(alist.size() > 0, "incorrect call to summarize");
         /**
          * first we dedupe over the points in the pointStore -- it is likely, and
@@ -298,7 +298,7 @@ public class ConditionalSampleSummarizer {
             likelihood[i] = (float) (centers.get(i).weight / totalWeight);
         }
 
-        return new ConditionalSampleSummary(totalWeight, pointList, likelihood, median, coordMean, deviation);
+        return new SampleSummary(totalWeight, pointList, likelihood, median, coordMean, deviation);
     }
 
     class ProjectedPoint {
