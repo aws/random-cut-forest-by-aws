@@ -55,5 +55,17 @@
       <version>2.12.6.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.protostuff</groupId>
+      <artifactId>protostuff-core</artifactId>
+      <version>1.7.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.protostuff</groupId>
+      <artifactId>protostuff-runtime</artifactId>
+      <version>1.7.2</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

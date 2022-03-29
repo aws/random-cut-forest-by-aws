@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -16,8 +16,12 @@
 package com.amazon.randomcutforest.parkservices.state;
 
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.protostuff.ProtostuffIOUtil;
+import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -26,36 +30,53 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class V2TRCFToV3StateConverterTest {
 
+    private ThresholdedRandomCutForestMapper trcfMapper = new ThresholdedRandomCutForestMapper();
+
     @ParameterizedTest
     @EnumSource(V2TRCFJsonResource.class)
-    public void test(V2TRCFJsonResource jsonResource) {
+    public void testJson(V2TRCFJsonResource jsonResource) throws JsonProcessingException {
+        String json = getStateFromFile(jsonResource.getResource());
+        assertNotNull(json);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        ThresholdedRandomCutForestState state = mapper.readValue(json, ThresholdedRandomCutForestState.class);
+        ThresholdedRandomCutForest forest = trcfMapper.toModel(state);
+        assertNotNull(forest);
+    }
 
-        try (InputStream is = V2TRCFToV3StateConverterTest.class.getResourceAsStream(jsonResource.getResource());
-                BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));) {
+    @ParameterizedTest
+    @EnumSource(V2TRCFByteBase64Resource.class)
+    public void testByteBase64(V2TRCFByteBase64Resource byteBase64Resource) {
+        String byteBase64 = getStateFromFile(byteBase64Resource.getResource());
+        assertNotNull(byteBase64);
+        Schema<ThresholdedRandomCutForestState> trcfSchema = RuntimeSchema.getSchema(ThresholdedRandomCutForestState.class);
+        byte[] bytes = Base64.getDecoder().decode(byteBase64);
+        ThresholdedRandomCutForestState state = trcfSchema.newMessage();
+        ProtostuffIOUtil.mergeFrom(bytes, state, trcfSchema);
+        ThresholdedRandomCutForest forest = trcfMapper.toModel(state);
+        assertNotNull(forest);
+    }
 
+    private String getStateFromFile(String resourceFile) {
+        try (InputStream is = V2TRCFToV3StateConverterTest.class.getResourceAsStream(resourceFile);
+             BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder b = new StringBuilder();
             String line;
             while ((line = rr.readLine()) != null) {
                 b.append(line);
             }
-
-            String json = b.toString();
-
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
-            ThresholdedRandomCutForestState state = mapper.readValue(json, ThresholdedRandomCutForestState.class);
-
-            ThresholdedRandomCutForestMapper mapper1 = new ThresholdedRandomCutForestMapper();
-            ThresholdedRandomCutForest forest = mapper1.toModel(state);
-
+            return b.toString();
         } catch (IOException e) {
-            fail("Unable to load JSON resource");
+            fail("Unable to load resource");
         }
+        return null;
     }
 
 }
