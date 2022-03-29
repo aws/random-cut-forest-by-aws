@@ -18,14 +18,14 @@ package com.amazon.randomcutforest.parkservices.state;
 import lombok.Getter;
 
 @Getter
-public enum V2TRCFJsonResource {
+public enum V2TRCFByteBase64Resource {
 
-    TRCF_1("state_1.json"),
-    TRCF_2("state_2.json");
+    TRCF_STATE_1("byte_base64_1.txt"),
+    TRCF_STATE_2("byte_base64_2.txt");
 
     private final String resource;
 
-    V2TRCFJsonResource(String resource) {
+    V2TRCFByteBase64Resource(String resource) {
         this.resource = resource;
     }
 }
