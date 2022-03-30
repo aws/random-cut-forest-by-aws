@@ -24,7 +24,6 @@ fn two_distribution_test_static() {
     let mut vec2 = vec![0.0f32;dimensions];
     vec1[0] = 5.0;
     vec2[0] = - 5.0;
-    let scalevec = vec![0.1f32;dimensions];
     let scale = vec![vec![0.1f32;dimensions],vec![0.1f32;dimensions]];
     let mean = vec![vec1,vec2];
     let data_with_key = multidimdatawithkey::MultiDimDataWithKey::mixture(

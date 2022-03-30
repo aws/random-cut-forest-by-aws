@@ -31,24 +31,20 @@ const max_number_per_dimension : usize = 5;
 pub struct SampleSummary {
     pub summary_points: Vec<Vec<f32>>,
 
-    /**
-     * a measure of comparison among the typical points;
-     */
+    ///a measure of comparison among the typical points;
     pub relative_weight: Vec<f32>,
 
-    /**
-     * number of samples, often the number of summary
-     */
+
+    /// number of samples, often the number of summary, but can handle weighted points
+    /// (possibly indicating confidence or othe measure) in the future
     pub total_weight: f32,
-    /**
-     * the global mean, median
-     */
+
+
+    /// the global mean, median
     pub mean: Vec<f32>,
     pub median: Vec<f32>,
 
-    /**
-     * This is the global deviation, without any filtering on the TreeSamples
-     */
+    /// This is the global deviation, without any filtering on the TreeSamples
     pub deviation: Vec<f32>,
 }
 

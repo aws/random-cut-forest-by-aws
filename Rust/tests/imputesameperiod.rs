@@ -67,7 +67,7 @@ fn impute_same_period() {
 
     for i in 0..data_with_key.data.len() {
 
-        if (i > 200) {
+        if i > 200 {
             let next_values = forest.extrapolate(1);
             assert!(next_values.len() == base_dimension);
             error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();

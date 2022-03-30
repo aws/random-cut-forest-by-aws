@@ -120,7 +120,7 @@ impl MultiDimDataWithKey {
 fn next_element(mean: f32, scale: f32, rng: &mut ChaCha20Rng) -> f32 {
     let mut r:f32 = f64::sqrt(-2.0f64 * f64::ln(rng.gen::<f64>())) as f32;
     // the following is to discard inf being returned from ln()
-    while (r.is_infinite()){
+    while r.is_infinite() {
         r = f64::sqrt(-2.0f64 * f64::ln(rng.gen::<f64>())) as f32;
     }
 

@@ -15,6 +15,8 @@ impl Max for usize {
     const MAX: usize = usize::MAX;
 }
 
+pub type PointIndex = usize;
+
 /// The Location trait is used as a shorthand for the various traits needed by store (e.g., point
 /// store, node store) locations. These are the values vended by stores to reference a stored
 /// value.

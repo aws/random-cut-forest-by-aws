@@ -48,7 +48,7 @@ fn impute_different_period() {
     );
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude =  Vec::new();
-    for i in 0..base_dimension {
+    for _i in 0..base_dimension {
         amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
     let mut period_rng = ChaCha20Rng::seed_from_u64(7);
@@ -65,14 +65,13 @@ fn impute_different_period() {
         base_dimension.into(),
     );
 
-    let mut score: f64 = 0.0;
     let _next_index = 0;
     let mut error = 0.0;
     let mut count = 0;
 
     for i in 0..data_with_key.data.len() {
 
-        if (i > 200) {
+        if i > 200 {
             let next_values = forest.extrapolate(1);
             assert!(next_values.len() == base_dimension);
             error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();

@@ -15,11 +15,10 @@ use rcflib::samplesummary::summarize;
 
 use parameterized_test::create;
 
-#[test]
+#[cfg(test)]
 parameterized_test::create! { sample_summary_distance_test, (test_dimension,distance), {
     let data_size = 1000000;
     let dimensions = 40;
-    //let test_dimension = 2;
     let mut mean = Vec::new();
     let mut scale = Vec::new();
     for i in 0..test_dimension {

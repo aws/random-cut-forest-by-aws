@@ -13,7 +13,7 @@ use crate::{
     rcf::rand::RngCore,
     types::{Location, Max},
 };
-use crate::conditionalfieldsummarizer::field_summarizer;
+use crate::conditionalfieldsummarizer::FieldSummarizer;
 
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
@@ -478,7 +478,8 @@ where
         };
 
         let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, ignore_mass, score_seen, score_unseen, damp, normalizer);
-        field_summarizer(&self.point_store,&raw_list,&new_positions,centrality,project,max_number,L1distance)
+        let field_summarizer = FieldSummarizer::new(centrality,project,max_number,L1distance);
+        field_summarizer.summarize_list(&self.point_store,&raw_list,&new_positions)
     }
 
     fn extrapolate(&self, look_ahead: usize) -> Vec<f32> {

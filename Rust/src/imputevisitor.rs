@@ -96,6 +96,7 @@ impl Visitor<f64> for ImputeVisitor {
     }
 
     fn accept(&mut self, _point: &[f32], node_view: &dyn NodeView) {
+        assert!(self.stack.len() > 0, " there should have been an accept_leaf call which would have created a non-null stack");
         let mut top_of_stack = self.stack.pop().unwrap();
         if !top_of_stack.converged {
             let prob = if self.ignore_mass == 0 {
