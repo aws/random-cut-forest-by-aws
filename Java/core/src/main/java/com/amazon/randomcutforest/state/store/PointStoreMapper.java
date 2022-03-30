@@ -15,20 +15,19 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.Version;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreLarge;
 import com.amazon.randomcutforest.util.ArrayPacking;
+import lombok.Getter;
+import lombok.Setter;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 @Getter
 @Setter
@@ -55,7 +54,12 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
         int[] locationList = new int[indexCapacity];
         int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
         if (!state.getVersion().equals(Version.V3_0)) {
-            System.arraycopy(tempList, 0, locationList, 0, tempList.length);
+            int shingleSize = state.getShingleSize();
+            int baseDimension = dimensions / shingleSize;
+            for (int i = 0; i < tempList.length; i++) {
+                checkArgument(tempList[i] % baseDimension == 0, "the location field should be a multiple of dimension/shingle size for versions before 3.0");
+                locationList[i] = tempList[i] / baseDimension;
+            }
         } else {
             int[] duplicateRefs = null;
             if (state.getDuplicateRefs() != null) {
