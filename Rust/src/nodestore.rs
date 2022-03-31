@@ -8,20 +8,20 @@ use crate::{
     types::{Location, Max},
 };
 
-/**
-* capacity is the number of leaves in the tree
-* this is the (per tree) samplesize in RCF
-* in the encoding below, the leaves are point_index + capacity
-* the value 0 stands for null
-* the values 1..(capacity-1) corresponds to the internal nodes; note that a regular binary tree
-* where wach node has 0 or 2 children has (capacity - 1) internal nodes
-*
-* the nodestore does not need to save the parent information; it is saved if the bounding box cache is
-* more than 0.
-*
-* Note that the mass of each node (in use) is at least 1. Subtracting 1 from each node implicitly
-* makes the values between [0..(capacity-1)] which is very convenient for 2^8 and 2^16.
-*/
+///
+/// capacity is the number of leaves in the tree
+/// this is the (per tree) samplesize in RCF
+/// in the encoding below, the leaves are point_index + capacity
+/// the value capacity - 1 stands for null
+/// the values 0..(capacity-2) corresponds to the internal nodes; note that a regular binary tree
+/// where each node has 0 or 2 children, has (capacity - 1) internal nodes
+///
+/// the nodestore does not need to save the parent information; it is saved if the bounding box cache is
+/// more than 0.
+///
+/// Note that the mass of each node (in use) is at least 1. Subtracting 1 from each node implicitly
+/// makes the values between [0..(capacity-1)] which is very convenient for 2^8 and 2^16.
+///
 
 #[repr(C)]
 pub struct VectorNodeStore<C, P, N>
@@ -88,6 +88,7 @@ pub trait NodeStore {
     fn get_distribution(&self, index: usize) -> (usize, f32, usize, usize);
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize);
     fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)>;
+    fn null_node(&self) -> usize;
 }
 
 impl<C, P, N> VectorNodeStore<C, P, N>
@@ -117,17 +118,18 @@ where
             panic!();
         }
         let cache_limit: usize = (bounding_box_cache_fraction * capacity as f64) as usize;
+        let null_node = Self::null_value(capacity);
         VectorNodeStore {
             capacity,
             dimensions,
             using_transforms,
             project_to_tree,
             bounding_box_cache_fraction,
-            left_index: vec![0.try_into().unwrap(); capacity - 1],
-            right_index: vec![0.try_into().unwrap(); capacity - 1],
+            left_index: vec![null_node.try_into().unwrap(); capacity - 1],
+            right_index: vec![null_node.try_into().unwrap(); capacity - 1],
             mass: vec![0.try_into().unwrap(); capacity - 1],
             parent_index: if bounding_box_cache_fraction > 0.0 {
-                vec![0.try_into().unwrap(); capacity - 1]
+                vec![null_node.try_into().unwrap(); capacity - 1]
             } else {
                 Vec::new()
             },
@@ -140,14 +142,14 @@ where
         }
     }
 
-    // 0 is indicative of null given unsigned representation
-    // otherwise index X uses slot X-1
+    /// 0 is indicative of null given unsigned representation
+    /// otherwise index X uses slot X-1
 
     fn translate(&self, index: usize) -> usize {
-        if index != 0 && self.range_sum_data.len() <= index - 1 {
+        if index != self.null_node() && self.range_sum_data.len() <= index {
             usize::MAX
         } else {
-            index - 1
+            index
         }
     }
 
@@ -224,13 +226,12 @@ where
     }
 
     pub fn reconstruct_box(&self, index: usize, point_store: &dyn PointStore) -> BoundingBox {
-        let idx: usize = (index - 1).try_into().unwrap();
-        let mut mutated_bounding_box = self.get_box(self.left_index[idx].into(), point_store);
+        let mut mutated_bounding_box = self.get_box(self.left_index[index].into(), point_store);
         self.grow_node_box(
             &mut mutated_bounding_box,
             point_store,
             index,
-            self.right_index[idx].into(),
+            self.right_index[index].into(),
         );
         mutated_bounding_box
     }
@@ -241,11 +242,11 @@ where
         point: &[f32],
         point_store: &dyn PointStore,
     ) -> bool {
-        let idx = self.translate(index.into());
+        let idx = self.translate(index);
         if idx != usize::MAX {
-            if !self.check_strictly_contains(index.into(), point) {
+            if !self.check_strictly_contains(index, point) {
                 let mutated_bounding_box = self.reconstruct_box(index, point_store);
-                self.copy_box_to_data(index.into(), &mutated_bounding_box);
+                self.copy_box_to_data(index, &mutated_bounding_box);
                 return false;
             }
             true
@@ -256,7 +257,7 @@ where
 
     pub fn add_box(&mut self, index: usize, bounding_box: &BoundingBox) {
         if !self.is_leaf(index) {
-            self.copy_box_to_data(index.into(), &bounding_box);
+            self.copy_box_to_data(index, &bounding_box);
         }
     }
 
@@ -283,19 +284,19 @@ where
         self.mass[index] = (self.get_mass(child)).try_into().unwrap();
         // Not adding 1 to the above (new leaf) since all mass is represented as mass- 1
         if self.bounding_box_cache_fraction > 0.0 {
-            self.copy_box_to_data(index + 1, saved_box);
-            self.check_contains_and_add_point(index + 1, point);
+            self.copy_box_to_data(index, saved_box);
+            self.check_contains_and_add_point(index, point);
 
             self.parent_index[index] = parent_index.try_into().unwrap();
             if !self.is_leaf(child) {
-                self.parent_index[child - 1] = (index + 1).try_into().unwrap();
+                self.parent_index[child] = index.try_into().unwrap();
             }
         }
 
-        if parent_index != 0 {
-            self.replace_node(parent_index, child, index + 1);
+        if parent_index != self.null_node() {
+            self.replace_node(parent_index, child, index);
         }
-        (index + 1).try_into().unwrap()
+        index
     }
 
     pub fn leaf_index(&self, point_index: usize) -> usize {
@@ -307,7 +308,7 @@ where
         <N as TryFrom<usize>>::Error: Debug,
     {
         if !self.is_leaf(index) && self.bounding_box_cache_fraction > 0.0 {
-            self.parent_index[index - 1] = 0.try_into().unwrap();
+            self.parent_index[index] = 0.try_into().unwrap();
         }
     }
 
@@ -347,8 +348,8 @@ where
         let mut resolved = box_resolved;
         while path.len() != 0 {
             let index = path.pop().unwrap().0;
-            let val: usize = self.mass[index - 1].into();
-            self.mass[index - 1] = (val + 1).try_into().unwrap();
+            let val: usize = self.mass[index].into();
+            self.mass[index] = (val + 1).try_into().unwrap();
             if self.bounding_box_cache_fraction > 0.0 && !resolved {
                 resolved = self.check_contains_and_add_point(index.into(), point);
             }
@@ -365,8 +366,8 @@ where
         let mut resolved = box_resolved;
         while path.len() != 0 {
             let index = path.pop().unwrap().0;
-            let val: usize = self.mass[index - 1].into();
-            self.mass[index - 1] = (val - 1).try_into().unwrap();
+            let val: usize = self.mass[index].into();
+            self.mass[index] = (val - 1).try_into().unwrap();
             if self.bounding_box_cache_fraction > 0.0 && !resolved {
                 resolved = self.check_contains_and_rebuild_box(index, point, point_store);
             }
@@ -374,17 +375,17 @@ where
     }
 
     pub fn delete_internal_node(&mut self, index: usize) {
-        let uindex: usize = (index - 1).into();
+        let null_node = self.null_node();
 
-        self.left_index[uindex] = 0.try_into().unwrap();
-        self.right_index[uindex] = 0.try_into().unwrap();
-        self.mass[uindex] = 0.try_into().unwrap();
+        self.left_index[index] = null_node.try_into().unwrap();
+        self.right_index[index] = null_node.try_into().unwrap();
+        self.mass[index] = 0.try_into().unwrap();
         if self.bounding_box_cache_fraction > 0.0 {
-            self.parent_index[uindex] = 0.try_into().unwrap(); // null
+            self.parent_index[index] = null_node.try_into().unwrap(); // null
         }
-        self.cut_dimension[uindex] = C::MAX;
-        self.cut_value[uindex] = 0.0;
-        self.internal_node_manager.release(uindex);
+        self.cut_dimension[index] = C::MAX;
+        self.cut_value[index] = 0.0;
+        self.internal_node_manager.release(index);
     }
 
     pub fn get_point_index(&self, index: usize) -> usize {
@@ -393,11 +394,11 @@ where
     }
 
     pub fn get_cut_value(&self, index: usize) -> f32 {
-        self.cut_value[index - 1]
+        self.cut_value[index]
     }
 
     pub fn get_cut_dimension(&self, index: usize) -> usize {
-        self.cut_dimension[index - 1].into()
+        self.cut_dimension[index].into()
     }
 
     pub fn check_left(
@@ -431,14 +432,13 @@ where
     }
 
     pub fn replace_node(&mut self, grand_parent: usize, parent: usize, node: usize) {
-        let ug: usize = (grand_parent - 1).into();
-        if parent == self.left_index[ug].into() {
-            self.left_index[ug] = node.try_into().unwrap();
+        if parent == self.left_index[grand_parent].into() {
+            self.left_index[grand_parent] = node.try_into().unwrap();
         } else {
-            self.right_index[ug] = node.try_into().unwrap();
+            self.right_index[grand_parent] = node.try_into().unwrap();
         }
         if !self.is_leaf(node) && self.bounding_box_cache_fraction > 0.0 {
-            self.parent_index[node - 1] = grand_parent.try_into().unwrap();
+            self.parent_index[node] = grand_parent.try_into().unwrap();
         }
     }
 
@@ -450,6 +450,10 @@ where
             + (self.cut_value.len()) * mem::size_of::<f32>()
             + (self.bounding_box_data.len() + 2 * self.range_sum_data.len()) * mem::size_of::<f32>()
             + std::mem::size_of::<VectorNodeStore<C, P, N>>()
+    }
+
+    fn null_value(capacity:usize) -> usize {
+        capacity - 1
     }
 }
 
@@ -474,8 +478,7 @@ where
                 1
             };
         }
-        let idx: usize = (index - 1).try_into().unwrap();
-        let base: usize = self.mass[idx].into();
+        let base: usize = self.mass[index].into();
         base + 1
     }
 
@@ -492,20 +495,19 @@ where
                 BoundingBox::new(point, point)
             };
         } else {
-            let idx: usize = self.translate(index.into());
+            let idx: usize = self.translate(index);
             if idx != usize::MAX {
                 return self.get_box_from_data(idx);
             }
             let mut mutated_bounding_box =
-                self.get_box(self.left_index[index - 1].into(), point_store);
+                self.get_box(self.left_index[index].into(), point_store);
             self.grow_node_box(
                 &mut mutated_bounding_box,
                 point_store,
                 index,
-                self.right_index[index - 1].into(),
+                self.right_index[index].into(),
             );
             return mutated_bounding_box;
-            //self.reconstruct_box(index, point_store)
         }
     }
 
@@ -565,7 +567,7 @@ where
                 (*second).check_contains_and_add_point(point);
             }
         } else {
-            let idx: usize = self.translate(sibling.into());
+            let idx: usize = self.translate(sibling);
             if idx != usize::MAX {
                 let dimensions = self.dimensions;
                 let base = 2 * idx * dimensions;
@@ -644,10 +646,9 @@ where
     }
 
     fn get_sibling(&self, node: usize, parent: usize) -> usize {
-        let uparent: usize = (parent - 1).into();
-        let mut sibling = self.left_index[uparent].into();
+        let mut sibling = self.left_index[parent].into();
         if node == sibling {
-            sibling = self.right_index[uparent].into();
+            sibling = self.right_index[parent].into();
         }
         sibling
     }
@@ -661,29 +662,28 @@ where
     }
 
     fn get_cut_dimension(&self, index: usize) -> usize {
-        self.cut_dimension[index - 1].into()
+        self.cut_dimension[index].into()
     }
 
     fn get_left_index(&self, index: usize) -> usize {
-        self.left_index[index - 1].try_into().unwrap()
+        self.left_index[index].try_into().unwrap()
     }
 
     fn get_right_index(&self, index: usize) -> usize {
-        self.right_index[index - 1].try_into().unwrap()
+        self.right_index[index].try_into().unwrap()
     }
 
     fn get_cut_value(&self, index: usize) -> f32 {
-        self.cut_value[index - 1]
+        self.cut_value[index]
     }
 
     fn is_leaf(&self, index: usize) -> bool {
-        index != 0 && index >= self.capacity
+        index != self.null_node() && index >= self.capacity
     }
 
     fn is_left_of(&self, index: usize, point: &[f32]) -> bool {
-        let idx: usize = index - 1;
-        let dim_idx: usize = self.cut_dimension[idx].try_into().unwrap();
-        point[dim_idx] <= self.cut_value[idx]
+        let dim_idx: usize = self.cut_dimension[index].try_into().unwrap();
+        point[dim_idx] <= self.cut_value[index]
     }
 
     fn use_path_for_box(&self) -> bool {
@@ -692,8 +692,8 @@ where
 
     fn get_distribution(&self, index: usize) -> (usize, f32, usize, usize) {
         (
-            self.cut_dimension[index - 1].into(),
-            self.cut_value[index - 1],
+            self.cut_dimension[index].into(),
+            self.cut_value[index],
             self.get_mass(self.get_left_index(index)),
             self.get_mass(self.get_right_index(index)),
         )
@@ -701,19 +701,19 @@ where
 
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize) {
         (
-            self.cut_dimension[index - 1].into(),
-            self.cut_value[index - 1],
-            self.left_index[index - 1].into(),
-            self.right_index[index - 1].into(),
+            self.cut_dimension[index].into(),
+            self.cut_value[index],
+            self.left_index[index].into(),
+            self.right_index[index].into(),
         )
     }
 
     fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)> {
         let mut node = root;
         let mut answer = Vec::new();
-        answer.push((root, 0));
+        answer.push((root, self.null_node()));
         while !self.is_leaf(node) {
-            let idx: usize = (node - 1).try_into().unwrap();
+            let idx: usize = node;
             if self.is_left_of(node, point) {
                 node = self.left_index[idx].into();
                 answer.push((node, self.right_index[idx].into()));
@@ -723,5 +723,9 @@ where
             }
         }
         answer
+    }
+
+    fn null_node(&self) -> usize {
+        Self::null_value(self.capacity)
     }
 }

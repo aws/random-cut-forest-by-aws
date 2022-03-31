@@ -1,8 +1,8 @@
-use crate::{
-    nodestore::NodeStore,
-    nodeview::NodeView,
-    visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor},
-};
+use num::abs;
+use rand::{random, Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use crate::{L1distance, nodestore::NodeStore, nodeview::NodeView, visitor::{UniqueMultiVisitor, Visitor, VisitorDescriptor}};
+
 
 #[repr(C)]
 pub struct ImputeVisitor {
@@ -13,8 +13,19 @@ pub struct ImputeVisitor {
     ignore_mass: usize,
     centrality: f64,
     tree_mass: usize,
+    rng : ChaCha20Rng,
     missing: Vec<usize>,
-    values: Vec<(bool, f64, usize, Vec<f32>)>,
+    stack: Vec<ImputeVisitorStackElement>,
+}
+
+#[repr(C)]
+struct ImputeVisitorStackElement{
+    converged: bool,
+    score : f64,
+    random : f32,
+    index : usize,
+    imputed_point : Vec<f32>,
+    distance : f32
 }
 
 impl ImputeVisitor {
@@ -22,6 +33,7 @@ impl ImputeVisitor {
         missing: &[usize],
         centrality: f64,
         tree_mass: usize,
+        seed : u64,
         ignore_mass: usize,
         damp: fn(usize, usize) -> f64,
         score_seen: fn(usize, usize) -> f64,
@@ -31,16 +43,29 @@ impl ImputeVisitor {
         ImputeVisitor {
             centrality,
             tree_mass,
+            rng : ChaCha20Rng::seed_from_u64(seed),
             ignore_mass,
             damp,
             score_seen,
             score_unseen,
             normalizer,
             missing: Vec::from(missing),
-            values: Vec::new(),
+            stack : Vec::new()
         }
     }
+
+    /// the following function allows the score to vary between the score used in
+    /// anomaly detection and fully random sample based on the parameter centrality
+    /// these two cases correspond to centrality = 1 and centrality = 0 respectively
+
+    fn adjusted_score(&self, e : &ImputeVisitorStackElement)->f64{
+           self.centrality * (self.normalizer) (e.score,self.tree_mass) +
+               (1.0 - self.centrality) * e.random as f64
+    }
 }
+
+
+
 
 impl Visitor<f64> for ImputeVisitor {
     fn accept_leaf(&mut self, point: &[f32], node_view: &dyn NodeView) {
@@ -59,35 +84,44 @@ impl Visitor<f64> for ImputeVisitor {
         } else {
             score = (self.score_unseen)(node_view.get_depth(), mass);
         }
-
-        self.values
-            .push((converged, score, node_view.get_leaf_index(), new_point));
+        let dist = L1distance(&new_point,&leaf_point) as f32;
+        self.stack
+            .push(ImputeVisitorStackElement{
+                converged,
+                score,
+                index: node_view.get_leaf_index(),
+                random : self.rng.gen::<f32>(),
+                imputed_point: new_point,
+                distance : dist});
     }
 
     fn accept(&mut self, _point: &[f32], node_view: &dyn NodeView) {
-        let (converged, score, index, result) = self.values.pop().unwrap();
-        if !converged {
+        assert!(self.stack.len() > 0, " there should have been an accept_leaf call which would have created a non-null stack");
+        let mut top_of_stack = self.stack.pop().unwrap();
+        if !top_of_stack.converged {
             let prob = if self.ignore_mass == 0 {
-                node_view.get_probability_of_cut(&result)
+                node_view.get_probability_of_cut(&top_of_stack.imputed_point)
             } else {
-                node_view.get_shadow_box().probability_of_cut(&result)
+                node_view.get_shadow_box().probability_of_cut(&top_of_stack.imputed_point)
             };
             if prob == 0.0 {
-                self.values.push((true, score, index, result));
+                top_of_stack.converged = true;
             } else {
-                let new_score = (1.0 - prob) * score
+                let new_score = (1.0 - prob) * top_of_stack.score
                     + prob * (self.score_unseen)(node_view.get_depth(), node_view.get_mass());
-                self.values.push((false, new_score, index, result));
+                top_of_stack.converged = false;
+                top_of_stack.score = new_score;
             }
+            self.stack.push(top_of_stack);
         }
     }
 
     fn get_result(&self) -> f64 {
-        self.values.last().unwrap().1
+        self.stack.last().unwrap().score
     }
 
     fn has_converged(&self) -> bool {
-        self.values.last().unwrap().0
+        self.stack.last().unwrap().converged
     }
 
     fn descriptor(&self) -> VisitorDescriptor {
@@ -105,10 +139,11 @@ impl Visitor<f64> for ImputeVisitor {
     }
 }
 
-impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
-    fn get_arguments(&self) -> usize {
-        assert_eq!(self.values.len(), 1, "incorrect state");
-        self.values.last().unwrap().2
+impl UniqueMultiVisitor<f64, (usize,f32)> for ImputeVisitor {
+    fn get_arguments(&self) -> (usize,f32) {
+        assert_eq!(self.stack.len(), 1, "incorrect state");
+        let top_of_stack = self.stack.last().unwrap();
+        (top_of_stack.index,top_of_stack.distance)
     }
 
     fn trigger(&self, _point: &[f32], node_view: &dyn NodeView) -> bool {
@@ -116,32 +151,24 @@ impl UniqueMultiVisitor<f64, usize> for ImputeVisitor {
     }
 
     fn combine_branches(&mut self, _point: &[f32], _node_view: &dyn NodeView) {
-        assert!(self.values.len() >= 2, "incorrect state");
-        let (first_converged, first_score, first_index, first_result) = self.values.pop().unwrap();
-        let (second_converged, second_score, second_index, second_result) =
-            self.values.pop().unwrap();
-        if first_score < second_score {
-            self.values.push((
-                first_converged || second_converged,
-                first_score,
-                first_index,
-                first_result,
-            ));
+        assert!(self.stack.len() >= 2, "incorrect state");
+        let mut top_of_stack = self.stack.pop().unwrap();
+        let mut next_of_stack = self.stack.pop().unwrap();
+
+        if self.adjusted_score(&top_of_stack) < self.adjusted_score(&next_of_stack) {
+            top_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
+            self.stack.push(top_of_stack);
         } else {
-            self.values.push((
-                first_converged || second_converged,
-                second_score,
-                second_index,
-                second_result,
-            ));
+            next_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
+            self.stack.push(next_of_stack);
         }
     }
 
     fn unique_answer(&self) -> &[f32] {
         assert!(
-            self.values.len() >= 1,
+            self.stack.len() >= 1,
             "incorrect state, at least one leaf must have been visited"
         );
-        &self.values.last().unwrap().3
+        &self.stack.last().unwrap().imputed_point
     }
 }

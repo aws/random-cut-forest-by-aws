@@ -162,12 +162,13 @@ where
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> usize {
+    ) -> (usize,f32) {
         self.tree.conditional_field(
             positions,
             point,
             point_store,
             centrality,
+            self.random_seed,
             ignore_mass,
             score_seen,
             score_unseen,

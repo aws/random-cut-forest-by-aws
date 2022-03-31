@@ -1,24 +1,19 @@
-mod boundingbox;
-mod cut;
-mod imputevisitor;
-mod intervalstoremanager;
-mod multidimdatawithkey;
-mod nodestore;
-mod nodeview;
-mod pointstore;
-mod randomcuttree;
-mod rcf;
-mod sampler;
-mod samplerplustree;
-mod scalarscorevisitor;
-mod types;
-mod visitor;
 
 extern crate rand;
-use crate::rcf::{create_rcf, RCF};
 extern crate rand_chacha;
+extern crate rcflib;
 
-fn main() {
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use rcflib::multidimdatawithkey;
+use rcflib::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::rcf::{create_rcf, RCF};
+
+/// try cargo test --release
+/// these tests are designed to be longish
+
+#[test]
+fn anomalydetection_score_and_update() {
     let shingle_size = 8;
     let base_dimension = 5;
     let data_size = 100000;
@@ -34,6 +29,7 @@ fn main() {
     let store_attributes: bool = false;
     let internal_shingling: bool = true;
     let internal_rotation = false;
+    let noise = 5.0;
 
     let mut forest: Box<dyn RCF> = create_rcf(
         dimensions,
@@ -49,11 +45,16 @@ fn main() {
         initial_accept_fraction,
         bounding_box_cache_fraction,
     );
-    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::new(
+    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut amplitude =  Vec::new();
+    for _i in 0..base_dimension {
+        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
+    }
+    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
         data_size,
-        60,
-        100.0,
-        5.0,
+        &vec![60;base_dimension],
+        &amplitude,
+        noise,
         0,
         base_dimension.into(),
     );
@@ -70,6 +71,7 @@ fn main() {
             next_index += 1;
         }
         */
+
         score += new_score;
         forest.update(&data_with_key.data[i], 0);
     }
@@ -78,6 +80,7 @@ fn main() {
         "Average score {} ",
         (score / data_with_key.data.len() as f64)
     );
+    assert!(score < data_with_key.data.len() as f64, " average score is above 1");
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());

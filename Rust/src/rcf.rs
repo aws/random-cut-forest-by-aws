@@ -1,9 +1,6 @@
 use rayon::prelude::*;
 
-use crate::{
-    pointstore::{PointStore, VectorizedPointStore},
-    samplerplustree::SamplerPlusTree,
-};
+use crate::{L1distance, pointstore::{PointStore, VectorizedPointStore}, samplerplustree::SamplerPlusTree, samplesummary::{SampleSummary, summarize}};
 extern crate num;
 extern crate rand;
 use rand::SeedableRng;
@@ -16,6 +13,8 @@ use crate::{
     rcf::rand::RngCore,
     types::{Location, Max},
 };
+use crate::conditionalfieldsummarizer::FieldSummarizer;
+
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
     1.0 / (x as f64 + f64::log2(1.0 + y as f64))
@@ -29,6 +28,9 @@ pub(crate) fn normalizer(x: f64, y: usize) -> f64 {
 pub(crate) fn damp(x: usize, y: usize) -> f64 {
     1.0 - (x as f64) / (2.0 * y as f64)
 }
+
+const max_number_in_summary : usize = 5;
+
 
 pub trait RCF {
     fn validate_update(&self, point: &[f32]) {
@@ -63,11 +65,21 @@ pub trait RCF {
         normalizer: fn(f64, usize) -> f64,
     ) -> f64;
 
-    fn conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64) -> Vec<usize> {
+
+    fn impute_missing_values(&self, positions: &[usize], point: &[f32]) -> Vec<f32> {
+        assert!(positions.len()>0, "nothing to impute");
+        self.conditional_field(positions,point,1.0,true,0).median
+    }
+
+    fn extrapolate(&self, look_ahead : usize) -> Vec<f32>;
+
+    fn conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64, project:bool, max_number : usize) -> SampleSummary {
         self.generic_conditional_field(
             positions,
             point,
             centrality,
+            project,
+            max_number,
             0,
             score_seen,
             score_unseen,
@@ -75,17 +87,20 @@ pub trait RCF {
             normalizer,
         )
     }
+
     fn generic_conditional_field(
         &self,
         positions: &[usize],
         point: &[f32],
         centrality: f64,
+        project : bool,
+        max_number : usize,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> Vec<usize>;
+        normalizer: fn(f64, usize) -> f64
+    ) -> SampleSummary;
     fn get_size(&self) -> usize;
     fn get_point_store_size(&self) -> usize;
 
@@ -207,6 +222,57 @@ where
             internal_shingling,
             internal_rotation,
         }
+    }
+
+    pub fn generic_conditional_field_point_list_and_distances(
+        &self,
+        positions: &[usize],
+        point: &[f32],
+        centrality: f64,
+        ignore_mass: usize,
+        score_seen: fn(usize, usize) -> f64,
+        score_unseen: fn(usize, usize) -> f64,
+        damp: fn(usize, usize) -> f64,
+        normalizer: fn(f64, usize) -> f64,
+    ) -> Vec<(usize,f32)> {
+        let new_point = self.point_store.get_shingled_point(point);
+        let mut list: Vec<(usize,f32)> = if self.parallel_enabled {
+            self.sampler_plus_trees
+                .par_iter()
+                .map(|m| {
+                    m.conditional_field(
+                        &positions,
+                        centrality,
+                        &new_point,
+                        &self.point_store,
+                        ignore_mass,
+                        score_seen,
+                        score_unseen,
+                        damp,
+                        normalizer,
+                    )
+                })
+                .collect()
+        } else {
+            self.sampler_plus_trees
+                .iter()
+                .map(|m| {
+                    m.conditional_field(
+                        &positions,
+                        centrality,
+                        &new_point,
+                        &self.point_store,
+                        ignore_mass,
+                        score_seen,
+                        score_unseen,
+                        damp,
+                        normalizer,
+                    )
+                })
+                .collect()
+        };
+        list.sort_by(|o1,o2| o1.0.cmp(&o2.0));
+        list
     }
 }
 
@@ -353,6 +419,7 @@ where
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
     ) -> f64 {
+        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
         let mut sum = 0.0;
         let new_point = self.point_store.get_shingled_point(point);
         sum = if self.parallel_enabled {
@@ -394,52 +461,45 @@ where
         positions: &[usize],
         point: &[f32],
         centrality: f64,
+        project: bool,
+        max_number : usize,
         ignore_mass: usize,
         score_seen: fn(usize, usize) -> f64,
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> Vec<usize> {
-        let new_point = self.point_store.get_shingled_point(point);
-        let new_positions = self.point_store.get_missing_values(positions);
-        let mut list: Vec<usize> = if self.parallel_enabled {
-            self.sampler_plus_trees
-                .par_iter()
-                .map(|m| {
-                    m.conditional_field(
-                        &new_positions,
-                        centrality,
-                        &new_point,
-                        &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
-                    )
-                })
-                .collect()
+    ) -> SampleSummary {
+        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
+        let new_positions = if point.len() == self.dimensions {
+            Vec::from(positions)
         } else {
-            self.sampler_plus_trees
-                .iter()
-                .map(|m| {
-                    m.conditional_field(
-                        &new_positions,
-                        centrality,
-                        &new_point,
-                        &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
-                    )
-                })
-                .collect()
+            /// internal shingling
+            self.point_store.get_missing_indices(0,positions)
         };
-        list.sort();
-        list
+
+        let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, ignore_mass, score_seen, score_unseen, damp, normalizer);
+        let field_summarizer = FieldSummarizer::new(centrality,project,max_number,L1distance);
+        field_summarizer.summarize_list(&self.point_store,&raw_list,&new_positions)
     }
+
+    fn extrapolate(&self, look_ahead: usize) -> Vec<f32> {
+        assert!(self.internal_shingling, " look ahead is not meaningful without internal shingling mechanism ");
+        assert!(self.shingle_size > 1, " need shingle size > 1 for extrapolation");
+        let mut answer = Vec:: new();
+        let base = self.dimensions/self.shingle_size;
+        let mut fictitious_point = self.point_store.get_shingled_point(&vec![0.0f32;base]);
+        for i in 0..look_ahead {
+            let missing = self.point_store.get_next_indices(i);
+            assert!(missing.len() == base, "incorrect imputation");
+            let values = self.impute_missing_values(&missing,&fictitious_point);
+            for j in 0..base {
+                answer.push(values[j]);
+                fictitious_point[missing[j]]=values[j];
+            }
+        }
+        answer
+    }
+
 
     fn get_size(&self) -> usize {
         let mut sum: usize = 0;
