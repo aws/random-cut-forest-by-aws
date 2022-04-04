@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.examples.serialization;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 public class ObjectStreamExample implements Example {
 
@@ -115,7 +115,7 @@ public class ObjectStreamExample implements Example {
 
     private byte[] serialize(Object model) {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-             ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)) {
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)) {
             objectOutputStream.writeObject(model);
             objectOutputStream.flush();
             return byteArrayOutputStream.toByteArray();

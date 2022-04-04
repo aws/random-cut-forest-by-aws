@@ -20,11 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
+@Tag("functional")
 public class AttributionExamplesFunctionalTest {
 
     private static int numberOfTrees;

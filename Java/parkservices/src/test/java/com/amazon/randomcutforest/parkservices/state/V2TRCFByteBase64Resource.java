@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ import lombok.Getter;
 @Getter
 public enum V2TRCFByteBase64Resource {
 
-    TRCF_STATE_1("byte_base64_1.txt"),
-    TRCF_STATE_2("byte_base64_2.txt");
+    TRCF_STATE_1("byte_base64_1.txt"), TRCF_STATE_2("byte_base64_2.txt");
 
     private final String resource;
 

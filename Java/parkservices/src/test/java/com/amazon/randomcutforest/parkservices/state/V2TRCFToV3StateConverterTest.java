@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -15,15 +15,8 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
-import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.protostuff.ProtostuffIOUtil;
-import io.protostuff.Schema;
-import io.protostuff.runtime.RuntimeSchema;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,8 +25,17 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.protostuff.ProtostuffIOUtil;
+import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
 
 public class V2TRCFToV3StateConverterTest {
 
@@ -56,7 +58,8 @@ public class V2TRCFToV3StateConverterTest {
     public void testByteBase64(V2TRCFByteBase64Resource byteBase64Resource) {
         String byteBase64 = getStateFromFile(byteBase64Resource.getResource());
         assertNotNull(byteBase64);
-        Schema<ThresholdedRandomCutForestState> trcfSchema = RuntimeSchema.getSchema(ThresholdedRandomCutForestState.class);
+        Schema<ThresholdedRandomCutForestState> trcfSchema = RuntimeSchema
+                .getSchema(ThresholdedRandomCutForestState.class);
         byte[] bytes = Base64.getDecoder().decode(byteBase64);
         ThresholdedRandomCutForestState state = trcfSchema.newMessage();
         ProtostuffIOUtil.mergeFrom(bytes, state, trcfSchema);
@@ -66,7 +69,7 @@ public class V2TRCFToV3StateConverterTest {
 
     private String getStateFromFile(String resourceFile) {
         try (InputStream is = V2TRCFToV3StateConverterTest.class.getResourceAsStream(resourceFile);
-             BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder b = new StringBuilder();
             String line;
             while ((line = rr.readLine()) != null) {
