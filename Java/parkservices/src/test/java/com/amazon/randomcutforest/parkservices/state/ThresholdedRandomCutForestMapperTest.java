@@ -95,6 +95,7 @@ public class ThresholdedRandomCutForestMapperTest {
         for (int trials = 0; trials < 10; trials++) {
 
             long seed = new Random().nextLong();
+            System.out.println("Seed " + seed);
             RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
                     .precision(Precision.FLOAT_32).internalShinglingEnabled(false).randomSeed(seed).build();
 
@@ -103,8 +104,8 @@ public class ThresholdedRandomCutForestMapperTest {
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                     .internalShinglingEnabled(false).anomalyRate(0.01).build();
 
-            Random r = new Random();
-            for (int i = 0; i < new Random().nextInt(1000); i++) {
+            Random r = new Random(seed + 1);
+            for (int i = 0; i < new Random(seed + 2).nextInt(1000); i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 first.process(point, 0L);
                 forest.update(point);
@@ -119,7 +120,7 @@ public class ThresholdedRandomCutForestMapperTest {
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest(copyForest, 0.01, null);
 
             //
-            for (int i = 0; i < new Random().nextInt(1000); i++) {
+            for (int i = 0; i < new Random(seed + 3).nextInt(1000); i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 AnomalyDescriptor secondResult = second.process(point, 0L);
