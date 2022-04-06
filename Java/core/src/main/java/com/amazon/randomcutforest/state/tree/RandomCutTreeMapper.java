@@ -40,9 +40,21 @@ public class RandomCutTreeMapper
         int dimension = (state.getDimensions() != 0) ? state.getDimensions() : context.getPointStore().getDimensions();
         // boundingBoxcache is not set deliberately;
         // it should be set after the partial tree is complete
+        // likewise all the leaves, including the root, should be set to
+        // nodeStore.getCapacity()
+        // such that when the partial tree is filled, the correct mass is computed
+        // note that this has no effect on the cuts -- since a single node tree has no
+        // cuts
+        // uncommenting and using the following line would result in such an incorrect
+        // computation
+        // in testRoundTripForSingleNodeForest() where the masses of the trees would be
+        // different by 1
+        // and thus outputAfter() would be triggered differently.
+        // int newRoot = state.getRoot();
+        int newRoot = nodeStore.isLeaf(state.getRoot()) ? nodeStore.getCapacity() : state.getRoot();
         RandomCutTree tree = new RandomCutTree.Builder().dimension(dimension)
                 .storeSequenceIndexesEnabled(state.isStoreSequenceIndexesEnabled()).capacity(state.getMaxSize())
-                .setRoot(state.getRoot()).randomSeed(state.getSeed()).pointStoreView(context.getPointStore())
+                .setRoot(newRoot).randomSeed(state.getSeed()).pointStoreView(context.getPointStore())
                 .nodeStore(nodeStore).centerOfMassEnabled(state.isCenterOfMassEnabled())
                 .outputAfter(state.getOutputAfter()).build();
         return tree;

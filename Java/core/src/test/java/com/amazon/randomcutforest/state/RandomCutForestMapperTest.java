@@ -125,4 +125,31 @@ public class RandomCutForestMapperTest {
 
         assertCompactForestEquals(forest, forest2);
     }
+
+    @Test
+    public void testRoundTripForSingleNodeForest() {
+        int dimensions = 10;
+        long seed = new Random().nextLong();
+        System.out.println(" Seed " + seed);
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
+                .precision(Precision.FLOAT_32).internalShinglingEnabled(false).randomSeed(seed).build();
+        Random r = new Random(seed + 1);
+        double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+        for (int i = 0; i < new Random().nextInt(1000); i++) {
+            forest.update(point);
+        }
+        RandomCutForestMapper mapper = new RandomCutForestMapper();
+        mapper.setSaveExecutorContextEnabled(true);
+        mapper.setSaveTreeStateEnabled(true);
+        mapper.setPartialTreeStateEnabled(true);
+        RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
+
+        for (int i = 0; i < new Random(seed + 2).nextInt(1000); i++) {
+            double[] anotherPoint = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+            assertEquals(forest.getAnomalyScore(anotherPoint), copyForest.getAnomalyScore(anotherPoint), 1e-10);
+            forest.update(anotherPoint);
+            copyForest.update(anotherPoint);
+        }
+    }
+
 }
