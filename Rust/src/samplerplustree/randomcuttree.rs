@@ -1,27 +1,19 @@
 use std::fmt::Debug;
-
-use crate::{
-    boundingbox::BoundingBox,
-    cut::Cut,
-    nodestore::{NodeStore, VectorNodeStore},
-};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use rand_core::RngCore;
 
 extern crate rand;
-use rand::SeedableRng;
 extern crate rand_chacha;
-use rand_chacha::ChaCha20Rng;
 
-use crate::{
-    imputevisitor::ImputeVisitor,
-    nodeview::BasicNodeView,
-    pointstore::PointStore,
-    randomcuttree::rand::{Rng, RngCore},
-    scalarscorevisitor::ScalarScoreVisitor,
-    types::{Location, Max},
-    visitor::{UniqueMultiVisitor, Visitor},
-};
-
-pub type StoreInUse = VectorNodeStore<u8, u16, u8>;
+use crate::pointstore::PointStore;
+use crate::samplerplustree::boundingbox::BoundingBox;
+use crate::samplerplustree::cut::Cut;
+use crate::samplerplustree::nodestore::{NodeStore, VectorNodeStore};
+use crate::samplerplustree::nodeview::{BasicNodeView, MinimalNodeView};
+use crate::types::Location;
+use crate::visitor::imputevisitor::ImputeVisitor;
+use crate::visitor::visitor::{LeafPointVisitor, SimpleVisitor, Visitor, VisitorInfo, VisitorResult};
 
 #[repr(C)]
 pub struct RCFTree<C, P, N>
@@ -253,77 +245,115 @@ where
         leaf_point_index
     }
 
-    pub fn generic_score(
+
+    pub fn generic_simple_visitor_traversal<T : Clone>(
         &self,
         point: &[f32],
         point_store: &dyn PointStore,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> f64 {
+        parameters: &[usize],
+        visitor_info : &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn SimpleVisitor<T>>,
+        default : &T
+    ) -> T {
         if self.root == self.node_store.null_node() {
-            return 0.0;
+            return default.clone();
         }
 
-        let mut visitor = ScalarScoreVisitor::new(
-            self.tree_mass,
-            ignore_mass,
-            damp,
-            score_seen,
-            score_unseen,
-            normalizer,
-        );
+        let mut visitor = visitor_factory(self.tree_mass,parameters,&visitor_info);
         let mut node_view = BasicNodeView::new(
             self.dimensions,
             self.root,
             self.node_store.use_path_for_box(),
-            false,
-            false,
+            false
         );
-        node_view.traverse(&mut visitor, point, point_store, &self.node_store);
-        normalizer(visitor.get_result(), self.tree_mass)
+        node_view.traverse_simple(visitor.as_mut(), point, point_store, &self.node_store);
+        visitor.get_result()
     }
+
+
+    pub fn generic_leaf_point_visitor_traversal<T : Clone>(
+        &self,
+        point: &[f32],
+        point_store: &dyn PointStore,
+        parameters: &[usize],
+        visitor_info : &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn LeafPointVisitor<T>>,
+        default : &T
+    ) -> T {
+        if self.root == self.node_store.null_node() {
+            return default.clone();
+        }
+
+        let mut visitor = visitor_factory(self.tree_mass,parameters,&visitor_info);
+
+        let mut node_view = BasicNodeView::new(
+            self.dimensions,
+            self.root,
+            self.node_store.use_path_for_box(),
+            true
+        );
+        node_view.traverse_leaf_point(visitor.as_mut(), point, point_store, &self.node_store);
+        visitor.get_result()
+    }
+
+    pub fn generic_visitor_traversal<T : Clone>(
+        &self,
+        point: &[f32],
+        point_store: &dyn PointStore,
+        parameters: &[usize],
+        visitor_info : &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn Visitor<T>>,
+        default : &T
+    ) -> T {
+        if self.root == self.node_store.null_node() {
+            return default.clone();
+        }
+
+        let mut visitor = visitor_factory(self.tree_mass,parameters,&visitor_info);
+        let mut node_view = BasicNodeView::new(
+            self.dimensions,
+            self.root,
+            true,
+            true
+        );
+        node_view.traverse(visitor.as_mut(), point, point_store, &self.node_store);
+        visitor.get_result()
+    }
+
 
     pub fn conditional_field(
         &self,
-        positions: &[usize],
+        missing: &[usize],
         point: &[f32],
         point_store: &dyn PointStore,
         centrality: f64,
         seed : u64,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> (usize,f32) {
+        visitor_info:&VisitorInfo
+    ) -> (f64,usize,f64) {
         if self.root == self.node_store.null_node() {
-            return (usize::MAX,0.0);
+            return (0.0,usize::MAX,0.0);
         }
-
         let mut visitor = ImputeVisitor::new(
-            positions,
+            missing,
             centrality,
             self.tree_mass,
             seed,
-            ignore_mass,
-            damp,
-            score_seen,
-            score_unseen,
-            normalizer,
+            visitor_info
         );
         let mut node_view = BasicNodeView::new(
             self.dimensions,
             self.root,
-            self.node_store.use_path_for_box(),
-            true,
-            false,
+             self.node_store.use_path_for_box(),
+           true
         );
-
-        node_view.traverse_unique_multi(&mut visitor, point, point_store, &self.node_store);
-        visitor.get_arguments()
+        let mut missing_coordinates = vec![false;self.dimensions];
+        for i in missing.iter(){
+            missing_coordinates[*i] = true;
+        }
+        node_view.traverse_multi_with_missing_coordinates(&mut visitor, point, &missing_coordinates,point_store, &self.node_store);
+        // the following tests the more expensive method
+        //node_view.traverse_unique_multi(&mut visitor,point,point_store,&self.node_store);
+        visitor.get_result()
     }
 
     pub fn get_size(&self) -> usize {

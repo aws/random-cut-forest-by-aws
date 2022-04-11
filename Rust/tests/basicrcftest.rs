@@ -6,10 +6,9 @@ extern crate rcflib;
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::{L1distance, multidimdatawithkey};
-use rcflib::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
-use rcflib::samplesummary::summarize;
+
 
 /// try cargo test --release
 /// these tests are designed to be longish
@@ -26,7 +25,7 @@ fn two_distribution_test_static() {
     vec2[0] = - 5.0;
     let scale = vec![vec![0.1f32;dimensions],vec![0.1f32;dimensions]];
     let mean = vec![vec1,vec2];
-    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::mixture(
+    let data_with_key = MultiDimDataWithKey::mixture(
         data_size,
         &mean,
         &scale,
@@ -35,7 +34,7 @@ fn two_distribution_test_static() {
     );
 
     let shingle_size = 1;
-    let number_of_trees = 30;
+    let number_of_trees = 50;
     let capacity = 256;
     let initial_accept_fraction = 0.1;
     let _point_store_capacity = capacity * number_of_trees + 1;
@@ -66,7 +65,7 @@ fn two_distribution_test_static() {
          forest.update(&data_with_key.data[i],0);
     }
 
-    assert!(forest.score(&vec![0.0f32;dimensions]) > 1.5);
-
-    
+    let anomaly = vec![0.0f32;dimensions];
+    assert!(forest.score(&anomaly) > 1.5);
+    assert!(abs(forest.score(&anomaly) - forest.attribution(&anomaly).total()) < 1e-6);
     }

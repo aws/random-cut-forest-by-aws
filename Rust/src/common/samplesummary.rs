@@ -63,29 +63,22 @@ impl SampleSummary{
 }
 
 #[repr(C)]
-struct Center {
-    coordinate: Vec<f32>,
+struct Center<Q,T> {
+    representative: Q,
     weight: f64,
     points: Vec<(usize,f32)>,
-    sum_of_radii : f64
+    sum_of_radii : f64,
+    optimize : fn(&mut Q,&[(T,f32)],&mut [(usize,f32)])
 }
 
-impl Center {
-    pub fn new(dimensions:usize) -> Self {
+impl<Q,T: Copy> Center<Q,T> {
+    pub fn new(representative : Q, optimize: fn(&mut Q,&[(T,f32)],&mut [(usize,f32)])) -> Self {
         Center{
-            coordinate : vec![0.0;dimensions],
+            representative,
             weight : 0.0,
             points : Vec::new(),
-            sum_of_radii : 0.0
-        }
-    }
-
-    pub fn initial(coordinate: &[f32]) -> Self{
-        Center{
-            coordinate : Vec::from(coordinate),
-            weight : 0.0,
-            points : Vec::new(),
-            sum_of_radii : 0.0
+            sum_of_radii : 0.0,
+            optimize
         }
     }
 
@@ -107,28 +100,17 @@ impl Center {
         }
     }
 
-    fn median(points:&[(&[f32],f32)], list: &mut[(usize,f32)], dimensions:usize) -> Vec<f32>{
-        let mut answer = vec![0.0f32;dimensions];
-        let total : f64 = list.iter().map(|a| a.1 as f64).sum();
-        for i in 0..dimensions {
-            list.sort_by(|a, b| points[a.0].0[i].partial_cmp(&points[b.0].0[i]).unwrap());
-            let position = pick(list,(total/2.0) as f32);
-            answer[i] = points[list[position].0].0[i];
-        }
-        answer
-    }
-
-    pub fn recompute(&mut self,points:&[(&[f32],f32)],distance : fn(&[f32],&[f32]) -> f64){
+    pub fn recompute(&mut self,points:&[(T,f32)],distance : fn(&Q,T) -> f64){
         self.sum_of_radii  = 0.0;
         if self.weight == 0.0 {
             assert!(self.points.len() == 0, "adding points with weight 0.0 ?");
-            self.coordinate = vec![0.0;self.coordinate.len()];
+            //self.coordinate = vec![0.0;self.coordinate.len()];
             return;
         }
 
         // the following computes an approximate median
-        let new_center = if self.points.len() < 500 {
-            Self::median(points,&mut self.points,self.coordinate.len())
+        if self.points.len() < 500 {
+            (self.optimize)(&mut self.representative, points, &mut self.points)
         } else {
             let mut samples = Vec::new();
             let mut rng =ChaCha20Rng::seed_from_u64(0);
@@ -137,18 +119,24 @@ impl Center {
                     samples.push((self.points[i].0,1.0));
                 }
             };
-            Self::median(points,&mut samples,self.coordinate.len())
+            (self.optimize)(&mut self.representative,points,&mut samples)
         };
 
-        for i in 0..self.coordinate.len() {
-            self.coordinate[i] = new_center[i];
-        }
-
         for j in 0..self.points.len() {
-                self.sum_of_radii += self.points[j].1 as f64 * distance(&self.coordinate,&points[self.points[j].0].0) as f64;
+                self.sum_of_radii += self.points[j].1 as f64 * distance(&self.representative,points[self.points[j].0].0) as f64;
         }
     }
 
+}
+
+pub fn optimize_l1(representative: &mut Vec<f32>, points:&[(&[f32],f32)], list: &mut[(usize,f32)]){
+    let dimensions = representative.len();
+    let total : f64 = list.iter().map(|a| a.1 as f64).sum();
+    for i in 0..dimensions {
+        list.sort_by(|a, b| points[a.0].0[i].partial_cmp(&points[b.0].0[i]).unwrap());
+        let position = pick(list,(total/2.0) as f32);
+        representative[i] = points[list[position].0].0[i];
+    }
 }
 
 const weight_threshold : f64 = 1.25;
@@ -168,7 +156,7 @@ fn pick<T>(points: &[(T,f32)], wt : f32) -> usize{
 }
 
 
-fn assign(points : &[(&[f32],f32)], centers: &mut[Center], distance : fn(&[f32],&[f32]) -> f64) {
+fn assign<Q,T : Copy>(points : &[(T,f32)], centers: &mut[Center<Q,T>], distance : fn(&Q,T) -> f64) {
 
     for j in 0..centers.len() {
         centers[j].reset();
@@ -179,7 +167,7 @@ fn assign(points : &[(&[f32],f32)], centers: &mut[Center], distance : fn(&[f32],
         let mut dist = vec![0.0; centers.len()];
         let mut min_distance = f64::MAX;
         for j in 0..centers.len() {
-            dist[j] = distance(&centers[j].coordinate, &points[i].0);
+            dist[j] = distance(&centers[j].representative, points[i].0);
             if min_distance > dist[j] {
                 min_distance = dist[j];
             }
@@ -206,24 +194,23 @@ fn assign(points : &[(&[f32],f32)], centers: &mut[Center], distance : fn(&[f32],
     }
 }
 
-fn add_center(points: &[(&[f32],f32)], centers : &mut Vec<Center>, distance: fn (&[f32],&[f32])-> f64, index: usize) {
+fn add_center(points: &[(&[f32],f32)], centers : &mut Vec<Center<Vec<f32>,&[f32]>>, distance: fn (&Vec<f32>,&[f32])-> f64, index: usize,optimize: fn(&mut Vec<f32>,&[(&[f32],f32)],&mut [(usize,f32)])) {
     let mut min_dist = f64::MAX;
     for i in 0..centers.len() {
-        let t = distance(&points[index].0, &centers[i].coordinate);
+        let t = distance(&centers[i].representative, points[index].0);
         if t < min_dist {
             min_dist = t;
         };
     }
     if min_dist > 0.0 {
-        centers.push(Center::initial(&points[index].0));
+        centers.push(Center::new(Vec::from(points[index].0),optimize));
     }
 }
 
 const separation_ratio_for_merge : f64 = 0.8;
 
 
-
-pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64, max_number : usize) -> SampleSummary {
+pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&Vec<f32>,&[f32]) -> f64, max_number : usize) -> SampleSummary {
     assert!(max_number < 51, " for large number of clusters, other methods may be better, consider recursively removing clusters");
     if max_number == 0 {
         return SampleSummary{
@@ -268,14 +255,17 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
         median[j] = v[num / 2];
     };
 
-    let mut centers: Vec<Center> = Vec::new();
-    centers.push(Center::initial(&median));
+    let mut centers: Vec<Center<Vec<f32>,&[f32]>> = Vec::new();
+    centers.push(Center::new(median.clone(),optimize_l1));
     let max_allowed = min(dimensions * max_number_per_dimension,
                           max_number);
     let mut rng = ChaCha20Rng::seed_from_u64(max_allowed as u64);
 
-    // the following sampling is for efficiency reasons
-    let mut sampled_points: Vec<(&[f32],f32)> = Vec::new();
+    /// the following sampling is for efficiency reasons
+    /// the sampling produces references to save duplication
+    /// however that implies that ownership wise, those references should be
+    /// created and eventually destroyed in this same block
+     let mut sampled_points: Vec<(&[f32],f32)> = Vec::new();
     if points.len() < 10000 {
         for j in 0..points.len() {
             sampled_points.push((&points[j].0,points[j].1));
@@ -292,7 +282,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
         for j in 0..points.len() {
             if points[j].1 <= (total_weight / 1000.0) as f32 && rng.gen::<f64>() < 10000.0 / points.len() as f64 {
                 let t = points[j].1 as f64 * (points.len() as f64/10000.0) * (remainder / total_weight);
-                sampled_points.push((&points[j].0, points[j].1));
+                sampled_points.push((&points[j].0, t as f32));
             }
         }
     }
@@ -303,9 +293,9 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
     /// with weight 1/k whp
     ///
     let sampled_sum : f32 = sampled_points.iter().map(|x| x.1).sum();
-    for k in 0..2 * max_allowed{
+    for _k in 0..2 * max_allowed{
         let wt = (rng.gen::<f64>() * sampled_sum as f64) as f32;
-        add_center(&sampled_points,&mut centers,distance,pick(&sampled_points,wt));
+        add_center(&sampled_points,&mut centers,distance,pick(&sampled_points,wt), optimize_l1);
     }
 
     assign(&sampled_points,&mut centers,distance);
@@ -325,7 +315,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
         measure = 0.0;
         for i in 0..centers.len() - 1 {
             for j in i + 1..centers.len() {
-                let dist = distance(&centers[i].coordinate, &centers[j].coordinate);
+                let dist = distance(&centers[i].representative, &centers[j].representative);
                 let temp_measure = (centers[i].average_radius() + centers[j].average_radius()) / dist;
                 if measure < temp_measure {
                     first = i;
@@ -356,7 +346,7 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
     let mut relative_weight: Vec<f32> = Vec::new();
     let center_sum : f64= centers.iter().map(|x| x.weight).sum();
     for i in 0..centers.len() {
-        summary_points.push(centers[i].coordinate.clone());
+        summary_points.push(centers[i].representative.clone());
         relative_weight.push((centers[i].weight /center_sum) as f32);
     };
     SampleSummary {

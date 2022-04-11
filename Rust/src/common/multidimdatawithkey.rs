@@ -1,11 +1,12 @@
 extern crate rand;
-use rand::SeedableRng;
+
 extern crate rand_chacha;
 use std::f32::consts::PI;
 
+use crate::rand::Rng;
 use rand_chacha::ChaCha20Rng;
-
-use crate::multidimdatawithkey::rand::{Rng, RngCore};
+use rand_core::RngCore;
+use rand::SeedableRng;
 
 pub struct MultiDimDataWithKey {
     pub data: Vec<Vec<f32>>,
@@ -28,7 +29,6 @@ impl MultiDimDataWithKey {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
         let mut noiserng = ChaCha20Rng::seed_from_u64(seed + 1);
         let mut phase: Vec<usize> = Vec::new();
-        let mut amp : Vec<f32> = Vec::new();
 
         for i in 0..base_dimension {
             phase.push(rng.next_u64() as usize % period[i]);
@@ -92,7 +92,7 @@ impl MultiDimDataWithKey {
         let sum : f32 = weight.iter().sum();
         let mut data = Vec::new();
         let mut labels = Vec::new();
-        for j in 0..num {
+        for _j in 0..num {
             let mut i = base_dimension;
             while i == base_dimension  {
                 i = 0;

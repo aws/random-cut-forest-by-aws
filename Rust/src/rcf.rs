@@ -1,19 +1,25 @@
-use rayon::prelude::*;
 
-use crate::{L1distance, pointstore::{PointStore, VectorizedPointStore}, samplerplustree::SamplerPlusTree, samplesummary::{SampleSummary, summarize}};
 extern crate num;
 extern crate rand;
-use rand::SeedableRng;
 extern crate rand_chacha;
+
+use rayon::prelude::*;
+use rand::SeedableRng;
 use core::fmt::Debug;
-
 use rand_chacha::ChaCha20Rng;
-
-use crate::{
-    rcf::rand::RngCore,
-    types::{Location, Max},
-};
-use crate::conditionalfieldsummarizer::FieldSummarizer;
+use rand_core::RngCore;
+use crate::common::conditionalfieldsummarizer::FieldSummarizer;
+use crate::common::divector::DiVector;
+use crate::common::samplesummary::SampleSummary;
+use crate::pointstore::{PointStore, VectorizedPointStore};
+use crate::samplerplustree::nodeview::MinimalNodeView;
+use crate::samplerplustree::samplerplustree::SamplerPlusTree;
+use crate::types::Location;
+use crate::vec_l1distance;
+use crate::visitor::attributionvisitor::AttributionVisitor;
+use crate::visitor::imputevisitor::ImputeVisitor;
+use crate::visitor::scalarscorevisitor::ScalarScoreVisitor;
+use crate::visitor::visitor::{LeafPointVisitor, SimpleVisitor, Visitor, VisitorInfo};
 
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
@@ -31,6 +37,20 @@ pub(crate) fn damp(x: usize, y: usize) -> f64 {
 
 const max_number_in_summary : usize = 5;
 
+fn add_to(a: &f64, b : &mut f64){
+    *b += *a;
+}
+
+fn divide(a : &mut f64, b: usize){
+    *a /= b as f64;
+}
+
+fn add_nbr(a:&(f64,usize,f64), b: &mut Vec<(f64,usize,f64)>){
+    b.push(*a)
+}
+
+// should be optimized away; kept for uniformity across different functions
+fn nbr_finish( _a: &mut Vec<(f64,usize,f64)>, _b:usize){}
 
 pub trait RCF {
     fn validate_update(&self, point: &[f32]) {
@@ -52,7 +72,7 @@ pub trait RCF {
     fn get_entries_seen(&self) -> u64;
 
     fn score(&self, point: &[f32]) -> f64 {
-        self.generic_score(point, 0, score_seen, score_unseen, damp, normalizer)
+        self.score_visitor_traversal(point, &VisitorInfo::default())
     }
 
     fn generic_score(
@@ -63,7 +83,50 @@ pub trait RCF {
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> f64;
+    ) -> f64 {
+        self.score_visitor_traversal(point,&VisitorInfo::use_score(ignore_mass,score_seen,score_unseen,damp,normalizer))
+    }
+
+    fn score_visitor_traversal(&self, point :&[f32], visitor_info : &VisitorInfo) -> f64;
+
+    fn attribution(&self, point : &[f32]) -> DiVector {
+        self.attribution_visitor_traversal(point,&VisitorInfo::default())
+    }
+
+    fn generic_attribution(
+        &self,
+        point: &[f32],
+        ignore_mass: usize,
+        score_seen: fn(usize, usize) -> f64,
+        score_unseen: fn(usize, usize) -> f64,
+        damp: fn(usize, usize) -> f64,
+        normalizer: fn(f64, usize) -> f64,
+    ) -> DiVector {
+        self.attribution_visitor_traversal(point, &VisitorInfo::use_score(ignore_mass,score_seen,score_unseen,damp,normalizer))
+    }
+
+    fn attribution_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info : &VisitorInfo
+    ) -> DiVector;
+
+    /// the answer format is (score, point, distance from original)
+    fn near_neighbor_list(
+        &self,
+        point: &[f32],
+        percentile: usize,
+    ) -> Vec<(f64,Vec<f32>,f64)> {
+        self.near_neighbor_traversal(point,percentile, &VisitorInfo::default())
+    }
+
+    fn near_neighbor_traversal(
+        &self,
+        point: &[f32],
+        percentile: usize,
+        visitor_info : &VisitorInfo
+    ) -> Vec<(f64,Vec<f32>,f64)>;
+
 
 
     fn impute_missing_values(&self, positions: &[usize], point: &[f32]) -> Vec<f32> {
@@ -74,33 +137,19 @@ pub trait RCF {
     fn extrapolate(&self, look_ahead : usize) -> Vec<f32>;
 
     fn conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64, project:bool, max_number : usize) -> SampleSummary {
-        self.generic_conditional_field(
-            positions,
-            point,
-            centrality,
-            project,
-            max_number,
-            0,
-            score_seen,
-            score_unseen,
-            damp,
-            normalizer,
-        )
+        self.generic_conditional_field_visitor(positions,point, centrality,project,max_number,&VisitorInfo::default())
     }
 
-    fn generic_conditional_field(
+    fn generic_conditional_field_visitor(
         &self,
         positions: &[usize],
         point: &[f32],
         centrality: f64,
         project : bool,
         max_number : usize,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64
+        visitor_info:&VisitorInfo
     ) -> SampleSummary;
+
     fn get_size(&self) -> usize;
     fn get_point_store_size(&self) -> usize;
 
@@ -229,14 +278,10 @@ where
         positions: &[usize],
         point: &[f32],
         centrality: f64,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> Vec<(usize,f32)> {
+        visitor_info: &VisitorInfo
+    ) -> Vec<(f64,usize,f64)> {
         let new_point = self.point_store.get_shingled_point(point);
-        let mut list: Vec<(usize,f32)> = if self.parallel_enabled {
+        let mut list: Vec<(f64,usize,f64)> = if self.parallel_enabled {
             self.sampler_plus_trees
                 .par_iter()
                 .map(|m| {
@@ -245,11 +290,7 @@ where
                         centrality,
                         &new_point,
                         &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
+                        visitor_info
                     )
                 })
                 .collect()
@@ -262,18 +303,136 @@ where
                         centrality,
                         &new_point,
                         &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
+                        visitor_info
                     )
                 })
                 .collect()
         };
-        list.sort_by(|o1,o2| o1.0.cmp(&o2.0));
+        list.sort_by(|&o1,&o2| o1.2.partial_cmp(&o2.2).unwrap());
         list
     }
+
+    fn generic_traversal_manager<T : Clone + std::marker::Send + std::marker::Sync, S: Clone, Q>(
+        &self,
+        point: &[f32],
+        parameters : &[usize],
+        visitor_info: &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Q,
+        sampler_tree_function: fn(& SamplerPlusTree<C,P,N>, &[f32],&dyn PointStore,&[usize],&VisitorInfo, fn(usize,&[usize],&VisitorInfo) -> Q,&T) -> T,
+        default : &T,
+        initial:  &S,
+        collect_to: fn(&T, &mut S),
+        finish: fn(&mut S,usize)
+    ) -> S
+    {
+        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
+        let mut answer = initial.clone();
+        let new_point = self.point_store.get_shingled_point(point);
+
+        if self.parallel_enabled {
+            let list: Vec<T> = self.sampler_plus_trees
+                .par_iter()
+                .map(|m| {
+                    //m.generic_visitor_traversal(
+                    (sampler_tree_function)(m,
+                        &new_point,
+                        &self.point_store,
+                        parameters,
+                        &visitor_info,
+                        visitor_factory,
+                        default
+                    )
+                })
+                .collect();
+            // given the overhead of parallelism, it seems appropriate to collect()
+            // the below transformation is single threaded and the same function can be used
+            // as is used in the single threaded case
+            list.iter().for_each(|m| (collect_to)(m,&mut answer));
+        } else {
+            self.sampler_plus_trees
+                .iter()
+                .map(|m| {
+                    (sampler_tree_function)(m,
+                        &new_point,
+                        &self.point_store,
+                        parameters,
+                        &visitor_info,
+                        visitor_factory,
+                        default
+                    )
+                })
+                .for_each(|m| collect_to(&m,&mut answer));
+        };
+        (finish)(&mut answer,self.sampler_plus_trees.len());
+        answer.clone()
+    }
+
+    fn generic_simple_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
+        &self,
+        point: &[f32],
+        parameters : &[usize],
+        visitor_info: &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn SimpleVisitor<T>>,
+        default : &T,
+        initial:  &S,
+        collect_to: fn(&T, &mut S),
+        finish: fn(&mut S,usize)
+    ) -> S {
+        self.generic_traversal_manager(point,
+                                       parameters,
+                                       visitor_info,
+                                       visitor_factory,
+                                       SamplerPlusTree::generic_simple_visitor_traversal,
+                                       default,
+                                       initial,
+                                       collect_to,
+                                       finish)
+    }
+
+    fn generic_leaf_point_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
+        &self,
+        point: &[f32],
+        parameters : &[usize],
+        visitor_info: &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn LeafPointVisitor<T>>,
+        default : &T,
+        initial:  &S,
+        collect_to: fn(&T, &mut S),
+        finish: fn(&mut S,usize)
+    ) -> S {
+        self.generic_traversal_manager(point,
+                                       parameters,
+                                       visitor_info,
+                                       visitor_factory,
+                                       SamplerPlusTree::generic_Leaf_point_visitor_traversal,
+                                       default,
+                                       initial,
+                                       collect_to,
+                                       finish)
+    }
+
+    fn generic_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
+        &self,
+        point: &[f32],
+        parameters : &[usize],
+        visitor_info: &VisitorInfo,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn Visitor<T>>,
+        default : &T,
+        initial:  &S,
+        collect_to: fn(&T, &mut S),
+        finish: fn(&mut S,usize)
+    ) -> S {
+        self.generic_traversal_manager(point,
+                                       parameters,
+                                       visitor_info,
+                                       visitor_factory,
+                                       SamplerPlusTree::generic_visitor_traversal,
+                                       default,
+                                       initial,
+                                       collect_to,
+                                       finish)
+    }
+
 }
 
 pub fn create_rcf(
@@ -410,75 +569,59 @@ where
         self.entries_seen
     }
 
-    fn generic_score(
+    fn score_visitor_traversal(
         &self,
         point: &[f32],
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
+        visitor_info : &VisitorInfo
     ) -> f64 {
-        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
-        let mut sum = 0.0;
-        let new_point = self.point_store.get_shingled_point(point);
-        sum = if self.parallel_enabled {
-            self.sampler_plus_trees
-                .par_iter()
-                .map(|m| {
-                    m.generic_score(
-                        &new_point,
-                        &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
-                    )
-                })
-                .sum()
-        } else {
-            self.sampler_plus_trees
-                .iter()
-                .map(|m| {
-                    m.generic_score(
-                        &new_point,
-                        &self.point_store,
-                        ignore_mass,
-                        score_seen,
-                        score_unseen,
-                        damp,
-                        normalizer,
-                    )
-                })
-                .sum()
-        };
-        sum / (self.sampler_plus_trees.len() as f64)
+        // parameter unused for score traversal
+        self.generic_simple_visitor_traversal(point, &Vec::new(),visitor_info, ScalarScoreVisitor::create_visitor, &0.0, &0.0,add_to, divide)
     }
 
-    fn generic_conditional_field(
+    fn attribution_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info : &VisitorInfo
+    ) -> DiVector {
+        let parameters = &vec![self.dimensions];
+        self.generic_visitor_traversal(point, parameters, visitor_info,AttributionVisitor::create_visitor,&DiVector::empty(self.dimensions),&DiVector::empty(self.dimensions),DiVector::add_to,DiVector::divide)
+    }
+
+    fn near_neighbor_traversal(
+        &self,
+        point: &[f32],
+        percentile: usize,
+        visitor_info : &VisitorInfo
+    ) -> Vec<(f64,Vec<f32>,f64)> {
+        let x = (0.0f64,usize::MAX,f64::MAX);
+        let parameters = &vec![percentile];
+        let list = self.generic_leaf_point_visitor_traversal(point,parameters,visitor_info,ImputeVisitor::create_nbr_visitor,&x,&Vec::new(),add_nbr,nbr_finish);
+        let mut answer = Vec::new();
+        for e in list.iter() {
+            answer.push((e.0,self.point_store.get_copy(e.1),e.2));
+        }
+        answer
+    }
+
+    fn generic_conditional_field_visitor(
         &self,
         positions: &[usize],
         point: &[f32],
         centrality: f64,
         project: bool,
         max_number : usize,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
+        visitor_info: &VisitorInfo
     ) -> SampleSummary {
         assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
         let new_positions = if point.len() == self.dimensions {
             Vec::from(positions)
         } else {
-            /// internal shingling
+            // internal shingling
             self.point_store.get_missing_indices(0,positions)
         };
 
-        let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, ignore_mass, score_seen, score_unseen, damp, normalizer);
-        let field_summarizer = FieldSummarizer::new(centrality,project,max_number,L1distance);
+        let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, visitor_info);
+        let field_summarizer = FieldSummarizer::new(centrality, project, max_number, vec_l1distance);
         field_summarizer.summarize_list(&self.point_store,&raw_list,&new_positions)
     }
 

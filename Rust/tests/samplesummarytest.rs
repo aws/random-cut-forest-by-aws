@@ -6,14 +6,17 @@ extern crate rcflib;
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::{L1distance, L2distance, LInfinitydistance, multidimdatawithkey};
-use rcflib::multidimdatawithkey::MultiDimDataWithKey;
-use rcflib::samplesummary::summarize;
+
 
 /// try cargo test --release
 /// these tests are designed to be longish
 
 use parameterized_test::create;
+use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::common::samplesummary::summarize;
+use rcflib::vec_l1distance;
+use rcflib::vec_l2distance;
+use rcflib::vec_linfinitydistance;
 
 #[cfg(test)]
 parameterized_test::create! { sample_summary_distance_test, (test_dimension,distance), {
@@ -32,7 +35,7 @@ parameterized_test::create! { sample_summary_distance_test, (test_dimension,dist
         scale.push(vec![0.1f32;dimensions]);
     };
 
-    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::mixture(
+    let data_with_key = MultiDimDataWithKey::mixture(
         data_size,
         &mean,
         &scale,
@@ -65,14 +68,14 @@ parameterized_test::create! { sample_summary_distance_test, (test_dimension,dist
     }}
 
 sample_summary_distance_test! {
-    a1 : (1,L1distance),
-    b1 : (1,L2distance),
-    c1 : (1,LInfinitydistance),
-    a2 : (2,L1distance),
-    b2 : (3,L2distance),
-    c2 : (4,LInfinitydistance),
-    a3 : (5,L1distance),
-    b3 : (5,L2distance),
-    c3 : (5,LInfinitydistance),
+    a1 : (1,vec_l1distance),
+    b1 : (1,vec_l2distance),
+    c1 : (1,vec_linfinitydistance),
+    a2 : (2,vec_l1distance),
+    b2 : (3,vec_l2distance),
+    c2 : (4,vec_linfinitydistance),
+    a3 : (5,vec_l1distance),
+    b3 : (5,vec_l2distance),
+    c3 : (5,vec_linfinitydistance),
 
 }

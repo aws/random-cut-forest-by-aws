@@ -1,7 +1,8 @@
 extern crate num;
 use std::{collections::HashMap, convert::TryFrom, fmt::Debug};
+use crate::types::Location;
+use crate::common::intervalstoremanager::IntervalStoreManager;
 
-use crate::{intervalstoremanager::IntervalStoreManager, types::Location};
 
 pub trait PointStore {
     fn get_shingled_point(&self, point: &[f32]) -> Vec<f32>;
@@ -138,12 +139,6 @@ where
             + std::mem::size_of::<VectorizedPointStore<L>>()
     }
 
-    fn get_next_indices(&self,look_ahead : usize) -> Vec<usize> {
-        let base = self.dimensions / self.shingle_size;
-        let vec : Vec<usize> = (0..base).collect();
-         self.get_missing_indices(look_ahead, &vec)
-    }
-
     fn get_missing_indices(&self, look_ahead: usize, values: &[usize]) -> Vec<usize> {
         if !self.internal_shingling {
             assert!(look_ahead == 0, "look ahead is meaningless for external shingling");
@@ -160,6 +155,12 @@ where
             }
         }
         answer
+    }
+
+    fn get_next_indices(&self,look_ahead : usize) -> Vec<usize> {
+        let base = self.dimensions / self.shingle_size;
+        let vec : Vec<usize> = (0..base).collect();
+         self.get_missing_indices(look_ahead, &vec)
     }
 
     fn get_copy(&self, index: usize) -> Vec<f32> {
