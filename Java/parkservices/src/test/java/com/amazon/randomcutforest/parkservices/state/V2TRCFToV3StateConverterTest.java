@@ -15,8 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.protostuff.ProtostuffIOUtil;
+import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,18 +31,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Random;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-
-import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.protostuff.ProtostuffIOUtil;
-import io.protostuff.Schema;
-import io.protostuff.runtime.RuntimeSchema;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class V2TRCFToV3StateConverterTest {
 
@@ -50,6 +49,11 @@ public class V2TRCFToV3StateConverterTest {
         mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
         ThresholdedRandomCutForestState state = mapper.readValue(json, ThresholdedRandomCutForestState.class);
         ThresholdedRandomCutForest forest = trcfMapper.toModel(state);
+        Random r = new Random(0);
+        for (int i = 0; i < 200000; i++) {
+            double[] point = r.ints(forest.getForest().getDimensions(), 0, 50).asDoubleStream().toArray();
+            forest.process(point, 0L);
+        }
         assertNotNull(forest);
     }
 
