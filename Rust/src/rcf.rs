@@ -12,15 +12,15 @@ use crate::common::conditionalfieldsummarizer::FieldSummarizer;
 use crate::common::divector::DiVector;
 use crate::common::samplesummary::SampleSummary;
 use crate::pointstore::{PointStore, VectorizedPointStore};
-use crate::samplerplustree::nodeview::MinimalNodeView;
+use crate::samplerplustree::nodestore::VectorNodeStore;
+use crate::samplerplustree::nodeview::UpdatableNodeView;
 use crate::samplerplustree::samplerplustree::SamplerPlusTree;
 use crate::types::Location;
 use crate::vec_l1distance;
 use crate::visitor::attributionvisitor::AttributionVisitor;
 use crate::visitor::imputevisitor::ImputeVisitor;
 use crate::visitor::scalarscorevisitor::ScalarScoreVisitor;
-use crate::visitor::visitor::{LeafPointVisitor, SimpleVisitor, Visitor, VisitorInfo};
-
+use crate::visitor::visitor::{Visitor, VisitorInfo};
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
     1.0 / (x as f64 + f64::log2(1.0 + y as f64))
@@ -72,7 +72,7 @@ pub trait RCF {
     fn get_entries_seen(&self) -> u64;
 
     fn score(&self, point: &[f32]) -> f64 {
-        self.score_visitor_traversal(point, &VisitorInfo::default())
+       self.score_visitor_traversal(point, &VisitorInfo::default())
     }
 
     fn generic_score(
@@ -312,125 +312,60 @@ where
         list
     }
 
-    fn generic_traversal_manager<T : Clone + std::marker::Send + std::marker::Sync, S: Clone, Q>(
+    pub fn simple_traversal<NodeView,V,R,S>(
         &self,
         point: &[f32],
         parameters : &[usize],
         visitor_info: &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Q,
-        sampler_tree_function: fn(& SamplerPlusTree<C,P,N>, &[f32],&dyn PointStore,&[usize],&VisitorInfo, fn(usize,&[usize],&VisitorInfo) -> Q,&T) -> T,
-        default : &T,
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
+        default : &R,
         initial:  &S,
-        collect_to: fn(&T, &mut S),
+        collect_to: fn(&R, &mut S),
         finish: fn(&mut S,usize)
     ) -> S
+        where        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, VectorizedPointStore<L>>,
+                     V : Visitor<NodeView,R>,
+                     R: Clone + std::marker::Send + std::marker::Sync,
+                     S: Clone
     {
         assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
         let mut answer = initial.clone();
         let new_point = self.point_store.get_shingled_point(point);
 
         if self.parallel_enabled {
-            let list: Vec<T> = self.sampler_plus_trees
+            let list: Vec<R> = self.sampler_plus_trees
                 .par_iter()
                 .map(|m| {
                     //m.generic_visitor_traversal(
-                    (sampler_tree_function)(m,
-                        &new_point,
-                        &self.point_store,
-                        parameters,
-                        &visitor_info,
-                        visitor_factory,
-                        default
+                    m.simple_traversal(&new_point,
+                                       &self.point_store,
+                                       parameters,
+                                       &visitor_info,
+                                       visitor_factory,
+                                       default
                     )
                 })
                 .collect();
             // given the overhead of parallelism, it seems appropriate to collect()
             // the below transformation is single threaded and the same function can be used
             // as is used in the single threaded case
-            list.iter().for_each(|m| (collect_to)(m,&mut answer));
+            list.iter().for_each(|m| (collect_to)(m, &mut answer));
         } else {
             self.sampler_plus_trees
                 .iter()
                 .map(|m| {
-                    (sampler_tree_function)(m,
-                        &new_point,
-                        &self.point_store,
-                        parameters,
-                        &visitor_info,
-                        visitor_factory,
-                        default
+                    m.simple_traversal(&new_point,
+                                       &self.point_store,
+                                       parameters,
+                                       &visitor_info,
+                                       visitor_factory,
+                                       default
                     )
                 })
-                .for_each(|m| collect_to(&m,&mut answer));
-        };
+                .for_each(|m| collect_to(&m, &mut answer));
+        }
         (finish)(&mut answer,self.sampler_plus_trees.len());
         answer.clone()
-    }
-
-    fn generic_simple_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
-        &self,
-        point: &[f32],
-        parameters : &[usize],
-        visitor_info: &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn SimpleVisitor<T>>,
-        default : &T,
-        initial:  &S,
-        collect_to: fn(&T, &mut S),
-        finish: fn(&mut S,usize)
-    ) -> S {
-        self.generic_traversal_manager(point,
-                                       parameters,
-                                       visitor_info,
-                                       visitor_factory,
-                                       SamplerPlusTree::generic_simple_visitor_traversal,
-                                       default,
-                                       initial,
-                                       collect_to,
-                                       finish)
-    }
-
-    fn generic_leaf_point_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
-        &self,
-        point: &[f32],
-        parameters : &[usize],
-        visitor_info: &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn LeafPointVisitor<T>>,
-        default : &T,
-        initial:  &S,
-        collect_to: fn(&T, &mut S),
-        finish: fn(&mut S,usize)
-    ) -> S {
-        self.generic_traversal_manager(point,
-                                       parameters,
-                                       visitor_info,
-                                       visitor_factory,
-                                       SamplerPlusTree::generic_Leaf_point_visitor_traversal,
-                                       default,
-                                       initial,
-                                       collect_to,
-                                       finish)
-    }
-
-    fn generic_visitor_traversal<T : Clone + std::marker::Send + std::marker::Sync, S: Clone>(
-        &self,
-        point: &[f32],
-        parameters : &[usize],
-        visitor_info: &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn Visitor<T>>,
-        default : &T,
-        initial:  &S,
-        collect_to: fn(&T, &mut S),
-        finish: fn(&mut S,usize)
-    ) -> S {
-        self.generic_traversal_manager(point,
-                                       parameters,
-                                       visitor_info,
-                                       visitor_factory,
-                                       SamplerPlusTree::generic_visitor_traversal,
-                                       default,
-                                       initial,
-                                       collect_to,
-                                       finish)
     }
 
 }
@@ -575,7 +510,7 @@ where
         visitor_info : &VisitorInfo
     ) -> f64 {
         // parameter unused for score traversal
-        self.generic_simple_visitor_traversal(point, &Vec::new(),visitor_info, ScalarScoreVisitor::create_visitor, &0.0, &0.0,add_to, divide)
+        self.simple_traversal(point, &Vec::new(),visitor_info, ScalarScoreVisitor::Default, &0.0, &0.0,add_to, divide)
     }
 
     fn attribution_visitor_traversal(
@@ -583,8 +518,9 @@ where
         point: &[f32],
         visitor_info : &VisitorInfo
     ) -> DiVector {
+        // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
-        self.generic_visitor_traversal(point, parameters, visitor_info,AttributionVisitor::create_visitor,&DiVector::empty(self.dimensions),&DiVector::empty(self.dimensions),DiVector::add_to,DiVector::divide)
+        self.simple_traversal(point, parameters, visitor_info,AttributionVisitor::create_visitor,&DiVector::empty(self.dimensions),&DiVector::empty(self.dimensions),DiVector::add_to,DiVector::divide)
     }
 
     fn near_neighbor_traversal(
@@ -595,7 +531,7 @@ where
     ) -> Vec<(f64,Vec<f32>,f64)> {
         let x = (0.0f64,usize::MAX,f64::MAX);
         let parameters = &vec![percentile];
-        let list = self.generic_leaf_point_visitor_traversal(point,parameters,visitor_info,ImputeVisitor::create_nbr_visitor,&x,&Vec::new(),add_nbr,nbr_finish);
+        let list = self.simple_traversal(point,parameters,visitor_info,ImputeVisitor::create_nbr_visitor,&x,&Vec::new(),add_nbr,nbr_finish);
         let mut answer = Vec::new();
         for e in list.iter() {
             answer.push((e.0,self.point_store.get_copy(e.1),e.2));

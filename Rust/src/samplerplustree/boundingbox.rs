@@ -30,10 +30,14 @@ impl BoundingBox {
     }
 
     pub fn check_contains_and_add_point(&mut self, values: &[f32]) -> bool {
-        self.two_arrays(values, values)
+        self.add_two_arrays(values, values)
     }
 
-    fn two_arrays(&mut self, minvalues: &[f32], maxvalues: &[f32]) -> bool {
+    pub fn add_box(&mut self, x: &BoundingBox) {
+        self.add_two_arrays(x.get_min_values(),x.get_max_values());
+    }
+
+    fn add_two_arrays(&mut self, minvalues: &[f32], maxvalues: &[f32]) -> bool {
         let old_sum = self.range_sum;
 
         for (x, y) in self.min_values.iter_mut().zip(minvalues) {

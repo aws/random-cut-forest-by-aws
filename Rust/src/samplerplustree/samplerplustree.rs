@@ -1,17 +1,17 @@
+extern crate rand;
+extern crate rand_chacha;
+
 use std::fmt::Debug;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
 use crate::pointstore::PointStore;
-use crate::samplerplustree::nodeview::MinimalNodeView;
-
-extern crate rand;
-extern crate rand_chacha;
-
-use crate::samplerplustree::randomcuttree::RCFTree;
+use crate::samplerplustree::nodestore::VectorNodeStore;
+use crate::samplerplustree::nodeview::UpdatableNodeView;
+use crate::samplerplustree::randomcuttree::{RCFTree, Traversable};
 use crate::samplerplustree::sampler::Sampler;
 use crate::types::Location;
-use crate::visitor::visitor::{LeafPointVisitor, SimpleVisitor, Visitor, VisitorInfo};
+use crate::visitor::visitor::{Visitor, VisitorInfo};
 
 
 #[repr(C)]
@@ -132,71 +132,32 @@ where
         }
     }
 
-    pub fn generic_simple_visitor_traversal<T : Clone>(
-        &self,
-        point: &[f32],
-        point_store: &dyn PointStore,
-        parameters : &[usize],
-        visitor_info : &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn SimpleVisitor<T>>,
-        default : &T
-    ) -> T {
-        self.tree.generic_simple_visitor_traversal(
-            point,
-            point_store,
-            parameters,
-            visitor_info,
-            visitor_factory,
-            default
-        )
+    pub fn simple_traversal<NodeView,V,R,PS>(&self,
+                                       point: &[f32],
+                                       point_store: &PS,
+                                       parameters : &[usize],
+                                       visitor_info : &VisitorInfo,
+                                       visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
+                                       default : &R
+    ) -> R
+    where        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
+                 V : Visitor<NodeView,R>,
+                 PS: PointStore,
+                 R: Clone
+    {
+         self.tree.traverse(point, parameters, visitor_factory, visitor_info, point_store, default)
     }
 
-    pub fn generic_Leaf_point_visitor_traversal<T : Clone>(
-        &self,
-        point: &[f32],
-        point_store: &dyn PointStore,
-        parameters : &[usize],
-        visitor_info : &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn LeafPointVisitor<T>>,
-        default : &T
-    ) -> T {
-        self.tree.generic_leaf_point_visitor_traversal(
-            point,
-            point_store,
-            parameters,
-            visitor_info,
-            visitor_factory,
-            default
-        )
-    }
-
-    pub fn generic_visitor_traversal<T : Clone>(
-        &self,
-        point: &[f32],
-        point_store: &dyn PointStore,
-        parameters : &[usize],
-        visitor_info : &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> Box<dyn Visitor<T>>,
-        default : &T
-    ) -> T {
-        self.tree.generic_visitor_traversal(
-            point,
-            point_store,
-            parameters,
-            visitor_info,
-            visitor_factory,
-            default
-        )
-    }
-
-    pub fn conditional_field(
+    pub fn conditional_field<PS>(
         &self,
         positions: &[usize],
         centrality: f64,
         point: &[f32],
-        point_store: &dyn PointStore,
+        point_store: &PS,
         visitor_info : &VisitorInfo,
-    ) -> (f64,usize,f64) {
+    ) -> (f64,usize,f64)
+    where PS : PointStore
+    {
         self.tree.conditional_field(
             positions,
             point,

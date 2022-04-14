@@ -108,7 +108,7 @@ pub trait NodeStore {
     fn use_path_for_box(&self) -> bool;
     fn get_distribution(&self, index: usize) -> (usize, f32, usize, usize);
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize);
-    fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)>;
+    fn set_path(&self, answer: &mut Vec<(usize,usize)>, root: usize, point: &[f32]);
     fn null_node(&self) -> usize;
 }
 
@@ -471,6 +471,10 @@ where
 
     fn null_value(capacity:usize) -> usize {
         capacity - 1
+    }
+
+    fn is_internal(&self, index: usize) -> bool {
+        index != self.null_node() && index < self.capacity
     }
 }
 
@@ -849,32 +853,36 @@ where
     }
 
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize) {
-        (
-            self.cut_dimension[index].into(),
-            self.cut_value[index],
-            self.left_index[index].into(),
-            self.right_index[index].into(),
-        )
+            if self.is_internal(index) {
+                (self.cut_dimension[index].into(),
+                self.cut_value[index],
+                self.left_index[index].into(),
+                self.right_index[index].into())
+            } else {
+                (usize::MAX,
+                f32::MAX,
+                usize::MAX,
+                usize::MAX)
+            }
     }
 
-    fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)> {
+    fn set_path(&self, answer : &mut Vec<(usize,usize)>, root: usize, point: &[f32]){
         let mut node = root;
-        let mut answer = Vec::new();
         answer.push((root, self.null_node()));
         while !self.is_leaf(node) {
-            let idx: usize = node;
             if self.is_left_of(node, point) {
-                node = self.left_index[idx].into();
-                answer.push((node, self.right_index[idx].into()));
+                answer.push((self.left_index[node].into(),self.right_index[node].into()));
+                node = self.left_index[node].into();
             } else {
-                node = self.right_index[idx].into();
-                answer.push((node, self.left_index[idx].into()));
+                answer.push((self.right_index[node].into(),self.left_index[node].into()));
+                node = self.right_index[node].into();
             }
         }
-        answer
     }
 
     fn null_node(&self) -> usize {
         Self::null_value(self.capacity)
     }
+
+
 }

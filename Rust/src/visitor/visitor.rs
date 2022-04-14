@@ -1,52 +1,5 @@
 use crate::l1distance;
 use crate::rcf::{damp, normalizer, score_seen, score_unseen};
-use crate::samplerplustree::nodeview::{AllowTraversal, LeafPointNodeView, MinimalNodeView, NodeView};
-
-
-pub trait VisitorResult<T> {
-    fn get_result(&self) -> T;
-    fn has_converged(&self) -> bool;
-    fn use_shadow_box(&self) -> bool;
-}
-
-
-pub trait AVisitor<Q,T> : VisitorResult<T> + AllowTraversal<Q> where Q : MinimalNodeView{
-    //fn accept_leaf(&mut self, point: &[f32], node_view: &dyn MinimalNodeView);
-    //fn accept(&mut self, point: &[f32], node_view: &dyn MinimalNodeView);
-}
-
-pub trait SimpleVisitor<T> : VisitorResult<T> {
-    fn accept_leaf(&mut self, point: &[f32], node_view: &dyn MinimalNodeView);
-    fn accept(&mut self, point: &[f32], node_view: &dyn MinimalNodeView);
-}
-
-pub trait LeafPointVisitor<T> : VisitorResult<T>{
-    fn accept_leaf(&mut self, point: &[f32], node_view: &dyn LeafPointNodeView);
-    fn accept(&mut self, point: &[f32], node_view: &dyn LeafPointNodeView);
-}
-
-pub trait Visitor<T> : VisitorResult<T>{
-    fn accept_leaf(&mut self, point: &[f32], node_view: &dyn NodeView);
-    fn accept(&mut self, point: &[f32], node_view: &dyn NodeView);
-}
-
-pub trait MissingCoordinatesMultiLeafPointVisitor<T>: LeafPointVisitor<T> {
-    fn combine_branches(&mut self, point: &[f32], node_view: &dyn LeafPointNodeView);
-}
-
-pub trait MissingCoordinatesMultiVisitor<T>: Visitor<T> {
-    fn combine_branches(&mut self, point: &[f32], node_view: &dyn NodeView);
-}
-
-pub trait UniqueMultiVisitor<T>: MissingCoordinatesMultiVisitor<T> {
-    fn trigger(&self, point: &[f32], node_view: &dyn NodeView) -> bool;
-    fn unique_answer(&self) -> &[f32];
-}
-
-pub trait StreamingMultiVisitor<T>: UniqueMultiVisitor<T> {
-    fn initialize_branch_split(&mut self, point: &[f32], node_view: &dyn NodeView);
-    fn second_branch(&mut self, point: &[f32], node_view: &dyn NodeView);
-}
 
 #[repr(C)]
 pub struct VisitorInfo {
@@ -58,6 +11,28 @@ pub struct VisitorInfo {
     pub distance: fn(&[f32],&[f32]) -> f64
 }
 
+
+pub trait Visitor<NodeView, Result> {
+    fn accept(&mut self, point : &[f32], visitor_info: &VisitorInfo, node_view: &NodeView);
+    fn accept_leaf(&mut self, point : &[f32], visitor_info: &VisitorInfo, node_view: &NodeView);
+    fn is_converged(&self) -> bool;
+    fn result(&self,visitor_info:&VisitorInfo) -> Result;
+    fn use_shadow_box(&self) -> bool;
+}
+
+pub trait SimpleMultiVisitor<NodeView, Result> : Visitor<NodeView, Result>{
+    fn combine_branches(&mut self, point: &[f32], _node_view: &NodeView, visitor_info:&VisitorInfo);
+}
+
+pub trait UniqueMultiVisitor<NodeView,Result>: SimpleMultiVisitor<NodeView, Result> {
+    fn trigger(&self, point: &[f32], node_view: &NodeView,visitor_info:&VisitorInfo) -> bool;
+    fn unique_answer(&self,visitor_info:&VisitorInfo) -> Vec<f32>;
+}
+
+pub trait StreamingMultiVisitor<NodeView,Result>: UniqueMultiVisitor<NodeView,Result> {
+    fn initialize_branch_split(&mut self, point: &[f32], node_view: &NodeView,visitor_info:&VisitorInfo);
+    fn second_branch(&mut self, point: &[f32], node_view: &NodeView, visitor_info:&VisitorInfo);
+}
 
 impl VisitorInfo {
     pub fn default() -> Self {
