@@ -17,6 +17,14 @@ package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static java.lang.Math.max;
+import static java.util.stream.Collectors.toCollection;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import com.amazon.randomcutforest.imputation.ProjectedPoint;
 
 public class SampleSummary {
 
@@ -81,6 +89,68 @@ public class SampleSummary {
         this.median = toFloatArray(point);
         this.mean = toFloatArray(point);
         this.deviation = new float[point.length];
+    }
+
+    public SampleSummary(int dimension, float[][] typicalPoints, float[] relativeLikelihood) {
+        this.addTypical(dimension, typicalPoints, relativeLikelihood);
+    }
+
+    public void addTypical(int dimension, float[][] typicalPoints, float[] relativeLikelihood) {
+        checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
+        this.summaryPoints = new float[typicalPoints.length][];
+        for (int i = 0; i < typicalPoints.length; i++) {
+            checkArgument(dimension == typicalPoints[i].length, " incorrect length points");
+            this.summaryPoints[i] = Arrays.copyOf(typicalPoints[i], dimension);
+        }
+        this.relativeWeight = Arrays.copyOf(relativeLikelihood, relativeLikelihood.length);
+    }
+
+    public SampleSummary(List<ProjectedPoint> points, float[][] typicalPoints, float[] relativeLikelihood) {
+        this(points);
+        this.addTypical(points.get(0).getDimension(), typicalPoints, relativeLikelihood);
+    }
+
+    public SampleSummary(List<ProjectedPoint> points) {
+        checkArgument(points.size() > 0, "point list cannot be empty");
+        int dimension = points.get(0).getDimension();
+        double[] coordinateSum = new double[dimension];
+        double[] coordinateSumSquare = new double[dimension];
+        double totalWeight = 0;
+        for (ProjectedPoint e : points) {
+            checkArgument(e.getDimension() == dimension, "points have to be of same length");
+            float weight = e.getWeight();
+            checkArgument(weight >= 0, "weights have to be non-negative");
+            totalWeight += weight;
+            e.accumulateForDeviation(coordinateSum, coordinateSumSquare);
+        }
+        checkArgument(totalWeight > 0, " weights cannot all be 0");
+        this.weightOfSamples = totalWeight;
+        this.mean = new float[dimension];
+        this.deviation = new float[dimension];
+        this.median = new float[dimension];
+
+        for (int i = 0; i < dimension; i++) {
+            this.mean[i] = (float) (coordinateSum[i] / totalWeight);
+            this.deviation[i] = (float) Math.sqrt(max(0.0, coordinateSumSquare[i] / totalWeight - mean[i] * mean[i]));
+        }
+        for (int i = 0; i < dimension; i++) {
+            int index = i;
+            ArrayList<float[]> list = points.stream().map(e -> new float[] { e.getCoordinate(index), e.getWeight() })
+                    .collect(toCollection(ArrayList::new));
+            list.sort((o1, o2) -> Float.compare(o1[0], o2[0]));
+            this.median[i] = pick(list, totalWeight / 2.0);
+        }
+    }
+
+    static float pick(ArrayList<float[]> list, double weight) {
+        double remainder = weight;
+        for (float[] e : list) {
+            remainder -= e[1];
+            if (remainder <= 0.0) {
+                return e[0];
+            }
+        }
+        return list.get(list.size() - 1)[0];
     }
 
 }
