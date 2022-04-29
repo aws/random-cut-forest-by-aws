@@ -24,6 +24,8 @@ import java.util.List;
 
 import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.util.WeightedIndex;
 
 public class ConditionalSampleSummarizer {
 
@@ -101,8 +103,8 @@ public class ConditionalSampleSummarizer {
 
         newList.sort((o1, o2) -> Double.compare(o1.distance, o2.distance));
 
-        ArrayList<ProjectedPoint> points = new ArrayList<>();
-        newList.stream().forEach(e -> points.add(new ProjectedPoint(e.leafPoint, (float) e.weight)));
+        ArrayList<WeightedIndex<float[]>> points = new ArrayList<>();
+        newList.stream().forEach(e -> points.add(new WeightedIndex<>(e.leafPoint, (float) e.weight)));
         SampleSummary summary = new SampleSummary(points);
 
         if (addTypical) {
@@ -146,7 +148,7 @@ public class ConditionalSampleSummarizer {
                 ++num;
             }
 
-            ProjectedPoint[] typicalPoints = new ProjectedPoint[num];
+            ArrayList<WeightedIndex<float[]>> typicalPoints = new ArrayList<>();
             for (int j = 0; j < newList.size(); j++) {
                 ConditionalTreeSample e = newList.get(j);
 
@@ -162,7 +164,7 @@ public class ConditionalSampleSummarizer {
                 if (j < num) { // weight is changed for clustering,
                     // based on the distance of the sample from the query point
                     double weight = (e.distance <= threshold) ? e.weight : e.weight * threshold / e.distance;
-                    typicalPoints[j] = new ProjectedPoint(values, (float) weight);
+                    typicalPoints.add(new WeightedIndex<>(values, (float) weight));
                 }
             }
             int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION,

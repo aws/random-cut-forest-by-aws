@@ -16,15 +16,21 @@
 package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import com.amazon.randomcutforest.imputation.Summarizer;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 @Tag("functional")
@@ -38,39 +44,23 @@ public class SampleSummaryTest {
     private static double transitionToBaseProbability;
     private static int dataSize;
 
-    @Test
-    public void SummaryTest() {
+    @ParameterizedTest
+    @MethodSource("generateArguments")
+    public void SummaryTest(BiFunction<float[], float[], Double> distance) {
 
         int over = 0;
         int under = 0;
 
-        for (int numTrials = 0; numTrials < 100; numTrials++) {
+        for (int numTrials = 0; numTrials < 50; numTrials++) {
             long seed = new Random().nextLong();
             Random random = new Random(seed);
             int newDimensions = random.nextInt(10) + 3;
             dataSize = 200000;
 
-            float[][] points = getData(dataSize, newDimensions, random.nextInt());
+            float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
-            BiFunction<float[], float[], Double> L1distance = (a, b) -> {
-                double dist = 0;
-                for (int i = 0; i < a.length; i++) {
-                    dist += Math.abs(a[i] - b[i]);
-                }
-                return dist;
-            };
-
-            BiFunction<float[], float[], Double> L2distance = (a, b) -> {
-                double dist = 0;
-                for (int i = 0; i < a.length; i++) {
-                    double t = Math.abs(a[i] - b[i]);
-                    dist += t * t;
-                }
-                return Math.sqrt(dist);
-            };
-
-            SampleSummary summary = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false,
-                    L2distance, random.nextInt());
+            SampleSummary summary = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
+                    random.nextInt(), true);
             System.out.println("trial " + numTrials + " : " + summary.summaryPoints.length + " clusters for "
                     + newDimensions + " dimensions, seed : " + seed);
             if (summary.summaryPoints.length < 2 * newDimensions) {
@@ -83,7 +73,36 @@ public class SampleSummaryTest {
         assert (over <= 1);
     }
 
-    public float[][] getData(int dataSize, int newDimensions, int seed) {
+    @ParameterizedTest
+    @MethodSource("generateArguments")
+    public void ParallelTest(BiFunction<float[], float[], Double> distance) {
+
+        int over = 0;
+        int under = 0;
+
+        long seed = new Random().nextLong();
+        Random random = new Random(seed);
+        int newDimensions = random.nextInt(10) + 3;
+        dataSize = 200000;
+
+        float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
+        System.out.println("checking parallelEnabled seed : " + seed);
+        int nextSeed = random.nextInt();
+        SampleSummary summary1 = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
+                nextSeed, false);
+        SampleSummary summary2 = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
+                nextSeed, true);
+        assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
+        assertEquals(summary2.summaryPoints.length, summary1.summaryPoints.length,
+                " incorrect length of typical points");
+        for (int i = 0; i < summary2.summaryPoints.length; i++) {
+            assertArrayEquals(summary1.summaryPoints[i], summary2.summaryPoints[i], 1e-6f);
+            assertEquals(summary1.relativeWeight[i], summary2.relativeWeight[i], 1e-6f);
+        }
+
+    }
+
+    public float[][] getData(int dataSize, int newDimensions, int seed, BiFunction<float[], float[], Double> distance) {
         baseMu = 0.0;
         baseSigma = 1.0;
         anomalyMu = 0.0;
@@ -97,26 +116,35 @@ public class SampleSummaryTest {
         double[][] data = generator.generateTestData(dataSize, newDimensions, seed);
         float[][] floatData = new float[dataSize][];
 
+        float[] allZero = new float[newDimensions];
+        float[] sigma = new float[newDimensions];
+        Arrays.fill(sigma, 1f);
+        double scale = distance.apply(allZero, sigma);
+
         for (int i = 0; i < dataSize; i++) {
             // shrink, shift at random
             int nextD = prg.nextInt(newDimensions);
             for (int j = 0; j < newDimensions; j++) {
-                data[i][j] *= 1.0 / (3.0 * Math.sqrt(newDimensions));
+                data[i][j] *= 1.0 / (3.0);
                 // standard deviation adds up across dimension; taking square root
                 // and using s 3 sigma ball
                 if (j == nextD) {
                     if (prg.nextDouble() < 0.5)
-                        data[i][j] += 2.0;
-                    // set to 2*Math.sqrt(newDimensions); for L1
+                        data[i][j] += 2.0 * scale;
                     else
-                        data[i][j] -= 2.0;
-                    // set to 2*Math.sqrt(newDimensions); for L1
+                        data[i][j] -= 2.0 * scale;
                 }
             }
             floatData[i] = toFloatArray(data[i]);
         }
 
         return floatData;
+    }
+
+    private static Stream<Arguments> generateArguments() {
+        return Stream.of(Arguments.of((BiFunction<float[], float[], Double>) Summarizer::L1distance),
+                Arguments.of((BiFunction<float[], float[], Double>) Summarizer::L2distance),
+                Arguments.of((BiFunction<float[], float[], Double>) Summarizer::LInfinitydistance));
     }
 
 }
