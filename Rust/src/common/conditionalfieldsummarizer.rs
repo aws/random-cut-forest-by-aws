@@ -31,11 +31,11 @@ pub struct FieldSummarizer {
     centrality: f64,
     project : bool,
     max_number : usize,
-    distance : fn(&Vec<f32>,&[f32]) -> f64
+    distance : fn(&[f32],&[f32]) -> f64
 }
 
 impl FieldSummarizer {
-    pub fn new(centrality: f64, project: bool, max_number: usize, distance: fn(&Vec<f32>, &[f32]) -> f64) -> Self {
+    pub fn new(centrality: f64, project: bool, max_number: usize, distance: fn(&[f32], &[f32]) -> f64) -> Self {
         FieldSummarizer {
             centrality,
             project,
@@ -102,7 +102,7 @@ impl FieldSummarizer {
             median[j] = v[vec.len() / 2];
         };
 
-        let summary = summarize(&vec, self.distance, self.max_number);
+        let summary = summarize(&vec, self.distance, self.max_number,false);
         SampleSummary {
             summary_points: summary.summary_points.clone(),
             relative_weight: summary.relative_weight.clone(),

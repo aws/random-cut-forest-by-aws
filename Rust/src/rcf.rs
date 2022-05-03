@@ -16,7 +16,8 @@ use crate::samplerplustree::nodestore::VectorNodeStore;
 use crate::samplerplustree::nodeview::UpdatableNodeView;
 use crate::samplerplustree::samplerplustree::SamplerPlusTree;
 use crate::types::Location;
-use crate::vec_l1distance;
+use crate::util::{add_nbr, add_to, divide, nbr_finish};
+use crate::{l1distance};
 use crate::visitor::attributionvisitor::AttributionVisitor;
 use crate::visitor::imputevisitor::ImputeVisitor;
 use crate::visitor::scalarscorevisitor::ScalarScoreVisitor;
@@ -36,21 +37,6 @@ pub(crate) fn damp(x: usize, y: usize) -> f64 {
 }
 
 const max_number_in_summary : usize = 5;
-
-fn add_to(a: &f64, b : &mut f64){
-    *b += *a;
-}
-
-fn divide(a : &mut f64, b: usize){
-    *a /= b as f64;
-}
-
-fn add_nbr(a:&(f64,usize,f64), b: &mut Vec<(f64,usize,f64)>){
-    b.push(*a)
-}
-
-// should be optimized away; kept for uniformity across different functions
-fn nbr_finish( _a: &mut Vec<(f64,usize,f64)>, _b:usize){}
 
 pub trait RCF {
     fn validate_update(&self, point: &[f32]) {
@@ -557,7 +543,7 @@ where
         };
 
         let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, visitor_info);
-        let field_summarizer = FieldSummarizer::new(centrality, project, max_number, vec_l1distance);
+        let field_summarizer = FieldSummarizer::new(centrality, project, max_number, l1distance);
         field_summarizer.summarize_list(&self.point_store,&raw_list,&new_positions)
     }
 

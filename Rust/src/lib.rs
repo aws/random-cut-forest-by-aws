@@ -4,21 +4,13 @@ pub mod rcf;
 mod samplerplustree;
 mod types;
 mod visitor;
+mod util;
 
 extern crate rand;
 extern crate rand_chacha;
 
 use num::abs;
 
-pub fn vec_l1distance(a: &Vec<f32>, b : &[f32]) -> f64 {
-    l1distance(a, b)
-}
-pub fn vec_l2distance(a: &Vec<f32>, b : &[f32]) -> f64 {
-    l2distance(a, b)
-}
-pub fn vec_linfinitydistance(a: &Vec<f32>, b : &[f32]) -> f64 {
-    linfinitydistance(a, b)
-}
 
 pub fn l1distance(a: &[f32], b : &[f32]) -> f64{
     a.iter().zip(b).map(|(&x,&y)| abs(x as f64 - y as f64)).sum()
