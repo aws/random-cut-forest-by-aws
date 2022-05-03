@@ -60,7 +60,7 @@ public class SampleSummaryTest {
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
             SampleSummary summary = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
-                    random.nextInt(), true);
+                    random.nextInt(), false);
             System.out.println("trial " + numTrials + " : " + summary.summaryPoints.length + " clusters for "
                     + newDimensions + " dimensions, seed : " + seed);
             if (summary.summaryPoints.length < 2 * newDimensions) {

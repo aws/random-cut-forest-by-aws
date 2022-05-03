@@ -16,8 +16,8 @@
 package com.amazon.randomcutforest.summarization;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.util.WeightedIndex.createSample;
-import static com.amazon.randomcutforest.util.WeightedIndex.prefixPick;
+import static com.amazon.randomcutforest.util.Weighted.createSample;
+import static com.amazon.randomcutforest.util.Weighted.prefixPick;
 import static java.lang.Math.max;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import java.util.Random;
 import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.util.WeightedIndex;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class Summarizer {
 
@@ -87,7 +87,7 @@ public class Summarizer {
      *                        cluster by cluster recomputation. Using parallel mode
      *                        during the assignment of points does not seem to help
      */
-    public static void assignAndRecompute(List<WeightedIndex<float[]>> sampledPoints, ArrayList<ICluster> clusters,
+    public static void assignAndRecompute(List<Weighted<float[]>> sampledPoints, ArrayList<ICluster> clusters,
             BiFunction<float[], float[], Double> distance, boolean parallelEnabled) {
         checkArgument(clusters.size() > 0, " cannot be empty list of clusters");
         checkArgument(sampledPoints.size() > 0, " cannot be empty list of points");
@@ -98,7 +98,7 @@ public class Summarizer {
 
         int counter = 0;
 
-        for (WeightedIndex<float[]> point : sampledPoints) {
+        for (Weighted<float[]> point : sampledPoints) {
             if (point.weight > 0) {
 
                 double[] dist = new double[clusters.size()];
@@ -191,7 +191,7 @@ public class Summarizer {
      */
 
     public static <Q extends ICluster> List<ICluster> iterativeClustering(int maxAllowed, int initial,
-            List<WeightedIndex<float[]>> sampledPoints, BiFunction<float[], float[], Double> distance,
+            List<Weighted<float[]>> sampledPoints, BiFunction<float[], float[], Double> distance,
             BiFunction<float[], Float, Q> clusterInitializer, long seed, boolean parallelEnabled,
             boolean phase1reassign, boolean enablePhase3, double overlapParameter) {
 
@@ -200,13 +200,13 @@ public class Summarizer {
         Random rng = new Random(seed);
         ArrayList<ICluster> centers = new ArrayList<>();
         if (sampledPoints.size() < 10 * initial) {
-            for (WeightedIndex<float[]> point : sampledPoints) {
+            for (Weighted<float[]> point : sampledPoints) {
                 centers.add(clusterInitializer.apply(point.index, point.weight));
             }
         } else {
             for (int k = 0; k < 2 * initial; k++) {
                 double wt = rng.nextDouble() * sampledSum;
-                WeightedIndex<float[]> picked = prefixPick(sampledPoints, wt);
+                Weighted<float[]> picked = prefixPick(sampledPoints, wt);
                 centers.add(clusterInitializer.apply(picked.index, picked.weight));
             }
         }
@@ -247,7 +247,7 @@ public class Summarizer {
                             minNbr = j;
                             minDist = dist;
                         }
-                        double temp = (centers.get(lower).average_radius() + centers.get(j).average_radius()
+                        double temp = (centers.get(lower).averageRadius() + centers.get(j).averageRadius()
                                 + phase3Distance) / dist;
                         if (temp > overlapParameter && measure < temp) {
                             firstOfMerge = lower;
@@ -310,7 +310,7 @@ public class Summarizer {
      *         approximate median; exact computation is unlikely to be critical for
      *         true applications of summarization)
      */
-    public static SampleSummary summarize(List<WeightedIndex<float[]>> points, int maxAllowed, int initial,
+    public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
             boolean phase1reassign, BiFunction<float[], float[], Double> distance, long seed, boolean parallelEnabled) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
@@ -319,7 +319,7 @@ public class Summarizer {
         checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
                 " weights have to finite and non-NaN");
         Random rng = new Random(seed);
-        List<WeightedIndex<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, true, 1.0);
+        List<Weighted<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
 
         List<ICluster> centers = iterativeClustering(maxAllowed, initial, sampledPoints, distance, Center::initialize,
                 rng.nextLong(), parallelEnabled, phase1reassign, true, SEPARATION_RATIO_FOR_MERGE);
@@ -335,9 +335,7 @@ public class Summarizer {
             likelihood[i] = (float) (centers.get(i).getWeight() / totalWeight);
         }
 
-        SampleSummary summary = new SampleSummary(sampledPoints);
-        summary.addTypical(dimensions, pointList, likelihood);
-        return summary;
+        return new SampleSummary(sampledPoints, pointList, likelihood);
     }
 
     /**
@@ -358,9 +356,9 @@ public class Summarizer {
      */
     public static SampleSummary summarize(float[][] points, int maxAllowed, int initial, boolean reassignPerStep,
             BiFunction<float[], float[], Double> distance, long seed, Boolean parallelEnabled) {
-        ArrayList<WeightedIndex<float[]>> weighted = new ArrayList<>();
+        ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
         for (float[] point : points) {
-            weighted.add(new WeightedIndex<>(point, 1.0f));
+            weighted.add(new Weighted<>(point, 1.0f));
         }
         return summarize(weighted, maxAllowed, initial, reassignPerStep, distance, seed, parallelEnabled);
     }
@@ -375,7 +373,7 @@ public class Summarizer {
      * @param reassignPerStep if reassignment is to be performed each step
      * @return a summarization
      */
-    public static SampleSummary summarize(List<WeightedIndex<float[]>> points, int maxAllowed, int initial,
+    public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
             boolean reassignPerStep) {
         return summarize(points, maxAllowed, initial, reassignPerStep, Summarizer::L2distance, new Random().nextLong(),
                 false);

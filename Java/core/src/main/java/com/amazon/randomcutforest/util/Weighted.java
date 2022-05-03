@@ -26,12 +26,12 @@ import java.util.Random;
  * 
  * @param <Q>
  */
-public class WeightedIndex<Q> {
+public class Weighted<Q> {
 
     public Q index;
     public float weight;
 
-    public WeightedIndex(Q object, float weight) {
+    public Weighted(Q object, float weight) {
         this.index = object;
         this.weight = weight;
     }
@@ -39,36 +39,35 @@ public class WeightedIndex<Q> {
     /**
      * a generic MonteCarlo sampler that creates an Arraylist of WeightedIndexes
      * 
-     * @param input       input list of weighted objects
-     * @param seed        random seed for repreoducibility
-     * @param lengthBound a target bound of the length of the list
-     * @param heavyItems  add the items which are 5.0/lengthBound fraction of the
-     *                    weights
-     * @param scale       scale that multiples the weights of the remainder. Note
-     *                    that elements that are sampled are rescaled to have
-     *                    ensured that the total weight (after removal of heavy
-     *                    items) remains the same in expectation
-     * @param <Q>         a generic index type, typically float[] in the current
-     *                    usage
+     * @param input               input list of weighted objects
+     * @param seed                random seed for repreoducibility
+     * @param forceSampleFraction add the items which have weight over this fraction
+     * @param scale               scale that multiples the weights of the remainder.
+     *                            Note that elements that are sampled are rescaled
+     *                            to have ensured that the total weight (after
+     *                            removal of heavy items) remains the same in
+     *                            expectation
+     * @param <Q>                 a generic index type, typically float[] in the
+     *                            current usage
      * @return a randomly sampled arraylist (which can be the same list) of length
      *         about LengthBound
      */
-    public static <Q> List<WeightedIndex<Q>> createSample(List<WeightedIndex<Q>> input, long seed, int lengthBound,
-            boolean heavyItems, double scale) {
+    public static <Q> List<Weighted<Q>> createSample(List<Weighted<Q>> input, long seed, int lengthBound,
+            double forceSampleFraction, double scale) {
 
         if (input.size() < lengthBound) {
             return input;
         }
 
-        ArrayList<WeightedIndex<Q>> samples = new ArrayList<>();
+        ArrayList<Weighted<Q>> samples = new ArrayList<>();
         Random rng = new Random(seed);
         double totalWeight = input.stream().map(x -> (double) x.weight).reduce(Double::sum).get();
         double remainder = totalWeight;
 
-        if (heavyItems) {
+        if (forceSampleFraction > 0) {
             remainder = input.stream().map(e -> {
-                if (e.weight > totalWeight * 5.0 / lengthBound) {
-                    samples.add(new WeightedIndex<>(e.index, e.weight));
+                if (e.weight > totalWeight * forceSampleFraction) {
+                    samples.add(new Weighted<>(e.index, e.weight));
                     return 0.0;
                 } else {
                     return (double) e.weight;
@@ -78,8 +77,8 @@ public class WeightedIndex<Q> {
         float factor = (float) (lengthBound * 1.0 / input.size());
         float newScale = (float) (scale * (remainder / totalWeight) / factor);
         input.stream().forEach(e -> {
-            if ((e.weight <= totalWeight * 5.0 / lengthBound) && (rng.nextDouble() < factor)) {
-                samples.add(new WeightedIndex<>(e.index, e.weight * newScale));
+            if ((e.weight <= totalWeight * forceSampleFraction) && (rng.nextDouble() < factor)) {
+                samples.add(new Weighted<>(e.index, e.weight * newScale));
             }
         });
 
@@ -96,11 +95,11 @@ public class WeightedIndex<Q> {
      *         element
      */
 
-    public static <Q> WeightedIndex<Q> prefixPick(List<WeightedIndex<Q>> points, double wt) {
+    public static <Q> Weighted<Q> prefixPick(List<Weighted<Q>> points, double wt) {
         checkArgument(points.size() > 0, "cannot pick from an empty list");
         double running = wt;
-        WeightedIndex<Q> saved = points.get(0);
-        for (WeightedIndex<Q> point : points) {
+        Weighted<Q> saved = points.get(0);
+        for (Weighted<Q> point : points) {
             if (running - point.weight <= 0.0) {
                 return point;
             }

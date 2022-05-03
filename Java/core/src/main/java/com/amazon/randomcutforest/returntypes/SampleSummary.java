@@ -17,7 +17,7 @@ package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.util.WeightedIndex.prefixPick;
+import static com.amazon.randomcutforest.util.Weighted.prefixPick;
 import static java.lang.Math.max;
 import static java.util.stream.Collectors.toCollection;
 
@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.amazon.randomcutforest.util.WeightedIndex;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class SampleSummary {
 
@@ -92,32 +92,32 @@ public class SampleSummary {
         this.deviation = new float[point.length];
     }
 
-    public SampleSummary(int dimension, float[][] typicalPoints, float[] relativeLikelihood) {
-        this.addTypical(dimension, typicalPoints, relativeLikelihood);
+    public SampleSummary(int dimension, float[][] summaryPoints, float[] relativeWeight) {
+        this.addTypical(dimension, summaryPoints, relativeWeight);
     }
 
-    public void addTypical(int dimension, float[][] typicalPoints, float[] relativeLikelihood) {
-        checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
-        this.summaryPoints = new float[typicalPoints.length][];
-        for (int i = 0; i < typicalPoints.length; i++) {
-            checkArgument(dimension == typicalPoints[i].length, " incorrect length points");
-            this.summaryPoints[i] = Arrays.copyOf(typicalPoints[i], dimension);
+    void addTypical(int dimension, float[][] summaryPoints, float[] relativeWeight) {
+        checkArgument(summaryPoints.length == relativeWeight.length, "incorrect lengths of fields");
+        this.summaryPoints = new float[summaryPoints.length][];
+        for (int i = 0; i < summaryPoints.length; i++) {
+            checkArgument(dimension == summaryPoints[i].length, " incorrect length points");
+            this.summaryPoints[i] = Arrays.copyOf(summaryPoints[i], dimension);
         }
-        this.relativeWeight = Arrays.copyOf(relativeLikelihood, relativeLikelihood.length);
+        this.relativeWeight = Arrays.copyOf(relativeWeight, relativeWeight.length);
     }
 
-    public SampleSummary(List<WeightedIndex<float[]>> points, float[][] typicalPoints, float[] relativeLikelihood) {
+    public SampleSummary(List<Weighted<float[]>> points, float[][] typicalPoints, float[] relativeLikelihood) {
         this(points);
         this.addTypical(points.get(0).index.length, typicalPoints, relativeLikelihood);
     }
 
-    public SampleSummary(List<WeightedIndex<float[]>> points) {
+    public SampleSummary(List<Weighted<float[]>> points) {
         checkArgument(points.size() > 0, "point list cannot be empty");
         int dimension = points.get(0).index.length;
         double[] coordinateSum = new double[dimension];
         double[] coordinateSumSquare = new double[dimension];
         double totalWeight = 0;
-        for (WeightedIndex<float[]> e : points) {
+        for (Weighted<float[]> e : points) {
             checkArgument(e.index.length == dimension, "points have to be of same length");
             float weight = e.weight;
             checkArgument(weight >= 0, "weights have to be non-negative");
@@ -143,8 +143,8 @@ public class SampleSummary {
         }
         for (int i = 0; i < dimension; i++) {
             int index = i;
-            ArrayList<WeightedIndex<Float>> list = points.stream()
-                    .map(e -> new WeightedIndex<>(e.index[index], e.weight)).collect(toCollection(ArrayList::new));
+            ArrayList<Weighted<Float>> list = points.stream().map(e -> new Weighted<>(e.index[index], e.weight))
+                    .collect(toCollection(ArrayList::new));
             list.sort((o1, o2) -> Float.compare(o1.index, o2.index));
             this.median[i] = prefixPick(list, totalWeight / 2.0).index;
         }

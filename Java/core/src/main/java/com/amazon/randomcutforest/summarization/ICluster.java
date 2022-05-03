@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.summarization;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import com.amazon.randomcutforest.util.WeightedIndex;
+import com.amazon.randomcutforest.util.Weighted;
 
 public interface ICluster {
 
@@ -29,7 +29,7 @@ public interface ICluster {
     void reset();
 
     // average distance of a point from a cluster representative
-    double average_radius();
+    double averageRadius();
 
     // weight computation
     double getWeight();
@@ -38,7 +38,7 @@ public interface ICluster {
     boolean captureBeforeReset(float[] point, BiFunction<float[], float[], Double> distance);
 
     // optimize the cluster representation based on assigned points
-    double recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance);
+    double recompute(List<Weighted<float[]>> points, BiFunction<float[], float[], Double> distance);
 
     // merge another cluster of same type
     void absorb(ICluster other, BiFunction<float[], float[], Double> distance);
@@ -53,5 +53,5 @@ public interface ICluster {
     float[] primaryRepresentative(BiFunction<float[], float[], Double> distance);
 
     // all potential representativess of a cluster
-    List<WeightedIndex<float[]>> getRepresentatives();
+    List<Weighted<float[]>> getRepresentatives();
 }

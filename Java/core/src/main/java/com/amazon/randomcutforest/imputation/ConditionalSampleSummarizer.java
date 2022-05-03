@@ -25,7 +25,7 @@ import java.util.List;
 import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
 import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.util.WeightedIndex;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class ConditionalSampleSummarizer {
 
@@ -103,90 +103,96 @@ public class ConditionalSampleSummarizer {
 
         newList.sort((o1, o2) -> Double.compare(o1.distance, o2.distance));
 
-        ArrayList<WeightedIndex<float[]>> points = new ArrayList<>();
-        newList.stream().forEach(e -> points.add(new WeightedIndex<>(e.leafPoint, (float) e.weight)));
-        SampleSummary summary = new SampleSummary(points);
-
-        if (addTypical) {
-
-            /**
-             * for centrality = 0; there will be no filtration for centrality = 1; at least
-             * half the values will be present -- the sum of distance(P33) + distance(P50)
-             * appears to be slightly more reasonable than 2 * distance(P50) the distance 0
-             * elements correspond to exact matches (on the available fields)
-             *
-             * it is an open question is the weight of such points should be higher. But if
-             * one wants true dynamic adaptability then such a choice to increase weights of
-             * exact matches would go against the dynamic sampling based use of RCF.
-             **/
-
-            int dimensions = queryPoint.length;
-
-            double threshold = centrality * newList.get(0).distance;
-            double currentWeight = 0;
-            int alwaysInclude = 0;
-            double remainderWeight = totalWeight;
-            while (alwaysInclude < newList.size() && newList.get(alwaysInclude).distance == 0) {
-                remainderWeight -= newList.get(alwaysInclude).weight;
-                ++alwaysInclude;
-            }
-            for (int j = 1; j < newList.size(); j++) {
-                if ((currentWeight < remainderWeight / 3
-                        && currentWeight + newList.get(j).weight >= remainderWeight / 3)
-                        || (currentWeight < remainderWeight / 2
-                                && currentWeight + newList.get(j).weight >= remainderWeight / 2)) {
-                    threshold = centrality * newList.get(j).distance;
+        ArrayList<Weighted<float[]>> points = new ArrayList<>();
+        newList.stream().forEach(e -> {
+            if (!project) {
+                points.add(new Weighted<>(e.leafPoint, (float) e.weight));
+            } else {
+                float[] values = new float[missingDimensions.length];
+                for (int i = 0; i < missingDimensions.length; i++) {
+                    values[i] = e.leafPoint[missingDimensions[i]];
                 }
-                currentWeight += newList.get(j).weight;
+                points.add(new Weighted<>(values, (float) e.weight));
             }
-            // note that the threshold is currently centrality * (some distance in the list)
-            // thus the sequel uses a convex combination; and setting centrality = 0 removes
-            // the entire filtering based on distances
-            threshold += (1 - centrality) * newList.get(newList.size() - 1).distance;
-            int num = 0;
-            while (num < newList.size() && newList.get(num).distance <= threshold) {
-                ++num;
-            }
+        });
 
-            ArrayList<WeightedIndex<float[]>> typicalPoints = new ArrayList<>();
-            for (int j = 0; j < newList.size(); j++) {
-                ConditionalTreeSample e = newList.get(j);
-
-                float[] values;
-                if (project) {
-                    values = new float[missingDimensions.length];
-                    for (int i = 0; i < missingDimensions.length; i++) {
-                        values[i] = e.leafPoint[missingDimensions[i]];
-                    }
-                } else {
-                    values = Arrays.copyOf(e.leafPoint, dimensions);
-                }
-                if (j < num) { // weight is changed for clustering,
-                    // based on the distance of the sample from the query point
-                    double weight = (e.distance <= threshold) ? e.weight : e.weight * threshold / e.distance;
-                    typicalPoints.add(new WeightedIndex<>(values, (float) weight));
-                }
-            }
-            int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION,
-                    MAX_NUMBER_OF_TYPICAL_ELEMENTS);
-            maxAllowed = min(maxAllowed, num);
-            SampleSummary projectedSummary = Summarizer.summarize(typicalPoints, maxAllowed, num, false);
-
-            float[][] pointList = new float[projectedSummary.summaryPoints.length][];
-            float[] likelihood = new float[projectedSummary.summaryPoints.length];
-
-            for (int i = 0; i < projectedSummary.summaryPoints.length; i++) {
-                pointList[i] = Arrays.copyOf(queryPoint, dimensions);
-                for (int j = 0; j < missingDimensions.length; j++) {
-                    pointList[i][missingDimensions[j]] = projectedSummary.summaryPoints[i][j];
-                }
-                likelihood[i] = projectedSummary.relativeWeight[i];
-            }
-
-            summary.addTypical(dimensions, pointList, likelihood);
+        if (!addTypical) {
+            return new SampleSummary(points);
         }
 
-        return summary;
+        /**
+         * for centrality = 0; there will be no filtration for centrality = 1; at least
+         * half the values will be present -- the sum of distance(P33) + distance(P50)
+         * appears to be slightly more reasonable than 2 * distance(P50) the distance 0
+         * elements correspond to exact matches (on the available fields)
+         *
+         * it is an open question is the weight of such points should be higher. But if
+         * one wants true dynamic adaptability then such a choice to increase weights of
+         * exact matches would go against the dynamic sampling based use of RCF.
+         **/
+
+        int dimensions = queryPoint.length;
+
+        double threshold = centrality * newList.get(0).distance;
+        double currentWeight = 0;
+        int alwaysInclude = 0;
+        double remainderWeight = totalWeight;
+        while (alwaysInclude < newList.size() && newList.get(alwaysInclude).distance == 0) {
+            remainderWeight -= newList.get(alwaysInclude).weight;
+            ++alwaysInclude;
+        }
+        for (int j = 1; j < newList.size(); j++) {
+            if ((currentWeight < remainderWeight / 3 && currentWeight + newList.get(j).weight >= remainderWeight / 3)
+                    || (currentWeight < remainderWeight / 2
+                            && currentWeight + newList.get(j).weight >= remainderWeight / 2)) {
+                threshold = centrality * newList.get(j).distance;
+            }
+            currentWeight += newList.get(j).weight;
+        }
+        // note that the threshold is currently centrality * (some distance in the list)
+        // thus the sequel uses a convex combination; and setting centrality = 0 removes
+        // the entire filtering based on distances
+        threshold += (1 - centrality) * newList.get(newList.size() - 1).distance;
+        int num = 0;
+        while (num < newList.size() && newList.get(num).distance <= threshold) {
+            ++num;
+        }
+
+        ArrayList<Weighted<float[]>> typicalPoints = new ArrayList<>();
+        for (int j = 0; j < newList.size(); j++) {
+            ConditionalTreeSample e = newList.get(j);
+
+            float[] values;
+            if (project) {
+                values = new float[missingDimensions.length];
+                for (int i = 0; i < missingDimensions.length; i++) {
+                    values[i] = e.leafPoint[missingDimensions[i]];
+                }
+            } else {
+                values = Arrays.copyOf(e.leafPoint, dimensions);
+            }
+            if (j < num) { // weight is changed for clustering,
+                // based on the distance of the sample from the query point
+                double weight = (e.distance <= threshold) ? e.weight : e.weight * threshold / e.distance;
+                typicalPoints.add(new Weighted<>(values, (float) weight));
+            }
+        }
+        int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
+        maxAllowed = min(maxAllowed, num);
+        SampleSummary projectedSummary = Summarizer.summarize(typicalPoints, maxAllowed, num, false);
+
+        float[][] pointList = new float[projectedSummary.summaryPoints.length][];
+        float[] likelihood = new float[projectedSummary.summaryPoints.length];
+
+        for (int i = 0; i < projectedSummary.summaryPoints.length; i++) {
+            pointList[i] = Arrays.copyOf(queryPoint, dimensions);
+            for (int j = 0; j < missingDimensions.length; j++) {
+                pointList[i][missingDimensions[j]] = projectedSummary.summaryPoints[i][j];
+            }
+            likelihood[i] = projectedSummary.relativeWeight[i];
+        }
+
+        return new SampleSummary(points, pointList, likelihood);
     }
 
 }

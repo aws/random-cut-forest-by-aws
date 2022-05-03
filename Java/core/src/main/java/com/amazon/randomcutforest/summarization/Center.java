@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import com.amazon.randomcutforest.util.WeightedIndex;
+import com.amazon.randomcutforest.util.Weighted;
 
 /**
  * the following class abstracts a single centroid representation of a group of
@@ -32,7 +32,7 @@ public class Center implements ICluster {
 
     float[] representative;
     double weight;
-    ArrayList<WeightedIndex<Integer>> assignedPoints;
+    ArrayList<Weighted<Integer>> assignedPoints;
     double sumOfRadius;
 
     double previousWeight = 0;
@@ -53,7 +53,7 @@ public class Center implements ICluster {
     // note that the weight may not be the entire weight of a point in case of a
     // "soft" assignment
     public void addPoint(int index, float weight, double dist) {
-        assignedPoints.add(new WeightedIndex<>(index, weight));
+        assignedPoints.add(new Weighted<>(index, weight));
         this.weight += weight;
         this.sumOfRadius += weight * dist;
     }
@@ -68,7 +68,7 @@ public class Center implements ICluster {
     }
 
     // average radius computation
-    public double average_radius() {
+    public double averageRadius() {
         return (weight > 0) ? sumOfRadius / weight : 0;
     }
 
@@ -83,7 +83,7 @@ public class Center implements ICluster {
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
-    public double recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance) {
+    public double recompute(List<Weighted<float[]>> points, BiFunction<float[], float[], Double> distance) {
         if (assignedPoints.size() == 0 || weight == 0.0) {
             Arrays.fill(representative, 0); // zero out values
             return 0;
@@ -121,10 +121,10 @@ public class Center implements ICluster {
     // sigmoid based weightage
     // for robustness
     public void absorb(ICluster other, BiFunction<float[], float[], Double> distance) {
-        List<WeightedIndex<float[]>> representatives = other.getRepresentatives();
+        List<Weighted<float[]>> representatives = other.getRepresentatives();
         float[] closest = representatives.get(0).index;
         double dist = Double.MAX_VALUE;
-        for (WeightedIndex<float[]> e : representatives) {
+        for (Weighted<float[]> e : representatives) {
             double t = distance.apply(e.index, representative);
             if (t < dist) {
                 dist = t;
@@ -159,9 +159,9 @@ public class Center implements ICluster {
     }
 
     @Override
-    public List<WeightedIndex<float[]>> getRepresentatives() {
-        ArrayList<WeightedIndex<float[]>> answer = new ArrayList<>();
-        answer.add(new WeightedIndex<>(representative, (float) weight));
+    public List<Weighted<float[]>> getRepresentatives() {
+        ArrayList<Weighted<float[]>> answer = new ArrayList<>();
+        answer.add(new Weighted<>(representative, (float) weight));
         return answer;
     }
 
