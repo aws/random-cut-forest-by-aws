@@ -92,23 +92,26 @@ public class SampleSummary {
         this.deviation = new float[point.length];
     }
 
-    public SampleSummary(int dimension, float[][] summaryPoints, float[] relativeWeight) {
-        this.addTypical(dimension, summaryPoints, relativeWeight);
+    public SampleSummary(float[][] summaryPoints, float[] relativeWeight) {
+        this.addTypical(summaryPoints, relativeWeight);
     }
 
-    void addTypical(int dimension, float[][] summaryPoints, float[] relativeWeight) {
+    void addTypical(float[][] summaryPoints, float[] relativeWeight) {
         checkArgument(summaryPoints.length == relativeWeight.length, "incorrect lengths of fields");
-        this.summaryPoints = new float[summaryPoints.length][];
-        for (int i = 0; i < summaryPoints.length; i++) {
-            checkArgument(dimension == summaryPoints[i].length, " incorrect length points");
-            this.summaryPoints[i] = Arrays.copyOf(summaryPoints[i], dimension);
+        if (summaryPoints.length > 0) {
+            int dimension = summaryPoints[0].length;
+            this.summaryPoints = new float[summaryPoints.length][];
+            for (int i = 0; i < summaryPoints.length; i++) {
+                checkArgument(dimension == summaryPoints[i].length, " incorrect length points");
+                this.summaryPoints[i] = Arrays.copyOf(summaryPoints[i], dimension);
+            }
+            this.relativeWeight = Arrays.copyOf(relativeWeight, relativeWeight.length);
         }
-        this.relativeWeight = Arrays.copyOf(relativeWeight, relativeWeight.length);
     }
 
-    public SampleSummary(List<Weighted<float[]>> points, float[][] typicalPoints, float[] relativeLikelihood) {
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight) {
         this(points);
-        this.addTypical(points.get(0).index.length, typicalPoints, relativeLikelihood);
+        this.addTypical(summaryPoints, relativeWeight);
     }
 
     public SampleSummary(List<Weighted<float[]>> points) {

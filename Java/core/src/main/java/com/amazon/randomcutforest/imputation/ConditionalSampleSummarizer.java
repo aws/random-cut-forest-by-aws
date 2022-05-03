@@ -59,10 +59,10 @@ public class ConditionalSampleSummarizer {
     protected double centrality;
 
     /**
-     * a boolean that determines if the summarization should use the full dimensions
-     * or only the missing dimensions.
+     * a boolean that determines if the summarization should use the missing
+     * dimensions or the full dimensions.
      */
-    protected boolean project = true;
+    protected boolean project = false;
 
     public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality) {
         this.missingDimensions = Arrays.copyOf(missingDimensions, missingDimensions.length);
