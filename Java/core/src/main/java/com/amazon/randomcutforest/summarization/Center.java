@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.summarization;
 
 import static java.lang.Math.exp;
-import static java.lang.Math.min;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,9 +52,10 @@ public class Center implements ICluster {
     // adds a point; only the index to keep space bounds lower
     // note that the weight may not be the entire weight of a point in case of a
     // "soft" assignment
-    public void addPoint(int index, float weight) {
+    public void addPoint(int index, float weight, double dist) {
         assignedPoints.add(new WeightedIndex<>(index, weight));
         this.weight += weight;
+        this.sumOfRadius += weight * dist;
     }
 
     // the following sets up reassignment of the coordinate based on the points
@@ -83,12 +83,13 @@ public class Center implements ICluster {
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
-    public void recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance) {
+    public double recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance) {
         if (assignedPoints.size() == 0 || weight == 0.0) {
             Arrays.fill(representative, 0); // zero out values
-            return;
+            return 0;
         }
 
+        previousSumOFRadius = sumOfRadius;
         sumOfRadius = 0;
         for (int i = 0; i < representative.length; i++) {
             int index = i;
@@ -111,6 +112,7 @@ public class Center implements ICluster {
             sumOfRadius += distance.apply(representative, points.get(assignedPoints.get(j).index).index)
                     * assignedPoints.get(j).weight;
         }
+        return (previousSumOFRadius - sumOfRadius);
 
     }
 
@@ -118,7 +120,7 @@ public class Center implements ICluster {
     // this can be followed by a reassignment step; however the merger uses a
     // sigmoid based weightage
     // for robustness
-    public void mergeInto(ICluster other, BiFunction<float[], float[], Double> distance) {
+    public void absorb(ICluster other, BiFunction<float[], float[], Double> distance) {
         List<WeightedIndex<float[]>> representatives = other.getRepresentatives();
         float[] closest = representatives.get(0).index;
         double dist = Double.MAX_VALUE;
@@ -148,13 +150,7 @@ public class Center implements ICluster {
 
     @Override
     public double distance(ICluster other, BiFunction<float[], float[], Double> distance) {
-        List<WeightedIndex<float[]>> representatives = other.getRepresentatives();
-        double dist = Double.MAX_VALUE;
-        for (WeightedIndex<float[]> e : representatives) {
-            double t = distance.apply(e.index, representative);
-            dist = min(dist, t);
-        }
-        return dist;
+        return other.distance(representative, distance);
     }
 
     @Override

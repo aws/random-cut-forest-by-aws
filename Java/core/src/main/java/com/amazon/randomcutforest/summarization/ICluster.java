@@ -23,7 +23,7 @@ import com.amazon.randomcutforest.util.WeightedIndex;
 public interface ICluster {
 
     // adding a point to a cluster
-    void addPoint(int index, float weight);
+    void addPoint(int index, float weight, double distance);
 
     // restting statistics for a potential reassignment
     void reset();
@@ -38,10 +38,10 @@ public interface ICluster {
     boolean captureBeforeReset(float[] point, BiFunction<float[], float[], Double> distance);
 
     // optimize the cluster representation based on assigned points
-    void recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance);
+    double recompute(List<WeightedIndex<float[]>> points, BiFunction<float[], float[], Double> distance);
 
     // merge another cluster of same type
-    void mergeInto(ICluster other, BiFunction<float[], float[], Double> distance);
+    void absorb(ICluster other, BiFunction<float[], float[], Double> distance);
 
     // distance of apoint from a cluster
     double distance(float[] point, BiFunction<float[], float[], Double> distance);

@@ -87,7 +87,7 @@ public class Summarizer {
      *                        cluster by cluster recomputation. Using parallel mode
      *                        during the assignment of points does not seem to help
      */
-    public static void assign(List<WeightedIndex<float[]>> sampledPoints, ArrayList<ICluster> clusters,
+    public static void assignAndRecompute(List<WeightedIndex<float[]>> sampledPoints, ArrayList<ICluster> clusters,
             BiFunction<float[], float[], Double> distance, boolean parallelEnabled) {
         checkArgument(clusters.size() > 0, " cannot be empty list of clusters");
         checkArgument(sampledPoints.size() > 0, " cannot be empty list of points");
@@ -117,7 +117,7 @@ public class Summarizer {
                 }
 
                 if (minDist == 0) {
-                    clusters.get(minDistNbr).addPoint(counter, point.weight);
+                    clusters.get(minDistNbr).addPoint(counter, point.weight, 0);
                 } else {
                     double sum = 0;
                     for (int i = 0; i < clusters.size(); i++) {
@@ -128,7 +128,8 @@ public class Summarizer {
                     for (int i = 0; i < clusters.size(); i++) {
                         if (dist[i] <= WEIGHT_ALLOCATION_THRESHOLD * minDist) {
                             // harmonic mean
-                            clusters.get(i).addPoint(counter, (float) (point.weight * minDist / (dist[i] * sum)));
+                            clusters.get(i).addPoint(counter, (float) (point.weight * minDist / (dist[i] * sum)),
+                                    dist[i]);
                         }
                     }
                 }
@@ -179,8 +180,6 @@ public class Summarizer {
      * @param parallelEnabled    a flag controlling (limited) parallelism
      * @param phase1reassign     should the centers be optimized during phase 1?
      *                           (default suggestion is false)
-     * @param phase2and3reassign should the centers be optimized in phases 2 and 3?
-     *                           (default suggestion is true)
      * @param enablePhase3       should phase 3 take place?
      * @param overlapParameter   a parameter that controls the ordering of cluster
      *                           merges
@@ -191,10 +190,10 @@ public class Summarizer {
      * @return a list of cluster centers
      */
 
-    public static <Q extends ICluster> List<ICluster> iterativeCluster(int maxAllowed, int initial,
+    public static <Q extends ICluster> List<ICluster> iterativeClustering(int maxAllowed, int initial,
             List<WeightedIndex<float[]>> sampledPoints, BiFunction<float[], float[], Double> distance,
             BiFunction<float[], Float, Q> clusterInitializer, long seed, boolean parallelEnabled,
-            boolean phase1reassign, boolean phase2and3reassign, boolean enablePhase3, double overlapParameter) {
+            boolean phase1reassign, boolean enablePhase3, double overlapParameter) {
 
         checkArgument(sampledPoints.size() > 0, "empty list, nothing to do");
         double sampledSum = sampledPoints.stream().map(e -> (double) e.weight).reduce(Double::sum).get();
@@ -212,9 +211,8 @@ public class Summarizer {
             }
         }
 
-        if (phase1reassign) {
-            assign(sampledPoints, centers, distance, parallelEnabled);
-        }
+        assignAndRecompute(sampledPoints, centers, distance, parallelEnabled);
+
         // assignment would change weights, sorting in non-decreasing order
         centers.sort(Comparator.comparingDouble(ICluster::getWeight));
         while (centers.get(0).getWeight() == 0) {
@@ -270,10 +268,10 @@ public class Summarizer {
 
             int inital = centers.size();
             if (inital > maxAllowed || foundMerge || (enablePhase3 && measure > overlapParameter)) {
-                centers.get(secondOfMerge).mergeInto(centers.get(firstOfMerge), distance);
+                centers.get(secondOfMerge).absorb(centers.get(firstOfMerge), distance);
                 centers.remove(firstOfMerge);
-                if (phase2and3reassign || centers.size() <= PHASE2_THRESHOLD * maxAllowed) {
-                    assign(sampledPoints, centers, distance, parallelEnabled);
+                if (phase1reassign || centers.size() <= PHASE2_THRESHOLD * maxAllowed) {
+                    assignAndRecompute(sampledPoints, centers, distance, parallelEnabled);
                 }
                 centers.sort(Comparator.comparingDouble(ICluster::getWeight));
                 while (centers.get(0).getWeight() == 0.0) {
@@ -323,8 +321,8 @@ public class Summarizer {
         Random rng = new Random(seed);
         List<WeightedIndex<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, true, 1.0);
 
-        List<ICluster> centers = iterativeCluster(maxAllowed, initial, sampledPoints, distance, Center::initialize,
-                rng.nextLong(), parallelEnabled, phase1reassign, true, true, SEPARATION_RATIO_FOR_MERGE);
+        List<ICluster> centers = iterativeClustering(maxAllowed, initial, sampledPoints, distance, Center::initialize,
+                rng.nextLong(), parallelEnabled, phase1reassign, true, SEPARATION_RATIO_FOR_MERGE);
 
         // sort in decreasing weight
         centers.sort((o1, o2) -> Double.compare(o2.getWeight(), o1.getWeight()));
