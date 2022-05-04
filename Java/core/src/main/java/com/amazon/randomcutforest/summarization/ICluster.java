@@ -20,10 +20,13 @@ import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.util.Weighted;
 
+/**
+ * a set of cunstions that a conceptual "cluster" should satisfy. The distance
+ * function is replicated as an argument -- there is a possibility that an user
+ * clustering on distance function d1 may use a function d2 to disambiguate
+ * scenarios
+ */
 public interface ICluster {
-
-    // adding a point to a cluster
-    void addPoint(int index, float weight, double distance);
 
     // restting statistics for a potential reassignment
     void reset();
@@ -36,9 +39,6 @@ public interface ICluster {
 
     // is a point well expressed by the cluster
     boolean captureBeforeReset(float[] point, BiFunction<float[], float[], Double> distance);
-
-    // optimize the cluster representation based on assigned points
-    double recompute(List<Weighted<float[]>> points, BiFunction<float[], float[], Double> distance);
 
     // merge another cluster of same type
     void absorb(ICluster other, BiFunction<float[], float[], Double> distance);

@@ -87,12 +87,12 @@ public class Summarizer {
      *                        cluster by cluster recomputation. Using parallel mode
      *                        during the assignment of points does not seem to help
      */
-    public static void assignAndRecompute(List<Weighted<float[]>> sampledPoints, ArrayList<ICluster> clusters,
+    public static void assignAndRecompute(List<Weighted<float[]>> sampledPoints, ArrayList<IPointIndexCluster> clusters,
             BiFunction<float[], float[], Double> distance, boolean parallelEnabled) {
         checkArgument(clusters.size() > 0, " cannot be empty list of clusters");
         checkArgument(sampledPoints.size() > 0, " cannot be empty list of points");
 
-        for (ICluster cluster : clusters) {
+        for (IPointIndexCluster cluster : clusters) {
             cluster.reset();
         }
 
@@ -185,20 +185,19 @@ public class Summarizer {
      *                           merges
      * @param <Q>                type of the cluster, so that this same framework
      *                           can be used for multiple clustering algorithms that
-     *                           correspond to different implementations of the
-     *                           ICluster functions
+     *                           correspond to different implementations
      * @return a list of cluster centers
      */
 
-    public static <Q extends ICluster> List<ICluster> iterativeClustering(int maxAllowed, int initial,
-            List<Weighted<float[]>> sampledPoints, BiFunction<float[], float[], Double> distance,
+    public static <Q extends IPointIndexCluster> List<IPointIndexCluster> iterativeClustering(int maxAllowed,
+            int initial, List<Weighted<float[]>> sampledPoints, BiFunction<float[], float[], Double> distance,
             BiFunction<float[], Float, Q> clusterInitializer, long seed, boolean parallelEnabled,
             boolean phase1reassign, boolean enablePhase3, double overlapParameter) {
 
         checkArgument(sampledPoints.size() > 0, "empty list, nothing to do");
         double sampledSum = sampledPoints.stream().map(e -> (double) e.weight).reduce(Double::sum).get();
         Random rng = new Random(seed);
-        ArrayList<ICluster> centers = new ArrayList<>();
+        ArrayList<IPointIndexCluster> centers = new ArrayList<>();
         if (sampledPoints.size() < 10 * initial) {
             for (Weighted<float[]> point : sampledPoints) {
                 centers.add(clusterInitializer.apply(point.index, point.weight));
@@ -214,7 +213,7 @@ public class Summarizer {
         assignAndRecompute(sampledPoints, centers, distance, parallelEnabled);
 
         // assignment would change weights, sorting in non-decreasing order
-        centers.sort(Comparator.comparingDouble(ICluster::getWeight));
+        centers.sort(Comparator.comparingDouble(IPointIndexCluster::getWeight));
         while (centers.get(0).getWeight() == 0) {
             centers.remove(0);
         }
@@ -273,7 +272,7 @@ public class Summarizer {
                 if (phase1reassign || centers.size() <= PHASE2_THRESHOLD * maxAllowed) {
                     assignAndRecompute(sampledPoints, centers, distance, parallelEnabled);
                 }
-                centers.sort(Comparator.comparingDouble(ICluster::getWeight));
+                centers.sort(Comparator.comparingDouble(IPointIndexCluster::getWeight));
                 while (centers.get(0).getWeight() == 0.0) {
                     centers.remove(0);
                 }
@@ -321,8 +320,8 @@ public class Summarizer {
         Random rng = new Random(seed);
         List<Weighted<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
 
-        List<ICluster> centers = iterativeClustering(maxAllowed, initial, sampledPoints, distance, Center::initialize,
-                rng.nextLong(), parallelEnabled, phase1reassign, true, SEPARATION_RATIO_FOR_MERGE);
+        List<IPointIndexCluster> centers = iterativeClustering(maxAllowed, initial, sampledPoints, distance,
+                Center::initialize, rng.nextLong(), parallelEnabled, phase1reassign, true, SEPARATION_RATIO_FOR_MERGE);
 
         // sort in decreasing weight
         centers.sort((o1, o2) -> Double.compare(o2.getWeight(), o1.getWeight()));

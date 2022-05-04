@@ -28,7 +28,7 @@ import com.amazon.randomcutforest.util.Weighted;
  * the following class abstracts a single centroid representation of a group of
  * points
  */
-public class Center implements ICluster {
+public class Center implements IPointIndexCluster {
 
     float[] representative;
     double weight;
