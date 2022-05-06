@@ -17,6 +17,15 @@ package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.util.Weighted.prefixPick;
+import static java.lang.Math.max;
+import static java.util.stream.Collectors.toCollection;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import com.amazon.randomcutforest.util.Weighted;
 
 public class SampleSummary {
 
@@ -81,6 +90,67 @@ public class SampleSummary {
         this.median = toFloatArray(point);
         this.mean = toFloatArray(point);
         this.deviation = new float[point.length];
+    }
+
+    public SampleSummary(float[][] summaryPoints, float[] relativeWeight) {
+        this.addTypical(summaryPoints, relativeWeight);
+    }
+
+    void addTypical(float[][] summaryPoints, float[] relativeWeight) {
+        checkArgument(summaryPoints.length == relativeWeight.length, "incorrect lengths of fields");
+        if (summaryPoints.length > 0) {
+            int dimension = summaryPoints[0].length;
+            this.summaryPoints = new float[summaryPoints.length][];
+            for (int i = 0; i < summaryPoints.length; i++) {
+                checkArgument(dimension == summaryPoints[i].length, " incorrect length points");
+                this.summaryPoints[i] = Arrays.copyOf(summaryPoints[i], dimension);
+            }
+            this.relativeWeight = Arrays.copyOf(relativeWeight, relativeWeight.length);
+        }
+    }
+
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight) {
+        this(points);
+        this.addTypical(summaryPoints, relativeWeight);
+    }
+
+    public SampleSummary(List<Weighted<float[]>> points) {
+        checkArgument(points.size() > 0, "point list cannot be empty");
+        int dimension = points.get(0).index.length;
+        double[] coordinateSum = new double[dimension];
+        double[] coordinateSumSquare = new double[dimension];
+        double totalWeight = 0;
+        for (Weighted<float[]> e : points) {
+            checkArgument(e.index.length == dimension, "points have to be of same length");
+            float weight = e.weight;
+            checkArgument(weight >= 0, "weights have to be non-negative");
+            totalWeight += weight;
+            for (int i = 0; i < dimension; i++) {
+                checkArgument(!Float.isNaN(weight) && Float.isFinite(weight),
+                        " weights must be finite, non-NaN values ");
+                checkArgument(!Float.isNaN(e.index[i]) && Float.isFinite(e.index[i]),
+                        " improper input, in coordinate " + i + ", must be finite, non-NaN values");
+                coordinateSum[i] += e.index[i] * weight;
+                coordinateSumSquare[i] += e.index[i] * e.index[i] * weight;
+            }
+        }
+        checkArgument(totalWeight > 0, " weights cannot all be 0");
+        this.weightOfSamples = totalWeight;
+        this.mean = new float[dimension];
+        this.deviation = new float[dimension];
+        this.median = new float[dimension];
+
+        for (int i = 0; i < dimension; i++) {
+            this.mean[i] = (float) (coordinateSum[i] / totalWeight);
+            this.deviation[i] = (float) Math.sqrt(max(0.0, coordinateSumSquare[i] / totalWeight - mean[i] * mean[i]));
+        }
+        for (int i = 0; i < dimension; i++) {
+            int index = i;
+            ArrayList<Weighted<Float>> list = points.stream().map(e -> new Weighted<>(e.index[index], e.weight))
+                    .collect(toCollection(ArrayList::new));
+            list.sort((o1, o2) -> Float.compare(o1.index, o2.index));
+            this.median[i] = prefixPick(list, totalWeight / 2.0).index;
+        }
     }
 
 }
