@@ -149,13 +149,13 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
         }
 
         let mut list: Vec<Center> = iterative_clustering(max_allowed, &sampled_points, Center::new, distance,parallel_enabled);
-        list.sort_by(|o1, o2| o2.get_weight().partial_cmp(&o1.get_weight()).unwrap()); // decreasing order
+        list.sort_by(|o1, o2| o2.weight().partial_cmp(&o1.weight()).unwrap()); // decreasing order
         let mut summary_points: Vec<Vec<f32>> = Vec::new();
         let mut relative_weight: Vec<f32> = Vec::new();
-        let center_sum: f64 = list.iter().map(|x| x.get_weight()).sum();
+        let center_sum: f64 = list.iter().map(|x| x.weight()).sum();
         for i in 0..list.len() {
-            summary_points.push(list[i].get_primary_representative(distance).clone());
-            relative_weight.push((list[i].get_weight() / center_sum) as f32);
+            summary_points.push(list[i].primary_representative(distance).clone());
+            relative_weight.push((list[i].weight() / center_sum) as f32);
         };
         summary.add_typical(summary_points, relative_weight);
     }

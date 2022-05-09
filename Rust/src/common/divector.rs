@@ -105,16 +105,8 @@ impl DiVector {
     }
 
     pub fn add_from(&mut self, other: &DiVector, factor : f64) {
-
-        for (x, &y) in self.high.iter_mut().zip(&other.high) {
-            *x += y * factor;
-        }
-        for (x, &y) in self.low.iter_mut().zip(&other.low) {
-            *x += y * factor;
-        }
-
+        other.add_to_scaled(self,factor);
     }
-
 
     pub fn add_to(&self, other: &mut DiVector) {
 

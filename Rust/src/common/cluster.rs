@@ -5,21 +5,41 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use crate::common::samplesummary::SampleSummary;
 
 const PHASE2_THRESHOLD : usize = 2;
-const separation_ratio_for_merge : f64 = 0.8;
-const weight_threshold : f64 = 1.25;
+const SEPARATION_RATIO_FOR_MERGE: f64 = 0.8;
+const WEIGHT_THRESHOLD: f64 = 1.25;
 const LENGTH_BOUND : usize = 1000;
 
 pub trait Cluster<Q,T: ?Sized> {
-    fn get_weight(&self) -> f64;
+    // aclsuter should provide a measure of the point set convered by the cluster
+    fn weight(&self) -> f64;
+    // A cluster is an extended object of a type different from the base type of a
+    // point indicated by T (and only the reference is used in the distance function
+    // every clustering algorithm implicitly/explicitly defines this function
     fn distance_to_point(&self, point : &T, distance: fn(&T, &T) -> f64) -> f64;
+    // Likewise, the distance function needs to be extended (implicitly/explicitly)
+    // to a distance function between clusters
     fn distance_to_cluster(&self, other : &dyn Cluster<Q,T>, distance: fn(&T, &T) -> f64) -> f64;
-    fn recompute(&mut self, points: &[(&T, f32)], distance: fn(&T, &T) -> f64) -> f64;
-    fn reset(&mut self);
-    fn average_radius(&self) -> f64;
+    // a function that assigns a point indexed by usize from a list of samples to
+    // the cluster; note the weight used in the function need not be the entire weight of the
+    // sampled point (for example in case of soft assignments)
     fn add_point(&mut self, index: usize, weight: f32, dist: f64);
+    // given a set of previous assignments, recomputes the optimal set of representatives
+    // this is the classic optimization step for k-Means; but the analogue exists for every
+    // clustering; note that it is possible that recompute does nothing
+    fn recompute(&mut self, points: &[(&T, f32)], distance: fn(&T, &T) -> f64) -> f64;
+    // resets  the statistics of a clusters; preparing for a sequence of add_point followed
+    // by recompute
+    fn reset(&mut self);
+    // a function that indicates cluster quality
+    fn average_radius(&self) -> f64;
+    // a function that allows a cluster to absorb another cluster in an agglomerative \
+    // clustering algorithm
     fn absorb(&mut self, another: &dyn Cluster<Q,T>, distance: fn(&T, &T) -> f64);
-    fn get_representatives(&self) -> Vec<Q>;
-    fn get_primary_representative(&self,distance: fn(&T, &T) -> f64) -> Q;
+    // a function to return a list of representatives corresponding to pairs (Q,weight)
+    fn representatives(&self) -> Vec<(Q,f32)>;
+    // a function to distill all representatives into a single representative under a given
+    // distance function over the base type of the points
+    fn primary_representative(&self, distance: fn(&T, &T) -> f64) -> Q;
 }
 
 #[repr(C)]
@@ -41,6 +61,11 @@ impl Center
         }
     }
 
+    // the following function takes a list of points and
+    // uses the assigned indices in self.points (via add_point) to compute the median
+    // clearly this is not optimal for means/L_infinity -- but median is more robust
+    // and some interpretation in the context of upstream sampling
+    //note that this is not a public function
     fn optimize_small(&mut self, points:&[(&[f32],f32)]) {
         let dimensions = self.representative.len();
         let total : f64 = self.points.iter().map(|a| a.1 as f64).sum();
@@ -51,6 +76,10 @@ impl Center
         }
     }
 
+    // same as optimize_small, but for a large number of assigned points -- the list
+    // is now a sample. The same function as optimize_small does not suffice because
+    // the borrow checker would not allow samples from self.points be moved and yet borrow self
+    // note that this function is called via rayon par_iter() as well
     fn optimize(&mut self, points:&[(&[f32],f32)], list: &mut[(usize,f32)]) {
         let dimensions = self.representative.len();
         let total : f64 = list.iter().map(|a| a.1 as f64).sum();
@@ -63,7 +92,7 @@ impl Center
 }
 
 impl Cluster<Vec<f32>,[f32]> for Center {
-    fn get_weight(&self) -> f64 {
+    fn weight(&self) -> f64 {
         self.weight
     }
 
@@ -124,16 +153,16 @@ impl Cluster<Vec<f32>,[f32]> for Center {
     }
 
     fn absorb(&mut self, another: &dyn Cluster<Vec<f32>, [f32]>, distance: fn(&[f32], &[f32]) -> f64) {
-        let other_weight = another.get_weight();
+        let other_weight = another.weight();
         let t = f64::exp(2.0*(self.weight - other_weight)/(self.weight + other_weight));
         let factor = t/(1.0+t);
-        let list = another.get_representatives();
-        let mut closest = &list[0];
+        let list = another.representatives();
+        let mut closest = &list[0].0;
         let mut dist = distance(&self.representative,closest);
         for i in 1..list.len() {
-            let t = distance(&self.representative,&list[i]);
+            let t = distance(&self.representative,&list[i].0);
             if t<dist {
-                closest = &list[i];
+                closest = &list[i].0;
                 dist = t;
             }
         }
@@ -148,11 +177,11 @@ impl Cluster<Vec<f32>,[f32]> for Center {
     }
 
 
-    fn get_representatives(&self) -> Vec<Vec<f32>> {
-        vec![self.representative.clone();1]
+    fn representatives(&self) -> Vec<(Vec<f32>,f32)> {
+        vec![(self.representative.clone(),self.weight as f32);1]
     }
 
-    fn get_primary_representative(&self, distance: fn(&[f32], &[f32]) -> f64) -> Vec<f32> {
+    fn primary_representative(&self, distance: fn(&[f32], &[f32]) -> f64) -> Vec<f32> {
         self.representative.clone()
     }
 }
@@ -200,12 +229,12 @@ where U : Cluster <Q,T> + Send,  T: std::marker::Sync{
         } else {
             let mut sum = 0.0;
             for j in 0..centers.len() {
-                if dist[j] <= weight_threshold * min_distance {
+                if dist[j] <= WEIGHT_THRESHOLD * min_distance {
                     sum += min_distance / dist[j];
                 }
             }
             for j in 0..centers.len() {
-                if dist[j] <= weight_threshold * min_distance {
+                if dist[j] <= WEIGHT_THRESHOLD * min_distance {
                     centers[j].add_point(i, (points[i].1 as f64 * min_distance / (sum * dist[j])) as f32, dist[j]);
                 }
             }
@@ -238,7 +267,7 @@ pub fn iterative_clustering<U,Q,T :?Sized>(max_allowed:usize, sampled_points: &[
 Vec<U>
     where U: Cluster<Q, T> + Send, T: std::marker::Sync
 {
-    general_iterative_clustering(max_allowed, sampled_points, max_allowed as u64, parallel_enabled,create, distance, false, true, separation_ratio_for_merge)
+    general_iterative_clustering(max_allowed, sampled_points, max_allowed as u64, parallel_enabled, create, distance, false, true, SEPARATION_RATIO_FOR_MERGE)
 }
 
 
@@ -263,8 +292,8 @@ pub fn general_iterative_clustering<U,Q,T :?Sized>(max_allowed:usize, sampled_po
     assign_and_recompute(&sampled_points, &mut centers, distance, parallel_enabled);
 
     // sort in increasing order of weight
-    centers.sort_by(|o1, o2| o1.get_weight().partial_cmp(&o2.get_weight()).unwrap());
-    while centers.len() > 0 && centers[0].get_weight() == 0.0 {
+    centers.sort_by(|o1, o2| o1.weight().partial_cmp(&o2.weight()).unwrap());
+    while centers.len() > 0 && centers[0].weight() == 0.0 {
         centers.remove(0);
     }
 
@@ -317,8 +346,8 @@ pub fn general_iterative_clustering<U,Q,T :?Sized>(max_allowed:usize, sampled_po
                 assign_and_recompute(&sampled_points, &mut centers, distance,parallel_enabled);
             }
 
-            centers.sort_by(|o1, o2| o1.get_weight().partial_cmp(&o2.get_weight()).unwrap());
-            while centers.len() > 0 && centers[0].get_weight() == 0.0 {
+            centers.sort_by(|o1, o2| o1.weight().partial_cmp(&o2.weight()).unwrap());
+            while centers.len() > 0 && centers[0].weight() == 0.0 {
                 centers.remove(0);
             }
 
@@ -332,7 +361,7 @@ pub fn general_iterative_clustering<U,Q,T :?Sized>(max_allowed:usize, sampled_po
         }
     }
 
-    centers.sort_by(|o1, o2| o2.get_weight().partial_cmp(&o1.get_weight()).unwrap()); // decreasing order
+    centers.sort_by(|o1, o2| o2.weight().partial_cmp(&o1.weight()).unwrap()); // decreasing order
     return centers;
 }
 
