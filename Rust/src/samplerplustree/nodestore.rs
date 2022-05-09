@@ -1,12 +1,11 @@
 use std::{collections::HashMap, fmt::Debug, mem};
+use crate::pointstore::PointStore;
+use crate::samplerplustree::boundingbox::BoundingBox;
+use crate::samplerplustree::cut::Cut;
+use crate::types::Location;
+use crate::common::divector::DiVector;
+use crate::common::intervalstoremanager::IntervalStoreManager;
 
-use crate::{
-    boundingbox::BoundingBox,
-    cut::Cut,
-    intervalstoremanager::IntervalStoreManager,
-    pointstore::PointStore,
-    types::{Location, Max},
-};
 
 ///
 /// capacity is the number of leaves in the tree
@@ -47,7 +46,7 @@ where
     bounding_box_data: Vec<f32>,
     range_sum_data: Vec<f64>,
     hash_mass_leaves: HashMap<usize, usize>,
-    internal_node_manager: IntervalStoreManager<usize>,
+    pub internal_node_manager: IntervalStoreManager<usize>,
 }
 
 const switch_threshold: f64 = 0.5;
@@ -61,6 +60,28 @@ pub trait NodeStore {
         point: &[f32],
         point_store: &dyn PointStore,
     ) -> f64;
+    fn get_probability_of_cut_with_missing_coordinates(
+        &self,
+        index: usize,
+        point: &[f32],
+        missing_coordinates : &[bool],
+        point_store: &dyn PointStore,
+    ) -> f64;
+    fn modify_in_place_probability_of_cut_di_vector(
+        &self,
+        index: usize,
+        point: &[f32],
+        point_store: &dyn PointStore,
+        di_vector: &mut DiVector,
+    );
+    fn modify_in_place_probability_of_cut_di_vector_with_missing_coordinates(
+        &self,
+        index: usize,
+        point: &[f32],
+        missing_coordinates: &[bool],
+        point_store: &dyn PointStore,
+        di_vector: &mut DiVector,
+    );
     fn grow_node_box_pair(
         &self,
         first: &mut BoundingBox,
@@ -87,7 +108,7 @@ pub trait NodeStore {
     fn use_path_for_box(&self) -> bool;
     fn get_distribution(&self, index: usize) -> (usize, f32, usize, usize);
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize);
-    fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)>;
+    fn set_path(&self, answer: &mut Vec<(usize,usize)>, root: usize, point: &[f32]);
     fn null_node(&self) -> usize;
 }
 
@@ -255,12 +276,6 @@ where
         }
     }
 
-    pub fn add_box(&mut self, index: usize, bounding_box: &BoundingBox) {
-        if !self.is_leaf(index) {
-            self.copy_box_to_data(index, &bounding_box);
-        }
-    }
-
     pub fn add_node(
         &mut self,
         parent_index: usize,
@@ -314,13 +329,15 @@ where
 
     // capacity is the number of leaves
     pub fn increase_leaf_mass(&mut self, index: usize) {
-        let y = index - self.capacity;
-        if y >= 0 {
+        if index >= self.capacity {
+            let y = index - self.capacity;
             if let Some(a) = self.hash_mass_leaves.remove(&y) {
                 self.hash_mass_leaves.insert(y, a + 1);
             } else {
                 self.hash_mass_leaves.insert(y, 1);
             }
+        } else {
+            panic!(" incorrect call with a non-leaf index");
         }
     }
 
@@ -455,6 +472,10 @@ where
     fn null_value(capacity:usize) -> usize {
         capacity - 1
     }
+
+    fn is_internal(&self, index: usize) -> bool {
+        index != self.null_node() && index < self.capacity
+    }
 }
 
 impl<C, P, N> NodeStore for VectorNodeStore<C, P, N>
@@ -544,6 +565,138 @@ where
             bounding_box.probability_of_cut(point)
         }
     }
+    fn get_probability_of_cut_with_missing_coordinates
+    (
+        &self,
+        index: usize,
+        point: &[f32],
+        missing_coordinates : &[bool],
+        point_store: &dyn PointStore,
+    ) -> f64 {
+        let node_idx: usize = self.translate(index);
+        if node_idx != usize::MAX {
+            let base = 2 * node_idx * self.dimensions;
+            let mid = base + self.dimensions;
+            let minarray = &self.bounding_box_data[base..mid];
+            let maxarray = &self.bounding_box_data[mid..mid + self.dimensions];
+            let minsum: f32 = minarray
+                .iter()
+                .zip(point)
+                .zip(missing_coordinates)
+                .map(|((&x, &y), &b)| if !b && x - y > 0.0 { x - y } else { 0.0 })
+                .sum();
+            let maxsum: f32 = point
+                .iter()
+                .zip(maxarray)
+                .zip(missing_coordinates)
+                .map(|((&x, &y), &b)| if !b && x - y > 0.0 { x - y } else { 0.0 })
+                .sum();
+            let sum = maxsum + minsum;
+
+            if sum == 0.0 {
+                return 0.0;
+            }
+            sum as f64 / (self.range_sum_data[node_idx] + sum as f64)
+        } else {
+            let bounding_box = self.get_box(index, point_store);
+            bounding_box.probability_of_cut_with_missing_coordinates(point,missing_coordinates)
+        }
+    }
+    fn modify_in_place_probability_of_cut_di_vector(
+        &self,
+        index: usize,
+        point: &[f32],
+        point_store: &dyn PointStore,
+        di_vector: &mut DiVector,
+    ) {
+        assert!(di_vector.high.len() == point.len());
+        let node_idx: usize = self.translate(index);
+        if node_idx != usize::MAX {
+            let base = 2 * node_idx * self.dimensions;
+            let mid = base + self.dimensions;
+            let minsum: f64 = di_vector.low
+                .iter_mut()
+                .zip(&self.bounding_box_data[base..mid])
+                .zip(point)
+                .map(|((x, &y), &z)| if y - z > 0.0 {
+                    *x = (y - z) as f64;
+                    *x
+                } else {
+                    *x = 0.0;
+                    *x
+                })
+                .sum();
+            let maxsum: f64 = di_vector.high
+                .iter_mut()
+                .zip(point)
+                .zip(&self.bounding_box_data[mid..mid + self.dimensions])
+                .map(|((x, &y), &z)| if y - z > 0.0 {
+                    *x = (y - z) as f64;
+                    *x
+                } else {
+                    *x = 0.0;
+                    *x
+                })
+                .sum();
+            let sum = maxsum + minsum;
+            if sum > 0.0 {
+                di_vector.scale(1.0 / (self.range_sum_data[node_idx] + sum));
+            }
+        } else {
+            let bounding_box = self.get_box(index, point_store);
+            di_vector.assign_as_probability_of_cut(&bounding_box,point);
+        };
+    }
+
+    fn modify_in_place_probability_of_cut_di_vector_with_missing_coordinates(
+        &self,
+        index: usize,
+        point: &[f32],
+        missing_coordinates: &[bool],
+        point_store: &dyn PointStore,
+        di_vector: &mut DiVector,
+    ) {
+        assert!(di_vector.high.len() == point.len());
+        let node_idx: usize = self.translate(index);
+        if node_idx != usize::MAX {
+            let base = 2 * node_idx * self.dimensions;
+            let mid = base + self.dimensions;
+            let minsum: f64 = di_vector.low
+                .iter_mut()
+                .zip(&self.bounding_box_data[base..mid])
+                .zip(point)
+                .zip(missing_coordinates)
+                .map(|(((x, &y), &z),&b)| if !b && y - z > 0.0 {
+                    *x = (y - z)  as f64;
+                    *x
+                } else {
+                    *x = 0.0;
+                    *x
+                })
+                .sum();
+            let maxsum: f64 = di_vector.high
+                .iter_mut()
+                .zip(point)
+                .zip(&self.bounding_box_data[mid..mid + self.dimensions])
+                .zip(missing_coordinates)
+                .map(|(((x, &y), &z), &b)| if !b && y - z > 0.0 {
+                    *x = (y - z) as f64;
+                    *x
+                } else {
+                    *x = 0.0;
+                    *x
+                })
+                .sum();
+            let sum = maxsum + minsum;
+            if sum > 0.0 {
+                di_vector.scale(1.0 / (self.range_sum_data[node_idx] + sum));
+            }
+        } else {
+            let bounding_box = self.get_box(index, point_store);
+            di_vector.assign_as_probability_of_cut_with_missing_coordinates(&bounding_box,point,missing_coordinates);
+        };
+    }
+
 
     fn grow_node_box_pair(
         &self,
@@ -700,32 +853,36 @@ where
     }
 
     fn get_cut_and_children(&self, index: usize) -> (usize, f32, usize, usize) {
-        (
-            self.cut_dimension[index].into(),
-            self.cut_value[index],
-            self.left_index[index].into(),
-            self.right_index[index].into(),
-        )
+            if self.is_internal(index) {
+                (self.cut_dimension[index].into(),
+                self.cut_value[index],
+                self.left_index[index].into(),
+                self.right_index[index].into())
+            } else {
+                (usize::MAX,
+                f32::MAX,
+                usize::MAX,
+                usize::MAX)
+            }
     }
 
-    fn get_path(&self, root: usize, point: &[f32]) -> Vec<(usize, usize)> {
+    fn set_path(&self, answer : &mut Vec<(usize,usize)>, root: usize, point: &[f32]){
         let mut node = root;
-        let mut answer = Vec::new();
         answer.push((root, self.null_node()));
         while !self.is_leaf(node) {
-            let idx: usize = node;
             if self.is_left_of(node, point) {
-                node = self.left_index[idx].into();
-                answer.push((node, self.right_index[idx].into()));
+                answer.push((self.left_index[node].into(),self.right_index[node].into()));
+                node = self.left_index[node].into();
             } else {
-                node = self.right_index[idx].into();
-                answer.push((node, self.left_index[idx].into()));
+                answer.push((self.right_index[node].into(),self.left_index[node].into()));
+                node = self.right_index[node].into();
             }
         }
-        answer
     }
 
     fn null_node(&self) -> usize {
         Self::null_value(self.capacity)
     }
+
+
 }

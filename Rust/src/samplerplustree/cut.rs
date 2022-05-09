@@ -1,4 +1,4 @@
-use crate::boundingbox::BoundingBox;
+use crate::samplerplustree::boundingbox::BoundingBox;
 
 /**
 *  this is a class that helps manage the cut information; the nodes do not store information in

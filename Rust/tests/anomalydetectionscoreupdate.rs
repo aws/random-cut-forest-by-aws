@@ -5,8 +5,7 @@ extern crate rcflib;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::multidimdatawithkey;
-use rcflib::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
 
 /// try cargo test --release
@@ -50,7 +49,7 @@ fn anomalydetection_score_and_update() {
     for _i in 0..base_dimension {
         amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
-    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
+    let data_with_key = MultiDimDataWithKey::multi_cosine(
         data_size,
         &vec![60;base_dimension],
         &amplitude,

@@ -1,11 +1,12 @@
 extern crate rand;
-use rand::SeedableRng;
+
 extern crate rand_chacha;
 use std::f32::consts::PI;
 
+use crate::rand::Rng;
 use rand_chacha::ChaCha20Rng;
-
-use crate::multidimdatawithkey::rand::{Rng, RngCore};
+use rand_core::RngCore;
+use rand::SeedableRng;
 
 pub struct MultiDimDataWithKey {
     pub data: Vec<Vec<f32>>,
@@ -28,7 +29,6 @@ impl MultiDimDataWithKey {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
         let mut noiserng = ChaCha20Rng::seed_from_u64(seed + 1);
         let mut phase: Vec<usize> = Vec::new();
-        let mut amp : Vec<f32> = Vec::new();
 
         for i in 0..base_dimension {
             phase.push(rng.next_u64() as usize % period[i]);
@@ -79,28 +79,26 @@ impl MultiDimDataWithKey {
         seed: u64
     ) -> Self {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
-        assert!(num>0, " number of elements cannot be 0");
+        assert!(num > 0, " number of elements cannot be 0");
         assert!(mean.len() > 0, " cannot be null");
         let base_dimension = mean[1].len();
         assert!(mean.len() == scale.len(), " need scales and means to be 1-1");
-        assert!(weight.len() == mean.len()," need weights and means to be 1-1");
+        assert!(weight.len() == mean.len(), " need weights and means to be 1-1");
         for i in 0..mean.len() {
             assert!(mean[i].len() == base_dimension, " must have the same dimensions");
             assert!(scale[i].len() == base_dimension, "sclaes must have the same dimension as the mean");
             assert!(weight[i] >= 0.0, " weights cannot be negative");
         }
-        let sum : f32 = weight.iter().sum();
+        let sum: f32 = weight.iter().sum();
+
         let mut data = Vec::new();
         let mut labels = Vec::new();
-        for j in 0..num {
-            let mut i = base_dimension;
-            while i == base_dimension  {
-                i = 0;
-                let mut wt : f32 = sum * rng.gen::<f32>();
-                while wt > weight[i]  {
-                    wt -= weight[i];
-                    i += 1;
-                }
+        for _j in 0..num {
+            let mut i = 0;
+            let mut wt : f32 = sum * rng.gen::<f32>();
+            while wt > weight[i]  {
+                wt -= weight[i];
+                i += 1;
             }
             data.push(new_vec(&mean[i],&scale[i],&mut rng));
             labels.push(i);

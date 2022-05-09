@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-type T = u16;
 
 #[repr(C)]
 pub struct IntervalStoreManager<T> {

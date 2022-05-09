@@ -5,8 +5,7 @@ extern crate rcflib;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::multidimdatawithkey;
-use rcflib::multidimdatawithkey::MultiDimDataWithKey;
+use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
 use rcflib::rcf::{create_rcf, RCF};
 
 /// try cargo test --release
@@ -27,7 +26,7 @@ fn anomalydetection_impute_score_and_update() {
     let time_decay = 0.1 / capacity as f64;
     let bounding_box_cache_fraction = 1.0;
     let random_seed = 17;
-    let parallel_enabled: bool = false;
+    let parallel_enabled: bool = true;
     let store_attributes: bool = false;
     let internal_shingling: bool = true;
     let internal_rotation = false;
@@ -52,7 +51,7 @@ fn anomalydetection_impute_score_and_update() {
     for _i in 0..base_dimension {
         amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
     }
-    let data_with_key = multidimdatawithkey::MultiDimDataWithKey::multi_cosine(
+    let data_with_key = MultiDimDataWithKey::multi_cosine(
         data_size,
         &vec![60;base_dimension],
         &amplitude,
@@ -68,7 +67,7 @@ fn anomalydetection_impute_score_and_update() {
 
     for i in 0..data_with_key.data.len() {
 
-        if (i > 200) {
+        if i > 200 {
             let next_values = forest.extrapolate(1);
             assert!(next_values.len() == base_dimension);
             error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();

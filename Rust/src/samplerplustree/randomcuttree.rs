@@ -1,27 +1,20 @@
 use std::fmt::Debug;
-
-use crate::{
-    boundingbox::BoundingBox,
-    cut::Cut,
-    nodestore::{NodeStore, VectorNodeStore},
-};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use rand_core::RngCore;
+use crate::pointstore::PointStore;
+use crate::samplerplustree::boundingbox::BoundingBox;
+use crate::samplerplustree::cut::Cut;
+use crate::samplerplustree::nodestore::{NodeStore, VectorNodeStore};
+use crate::samplerplustree::nodeview::{MediumNodeView, UpdatableMultiNodeView, UpdatableNodeView};
+use crate::types::Location;
+use crate::visitor::imputevisitor::ImputeVisitor;
+use crate::visitor::visitor::{SimpleMultiVisitor, Visitor, VisitorInfo};
 
 extern crate rand;
-use rand::SeedableRng;
 extern crate rand_chacha;
-use rand_chacha::ChaCha20Rng;
 
-use crate::{
-    imputevisitor::ImputeVisitor,
-    nodeview::BasicNodeView,
-    pointstore::PointStore,
-    randomcuttree::rand::{Rng, RngCore},
-    scalarscorevisitor::ScalarScoreVisitor,
-    types::{Location, Max},
-    visitor::{UniqueMultiVisitor, Visitor},
-};
 
-pub type StoreInUse = VectorNodeStore<u8, u16, u8>;
 
 #[repr(C)]
 pub struct RCFTree<C, P, N>
@@ -62,7 +55,7 @@ where
         random_seed: u64,
     ) -> Self {
         let project_to_tree: fn(Vec<f32>) -> Vec<f32> = { |x| x };
-        let node_store= VectorNodeStore::<C, P, N>::new(
+        let node_store = VectorNodeStore::<C, P, N>::new(
             capacity,
             dimensions,
             using_transforms,
@@ -93,7 +86,8 @@ where
             point_index
         } else {
             let point = &point_store.get_copy(point_index);
-            let mut path_to_root = self.node_store.get_path(self.root, point);
+            let mut path_to_root = Vec::new();
+            self.node_store.set_path(&mut path_to_root, self.root, point);
             let (mut node, mut sibling) = path_to_root.pop().unwrap();
 
             let leaf_point_index = self.node_store.get_point_index(node);
@@ -200,7 +194,8 @@ where
         }
         self.tree_mass = self.tree_mass - 1;
         let point = &point_store.get_copy(point_index);
-        let mut leaf_path = self.node_store.get_path(self.root, point);
+        let mut leaf_path = Vec::new();
+        self.node_store.set_path(&mut leaf_path, self.root, point);
         let (leaf_node, leaf_saved_sibling) = leaf_path.pop().unwrap();
 
         let leaf_point_index = self.node_store.get_point_index(leaf_node);
@@ -253,80 +248,174 @@ where
         leaf_point_index
     }
 
-    pub fn generic_score(
-        &self,
-        point: &[f32],
-        point_store: &dyn PointStore,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> f64 {
-        if self.root == self.node_store.null_node() {
-            return 0.0;
-        }
 
-        let mut visitor = ScalarScoreVisitor::new(
-            self.tree_mass,
-            ignore_mass,
-            damp,
-            score_seen,
-            score_unseen,
-            normalizer,
-        );
-        let mut node_view = BasicNodeView::new(
-            self.dimensions,
-            self.root,
-            self.node_store.use_path_for_box(),
-            false,
-            false,
-        );
-        node_view.traverse(&mut visitor, point, point_store, &self.node_store);
-        normalizer(visitor.get_result(), self.tree_mass)
-    }
-
-    pub fn conditional_field(
+    pub fn conditional_field<PS: PointStore>(
         &self,
-        positions: &[usize],
+        missing: &[usize],
         point: &[f32],
-        point_store: &dyn PointStore,
+        point_store: &PS,
         centrality: f64,
-        seed : u64,
-        ignore_mass: usize,
-        score_seen: fn(usize, usize) -> f64,
-        score_unseen: fn(usize, usize) -> f64,
-        damp: fn(usize, usize) -> f64,
-        normalizer: fn(f64, usize) -> f64,
-    ) -> (usize,f32) {
+        seed: u64,
+        visitor_info: &VisitorInfo
+    ) -> (f64, usize, f64) {
         if self.root == self.node_store.null_node() {
-            return (usize::MAX,0.0);
+            return (0.0, usize::MAX, 0.0);
         }
-
         let mut visitor = ImputeVisitor::new(
-            positions,
+            missing,
             centrality,
             self.tree_mass,
             seed,
-            ignore_mass,
-            damp,
-            score_seen,
-            score_unseen,
-            normalizer,
         );
-        let mut node_view = BasicNodeView::new(
-            self.dimensions,
-            self.root,
-            self.node_store.use_path_for_box(),
-            true,
-            false,
-        );
-
-        node_view.traverse_unique_multi(&mut visitor, point, point_store, &self.node_store);
-        visitor.get_arguments()
+        let mut node_view = MediumNodeView::new(self.root,&self.node_store);
+        let mut missing_coordinates = vec![false; self.dimensions];
+        for i in missing.iter() {
+            missing_coordinates[*i] = true;
+        }
+        self.traverse_multi_with_missing_coordinates(&mut node_view, &mut visitor, visitor_info, point, &missing_coordinates, point_store);
+        visitor.result(&visitor_info)
     }
+
+
+    pub fn traverse_multi_with_missing_coordinates<V,NodeView,PS,R>(
+        &self,
+        node_view: &mut NodeView,
+        visitor: &mut V,
+        visitor_info: &VisitorInfo,
+        point: &[f32],
+        missing_coordinates: &[bool],
+        point_store: &PS,
+    )
+    where V: SimpleMultiVisitor<NodeView,R>,
+          NodeView: UpdatableMultiNodeView<VectorNodeStore<C, P, N>, PS>,
+          PS: PointStore
+    {
+        let node = node_view.get_current_node();
+        if self.node_store.is_leaf(node) {
+            node_view.update_at_leaf(point,node,&self.node_store, &point_store, &visitor_info);
+            visitor.accept_leaf(point, visitor_info,node_view);
+        } else {
+            let parent = node;
+            node_view.set_trigger_traversing_down(point,parent, &self.node_store, point_store,visitor_info);
+            if missing_coordinates[self.node_store.get_cut_dimension(parent)] {
+                let right = self.node_store.get_left_index(parent);
+                let left = self.node_store.get_right_index(parent);
+                node_view.set_current_node(left);
+                self.traverse_multi_with_missing_coordinates(node_view, visitor, visitor_info,point, missing_coordinates, point_store);
+                let saved_box = node_view.get_bounding_box();
+                node_view.set_current_node(right);
+                self.traverse_multi_with_missing_coordinates(node_view, visitor, visitor_info,point, missing_coordinates, point_store);
+                visitor.combine_branches(point, &node_view,visitor_info);
+                if !visitor.is_converged() {
+                    node_view.merge_paths(parent,saved_box,point,missing_coordinates,&self.node_store,point_store);
+                }
+            } else {
+                node_view.update_from_node_traversing_down(point,parent,&self.node_store,point_store,&visitor_info);
+                self.traverse_multi_with_missing_coordinates(node_view, visitor, visitor_info,point, missing_coordinates, point_store);
+                if !visitor.is_converged() {
+                    node_view.update_view_to_parent_with_missing_coordinates(
+                        parent,
+                        point,
+                        missing_coordinates,
+                        &self.node_store,
+                        point_store,
+                        &visitor_info
+                    );
+                }
+            }
+            if !visitor.is_converged() {
+                visitor.accept(point, visitor_info,node_view);
+            }
+        }
+    }
+
 
     pub fn get_size(&self) -> usize {
         self.node_store.get_size(self.dimensions.into()) + std::mem::size_of::<RCFTree<C, P, N>>()
+    }
+
+    fn traverse_recursive<R,PS,NodeView,V>(
+        &self,
+        point: &[f32],
+        node_view: &mut NodeView,
+        visitor: &mut V,
+        visitor_info: &VisitorInfo,
+        point_store: &PS,
+    ) where
+        PS: PointStore,
+        V:  Visitor<NodeView, R>,
+        R : Clone,
+        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>
+    {
+        let current_node = node_view.get_current_node();
+        if self.node_store.is_leaf(current_node) {
+            node_view.update_at_leaf(point,current_node,&self.node_store, &point_store, &visitor_info);
+            visitor.accept_leaf(point,visitor_info,&node_view);
+            if visitor.use_shadow_box() {
+                node_view.set_use_shadow_box(&self.node_store,point_store);
+            }
+        } else {
+            node_view.update_from_node_traversing_down(point,current_node, &self.node_store, point_store,visitor_info);
+            self.traverse_recursive(point,node_view,visitor,visitor_info,point_store);
+            if !visitor.is_converged() {
+                node_view.update_from_node_traversing_up(point, current_node, &self.node_store, &point_store, &visitor_info);
+                visitor.accept(point, visitor_info, &node_view);
+            }
+        }
+    }
+}
+
+pub trait Traversable<NodeView, N, PS,V,R>
+        where
+            N: Location,
+            <N as TryFrom<usize>>::Error: Debug,
+            usize: From<N>,
+            PS: PointStore,
+            V : Visitor<NodeView,R>
+    {
+        fn traverse(
+            &self,
+            point: &[f32],
+            parameters: &[usize],
+            visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
+            visitor_info: &VisitorInfo,
+            point_store: &PS,
+            default : &R,
+        ) -> R;
+    }
+
+
+impl<C, P, N, PS, NodeView,V,R> Traversable<NodeView, N, PS,V,R> for RCFTree<C, P, N>
+    where
+        C: Location,
+        <C as TryFrom<usize>>::Error: Debug,
+        usize: From<C>,
+        P: Location,
+        <P as TryFrom<usize>>::Error: Debug,
+        usize: From<P>,
+        N: Location,
+        <N as TryFrom<usize>>::Error: Debug,
+        usize: From<N>,
+        PS: PointStore,
+        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
+        V : Visitor<NodeView,R>,
+        R : Clone
+{
+    fn traverse(
+        &self,
+        point: &[f32],
+        parameters: &[usize],
+        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
+        visitor_info: &VisitorInfo,
+        point_store: &PS,
+        default: &R
+    ) -> R {
+        if self.root == self.node_store.null_node() {
+            return default.clone();
+        }
+        let mut visitor = visitor_factory(self.tree_mass,parameters,&visitor_info);
+        let mut node_view = NodeView::create(self.root,&self.node_store);
+        self.traverse_recursive(point,&mut node_view,&mut visitor,&visitor_info,&point_store);
+        visitor.result(visitor_info)
     }
 }

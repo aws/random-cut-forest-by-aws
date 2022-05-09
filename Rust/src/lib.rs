@@ -1,31 +1,22 @@
-mod boundingbox;
-mod cut;
-mod imputevisitor;
-mod intervalstoremanager;
-pub mod multidimdatawithkey;
-mod nodestore;
-mod nodeview;
+pub mod common;
 mod pointstore;
-mod randomcuttree;
 pub mod rcf;
-mod sampler;
 mod samplerplustree;
-pub mod samplesummary;
-mod scalarscorevisitor;
 mod types;
 mod visitor;
-mod conditionalfieldsummarizer;
-extern crate rand;
+mod util;
 
-use num::abs;
-use crate::rcf::{create_rcf, RCF};
+extern crate rand;
 extern crate rand_chacha;
 
-pub fn L1distance(a: &[f32], b : &[f32]) -> f64{
+use num::abs;
+
+
+pub fn l1distance(a: &[f32], b : &[f32]) -> f64{
     a.iter().zip(b).map(|(&x,&y)| abs(x as f64 - y as f64)).sum()
 }
 
-pub fn LInfinitydistance(a: &[f32], b : &[f32]) -> f64{
+pub fn linfinitydistance(a: &[f32], b : &[f32]) -> f64{
     let mut dist = 0.0;
     for i in 0..a.len(){
         let t= abs(a[i] as f64 - b[i] as f64);
@@ -36,7 +27,7 @@ pub fn LInfinitydistance(a: &[f32], b : &[f32]) -> f64{
     dist
 }
 
-pub fn L2distance(a: &[f32], b : &[f32]) -> f64{
+pub fn l2distance(a: &[f32], b : &[f32]) -> f64{
     f64::sqrt(a.iter().zip(b).map(|(&x,&y)| (abs(x as f64 -y as f64) * abs ( x as f64 - y as f64))).sum())
 }
 
