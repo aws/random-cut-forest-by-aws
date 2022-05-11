@@ -354,7 +354,8 @@ impl LargeNodeView {
     pub fn get_cut_dimension(&self) -> usize {self.cut_dimension}
     pub fn get_cut_value(&self) -> f32 {self.cut_value}
     pub fn get_leaf_point(&self) -> Vec<f32> {self.point_at_leaf.clone()}
-    pub fn get_bounding_box(&self) -> BoundingBox {self.current_box.as_ref().unwrap().copy()}
+    pub fn bounding_box(&self) -> BoundingBox {self.current_box.as_ref().unwrap().copy()}
+    pub fn shadow_box(&self) -> BoundingBox {self.shadow_box.as_ref().unwrap().copy()}
     pub fn assign_probability_of_cut(&self,di_vector:&mut DiVector, point : &[f32]) {
         di_vector.assign_as_probability_of_cut(self.current_box.as_ref().unwrap(),point)
     }

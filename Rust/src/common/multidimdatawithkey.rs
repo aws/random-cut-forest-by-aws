@@ -81,7 +81,7 @@ impl MultiDimDataWithKey {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
         assert!(num > 0, " number of elements cannot be 0");
         assert!(mean.len() > 0, " cannot be null");
-        let base_dimension = mean[1].len();
+        let base_dimension = mean[0].len();
         assert!(mean.len() == scale.len(), " need scales and means to be 1-1");
         assert!(weight.len() == mean.len(), " need weights and means to be 1-1");
         for i in 0..mean.len() {

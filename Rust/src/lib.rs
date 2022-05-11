@@ -3,7 +3,7 @@ mod pointstore;
 pub mod rcf;
 mod samplerplustree;
 mod types;
-mod visitor;
+pub mod visitor;
 mod util;
 
 extern crate rand;

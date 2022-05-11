@@ -1,5 +1,5 @@
 use crate::l1distance;
-use crate::rcf::{damp, normalizer, score_seen, score_unseen};
+use crate::rcf::{damp, displacement_normalizer, identity, normalizer, score_seen, score_seen_displacement, score_unseen, score_unseen_displacement};
 
 #[repr(C)]
 pub struct VisitorInfo {
@@ -42,6 +42,26 @@ impl VisitorInfo {
             score_unseen,
             damp,
             normalizer,
+            distance : l1distance
+        }
+    }
+    pub fn displacement() -> Self {
+        VisitorInfo {
+            ignore_mass: 0,
+            score_seen : score_seen_displacement,
+            score_unseen : score_unseen_displacement,
+            damp,
+            normalizer : displacement_normalizer,
+            distance : l1distance
+        }
+    }
+    pub fn density() -> Self {
+        VisitorInfo {
+            ignore_mass: 0,
+            score_seen : score_unseen_displacement,
+            score_unseen : score_unseen_displacement,
+            damp,
+            normalizer : identity,
             distance : l1distance
         }
     }
