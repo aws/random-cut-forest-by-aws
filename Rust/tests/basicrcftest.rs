@@ -146,8 +146,10 @@ fn two_distribution_test_static() {
     assert!(forest.density(&vec1) > capacity as f64 * forest.density(&anomaly));
     assert!(forest.density(&vec2) > capacity as f64 * forest.density(&anomaly));
 
-    // but now, unlike displacement the  calibration if awry at anomalies
-    // and moreiver in the other direction; larger samplesize gives larger densities because
-    // of spurious points coming closer
+    // but now, unlike displacement, the  calibration is awry at potential anomalies
+    // and moreover is in the other direction; larger samplesize gives larger densities because
+    // of spurious points coming closer. This is a core intuition of observations/observability; the
+    // calibration of central tendency (often used in forecast, also densities of dense regions)
+    // has different requirements compared to callibration at extremeties (anomalies, sparse regions)
     assert!(another_forest.density(&anomaly) > 1.5 *forest.density(&anomaly));
     }
