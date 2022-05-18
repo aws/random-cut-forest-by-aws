@@ -163,7 +163,7 @@ impl DiVector {
         }
     }
 
-    pub fn dimension(&self) -> usize {
+    pub fn dimensions(&self) -> usize {
         self.high.len()
     }
 

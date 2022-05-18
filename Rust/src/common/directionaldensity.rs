@@ -22,12 +22,12 @@ impl InterpolationMeasure {
     }
 
     pub fn new(measure : DiVector, distance: DiVector, prob_mass:DiVector,sample_size: f32) -> Self{
-        assert!(measure.dimension() == distance.dimension(), " incorrect lengths");
-        assert!(measure.dimension() == prob_mass.dimension(), " incorrect lengths");
+        assert!(measure.dimensions() == distance.dimensions(), " incorrect lengths");
+        assert!(measure.dimensions() == prob_mass.dimensions(), " incorrect lengths");
         InterpolationMeasure{
-            measure: measure.clone(),
-            distance: distance.clone(),
-            probability_mass: prob_mass.clone(),
+            measure: measure,
+            distance: distance,
+            probability_mass: prob_mass,
             sample_size
         }
     }
@@ -93,12 +93,12 @@ impl InterpolationMeasure {
     pub fn directional_measure(&self, threshold: f64, manifold_dimension: f64) -> DiVector{
         assert!(self.sample_size >= 0.0 && self.measure.total() >= 0.0, " cannot have negative samples or measure");
         if self.sample_size == 0.0f32 || self.measure.total() == 0.0{
-            return DiVector::empty(self.measure.dimension());
+            return DiVector::empty(self.measure.dimensions());
         }
 
         let mut sum_of_factors = 0.0;
 
-        for i in 0..self.measure.dimension() {
+        for i in 0..self.measure.dimensions() {
             let mut t = if self.probability_mass.high_low_sum(i) > 0.0 {
                 self.distance.high_low_sum(i) / self.probability_mass.high_low_sum(i)
             } else {
@@ -119,7 +119,7 @@ impl InterpolationMeasure {
     }
 
     pub fn directional_density(&self) -> DiVector {
-        self.directional_measure(1e-3, self.measure.dimension() as f64)
+        self.directional_measure(1e-3, self.measure.dimensions() as f64)
     }
 
     pub fn density(&self) -> f64 {
