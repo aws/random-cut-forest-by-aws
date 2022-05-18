@@ -4,3 +4,4 @@ pub mod conditionalfieldsummarizer;
 pub mod intervalstoremanager;
 pub mod multidimdatawithkey;
 pub mod cluster;
+pub(crate) mod directionaldensity;

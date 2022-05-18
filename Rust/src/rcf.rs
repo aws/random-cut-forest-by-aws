@@ -18,8 +18,10 @@ use crate::samplerplustree::samplerplustree::SamplerPlusTree;
 use crate::types::Location;
 use crate::util::{add_nbr, add_to, divide, nbr_finish};
 use crate::{l1distance};
+use crate::common::directionaldensity::InterpolationMeasure;
 use crate::visitor::attributionvisitor::AttributionVisitor;
 use crate::visitor::imputevisitor::ImputeVisitor;
+use crate::visitor::interpolationvisitor::InterpolationVisitor;
 use crate::visitor::scalarscorevisitor::ScalarScoreVisitor;
 use crate::visitor::visitor::{Visitor, VisitorInfo};
 
@@ -35,6 +37,24 @@ pub(crate) fn normalizer(x: f64, y: usize) -> f64 {
 pub(crate) fn damp(x: usize, y: usize) -> f64 {
     1.0 - (x as f64) / (2.0 * y as f64)
 }
+
+pub(crate) fn score_seen_displacement(x: usize, y: usize) -> f64 { 1.0 / (1.0 + y as f64)}
+
+// the following would be used for density estimation as well; note that for density estimation
+// we are only focused about similarity of points and thus (previously) seen  and
+// (previously) unseen points have little distinction
+// that distinction can be crucial for some applications of anomaly detection
+
+pub(crate) fn score_unseen_displacement(x: usize, y: usize) -> f64 { y as f64}
+
+// the normalization is now multiplication by 1/treesize; this makes the
+// max score to be 1.0 whereas for the standard score the average is close to 1
+
+pub(crate) fn displacement_normalizer(x: f64, y: usize) -> f64 {
+    x * 1.0/(1.0 + y as f64)
+}
+
+pub(crate) fn identity(x:f64, _y :usize) -> f64 {x}
 
 const max_number_in_summary : usize = 5;
 
@@ -59,6 +79,10 @@ pub trait RCF {
 
     fn score(&self, point: &[f32]) -> f64 {
        self.score_visitor_traversal(point, &VisitorInfo::default())
+    }
+
+    fn displacement_score(&self, point: &[f32]) -> f64 {
+        self.score_visitor_traversal(point, &VisitorInfo::displacement())
     }
 
     fn generic_score(
@@ -96,6 +120,24 @@ pub trait RCF {
         point: &[f32],
         visitor_info : &VisitorInfo
     ) -> DiVector;
+
+    fn density(&self,point : &[f32]) -> f64 {
+        self.interpolation_visitor_traversal(point,&VisitorInfo::density()).density()
+    }
+
+    fn directional_density(&self,point : &[f32]) -> DiVector {
+        self.interpolation_visitor_traversal(point,&VisitorInfo::density()).directional_density()
+    }
+
+    fn density_interpolant(&self,point : &[f32]) -> InterpolationMeasure {
+        self.interpolation_visitor_traversal(point,&VisitorInfo::density())
+    }
+
+    fn interpolation_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info : &VisitorInfo
+    ) -> InterpolationMeasure;
 
     /// the answer format is (score, point, distance from original)
     fn near_neighbor_list(
@@ -507,6 +549,16 @@ where
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
         self.simple_traversal(point, parameters, visitor_info,AttributionVisitor::create_visitor,&DiVector::empty(self.dimensions),&DiVector::empty(self.dimensions),DiVector::add_to,DiVector::divide)
+    }
+
+    fn interpolation_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info : &VisitorInfo
+    ) -> InterpolationMeasure {
+        // tells the visitor what dimension to expect for each tree
+        let parameters = &vec![self.dimensions];
+        self.simple_traversal(point, parameters, visitor_info,InterpolationVisitor::create_visitor,&InterpolationMeasure::empty(self.dimensions,0.0),&InterpolationMeasure::empty(self.dimensions,0.0),InterpolationMeasure::add_to,InterpolationMeasure::divide)
     }
 
     fn near_neighbor_traversal(

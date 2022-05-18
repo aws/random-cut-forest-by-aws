@@ -58,7 +58,7 @@ impl Cut {
             };
 
             let gap: f32 = maxv - minv;
-            if gap > range as f32 {
+            if gap > range as f32 || (gap == range as f32 && gap > 0.0) {
                 new_cut = minv + range as f32; // precision lost here
                 if new_cut <= minv || new_cut >= maxv {
                     new_cut = minv;

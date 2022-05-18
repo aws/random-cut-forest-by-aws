@@ -163,4 +163,12 @@ impl DiVector {
         }
     }
 
+    pub fn dimensions(&self) -> usize {
+        self.high.len()
+    }
+
+    pub fn high_low_sum(&self, index: usize) -> f64 {
+        self.high[index] + self.low[index]
+    }
+
 }
