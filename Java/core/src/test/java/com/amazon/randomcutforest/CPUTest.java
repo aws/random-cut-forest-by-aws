@@ -22,6 +22,31 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
 
+/**
+ * The following "test" is intended to provide an approximate estimate of the improvement
+ * from parallelization. At the outset, we remark that running the test from inside
+ * an IDE/environment may reflect more of the environment. Issues such as warming are not
+ * reflected in this test.
+ *
+ * Users who wish to obtain more calibrated estimates should use a benchmark -- preferably
+ * using their own "typical" data and their end to end setup. Performance of RCF is data dependent.
+ * Such users may be invoking RCF functions differently from a standard "impute, score, update"
+ * process recommended for streaming time series data.
+ *
+ * Moreover, in the context of a large number of models, the rate at which the models require
+ * updates is also a factor and not controlled herein.
+ *
+ * The two tests should produce near identical sum of scores, and (root) mean squared error of
+ * the impute up to machine precision (since the order of the arithmetic operations would vary).
+ *
+ * To summarize the lessons, it appears that parallelism almost always helps (upto resource limitations).
+ * If an user is considering a single model -- say from a console or dashboard, they should consider
+ * having parallel threads enabled. For large number of models, it may be worthwhile
+ * to also investigate different ways of achieving parallelism and not just attempt to
+ * change the executor framework.
+ *
+ */
+
 @Tag("functional")
 public class CPUTest {
 
@@ -31,7 +56,10 @@ public class CPUTest {
     int numberOfAttributes = 5;
     int shingleSize = 30;
     int sampleSize = 256;
+    // set numberOfThreads = 1 to turn off parallelism
     int numberOfThreads = 3;
+    // change boundingBoxCacheFraction to see different memory consumption
+    // this would be germane for large number of models cache/memory contention
     double boundingBoxCacheFraction = 1.0;
     int dimensions = shingleSize * numberOfAttributes;
 
