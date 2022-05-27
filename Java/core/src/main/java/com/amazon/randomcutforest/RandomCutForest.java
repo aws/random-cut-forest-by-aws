@@ -60,6 +60,7 @@ import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
@@ -1072,20 +1073,25 @@ public class RandomCutForest {
     }
 
     public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
+        return extrapolateWithRanges(point, horizon, blockSize, cyclic, shingleIndex, 1.0).values;
+    }
+
+    public RangeVector extrapolateWithRanges(float[] point, int horizon, int blockSize, boolean cyclic,
+            int shingleIndex, double centrality) {
         checkArgument(0 < blockSize && blockSize < dimensions,
                 "blockSize must be between 0 and dimensions (exclusive)");
         checkArgument(dimensions % blockSize == 0, "dimensions must be evenly divisible by blockSize");
         checkArgument(0 <= shingleIndex && shingleIndex < dimensions / blockSize,
                 "shingleIndex must be between 0 (inclusive) and dimensions / blockSize");
 
-        float[] result = new float[blockSize * horizon];
+        RangeVector result = new RangeVector(blockSize * horizon);
         int[] missingIndexes = new int[blockSize];
         float[] queryPoint = Arrays.copyOf(point, dimensions);
 
         if (cyclic) {
-            extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
+            extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes, centrality);
         } else {
-            extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes);
+            extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes, centrality);
         }
 
         return result;
@@ -1130,7 +1136,8 @@ public class RandomCutForest {
                 builder.getShingleIndex());
     }
 
-    void extrapolateBasicSliding(float[] result, int horizon, int blockSize, float[] queryPoint, int[] missingIndexes) {
+    void extrapolateBasicSliding(RangeVector result, int horizon, int blockSize, float[] queryPoint,
+            int[] missingIndexes, double centrality) {
         int resultIndex = 0;
 
         Arrays.fill(missingIndexes, 0);
@@ -1142,16 +1149,20 @@ public class RandomCutForest {
             // shift all entries in the query point left by 1 block
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
-            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes,
+                    centrality);
             for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[dimensions - blockSize + y] = imputedPoint[dimensions - blockSize
-                        + y];
+                result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[dimensions
+                        - blockSize + y];
+                result.lower[resultIndex] = imputedSummary.lower[dimensions - blockSize + y];
+                result.upper[resultIndex] = imputedSummary.upper[dimensions - blockSize + y];
+                resultIndex++;
             }
         }
     }
 
-    void extrapolateBasicCyclic(float[] result, int horizon, int blockSize, int shingleIndex, float[] queryPoint,
-            int[] missingIndexes) {
+    void extrapolateBasicCyclic(RangeVector result, int horizon, int blockSize, int shingleIndex, float[] queryPoint,
+            int[] missingIndexes, double centrality) {
 
         int resultIndex = 0;
         int currentPosition = shingleIndex;
@@ -1162,11 +1173,15 @@ public class RandomCutForest {
                 missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
-            float[] imputedPoint = imputeMissingValues(queryPoint, blockSize, missingIndexes);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes,
+                    centrality);
 
             for (int y = 0; y < blockSize; y++) {
-                result[resultIndex++] = queryPoint[(currentPosition + y)
-                        % dimensions] = imputedPoint[(currentPosition + y) % dimensions];
+                result.values[resultIndex] = queryPoint[(currentPosition + y)
+                        % dimensions] = imputedSummary.median[(currentPosition + y) % dimensions];
+                result.lower[resultIndex] = imputedSummary.lower[(currentPosition + y) % dimensions];
+                result.upper[resultIndex] = imputedSummary.upper[(currentPosition + y) % dimensions];
+                resultIndex++;
             }
 
             currentPosition = (currentPosition + blockSize) % dimensions;

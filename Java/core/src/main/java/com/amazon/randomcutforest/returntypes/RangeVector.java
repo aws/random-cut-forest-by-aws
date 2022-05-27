@@ -1,0 +1,79 @@
+/*
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package com.amazon.randomcutforest.returntypes;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
+import java.util.Arrays;
+
+/**
+ * A RangeVector is used when we want to track a quantity and its upper and
+ * lower bounds
+ */
+public class RangeVector {
+
+    public final float[] values;
+
+    /**
+     * An array of values corresponding to the upper ranges in each dimension.
+     */
+    public final float[] upper;
+    /**
+     * An array of values corresponding to the lower ranges in each dimension
+     */
+    public final float[] lower;
+
+    public RangeVector(int dimensions) {
+        checkArgument(dimensions > 0, "dimensions must be greater than 0");
+        values = new float[dimensions];
+        upper = new float[dimensions];
+        lower = new float[dimensions];
+    }
+
+    /**
+     * Construct a new RangeVector with the given number of spatial dimensions.
+     * 
+     * @param values the values being estimated in a range
+     * @param upper  the higher values of the ranges
+     * @param lower  the lower values in the ranges
+     */
+    public RangeVector(float[] values, float[] upper, float[] lower) {
+        checkArgument(values.length > 0, " dimensions must be > 0");
+        checkArgument(values.length == upper.length && upper.length == lower.length, "dimensions must be equal");
+        this.values = Arrays.copyOf(values, values.length);
+        this.upper = Arrays.copyOf(upper, upper.length);
+        this.lower = Arrays.copyOf(lower, lower.length);
+    }
+
+    public RangeVector(float[] values) {
+        checkArgument(values.length > 0, "dimensions must be > 0 ");
+        this.values = Arrays.copyOf(values, values.length);
+        this.upper = Arrays.copyOf(values, values.length);
+        this.lower = Arrays.copyOf(values, values.length);
+    }
+
+    /**
+     * Create a deep copy of the base RangeVector.
+     *
+     * @param base The RangeVector to copy.
+     */
+    public RangeVector(RangeVector base) {
+        int dimensions = base.values.length;
+        this.values = Arrays.copyOf(base.values, dimensions);
+        this.upper = Arrays.copyOf(base.upper, dimensions);
+        this.lower = Arrays.copyOf(base.lower, dimensions);
+    }
+}
