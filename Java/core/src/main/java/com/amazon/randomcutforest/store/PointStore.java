@@ -15,15 +15,15 @@
 
 package com.amazon.randomcutforest.store;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.Vector;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static java.lang.Math.max;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.Vector;
 
 public abstract class PointStore implements IPointStore<float[]> {
 
@@ -742,19 +742,6 @@ public abstract class PointStore implements IPointStore<float[]> {
                 this.internalShingle = (builder.knownShingle != null)
                         ? Arrays.copyOf(toFloatArray(builder.knownShingle), dimensions)
                         : new float[dimensions];
-            }
-
-            /*
-             * an explicit conversion to bits; using toBits(refCount) in the constructor of
-             * IndexIntervalManager converts 256 into 0 and for a location appearing 256
-             * times, it seems that the location is free, and therefore that location is
-             * overwritten causing corruption of the PointStore
-             */
-
-            for (int i = 0; i < builder.refCount.length; i++) {
-                if (builder.refCount[i] > 0) {
-                    builder.refCount[i] = 1;
-                }
             }
 
             indexManager = new IndexIntervalManager(builder.refCount, builder.indexCapacity);
