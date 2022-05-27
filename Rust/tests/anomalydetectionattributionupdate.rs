@@ -1,4 +1,3 @@
-
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
@@ -6,8 +5,10 @@ extern crate rcflib;
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
-use rcflib::rcf::{create_rcf, RCF};
+use rcflib::{
+    common::multidimdatawithkey::MultiDimDataWithKey,
+    rcf::{create_rcf, RCF},
+};
 
 /// try cargo test --release
 /// these tests are designed to be longish
@@ -46,13 +47,13 @@ fn anomalydetection_attribution_and_update() {
         bounding_box_cache_fraction,
     );
     let mut rng = ChaCha20Rng::seed_from_u64(42);
-    let mut amplitude =  Vec::new();
+    let mut amplitude = Vec::new();
     for _i in 0..base_dimension {
-        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
+        amplitude.push((1.0 + 0.2 * rng.gen::<f32>()) * 100.0);
     }
     let data_with_key = MultiDimDataWithKey::multi_cosine(
         data_size,
-        &vec![60;base_dimension],
+        &vec![60; base_dimension],
         &amplitude,
         noise,
         0,
@@ -63,7 +64,6 @@ fn anomalydetection_attribution_and_update() {
     let _next_index = 0;
 
     for i in 0..data_with_key.data.len() {
-
         let attribution = forest.attribution(&data_with_key.data[i]);
         let new_score = forest.score(&data_with_key.data[i]);
         assert!(abs(new_score - attribution.total()) < 1e-6);
@@ -83,7 +83,10 @@ fn anomalydetection_attribution_and_update() {
         "Average score {} ",
         (score / data_with_key.data.len() as f64)
     );
-    assert!(score < data_with_key.data.len() as f64, " average score is above 1");
+    assert!(
+        score < data_with_key.data.len() as f64,
+        " average score is above 1"
+    );
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());

@@ -1,40 +1,32 @@
-
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
 
-
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
-use rcflib::visitor::visitor::VisitorInfo;
-use rcflib::rcf::{create_rcf, RCF};
-
+use rcflib::{
+    common::multidimdatawithkey::MultiDimDataWithKey,
+    rcf::{create_rcf, RCF},
+    visitor::visitor::VisitorInfo,
+};
 
 /// try cargo test --release
 /// these tests are designed to be longish
 
-
 #[test]
 fn two_distribution_test_static() {
-
     let data_size = 1000;
     let dimensions = 20;
-    let yard_stick =5.0;
-    let mut vec1 = vec![0.0f32;dimensions];
-    let mut vec2 = vec![0.0f32;dimensions];
+    let yard_stick = 5.0;
+    let mut vec1 = vec![0.0f32; dimensions];
+    let mut vec2 = vec![0.0f32; dimensions];
     vec1[0] = yard_stick;
-    vec2[0] = - yard_stick;
-    let scale = vec![vec![0.1f32;dimensions],vec![0.1f32;dimensions]];
-    let mean = vec![vec1.clone(),vec2.clone()].clone();
-    let data_with_key = MultiDimDataWithKey::mixture(
-        data_size,
-        &mean,
-        &scale,
-        &vec![0.5f32,0.5f32],
-        0
-    );
+    vec2[0] = -yard_stick;
+    let scale = vec![vec![0.1f32; dimensions], vec![0.1f32; dimensions]];
+    let mean = vec![vec1.clone(), vec2.clone()].clone();
+    let data_with_key =
+        MultiDimDataWithKey::mixture(data_size, &mean, &scale, &vec![0.5f32, 0.5f32], 0);
 
     let shingle_size = 1;
     let number_of_trees = 50;
@@ -67,7 +59,7 @@ fn two_distribution_test_static() {
     let mut another_forest: Box<dyn RCF> = create_rcf(
         dimensions,
         shingle_size,
-        capacity*2,
+        capacity * 2,
         number_of_trees,
         random_seed,
         store_attributes,
@@ -80,15 +72,15 @@ fn two_distribution_test_static() {
     );
 
     for i in 0..data_with_key.data.len() {
-         forest.update(&data_with_key.data[i],0);
-        another_forest.update(&data_with_key.data[i],0);
+        forest.update(&data_with_key.data[i], 0);
+        another_forest.update(&data_with_key.data[i], 0);
     }
 
-    let anomaly = vec![0.0f32;dimensions];
+    let anomaly = vec![0.0f32; dimensions];
 
     assert!(forest.score(&anomaly) > 1.5);
-    assert!(forest.displacement_score(&anomaly) * f64::log2(capacity as f64)> 1.5 );
-    let interpolant = forest.interpolation_visitor_traversal(&anomaly,&VisitorInfo::default());
+    assert!(forest.displacement_score(&anomaly) * f64::log2(capacity as f64) > 1.5);
+    let interpolant = forest.interpolation_visitor_traversal(&anomaly, &VisitorInfo::default());
     let attribution = forest.attribution(&anomaly);
     assert!(attribution.high[0] > 0.75);
     assert!(attribution.low[0] > 0.75);
@@ -102,8 +94,14 @@ fn two_distribution_test_static() {
     assert!(abs(attribution.high[0] - interpolant.measure.high[0]) < 1e-6);
 
     // a three signma radius
-    assert!(abs(interpolant.distance.high[0] - yard_stick as f64 * interpolant.probability_mass.high[0]) < 0.3);
-    assert!(abs(interpolant.distance.low[0] - yard_stick as f64 * interpolant.probability_mass.low[0]) < 0.3);
+    assert!(
+        abs(interpolant.distance.high[0] - yard_stick as f64 * interpolant.probability_mass.high[0])
+            < 0.3
+    );
+    assert!(
+        abs(interpolant.distance.low[0] - yard_stick as f64 * interpolant.probability_mass.low[0])
+            < 0.3
+    );
     assert!(interpolant.distance.high[1] < 0.1);
     assert!(interpolant.distance.low[1] < 0.1);
     assert!(interpolant.probability_mass.high[1] < 0.1);
@@ -127,7 +125,10 @@ fn two_distribution_test_static() {
     let displacement_score = forest.displacement_score(&anomaly);
     // displacement is calibrated for clear cut anomalies
     // samplesize did not matter for such
-    assert!(abs(displacement_score - another_forest.displacement_score(&anomaly)) < 0.1 * displacement_score);
+    assert!(
+        abs(displacement_score - another_forest.displacement_score(&anomaly))
+            < 0.1 * displacement_score
+    );
 
     // displacement is NOT the same for dense regions; larger samplesize
     // leads to lower score; in fact the gap is close to the ratio of samplesize
@@ -140,8 +141,12 @@ fn two_distribution_test_static() {
     assert!(displacement_score * f64::log2(capacity as f64) > 2.0);
 
     // in contrast to displacement, density is calibrated at the dense points
-    assert!(abs(forest.density(&vec1) - another_forest.density(&vec1)) < 0.1 * forest.density(&vec1));
-    assert!(abs(forest.density(&vec2) - another_forest.density(&vec2)) < 0.1 * forest.density(&vec2));
+    assert!(
+        abs(forest.density(&vec1) - another_forest.density(&vec1)) < 0.1 * forest.density(&vec1)
+    );
+    assert!(
+        abs(forest.density(&vec2) - another_forest.density(&vec2)) < 0.1 * forest.density(&vec2)
+    );
     // and much more than at anomalous points
     assert!(forest.density(&vec1) > capacity as f64 * forest.density(&anomaly));
     assert!(forest.density(&vec2) > capacity as f64 * forest.density(&anomaly));
@@ -151,5 +156,5 @@ fn two_distribution_test_static() {
     // of spurious points coming closer. This is a core intuition of observations/observability; the
     // calibration of central tendency (often used in forecast, also densities of dense regions)
     // has different requirements compared to callibration at extremeties (anomalies, sparse regions)
-    assert!(another_forest.density(&anomaly) > 1.5 *forest.density(&anomaly));
-    }
+    assert!(another_forest.density(&anomaly) > 1.5 * forest.density(&anomaly));
+}

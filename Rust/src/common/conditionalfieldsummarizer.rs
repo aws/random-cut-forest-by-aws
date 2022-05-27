@@ -1,10 +1,11 @@
-
 use num::abs;
-use crate::common::samplesummary::{SampleSummary, summarize};
-use crate::pointstore::PointStore;
 
+use crate::{
+    common::samplesummary::{summarize, SampleSummary},
+    pointstore::PointStore,
+};
 
-fn project_missing(point: &Vec<f32>,position : &[usize]) -> Vec<f32> {
+fn project_missing(point: &Vec<f32>, position: &[usize]) -> Vec<f32> {
     position.iter().map(|i| point[*i]).collect()
 }
 
@@ -29,35 +30,49 @@ fn project_missing(point: &Vec<f32>,position : &[usize]) -> Vec<f32> {
 #[repr(C)]
 pub struct FieldSummarizer {
     centrality: f64,
-    project : bool,
-    max_number : usize,
-    distance : fn(&[f32],&[f32]) -> f64
+    project: bool,
+    max_number: usize,
+    distance: fn(&[f32], &[f32]) -> f64,
 }
 
 impl FieldSummarizer {
-    pub fn new(centrality: f64, project: bool, max_number: usize, distance: fn(&[f32], &[f32]) -> f64) -> Self {
+    pub fn new(
+        centrality: f64,
+        project: bool,
+        max_number: usize,
+        distance: fn(&[f32], &[f32]) -> f64,
+    ) -> Self {
         FieldSummarizer {
             centrality,
             project,
             max_number,
-            distance
+            distance,
         }
     }
 
-    pub fn summarize_list(&self, pointstore: &dyn PointStore, point_list_with_distance: &[(f64, usize, f64)], missing: &[usize]) -> SampleSummary {
-        let mut distance_list: Vec<f64> = point_list_with_distance.iter().map(|a| a.2)
-            .collect();
+    pub fn summarize_list(
+        &self,
+        pointstore: &dyn PointStore,
+        point_list_with_distance: &[(f64, usize, f64)],
+        missing: &[usize],
+    ) -> SampleSummary {
+        let mut distance_list: Vec<f64> = point_list_with_distance.iter().map(|a| a.2).collect();
         distance_list.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         let mut threshold = 0.0;
         if self.centrality > 0.0 {
             let mut always_include = 0;
-            while always_include < point_list_with_distance.len() && distance_list[always_include] == 0.0 {
+            while always_include < point_list_with_distance.len()
+                && distance_list[always_include] == 0.0
+            {
                 always_include += 1;
             }
-            threshold = self.centrality * (distance_list[always_include + (distance_list.len() - always_include) / 3] +
-                distance_list[always_include + (distance_list.len() - always_include) / 2]) as f64;
+            threshold = self.centrality
+                * (distance_list[always_include + (distance_list.len() - always_include) / 3]
+                    + distance_list[always_include + (distance_list.len() - always_include) / 2])
+                    as f64;
         }
-        threshold += (1.0 - self.centrality) * distance_list[point_list_with_distance.len() - 1] as f64;
+        threshold +=
+            (1.0 - self.centrality) * distance_list[point_list_with_distance.len() - 1] as f64;
 
         let total_weight = point_list_with_distance.len() as f64;
         let dimensions = if !self.project || missing.len() == 0 {
@@ -74,42 +89,46 @@ impl FieldSummarizer {
             let point = if !self.project || missing.len() == 0 {
                 pointstore.get_copy(point_list_with_distance[i].1)
             } else {
-                project_missing(&pointstore.get_copy(point_list_with_distance[i].1), &missing)
+                project_missing(
+                    &pointstore.get_copy(point_list_with_distance[i].1),
+                    &missing,
+                )
             };
             for j in 0..dimensions {
                 sum_values[j] += point[j] as f64;
                 sum_values_sq[j] += point[j] as f64 * point[j] as f64;
             }
             // the else can be filtered further
-            let weight: f32 = if point_list_with_distance[i].2 <= threshold  {
+            let weight: f32 = if point_list_with_distance[i].2 <= threshold {
                 1.0
             } else {
                 (threshold / point_list_with_distance[i].2) as f32
             };
 
             vec.push((point, weight));
-        };
+        }
 
         for j in 0..dimensions {
             mean[j] = (sum_values[j] / total_weight as f64) as f32;
-            let t: f64 = sum_values_sq[j] / total_weight as f64 - sum_values[j] * sum_values[j] / (total_weight as f64 * total_weight as f64);
+            let t: f64 = sum_values_sq[j] / total_weight as f64
+                - sum_values[j] * sum_values[j] / (total_weight as f64 * total_weight as f64);
             deviation[j] = f64::sqrt(if t > 0.0 { t } else { 0.0 }) as f32;
-        };
+        }
         let mut median = vec![0.0f32; dimensions];
         for j in 0..dimensions {
             let mut v: Vec<f32> = vec.iter().map(|x| x.0[j]).collect();
             v.sort_by(|a, b| a.partial_cmp(b).unwrap());
             median[j] = v[vec.len() / 2];
-        };
+        }
 
-        let summary = summarize(&vec, self.distance, self.max_number,false);
+        let summary = summarize(&vec, self.distance, self.max_number, false);
         SampleSummary {
             summary_points: summary.summary_points.clone(),
             relative_weight: summary.relative_weight.clone(),
             total_weight: summary.total_weight,
             mean,
             median,
-            deviation
+            deviation,
         }
     }
 }

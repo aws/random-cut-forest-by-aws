@@ -1,29 +1,34 @@
-
 extern crate num;
 extern crate rand;
 extern crate rand_chacha;
 
-use rayon::prelude::*;
-use rand::SeedableRng;
 use core::fmt::Debug;
+
+use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
-use crate::common::conditionalfieldsummarizer::FieldSummarizer;
-use crate::common::divector::DiVector;
-use crate::common::samplesummary::SampleSummary;
-use crate::pointstore::{PointStore, VectorizedPointStore};
-use crate::samplerplustree::nodestore::VectorNodeStore;
-use crate::samplerplustree::nodeview::UpdatableNodeView;
-use crate::samplerplustree::samplerplustree::SamplerPlusTree;
-use crate::types::Location;
-use crate::util::{add_nbr, add_to, divide, nbr_finish};
-use crate::{l1distance};
-use crate::common::directionaldensity::InterpolationMeasure;
-use crate::visitor::attributionvisitor::AttributionVisitor;
-use crate::visitor::imputevisitor::ImputeVisitor;
-use crate::visitor::interpolationvisitor::InterpolationVisitor;
-use crate::visitor::scalarscorevisitor::ScalarScoreVisitor;
-use crate::visitor::visitor::{Visitor, VisitorInfo};
+use rayon::prelude::*;
+
+use crate::{
+    common::{
+        conditionalfieldsummarizer::FieldSummarizer, directionaldensity::InterpolationMeasure,
+        divector::DiVector, samplesummary::SampleSummary,
+    },
+    l1distance,
+    pointstore::{PointStore, VectorizedPointStore},
+    samplerplustree::{
+        nodestore::VectorNodeStore, nodeview::UpdatableNodeView, samplerplustree::SamplerPlusTree,
+    },
+    types::Location,
+    util::{add_nbr, add_to, divide, nbr_finish},
+    visitor::{
+        attributionvisitor::AttributionVisitor,
+        imputevisitor::ImputeVisitor,
+        interpolationvisitor::InterpolationVisitor,
+        scalarscorevisitor::ScalarScoreVisitor,
+        visitor::{Visitor, VisitorInfo},
+    },
+};
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
     1.0 / (x as f64 + f64::log2(1.0 + y as f64))
@@ -38,25 +43,31 @@ pub(crate) fn damp(x: usize, y: usize) -> f64 {
     1.0 - (x as f64) / (2.0 * y as f64)
 }
 
-pub(crate) fn score_seen_displacement(x: usize, y: usize) -> f64 { 1.0 / (1.0 + y as f64)}
+pub(crate) fn score_seen_displacement(x: usize, y: usize) -> f64 {
+    1.0 / (1.0 + y as f64)
+}
 
 // the following would be used for density estimation as well; note that for density estimation
 // we are only focused about similarity of points and thus (previously) seen  and
 // (previously) unseen points have little distinction
 // that distinction can be crucial for some applications of anomaly detection
 
-pub(crate) fn score_unseen_displacement(x: usize, y: usize) -> f64 { y as f64}
+pub(crate) fn score_unseen_displacement(x: usize, y: usize) -> f64 {
+    y as f64
+}
 
 // the normalization is now multiplication by 1/treesize; this makes the
 // max score to be 1.0 whereas for the standard score the average is close to 1
 
 pub(crate) fn displacement_normalizer(x: f64, y: usize) -> f64 {
-    x * 1.0/(1.0 + y as f64)
+    x * 1.0 / (1.0 + y as f64)
 }
 
-pub(crate) fn identity(x:f64, _y :usize) -> f64 {x}
+pub(crate) fn identity(x: f64, _y: usize) -> f64 {
+    x
+}
 
-const max_number_in_summary : usize = 5;
+const max_number_in_summary: usize = 5;
 
 pub trait RCF {
     fn validate_update(&self, point: &[f32]) {
@@ -78,7 +89,7 @@ pub trait RCF {
     fn get_entries_seen(&self) -> u64;
 
     fn score(&self, point: &[f32]) -> f64 {
-       self.score_visitor_traversal(point, &VisitorInfo::default())
+        self.score_visitor_traversal(point, &VisitorInfo::default())
     }
 
     fn displacement_score(&self, point: &[f32]) -> f64 {
@@ -94,13 +105,16 @@ pub trait RCF {
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
     ) -> f64 {
-        self.score_visitor_traversal(point,&VisitorInfo::use_score(ignore_mass,score_seen,score_unseen,damp,normalizer))
+        self.score_visitor_traversal(
+            point,
+            &VisitorInfo::use_score(ignore_mass, score_seen, score_unseen, damp, normalizer),
+        )
     }
 
-    fn score_visitor_traversal(&self, point :&[f32], visitor_info : &VisitorInfo) -> f64;
+    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> f64;
 
-    fn attribution(&self, point : &[f32]) -> DiVector {
-        self.attribution_visitor_traversal(point,&VisitorInfo::default())
+    fn attribution(&self, point: &[f32]) -> DiVector {
+        self.attribution_visitor_traversal(point, &VisitorInfo::default())
     }
 
     fn generic_attribution(
@@ -112,60 +126,70 @@ pub trait RCF {
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
     ) -> DiVector {
-        self.attribution_visitor_traversal(point, &VisitorInfo::use_score(ignore_mass,score_seen,score_unseen,damp,normalizer))
+        self.attribution_visitor_traversal(
+            point,
+            &VisitorInfo::use_score(ignore_mass, score_seen, score_unseen, damp, normalizer),
+        )
     }
 
-    fn attribution_visitor_traversal(
-        &self,
-        point: &[f32],
-        visitor_info : &VisitorInfo
-    ) -> DiVector;
+    fn attribution_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> DiVector;
 
-    fn density(&self,point : &[f32]) -> f64 {
-        self.interpolation_visitor_traversal(point,&VisitorInfo::density()).density()
+    fn density(&self, point: &[f32]) -> f64 {
+        self.interpolation_visitor_traversal(point, &VisitorInfo::density())
+            .density()
     }
 
-    fn directional_density(&self,point : &[f32]) -> DiVector {
-        self.interpolation_visitor_traversal(point,&VisitorInfo::density()).directional_density()
+    fn directional_density(&self, point: &[f32]) -> DiVector {
+        self.interpolation_visitor_traversal(point, &VisitorInfo::density())
+            .directional_density()
     }
 
-    fn density_interpolant(&self,point : &[f32]) -> InterpolationMeasure {
-        self.interpolation_visitor_traversal(point,&VisitorInfo::density())
+    fn density_interpolant(&self, point: &[f32]) -> InterpolationMeasure {
+        self.interpolation_visitor_traversal(point, &VisitorInfo::density())
     }
 
     fn interpolation_visitor_traversal(
         &self,
         point: &[f32],
-        visitor_info : &VisitorInfo
+        visitor_info: &VisitorInfo,
     ) -> InterpolationMeasure;
 
     /// the answer format is (score, point, distance from original)
-    fn near_neighbor_list(
-        &self,
-        point: &[f32],
-        percentile: usize,
-    ) -> Vec<(f64,Vec<f32>,f64)> {
-        self.near_neighbor_traversal(point,percentile, &VisitorInfo::default())
+    fn near_neighbor_list(&self, point: &[f32], percentile: usize) -> Vec<(f64, Vec<f32>, f64)> {
+        self.near_neighbor_traversal(point, percentile, &VisitorInfo::default())
     }
 
     fn near_neighbor_traversal(
         &self,
         point: &[f32],
         percentile: usize,
-        visitor_info : &VisitorInfo
-    ) -> Vec<(f64,Vec<f32>,f64)>;
-
-
+        visitor_info: &VisitorInfo,
+    ) -> Vec<(f64, Vec<f32>, f64)>;
 
     fn impute_missing_values(&self, positions: &[usize], point: &[f32]) -> Vec<f32> {
-        assert!(positions.len()>0, "nothing to impute");
-        self.conditional_field(positions,point,1.0,true,0).median
+        assert!(positions.len() > 0, "nothing to impute");
+        self.conditional_field(positions, point, 1.0, true, 0)
+            .median
     }
 
-    fn extrapolate(&self, look_ahead : usize) -> Vec<f32>;
+    fn extrapolate(&self, look_ahead: usize) -> Vec<f32>;
 
-    fn conditional_field(&self, positions: &[usize], point: &[f32], centrality: f64, project:bool, max_number : usize) -> SampleSummary {
-        self.generic_conditional_field_visitor(positions,point, centrality,project,max_number,&VisitorInfo::default())
+    fn conditional_field(
+        &self,
+        positions: &[usize],
+        point: &[f32],
+        centrality: f64,
+        project: bool,
+        max_number: usize,
+    ) -> SampleSummary {
+        self.generic_conditional_field_visitor(
+            positions,
+            point,
+            centrality,
+            project,
+            max_number,
+            &VisitorInfo::default(),
+        )
     }
 
     fn generic_conditional_field_visitor(
@@ -173,9 +197,9 @@ pub trait RCF {
         positions: &[usize],
         point: &[f32],
         centrality: f64,
-        project : bool,
-        max_number : usize,
-        visitor_info:&VisitorInfo
+        project: bool,
+        max_number: usize,
+        visitor_info: &VisitorInfo,
     ) -> SampleSummary;
 
     fn get_size(&self) -> usize;
@@ -306,10 +330,10 @@ where
         positions: &[usize],
         point: &[f32],
         centrality: f64,
-        visitor_info: &VisitorInfo
-    ) -> Vec<(f64,usize,f64)> {
+        visitor_info: &VisitorInfo,
+    ) -> Vec<(f64, usize, f64)> {
         let new_point = self.point_store.get_shingled_point(point);
-        let mut list: Vec<(f64,usize,f64)> = if self.parallel_enabled {
+        let mut list: Vec<(f64, usize, f64)> = if self.parallel_enabled {
             self.sampler_plus_trees
                 .par_iter()
                 .map(|m| {
@@ -318,7 +342,7 @@ where
                         centrality,
                         &new_point,
                         &self.point_store,
-                        visitor_info
+                        visitor_info,
                     )
                 })
                 .collect()
@@ -331,46 +355,52 @@ where
                         centrality,
                         &new_point,
                         &self.point_store,
-                        visitor_info
+                        visitor_info,
                     )
                 })
                 .collect()
         };
-        list.sort_by(|&o1,&o2| o1.2.partial_cmp(&o2.2).unwrap());
+        list.sort_by(|&o1, &o2| o1.2.partial_cmp(&o2.2).unwrap());
         list
     }
 
-    pub fn simple_traversal<NodeView,V,R,S>(
+    pub fn simple_traversal<NodeView, V, R, S>(
         &self,
         point: &[f32],
-        parameters : &[usize],
+        parameters: &[usize],
         visitor_info: &VisitorInfo,
-        visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
-        default : &R,
-        initial:  &S,
+        visitor_factory: fn(usize, &[usize], &VisitorInfo) -> V,
+        default: &R,
+        initial: &S,
         collect_to: fn(&R, &mut S),
-        finish: fn(&mut S,usize)
+        finish: fn(&mut S, usize),
     ) -> S
-        where        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, VectorizedPointStore<L>>,
-                     V : Visitor<NodeView,R>,
-                     R: Clone + std::marker::Send + std::marker::Sync,
-                     S: Clone
+    where
+        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, VectorizedPointStore<L>>,
+        V: Visitor<NodeView, R>,
+        R: Clone + std::marker::Send + std::marker::Sync,
+        S: Clone,
     {
-        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
+        assert!(
+            point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions,
+            "incorrect input length"
+        );
         let mut answer = initial.clone();
         let new_point = self.point_store.get_shingled_point(point);
 
         if self.parallel_enabled {
-            let list: Vec<R> = self.sampler_plus_trees
+            let list: Vec<R> = self
+                .sampler_plus_trees
                 .par_iter()
                 .map(|m| {
                     //m.generic_visitor_traversal(
-                    m.simple_traversal(&new_point,
-                                       &self.point_store,
-                                       parameters,
-                                       &visitor_info,
-                                       visitor_factory,
-                                       default
+                    m.simple_traversal(
+                        &new_point,
+                        &self.point_store,
+                        parameters,
+                        &visitor_info,
+                        visitor_factory,
+                        default,
                     )
                 })
                 .collect();
@@ -382,20 +412,20 @@ where
             self.sampler_plus_trees
                 .iter()
                 .map(|m| {
-                    m.simple_traversal(&new_point,
-                                       &self.point_store,
-                                       parameters,
-                                       &visitor_info,
-                                       visitor_factory,
-                                       default
+                    m.simple_traversal(
+                        &new_point,
+                        &self.point_store,
+                        parameters,
+                        &visitor_info,
+                        visitor_factory,
+                        default,
                     )
                 })
                 .for_each(|m| collect_to(&m, &mut answer));
         }
-        (finish)(&mut answer,self.sampler_plus_trees.len());
+        (finish)(&mut answer, self.sampler_plus_trees.len());
         answer.clone()
     }
-
 }
 
 pub fn create_rcf(
@@ -532,47 +562,75 @@ where
         self.entries_seen
     }
 
-    fn score_visitor_traversal(
-        &self,
-        point: &[f32],
-        visitor_info : &VisitorInfo
-    ) -> f64 {
+    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> f64 {
         // parameter unused for score traversal
-        self.simple_traversal(point, &Vec::new(),visitor_info, ScalarScoreVisitor::Default, &0.0, &0.0,add_to, divide)
+        self.simple_traversal(
+            point,
+            &Vec::new(),
+            visitor_info,
+            ScalarScoreVisitor::Default,
+            &0.0,
+            &0.0,
+            add_to,
+            divide,
+        )
     }
 
-    fn attribution_visitor_traversal(
-        &self,
-        point: &[f32],
-        visitor_info : &VisitorInfo
-    ) -> DiVector {
+    fn attribution_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> DiVector {
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
-        self.simple_traversal(point, parameters, visitor_info,AttributionVisitor::create_visitor,&DiVector::empty(self.dimensions),&DiVector::empty(self.dimensions),DiVector::add_to,DiVector::divide)
+        self.simple_traversal(
+            point,
+            parameters,
+            visitor_info,
+            AttributionVisitor::create_visitor,
+            &DiVector::empty(self.dimensions),
+            &DiVector::empty(self.dimensions),
+            DiVector::add_to,
+            DiVector::divide,
+        )
     }
 
     fn interpolation_visitor_traversal(
         &self,
         point: &[f32],
-        visitor_info : &VisitorInfo
+        visitor_info: &VisitorInfo,
     ) -> InterpolationMeasure {
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
-        self.simple_traversal(point, parameters, visitor_info,InterpolationVisitor::create_visitor,&InterpolationMeasure::empty(self.dimensions,0.0),&InterpolationMeasure::empty(self.dimensions,0.0),InterpolationMeasure::add_to,InterpolationMeasure::divide)
+        self.simple_traversal(
+            point,
+            parameters,
+            visitor_info,
+            InterpolationVisitor::create_visitor,
+            &InterpolationMeasure::empty(self.dimensions, 0.0),
+            &InterpolationMeasure::empty(self.dimensions, 0.0),
+            InterpolationMeasure::add_to,
+            InterpolationMeasure::divide,
+        )
     }
 
     fn near_neighbor_traversal(
         &self,
         point: &[f32],
         percentile: usize,
-        visitor_info : &VisitorInfo
-    ) -> Vec<(f64,Vec<f32>,f64)> {
-        let x = (0.0f64,usize::MAX,f64::MAX);
+        visitor_info: &VisitorInfo,
+    ) -> Vec<(f64, Vec<f32>, f64)> {
+        let x = (0.0f64, usize::MAX, f64::MAX);
         let parameters = &vec![percentile];
-        let list = self.simple_traversal(point,parameters,visitor_info,ImputeVisitor::create_nbr_visitor,&x,&Vec::new(),add_nbr,nbr_finish);
+        let list = self.simple_traversal(
+            point,
+            parameters,
+            visitor_info,
+            ImputeVisitor::create_nbr_visitor,
+            &x,
+            &Vec::new(),
+            add_nbr,
+            nbr_finish,
+        );
         let mut answer = Vec::new();
         for e in list.iter() {
-            answer.push((e.0,self.point_store.get_copy(e.1),e.2));
+            answer.push((e.0, self.point_store.get_copy(e.1), e.2));
         }
         answer
     }
@@ -583,40 +641,53 @@ where
         point: &[f32],
         centrality: f64,
         project: bool,
-        max_number : usize,
-        visitor_info: &VisitorInfo
+        max_number: usize,
+        visitor_info: &VisitorInfo,
     ) -> SampleSummary {
-        assert!(point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions, "incorrect input length");
+        assert!(
+            point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions,
+            "incorrect input length"
+        );
         let new_positions = if point.len() == self.dimensions {
             Vec::from(positions)
         } else {
             // internal shingling
-            self.point_store.get_missing_indices(0,positions)
+            self.point_store.get_missing_indices(0, positions)
         };
 
-        let raw_list = self.generic_conditional_field_point_list_and_distances(&new_positions, point, centrality, visitor_info);
+        let raw_list = self.generic_conditional_field_point_list_and_distances(
+            &new_positions,
+            point,
+            centrality,
+            visitor_info,
+        );
         let field_summarizer = FieldSummarizer::new(centrality, project, max_number, l1distance);
-        field_summarizer.summarize_list(&self.point_store,&raw_list,&new_positions)
+        field_summarizer.summarize_list(&self.point_store, &raw_list, &new_positions)
     }
 
     fn extrapolate(&self, look_ahead: usize) -> Vec<f32> {
-        assert!(self.internal_shingling, " look ahead is not meaningful without internal shingling mechanism ");
-        assert!(self.shingle_size > 1, " need shingle size > 1 for extrapolation");
-        let mut answer = Vec:: new();
-        let base = self.dimensions/self.shingle_size;
-        let mut fictitious_point = self.point_store.get_shingled_point(&vec![0.0f32;base]);
+        assert!(
+            self.internal_shingling,
+            " look ahead is not meaningful without internal shingling mechanism "
+        );
+        assert!(
+            self.shingle_size > 1,
+            " need shingle size > 1 for extrapolation"
+        );
+        let mut answer = Vec::new();
+        let base = self.dimensions / self.shingle_size;
+        let mut fictitious_point = self.point_store.get_shingled_point(&vec![0.0f32; base]);
         for i in 0..look_ahead {
             let missing = self.point_store.get_next_indices(i);
             assert!(missing.len() == base, "incorrect imputation");
-            let values = self.impute_missing_values(&missing,&fictitious_point);
+            let values = self.impute_missing_values(&missing, &fictitious_point);
             for j in 0..base {
                 answer.push(values[j]);
-                fictitious_point[missing[j]]=values[j];
+                fictitious_point[missing[j]] = values[j];
             }
         }
         answer
     }
-
 
     fn get_size(&self) -> usize {
         let mut sum: usize = 0;

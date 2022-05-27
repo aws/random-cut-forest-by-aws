@@ -1,16 +1,16 @@
-
 extern crate rand;
 extern crate rand_chacha;
 extern crate rcflib;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use rcflib::common::multidimdatawithkey::MultiDimDataWithKey;
-use rcflib::rcf::{create_rcf, RCF};
+use rcflib::{
+    common::multidimdatawithkey::MultiDimDataWithKey,
+    rcf::{create_rcf, RCF},
+};
 
 /// try cargo test --release
 /// these tests are designed to be longish
-
 
 #[test]
 fn impute_different_period() {
@@ -46,14 +46,14 @@ fn impute_different_period() {
         bounding_box_cache_fraction,
     );
     let mut rng = ChaCha20Rng::seed_from_u64(42);
-    let mut amplitude =  Vec::new();
+    let mut amplitude = Vec::new();
     for _i in 0..base_dimension {
-        amplitude.push( (1.0 + 0.2 * rng.gen::<f32>())*100.0);
+        amplitude.push((1.0 + 0.2 * rng.gen::<f32>()) * 100.0);
     }
     let mut period_rng = ChaCha20Rng::seed_from_u64(7);
-    let mut period =  Vec::new();
+    let mut period = Vec::new();
     for _i in 0..base_dimension {
-        period.push( ((1.0 + 0.2 * period_rng.gen::<f32>())*60.0) as usize);
+        period.push(((1.0 + 0.2 * period_rng.gen::<f32>()) * 60.0) as usize);
     }
     let data_with_key = MultiDimDataWithKey::multi_cosine(
         data_size,
@@ -69,11 +69,14 @@ fn impute_different_period() {
     let mut count = 0;
 
     for i in 0..data_with_key.data.len() {
-
         if i > 200 {
             let next_values = forest.extrapolate(1);
             assert!(next_values.len() == base_dimension);
-            error += next_values.iter().zip(&data_with_key.data[i]).map(|(x,y)| ((x-y) as f64 *(x-y) as f64)).sum::<f64>();
+            error += next_values
+                .iter()
+                .zip(&data_with_key.data[i])
+                .map(|(x, y)| ((x - y) as f64 * (x - y) as f64))
+                .sum::<f64>();
             count += base_dimension;
         }
         forest.update(&data_with_key.data[i], 0);
@@ -82,5 +85,9 @@ fn impute_different_period() {
     println!("Success! {}", forest.get_entries_seen());
     println!("PointStore Size {} ", forest.get_point_store_size());
     println!("Total size {} bytes (approx)", forest.get_size());
-    println!(" RMSE {},  noise {} ", f64::sqrt(error/count as f64), noise);
+    println!(
+        " RMSE {},  noise {} ",
+        f64::sqrt(error / count as f64),
+        noise
+    );
 }

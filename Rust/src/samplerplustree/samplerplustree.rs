@@ -2,17 +2,22 @@ extern crate rand;
 extern crate rand_chacha;
 
 use std::fmt::Debug;
+
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
-use crate::pointstore::PointStore;
-use crate::samplerplustree::nodestore::VectorNodeStore;
-use crate::samplerplustree::nodeview::UpdatableNodeView;
-use crate::samplerplustree::randomcuttree::{RCFTree, Traversable};
-use crate::samplerplustree::sampler::Sampler;
-use crate::types::Location;
-use crate::visitor::visitor::{Visitor, VisitorInfo};
 
+use crate::{
+    pointstore::PointStore,
+    samplerplustree::{
+        nodestore::VectorNodeStore,
+        nodeview::UpdatableNodeView,
+        randomcuttree::{RCFTree, Traversable},
+        sampler::Sampler,
+    },
+    types::Location,
+    visitor::visitor::{Visitor, VisitorInfo},
+};
 
 #[repr(C)]
 pub struct SamplerPlusTree<C, P, N>
@@ -126,26 +131,34 @@ where
         } else if self.initial_accept_fraction >= 1.0 {
             0.0
         } else {
-            1.0
-                - (fill_fraction - self.initial_accept_fraction)
+            1.0 - (fill_fraction - self.initial_accept_fraction)
                 / (1.0 - self.initial_accept_fraction)
-        }
+        };
     }
 
-    pub fn simple_traversal<NodeView,V,R,PS>(&self,
-                                       point: &[f32],
-                                       point_store: &PS,
-                                       parameters : &[usize],
-                                       visitor_info : &VisitorInfo,
-                                       visitor_factory : fn(usize,&[usize],&VisitorInfo) -> V,
-                                       default : &R
+    pub fn simple_traversal<NodeView, V, R, PS>(
+        &self,
+        point: &[f32],
+        point_store: &PS,
+        parameters: &[usize],
+        visitor_info: &VisitorInfo,
+        visitor_factory: fn(usize, &[usize], &VisitorInfo) -> V,
+        default: &R,
     ) -> R
-    where        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
-                 V : Visitor<NodeView,R>,
-                 PS: PointStore,
-                 R: Clone
+    where
+        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
+        V: Visitor<NodeView, R>,
+        PS: PointStore,
+        R: Clone,
     {
-         self.tree.traverse(point, parameters, visitor_factory, visitor_info, point_store, default)
+        self.tree.traverse(
+            point,
+            parameters,
+            visitor_factory,
+            visitor_info,
+            point_store,
+            default,
+        )
     }
 
     pub fn conditional_field<PS>(
@@ -154,9 +167,10 @@ where
         centrality: f64,
         point: &[f32],
         point_store: &PS,
-        visitor_info : &VisitorInfo,
-    ) -> (f64,usize,f64)
-    where PS : PointStore
+        visitor_info: &VisitorInfo,
+    ) -> (f64, usize, f64)
+    where
+        PS: PointStore,
     {
         self.tree.conditional_field(
             positions,
@@ -164,7 +178,7 @@ where
             point_store,
             centrality,
             self.random_seed,
-            visitor_info
+            visitor_info,
         )
     }
 
