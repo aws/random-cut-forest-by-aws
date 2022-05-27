@@ -15,12 +15,12 @@
 
 package com.amazon.randomcutforest.store;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkState;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Stack;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.checkState;
 
 /**
  * This class defines common functionality for Store classes, including
