@@ -34,7 +34,7 @@ impl BoundingBox {
     }
 
     pub fn add_box(&mut self, x: &BoundingBox) {
-        self.add_two_arrays(x.get_min_values(),x.get_max_values());
+        self.add_two_arrays(x.get_min_values(), x.get_max_values());
     }
 
     fn add_two_arrays(&mut self, minvalues: &[f32], maxvalues: &[f32]) -> bool {
@@ -97,7 +97,11 @@ impl BoundingBox {
         (sum as f64) / (self.range_sum + sum as f64)
     }
 
-    pub fn probability_of_cut_with_missing_coordinates(&self, point: &[f32], missing_coordinates: &[bool]) -> f64 {
+    pub fn probability_of_cut_with_missing_coordinates(
+        &self,
+        point: &[f32],
+        missing_coordinates: &[bool],
+    ) -> f64 {
         let minsum: f32 = self
             .min_values
             .iter()
@@ -109,7 +113,7 @@ impl BoundingBox {
             .iter()
             .zip(self.get_max_values())
             .zip(missing_coordinates)
-            .map(|((&x, &y),&z)| if !z && x - y > 0.0 { x - y } else { 0.0 })
+            .map(|((&x, &y), &z)| if !z && x - y > 0.0 { x - y } else { 0.0 })
             .sum();
         let sum = maxsum + minsum;
 
@@ -120,5 +124,4 @@ impl BoundingBox {
         }
         (sum as f64) / (self.range_sum + sum as f64)
     }
-
 }

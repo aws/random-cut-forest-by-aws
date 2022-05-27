@@ -1,7 +1,9 @@
 use std::cmp::{max, min};
+
 use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
+
 use crate::common::cluster::{iterative_clustering, Center, Cluster};
 
 ///
@@ -25,12 +27,11 @@ use crate::common::cluster::{iterative_clustering, Center, Cluster};
 ///
 ///
 
+const max_number_per_dimension: usize = 5;
 
-const max_number_per_dimension : usize = 5;
+const PHASE2_THRESHOLD: usize = 2;
 
-const PHASE2_THRESHOLD : usize = 2;
-
-const LENGTH_BOUND : usize = 1000;
+const LENGTH_BOUND: usize = 1000;
 
 #[repr(C)]
 pub struct SampleSummary {
@@ -39,11 +40,9 @@ pub struct SampleSummary {
     // a measure of comparison among the typical points;
     pub relative_weight: Vec<f32>,
 
-
     // number of samples, often the number of summary, but can handle weighted points
     // (possibly indicating confidence or othe measure) in the future
     pub total_weight: f32,
-
 
     // the global mean, median
     pub mean: Vec<f32>,
@@ -53,30 +52,36 @@ pub struct SampleSummary {
     pub deviation: Vec<f32>,
 }
 
-impl SampleSummary{
-    pub fn new(total_weight: f32, summary_points : Vec<Vec<f32>>, relative_weight : Vec<f32>,
-               median : Vec<f32>, mean : Vec<f32>, deviation : Vec<f32>) -> Self {
-        SampleSummary{
+impl SampleSummary {
+    pub fn new(
+        total_weight: f32,
+        summary_points: Vec<Vec<f32>>,
+        relative_weight: Vec<f32>,
+        median: Vec<f32>,
+        mean: Vec<f32>,
+        deviation: Vec<f32>,
+    ) -> Self {
+        SampleSummary {
             total_weight,
-            summary_points : summary_points.clone(),
-            relative_weight : relative_weight.clone(),
+            summary_points: summary_points.clone(),
+            relative_weight: relative_weight.clone(),
             median: median.clone(),
             mean: mean.clone(),
-            deviation : deviation.clone()
+            deviation: deviation.clone(),
         }
     }
 
-    pub fn add_typical(&mut self, summary_points : Vec<Vec<f32>>, relative_weight : Vec<f32>){
+    pub fn add_typical(&mut self, summary_points: Vec<Vec<f32>>, relative_weight: Vec<f32>) {
         self.summary_points = summary_points.clone();
         self.relative_weight = relative_weight.clone();
     }
 
-    pub fn from_Points(points : &[(Vec<f32>,f32)]) -> Self{
+    pub fn from_Points(points: &[(Vec<f32>, f32)]) -> Self {
         assert!(points.len() > 0, "cannot be empty list");
         let dimensions = points[0].0.len();
         assert!(dimensions > 0, " cannot have 0 dimensions");
-        let total_weight : f64 = points.iter().map(|x| x.1 as f64).sum();
-        assert!(total_weight>0.0, "weights cannot be all zero");
+        let total_weight: f64 = points.iter().map(|x| x.1 as f64).sum();
+        assert!(total_weight > 0.0, "weights cannot be all zero");
         assert!(total_weight.is_finite(), " cannot have infinite weights");
         let mut mean = vec![0.0f32; dimensions];
         let mut deviation = vec![0.0f32; dimensions];
@@ -86,44 +91,53 @@ impl SampleSummary{
             assert!(points[i].0.len() == dimensions, "incorrect dimensions");
             assert!(points[i].1 >= 0.0, "point weights have to be non-negative");
             for j in 0..dimensions {
-                assert!(points[i].0[j].is_finite() && !points[i].0[j].is_nan(), " cannot have NaN or infinite values");
+                assert!(
+                    points[i].0[j].is_finite() && !points[i].0[j].is_nan(),
+                    " cannot have NaN or infinite values"
+                );
                 sum_values[j] += points[i].1 as f64 * points[i].0[j] as f64;
-                sum_values_sq[j] += points[i].1 as f64 * points[i].0[j]  as f64 * points[i].0[j] as f64;
+                sum_values_sq[j] +=
+                    points[i].1 as f64 * points[i].0[j] as f64 * points[i].0[j] as f64;
             }
-        };
+        }
         for j in 0..dimensions {
             mean[j] = (sum_values[j] / total_weight) as f32;
-            let t: f64 = sum_values_sq[j] / total_weight - sum_values[j] * sum_values[j] / (total_weight * total_weight);
+            let t: f64 = sum_values_sq[j] / total_weight
+                - sum_values[j] * sum_values[j] / (total_weight * total_weight);
             deviation[j] = f64::sqrt(if t > 0.0 { t } else { 0.0 }) as f32;
-        };
+        }
         let mut median = vec![0.0f32; dimensions];
         let num = points.len();
         for j in 0..dimensions {
-            let mut v : Vec<f32>= points.iter().map(|x| x.0[j]).collect();
+            let mut v: Vec<f32> = points.iter().map(|x| x.0[j]).collect();
             v.sort_by(|a, b| a.partial_cmp(b).unwrap());
             median[j] = v[num / 2];
-        };
+        }
 
         SampleSummary {
-            summary_points : Vec::new(),
-            relative_weight : Vec::new(),
+            summary_points: Vec::new(),
+            relative_weight: Vec::new(),
             total_weight: total_weight as f32,
             mean,
             median,
-            deviation
+            deviation,
         }
     }
 }
 
-pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64, max_number : usize, parallel_enabled: bool) -> SampleSummary {
+pub fn summarize(
+    points: &[(Vec<f32>, f32)],
+    distance: fn(&[f32], &[f32]) -> f64,
+    max_number: usize,
+    parallel_enabled: bool,
+) -> SampleSummary {
     assert!(max_number < 51, " for large number of clusters, other methods may be better, consider recursively removing clusters");
     let mut summary = SampleSummary::from_Points(&points);
 
-    if max_number > 0  {
+    if max_number > 0 {
         let dimensions = points[0].0.len();
-        let max_allowed = min(dimensions * max_number_per_dimension,
-                              max_number);
-        let total_weight : f64 = points.iter().map(|x| x.1 as f64).sum();
+        let max_allowed = min(dimensions * max_number_per_dimension, max_number);
+        let total_weight: f64 = points.iter().map(|x| x.1 as f64).sum();
         let mut rng = ChaCha20Rng::seed_from_u64(max_allowed as u64);
 
         let mut sampled_points: Vec<(&[f32], f32)> = Vec::new();
@@ -141,14 +155,24 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
                 }
             }
             for j in 0..points.len() {
-                if points[j].1 <= (total_weight / LENGTH_BOUND as f64) as f32 && rng.gen::<f64>() < 5.0 * (LENGTH_BOUND as f64) / (points.len() as f64) {
-                    let t = points[j].1 as f64 * (points.len() as f64 / (5.0 * LENGTH_BOUND as f64)) * (remainder / total_weight);
+                if points[j].1 <= (total_weight / LENGTH_BOUND as f64) as f32
+                    && rng.gen::<f64>() < 5.0 * (LENGTH_BOUND as f64) / (points.len() as f64)
+                {
+                    let t = points[j].1 as f64
+                        * (points.len() as f64 / (5.0 * LENGTH_BOUND as f64))
+                        * (remainder / total_weight);
                     sampled_points.push((&points[j].0, t as f32));
                 }
             }
         }
 
-        let mut list: Vec<Center> = iterative_clustering(max_allowed, &sampled_points, Center::new, distance,parallel_enabled);
+        let mut list: Vec<Center> = iterative_clustering(
+            max_allowed,
+            &sampled_points,
+            Center::new,
+            distance,
+            parallel_enabled,
+        );
         list.sort_by(|o1, o2| o2.weight().partial_cmp(&o1.weight()).unwrap()); // decreasing order
         let mut summary_points: Vec<Vec<f32>> = Vec::new();
         let mut relative_weight: Vec<f32> = Vec::new();
@@ -156,9 +180,8 @@ pub fn summarize(points : &[(Vec<f32>,f32)], distance : fn(&[f32],&[f32]) -> f64
         for i in 0..list.len() {
             summary_points.push(list[i].primary_representative(distance).clone());
             relative_weight.push((list[i].weight() / center_sum) as f32);
-        };
+        }
         summary.add_typical(summary_points, relative_weight);
     }
     return summary;
 }
-
