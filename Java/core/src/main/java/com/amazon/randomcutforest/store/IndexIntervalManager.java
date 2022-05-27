@@ -48,7 +48,7 @@ public class IndexIntervalManager {
         checkArgument(refCount != null, "not a meaningful array input");
         BitSet bits = new BitSet(refCount.length);
         for (int i = 0; i < refCount.length; i++) {
-            if ((refCount[i] & 0xff) > 0) {
+            if (refCount[i] > 0) {
                 bits.set(i);
             }
         }
