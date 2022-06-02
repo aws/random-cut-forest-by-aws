@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.imputation;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import com.amazon.randomcutforest.CommonUtils;
 import com.amazon.randomcutforest.MultiVisitor;
@@ -66,6 +67,10 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
      */
     protected double centrality;
 
+    protected long randomSeed;
+
+    protected double randomRank;
+
     protected boolean converged;
 
     protected int pointIndex;
@@ -84,10 +89,11 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
      *                             space
      */
     public ImputeVisitor(float[] liftedPoint, float[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
-            double centrality) {
+            double centrality, long randomSeed) {
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.missing = new boolean[queryPoint.length];
         this.centrality = centrality;
+        this.randomSeed = randomSeed;
         this.dimensionsUsed = new int[queryPoint.length];
 
         if (missingIndexes == null) {
@@ -108,7 +114,7 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
     public ImputeVisitor(float[] queryPoint, int numberOfMissingIndices, int[] missingIndexes) {
         this(queryPoint, Arrays.copyOf(queryPoint, queryPoint.length),
                 Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)),
-                Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)), 1.0);
+                Arrays.copyOf(missingIndexes, Math.min(numberOfMissingIndices, missingIndexes.length)), 1.0, 0L);
     }
 
     /**
@@ -121,6 +127,8 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
         this.queryPoint = Arrays.copyOf(original.queryPoint, length);
         this.missing = Arrays.copyOf(original.missing, length);
         this.dimensionsUsed = new int[original.dimensionsUsed.length];
+        this.randomSeed = new Random(original.randomSeed).nextLong();
+        this.centrality = original.centrality;
         anomalyRank = DEFAULT_INIT_VALUE;
         distance = DEFAULT_INIT_VALUE;
     }
@@ -172,6 +180,13 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
                 double t = (queryPoint[i] - leafPoint[i]);
                 distance += Math.abs(t);
             }
+        }
+
+        if (centrality < 1.0) {
+            Random rng = new Random(randomSeed);
+            randomSeed = rng.nextLong();
+            rng.nextDouble(); // discard
+            randomRank = rng.nextDouble();
         }
 
         this.distance = distance;
@@ -226,8 +241,12 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
         return new ImputeVisitor(this);
     }
 
+    double adjustedRank() {
+        return (1 - centrality) * randomRank + centrality * anomalyRank;
+    }
+
     protected boolean updateCombine(ImputeVisitor other) {
-        return other.anomalyRank < anomalyRank;
+        return other.adjustedRank() < adjustedRank();
     }
 
     /**
