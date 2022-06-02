@@ -15,17 +15,18 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
-import java.util.Random;
-
-import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag("functional")
 public class ForecastTest {
@@ -37,8 +38,7 @@ public class ForecastTest {
         int baseDimensions = 1;
         int shingleSize = 8;
         int dimensions = baseDimensions * shingleSize;
-        long seed = 8008895784411556298L;
-        new Random().nextLong();
+        long seed = new Random().nextLong();
         System.out.println(seed);
 
         int length = 4 * sampleSize;
