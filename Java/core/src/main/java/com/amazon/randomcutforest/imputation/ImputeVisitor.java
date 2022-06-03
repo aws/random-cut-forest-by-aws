@@ -185,7 +185,6 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
         if (centrality < 1.0) {
             Random rng = new Random(randomSeed);
             randomSeed = rng.nextLong();
-            rng.nextDouble(); // discard
             randomRank = rng.nextDouble();
         }
 

@@ -569,16 +569,12 @@ public class RandomCutForest {
 
     /**
      *
-     * @return the sequence index of the last known shingled point if internal
-     *         shingling is not enabled, then the expectation would be the last
-     *         position
+     * @return the sequence index of the last known shingled point. If internal
+     *         shingling is not enabled, then this would correspond to the number of
+     *         updates
      */
     public long nextSequenceIndex() {
-        if (!internalShinglingEnabled) {
-            return shingleSize - 1;
-        } else {
-            return stateCoordinator.getStore().getNextSequenceIndex();
-        }
+        return stateCoordinator.getStore().getNextSequenceIndex();
     }
 
     /**
