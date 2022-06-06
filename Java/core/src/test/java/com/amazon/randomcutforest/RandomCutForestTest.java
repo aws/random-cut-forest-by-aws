@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -68,6 +69,8 @@ import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.returntypes.Neighbor;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDiVectorAccumulator;
 import com.amazon.randomcutforest.returntypes.OneSidedConvergingDoubleAccumulator;
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
@@ -513,10 +516,10 @@ public class RandomCutForestTest {
 
     @Test
     public void testExtrapolateBasic() {
-        doNothing().when(forest).extrapolateBasicCyclic(any(float[].class), anyInt(), anyInt(), anyInt(),
-                any(float[].class), any(int[].class));
-        doNothing().when(forest).extrapolateBasicSliding(any(float[].class), anyInt(), anyInt(), any(float[].class),
-                any(int[].class));
+        doNothing().when(forest).extrapolateBasicCyclic(any(RangeVector.class), anyInt(), anyInt(), anyInt(),
+                any(float[].class), any(int[].class), anyDouble());
+        doNothing().when(forest).extrapolateBasicSliding(any(RangeVector.class), anyInt(), anyInt(), any(float[].class),
+                any(int[].class), anyDouble());
 
         double[] point = new double[] { 2.0, -3.0 };
         int horizon = 2;
@@ -525,18 +528,18 @@ public class RandomCutForestTest {
         int shingleIndex = 1;
 
         forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
-        verify(forest).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(blockSize), eq(shingleIndex),
-                any(float[].class), any(int[].class));
+        verify(forest).extrapolateBasicCyclic(any(RangeVector.class), eq(horizon), eq(blockSize), eq(shingleIndex),
+                any(float[].class), any(int[].class), anyDouble());
 
         forest.extrapolateBasic(point, horizon, blockSize, cyclic);
-        verify(forest).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(blockSize), eq(0), any(float[].class),
-                any(int[].class));
+        verify(forest).extrapolateBasicCyclic(any(RangeVector.class), eq(horizon), eq(blockSize), eq(0),
+                any(float[].class), any(int[].class), anyDouble());
 
         cyclic = false;
         forest.extrapolateBasic(point, horizon, blockSize, cyclic, shingleIndex);
         forest.extrapolateBasic(point, horizon, blockSize, cyclic);
-        verify(forest, times(2)).extrapolateBasicSliding(any(float[].class), eq(horizon), eq(blockSize),
-                any(float[].class), any(int[].class));
+        verify(forest, times(2)).extrapolateBasicSliding(any(RangeVector.class), eq(horizon), eq(blockSize),
+                any(float[].class), any(int[].class), anyDouble());
     }
 
     @Test
@@ -572,59 +575,61 @@ public class RandomCutForestTest {
 
     @Test
     public void testExrapolateBasicWithShingleBuilder() {
-        doNothing().when(forest).extrapolateBasicCyclic(any(float[].class), anyInt(), anyInt(), anyInt(),
-                any(float[].class), any(int[].class));
-        doNothing().when(forest).extrapolateBasicSliding(any(float[].class), anyInt(), anyInt(), any(float[].class),
-                any(int[].class));
+        doNothing().when(forest).extrapolateBasicCyclic(any(RangeVector.class), anyInt(), anyInt(), anyInt(),
+                any(float[].class), any(int[].class), anyDouble());
+        doNothing().when(forest).extrapolateBasicSliding(any(RangeVector.class), anyInt(), anyInt(), any(float[].class),
+                any(int[].class), anyDouble());
 
         ShingleBuilder shingleBuilder = new ShingleBuilder(1, 2, true);
         int horizon = 3;
 
         forest.extrapolateBasic(shingleBuilder, horizon);
-        verify(forest, times(1)).extrapolateBasicCyclic(any(float[].class), eq(horizon), eq(1), eq(0),
-                any(float[].class), any(int[].class));
+        verify(forest, times(1)).extrapolateBasicCyclic(any(RangeVector.class), eq(horizon), eq(1), eq(0),
+                any(float[].class), any(int[].class), anyDouble());
 
         shingleBuilder = new ShingleBuilder(1, 2, false);
         forest.extrapolateBasic(shingleBuilder, horizon);
-        verify(forest, times(1)).extrapolateBasicSliding(any(float[].class), eq(horizon), eq(1), any(float[].class),
-                any(int[].class));
+        verify(forest, times(1)).extrapolateBasicSliding(any(RangeVector.class), eq(horizon), eq(1), any(float[].class),
+                any(int[].class), anyDouble());
     }
 
     @Test
     public void testExtrapolateBasicSliding() {
         int horizon = 3;
         int blockSize = 2;
-        float[] result = new float[dimensions * horizon];
+        RangeVector result = new RangeVector(dimensions * horizon);
         float[] queryPoint = new float[] { 1.0f, -2.0f };
         int[] missingIndexes = new int[blockSize];
 
-        doReturn(new float[] { 2.0f, -3.0f }).doReturn(new float[] { 4.0f, -5.0f })
-                .doReturn(new float[] { 6.0f, -7.0f }).when(forest)
-                .imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+        doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
+                .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
+                .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
+                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyDouble());
 
-        forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes);
+        forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes, 1.0);
 
         float[] expectedResult = new float[] { 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f };
-        assertArrayEquals(expectedResult, result);
+        assertArrayEquals(expectedResult, result.values);
     }
 
     @Test
     public void testExtrapolateBasicCyclic() {
         int horizon = 3;
         int blockSize = 2;
-        float[] result = new float[dimensions * horizon];
+        RangeVector result = new RangeVector(dimensions * horizon);
         int shingleIndex = 1;
         float[] queryPoint = new float[] { 1.0f, -2.0f };
         int[] missingIndexes = new int[blockSize];
 
-        doReturn(new float[] { 2.0f, -3.0f }).doReturn(new float[] { 4.0f, -5.0f })
-                .doReturn(new float[] { 6.0f, -7.0f }).when(forest)
-                .imputeMissingValues(aryEq(queryPoint), eq(blockSize), any(int[].class));
+        doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
+                .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
+                .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
+                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyDouble());
 
-        forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes);
+        forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes, 1.0);
 
         float[] expectedResult = new float[] { -3.0f, 2.0f, -5.0f, 4.0f, -7.0f, 6.0f };
-        assertArrayEquals(expectedResult, result);
+        assertArrayEquals(expectedResult, result.values);
     }
 
     @Test

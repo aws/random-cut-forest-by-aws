@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.util.Weighted.prefixPick;
 import static java.lang.Math.max;
@@ -28,6 +29,8 @@ import java.util.List;
 import com.amazon.randomcutforest.util.Weighted;
 
 public class SampleSummary {
+
+    public static double DEFAULT_PERCENTILE = 0.9;
 
     /**
      * a collection of summarized points (reminiscent of typical sets from the
@@ -60,8 +63,19 @@ public class SampleSummary {
      */
     public float[] deviation;
 
+    /**
+     * an upper percentile corresponding to the points, computed dimension
+     * agnostically
+     */
+    public float[] upper;
+
+    /**
+     * a lower percentile corresponding to the points
+     */
+    public float[] lower;
+
     public SampleSummary(double weightOfSamples, float[][] typicalPoints, float[] relativeLikelihood, float[] median,
-            float[] mean, float[] deviation) {
+            float[] mean, float[] deviation, float[] upper, float[] lower) {
         checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
         this.weightOfSamples = weightOfSamples;
         this.summaryPoints = typicalPoints;
@@ -69,6 +83,8 @@ public class SampleSummary {
         this.mean = mean;
         this.median = median;
         this.deviation = deviation;
+        this.upper = upper;
+        this.lower = lower;
     }
 
     public SampleSummary(int dimensions) {
@@ -79,17 +95,24 @@ public class SampleSummary {
         this.median = new float[dimensions];
         this.mean = new float[dimensions];
         this.deviation = new float[dimensions];
+        this.upper = new float[dimensions];
+        this.lower = new float[dimensions];
     }
 
     // for older tests
-    public SampleSummary(double[] point) {
-        this.weightOfSamples = 0;
-        this.summaryPoints = new float[1][];
-        this.summaryPoints[0] = new float[point.length];
-        this.relativeWeight = new float[] { 0.0f };
-        this.median = toFloatArray(point);
-        this.mean = toFloatArray(point);
-        this.deviation = new float[point.length];
+    public SampleSummary(float[] point) {
+        this(toDoubleArray(point), 1.0f);
+    }
+
+    public SampleSummary(double[] point, float weight) {
+        this(point.length);
+        this.weightOfSamples = weight;
+        this.summaryPoints[0] = toFloatArray(point);
+        this.relativeWeight[0] = weight;
+        System.arraycopy(this.summaryPoints[0], 0, this.median, 0, point.length);
+        System.arraycopy(this.summaryPoints[0], 0, this.mean, 0, point.length);
+        System.arraycopy(this.summaryPoints[0], 0, this.upper, 0, point.length);
+        System.arraycopy(this.summaryPoints[0], 0, this.lower, 0, point.length);
     }
 
     public SampleSummary(float[][] summaryPoints, float[] relativeWeight) {
@@ -109,13 +132,31 @@ public class SampleSummary {
         }
     }
 
-    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight) {
-        this(points);
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight,
+            double percentile) {
+        this(points, percentile);
         this.addTypical(summaryPoints, relativeWeight);
     }
 
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight) {
+        this(points, summaryPoints, relativeWeight, DEFAULT_PERCENTILE);
+    }
+
     public SampleSummary(List<Weighted<float[]>> points) {
+        this(points, DEFAULT_PERCENTILE);
+    }
+
+    /**
+     * constructs a summary of the weighted points based on the percentile envelopes
+     * by picking 1-precentile and percentile fractional rank of the items useful in
+     * surfacing a robust range of values
+     * 
+     * @param points     weighted points
+     * @param percentile value corresponding to bounds
+     */
+    public SampleSummary(List<Weighted<float[]>> points, double percentile) {
         checkArgument(points.size() > 0, "point list cannot be empty");
+        checkArgument(percentile > 0.5 && percentile < 1.0, "invalid ranges of the bound");
         int dimension = points.get(0).index.length;
         double[] coordinateSum = new double[dimension];
         double[] coordinateSumSquare = new double[dimension];
@@ -139,6 +180,8 @@ public class SampleSummary {
         this.mean = new float[dimension];
         this.deviation = new float[dimension];
         this.median = new float[dimension];
+        this.upper = new float[dimension];
+        this.lower = new float[dimension];
 
         for (int i = 0; i < dimension; i++) {
             this.mean[i] = (float) (coordinateSum[i] / totalWeight);
@@ -149,7 +192,9 @@ public class SampleSummary {
             ArrayList<Weighted<Float>> list = points.stream().map(e -> new Weighted<>(e.index[index], e.weight))
                     .collect(toCollection(ArrayList::new));
             list.sort((o1, o2) -> Float.compare(o1.index, o2.index));
+            this.lower[i] = prefixPick(list, totalWeight * (1.0 - percentile)).index;
             this.median[i] = prefixPick(list, totalWeight / 2.0).index;
+            this.upper[i] = prefixPick(list, totalWeight * percentile).index;
         }
     }
 
