@@ -86,9 +86,13 @@ public class ShingledMultiDimDataWithKeys {
         double[] phase = new double[baseDimension];
         double[] amp = new double[baseDimension];
         double[] slope = new double[baseDimension];
+        double[] shift = new double[baseDimension];
 
         for (int i = 0; i < baseDimension; i++) {
             phase[i] = prg.nextInt(period);
+            if (useSlope) {
+                shift[i] = (4 * prg.nextDouble() - 1) * amplitude;
+            }
             amp[i] = (1 + 0.2 * prg.nextDouble()) * amplitude;
             if (useSlope) {
                 slope[i] = (0.25 - prg.nextDouble() * 0.5) * amplitude / period;
@@ -102,7 +106,7 @@ public class ShingledMultiDimDataWithKeys {
             boolean used = false;
             for (int j = 0; j < baseDimension; j++) {
                 data[i][j] = amp[j] * Math.cos(2 * PI * (i + phase[j]) / period) + slope[j] * i
-                        + noise * noiseprg.nextDouble();
+                        + noise * noiseprg.nextDouble() + shift[j];
                 if (flag && noiseprg.nextDouble() < 0.3) {
                     double factor = 5 * (1 + noiseprg.nextDouble());
                     double change = noiseprg.nextDouble() < 0.5 ? factor * noise : -factor * noise;

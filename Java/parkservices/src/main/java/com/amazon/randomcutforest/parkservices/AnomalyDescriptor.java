@@ -36,9 +36,6 @@ public class AnomalyDescriptor extends RCFComputeDescriptor {
     // 0 is not an anomaly
     double anomalyGrade;
 
-    // if the anomaly is due to timestamp when it is augmented only for current time
-    long expectedTimeStamp;
-
     // confidence, for both anomalies/non-anomalies
     double dataConfidence;
 

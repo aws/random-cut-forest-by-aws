@@ -76,4 +76,29 @@ public class RangeVector {
         this.upper = Arrays.copyOf(base.upper, dimensions);
         this.lower = Arrays.copyOf(base.lower, dimensions);
     }
+
+    public void shiftDivide(int i, float shift, float weight) {
+        checkArgument(i >= 0 && i < values.length, "incorrect index");
+        if (weight == Float.MAX_VALUE) {
+            upper[i] = lower[i] = values[i] = 0.0f;
+        } else {
+            checkArgument(weight > 0, " negative weight not permitted");
+            upper[i] = (shift + upper[i]) / weight;
+            lower[i] = (shift + lower[i]) / weight;
+            values[i] = (shift + values[i]) / weight;
+        }
+    }
+
+    public void divideShift(int i, float shift, float weight) {
+        checkArgument(i >= 0 && i < values.length, "incorrect index");
+        if (weight == Float.MAX_VALUE) {
+            upper[i] = lower[i] = values[i] = shift;
+        } else {
+            checkArgument(weight > 0, " negative weight not permitted");
+            upper[i] = shift + upper[i] / weight;
+            lower[i] = shift + lower[i] / weight;
+            values[i] = shift + values[i] / weight;
+        }
+    }
+
 }

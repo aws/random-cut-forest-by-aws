@@ -99,6 +99,10 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
     // expected point of last anomaly
     double[] lastExpectedRCFPoint;
 
+    // if the anomaly is due to timestamp when it is augmented only for current time
+    long expectedTimeStamp;
+
+    // used for streaming imputation
     double[][] imputedPoints;
 
     public RCFComputeDescriptor(double[] input, long inputTimeStamp) {

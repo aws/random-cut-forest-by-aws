@@ -50,6 +50,10 @@ public class Deviation {
         this.count = count;
     }
 
+    public Deviation copy() {
+        return new Deviation(this.discount, this.weight, this.sumSquared, this.sum, this.count);
+    }
+
     public double getMean() {
         return (weight <= 0) ? 0 : sum / weight;
     }

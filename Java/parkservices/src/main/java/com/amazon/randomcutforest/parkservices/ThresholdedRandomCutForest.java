@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_CENTER_OF_MASS_ENABLED;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
@@ -49,6 +50,7 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
@@ -238,6 +240,44 @@ public class ThresholdedRandomCutForest {
             lastAnomalyDescriptor = description.copyOf();
         }
         return description;
+    }
+
+    public RangeVector extrapolate(int horizon, boolean correct, double centrality) {
+        checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet supported");
+        checkArgument(transformMethod != TransformMethod.DIFFERENCE
+                && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE, "not yet supported");
+        int shingleSize = preprocessor.getShingleSize();
+        checkArgument(shingleSize > 1, "extrapolation is not meaningful for shingle size = 1");
+        // note the forest may have external shingling ...
+        int dimensions = forest.getDimensions();
+        int blockSize = dimensions / shingleSize;
+        double[] lastPoint = preprocessor.getLastShingledPoint();
+        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
+        RangeVector answer = new RangeVector(horizon * blockSize);
+        int gap = (int) (preprocessor.getInternalTimeStamp() - lastAnomalyDescriptor.getInternalTimeStamp());
+        try {
+            if (ifZero) { // turn caching on temporarily
+                forest.setBoundingBoxCacheFraction(1.0);
+            }
+            float[] newPoint = toFloatArray(lastPoint);
+
+            // gap will be at least 1
+            if (gap <= shingleSize && correct && lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
+                if (gap == 1) {
+                    newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
+                } else {
+                    newPoint = toFloatArray(predictorCorrector.applyBasicCorrector(lastPoint, gap, shingleSize,
+                            blockSize, lastAnomalyDescriptor));
+                }
+            }
+            answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
+        } finally {
+            if (ifZero) { // turn caching off
+                forest.setBoundingBoxCacheFraction(0);
+            }
+        }
+        preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
+        return answer;
     }
 
     public RandomCutForest getForest() {

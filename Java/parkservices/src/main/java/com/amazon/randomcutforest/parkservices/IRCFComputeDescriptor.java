@@ -48,6 +48,9 @@ public interface IRCFComputeDescriptor {
     // updates with imputation)
     long getInternalTimeStamp();
 
+    // useful for time augmented forests
+    long getExpectedTimeStamp();
+
     // forestMode
     ForestMode getForestMode();
 
