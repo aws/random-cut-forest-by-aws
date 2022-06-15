@@ -242,10 +242,40 @@ public class ThresholdedRandomCutForest {
         return description;
     }
 
+    /**
+     * a function that extrapolates the data seen by the ThresholdedRCF model, and
+     * uses the transformations allowed (as opposed to just using RCFs). The
+     * forecasting also allows for predictor-corrector pattern which implies that
+     * some noise can be eliminated -- this can be important for various
+     * transformations. While the algorithm can function for STREAMING_IMPUTE mode
+     * where missing data is imputed on the fly, it may require effort to validate
+     * that the internal imputation is reasonably consistent with extrapolation. In
+     * general, since the STREAMING_IMPUTE can use non-RCF options to fill in
+     * missing data, the internal imputation and extrapolation need not be
+     * consistent.
+     * 
+     * @param horizon    the length of time in the future which is being forecast
+     * @param correct    a boolean indicating if predictor-corrector subroutine
+     *                   should be turned on; this is specially helpful if there has
+     *                   been an anomaly in the recent past
+     * @param centrality in general RCF predicts the p50 value of conditional
+     *                   samples (centrality = 1). This parameter relaxes the
+     *                   conditional sampling. Using assumptions about input data
+     *                   (hence external to this code) it may be possible to use
+     *                   this parameter and the range information for confidence
+     *                   bounds.
+     * @return a range vector where the values[i] correspond to the forecast for
+     *         horizon (i+1). The upper and lower arrays indicate the corresponding
+     *         bounds based on the conditional sampling (and treansformation)
+     */
+
     public RangeVector extrapolate(int horizon, boolean correct, double centrality) {
         checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet supported");
-        checkArgument(transformMethod != TransformMethod.DIFFERENCE
-                && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE, "not yet supported");
+        checkArgument(
+                (transformMethod != TransformMethod.DIFFERENCE
+                        && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE)
+                        || horizon <= preprocessor.getShingleSize() / 2 + 1,
+                "reduce horizon or use a different transformation, single step differencing will be noisy");
         int shingleSize = preprocessor.getShingleSize();
         checkArgument(shingleSize > 1, "extrapolation is not meaningful for shingle size = 1");
         // note the forest may have external shingling ...
@@ -278,6 +308,10 @@ public class ThresholdedRandomCutForest {
         }
         preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
         return answer;
+    }
+
+    public RangeVector extrapolate(int horizon) {
+        return extrapolate(horizon, true, 1.0);
     }
 
     public RandomCutForest getForest() {

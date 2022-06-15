@@ -33,6 +33,13 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.DifferenceTransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.EmptyTransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.ITransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.NormalizedDifferenceTransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.NormalizedTransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.SubtractMATransformer;
+import com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
@@ -74,9 +81,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     // behavior
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
 
-    // can be used to normalize data
-    protected Deviation[] deviationList;
-
     // the input corresponds to timestamp data and this statistic helps align input
     protected Deviation timeStampDeviation;
 
@@ -84,6 +88,10 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     protected boolean normalizeTime;
 
     protected boolean augmentTime;
+
+    protected double weightTime;
+
+    protected double timeDecay;
 
     // recording the last seen timestamp
     protected long[] previousTimeStamps;
@@ -138,14 +146,13 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     // length of input to be seen, may depend on internal/external shingling
     protected int inputLength;
 
-    // weights to be used for WEIGHTED transformation
-    protected double[] weights;
-
     // the mode of the forest used in this preprocessing
     protected ForestMode mode;
 
     // measures the data quality in imputed modes
     protected Deviation dataQuality;
+
+    protected ITransformer transformer;
 
     public Preprocessor(Builder<?> builder) {
         checkArgument(builder.transformMethod != null, "transform required");
@@ -177,17 +184,18 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         this.startNormalization = builder.startNormalization;
         this.stopNormalization = builder.stopNormalization;
         this.normalizeTime = builder.normalizeTime;
-        this.weights = new double[inputLength + 1];
+        double[] weights = new double[inputLength];
         Arrays.fill(weights, 1);
         if (builder.weights != null) {
             if (builder.weights.length == inputLength) {
                 System.arraycopy(builder.weights, 0, weights, 0, inputLength);
-                weights[inputLength] = builder.weightTime;
+                weightTime = builder.weightTime;
             } else {
-                System.arraycopy(builder.weights, 0, weights, 0, inputLength + 1);
+                System.arraycopy(builder.weights, 0, weights, 0, inputLength);
+                weightTime = builder.weights[inputLength];
             }
         } else {
-            weights[inputLength] = builder.weightTime;
+            weightTime = builder.weightTime;
         }
         previousTimeStamps = new long[shingleSize];
         if (inputLength == dimension) {
@@ -195,20 +203,34 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         } else {
             lastShingledInput = new double[shingleSize * inputLength];
         }
-        double discount = builder.timeDecay;
-        dataQuality = builder.dataQuality.orElse(new Deviation(discount));
+        timeDecay = builder.timeDecay;
+        dataQuality = builder.dataQuality.orElse(new Deviation(timeDecay));
 
-        if (this.transformMethod != TransformMethod.NONE && this.transformMethod != TransformMethod.DIFFERENCE) {
-            if (builder.deviations.isPresent()) {
-                deviationList = builder.deviations.get();
-            } else {
-                deviationList = new Deviation[inputLength];
-                for (int i = 0; i < inputLength; i++) {
-                    deviationList[i] = new Deviation(discount);
-                }
+        Deviation[] deviationList = null;
+        if (builder.deviations.isPresent()) {
+            deviationList = builder.deviations.get();
+        } else if (transformMethod != TransformMethod.NONE) {
+            deviationList = new Deviation[2 * inputLength];
+            for (int i = 0; i < 2 * inputLength; i++) {
+                deviationList[i] = new Deviation(timeDecay);
             }
         }
-        timeStampDeviation = builder.timeDeviation.orElse(new Deviation(discount));
+
+        if (transformMethod == TransformMethod.NONE) {
+            transformer = new EmptyTransformer();
+        } else if (transformMethod == TransformMethod.WEIGHTED) {
+            transformer = new WeightedTransformer(weights, deviationList);
+        } else if (transformMethod == TransformMethod.DIFFERENCE) {
+            transformer = new DifferenceTransformer(weights, deviationList);
+        } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
+            transformer = new SubtractMATransformer(weights, deviationList);
+        } else if (transformMethod == TransformMethod.NORMALIZE) {
+            transformer = new NormalizedTransformer(weights, deviationList);
+        } else {
+            transformer = new NormalizedDifferenceTransformer(weights, deviationList);
+        }
+
+        timeStampDeviation = builder.timeDeviation.orElse(new Deviation(timeDecay));
 
         if (mode == ForestMode.STREAMING_IMPUTE) {
             imputationMethod = builder.imputationMethod;
@@ -421,7 +443,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
 
     // same as inverseMapTime, using explicit value also useful in forecast
     protected long inverseMapTimeValue(double gap, long timestamp) {
-        double factor = weights[inputLength];
+        double factor = weightTime;
         if (factor == 0) {
             return 0;
         }
@@ -492,47 +514,8 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      */
     protected double[] invert(int base, int startPosition, int relativeBlockIndex, double[] newPoint) {
         double[] values = new double[base];
-        for (int i = 0; i < base; i++) {
-            values[i] = inverseTransform(newPoint[startPosition + i], i, relativeBlockIndex);
-        }
-        return values;
-    }
-
-    /**
-     * if we find an estimated value for input index i, then this function inverts
-     * that estimate to indicate (approximately) what that value should have been in
-     * the actual input space
-     *
-     * @param value              estimated value
-     * @param index              position in the input vector
-     * @param relativeBlockIndex the index of the block in the shingle
-     * @return the estimated value whose transform would be the value
-     */
-    protected double inverseTransform(double value, int index, int relativeBlockIndex) {
-        if (transformMethod == TransformMethod.NONE) {
-            return value;
-        }
-        if (!requireInitialSegment(false, transformMethod)) {
-            if (transformMethod == TransformMethod.WEIGHTED) {
-                return (weights[index] == 0) ? 0 : value / weights[index];
-            } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
-                return (weights[index] == 0) ? 0 : (value + deviationList[index].getMean()) / weights[index];
-            }
-            double[] difference = getShingledInput(shingleSize - 1 + relativeBlockIndex);
-            checkArgument(transformMethod == TransformMethod.DIFFERENCE, "incorrect configuration");
-            return (weights[index] == 0) ? 0 : (value + difference[index]) / weights[index];
-        } else {
-            if (transformMethod == TransformMethod.NORMALIZE) {
-                double newValue = deviationList[index].getMean()
-                        + 2 * value * (deviationList[index].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-                return (weights[index] == 0) ? 0 : newValue / weights[index];
-            }
-            checkArgument(transformMethod == TransformMethod.NORMALIZE_DIFFERENCE, "incorrect configuration");
-            double[] difference = getShingledInput(shingleSize - 1 + relativeBlockIndex);
-            double newValue = difference[index] + deviationList[index].getMean()
-                    + 2 * value * (deviationList[index].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-            return (weights[index] == 0) ? 0 : newValue / weights[index];
-        }
+        System.arraycopy(newPoint, startPosition, values, 0, base);
+        return transformer.invert(values, getShingledInput(shingleSize - 1 + relativeBlockIndex));
     }
 
     void invertTimeForecast(RangeVector ranges, long timeStamp) {
@@ -574,50 +557,8 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
             invertTimeForecast(ranges, localTimeStamp);
         }
 
-        if (transformMethod == TransformMethod.NONE) {
-            return;
-        }
-
-        if (!requireInitialSegment(false, transformMethod)) {
-            if (transformMethod == TransformMethod.WEIGHTED) {
-                for (int i = 0; i < horizon; i++) {
-                    for (int j = 0; j < inputLength; j++) {
-                        float weight = (weights[j] == 0) ? Float.MAX_VALUE : (float) weights[j];
-                        ranges.shiftDivide(i * baseDimension + j, 0, weight);
-                    }
-                }
-            } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
-                Deviation[] deviations = new Deviation[inputLength];
-                for (int i = 0; i < inputLength; i++) {
-                    deviations[i] = deviationList[i].copy();
-                }
-                for (int i = 0; i < horizon; i++) {
-                    for (int j = 0; j < inputLength; j++) {
-                        float weight = (weights[j] == 0) ? Float.MAX_VALUE : (float) weights[j];
-                        ranges.shiftDivide(i * baseDimension + j, (float) deviations[j].getMean(), weight);
-                        deviations[j].update(ranges.values[i * baseDimension + j]);
-                    }
-                }
-            } else {
-                checkArgument(transformMethod == TransformMethod.DIFFERENCE, " incorrect transform method");
-                throw new IllegalArgumentException(" not yet supported ");
-            }
-        } else {
-            if (transformMethod == TransformMethod.NORMALIZE) {
-                for (int i = 0; i < horizon; i++) {
-                    for (int j = 0; j < inputLength; j++) {
-                        double factor = 0.5 / (deviationList[j].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-                        ranges.shiftDivide(i * baseDimension + j, 0, (float) factor);
-                        float weight = (weights[j] == 0) ? Float.MAX_VALUE : (float) weights[j];
-                        ranges.shiftDivide(i * baseDimension + j, (float) deviationList[j].getMean(), weight);
-                    }
-                }
-            } else {
-                checkArgument(transformMethod == TransformMethod.NORMALIZE_DIFFERENCE, " incorrect transform method");
-                throw new IllegalArgumentException(" not yet supported ");
-            }
-
-        }
+        double[] lastInput = getShingledInput(shingleSize - 1);
+        transformer.invertForecastRange(ranges, baseDimension, lastInput);
     }
 
     /**
@@ -629,7 +570,8 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      */
     protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
             double defaultTimeFactor) {
-        double[] scaledInput = transformValues(input, defaultFactors);
+        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, getShingledInput(shingleSize - 1),
+                defaultFactors, clipFactor);
         if (mode == ForestMode.TIME_AUGMENTED) {
             scaledInput = augmentTime(scaledInput, timestamp, defaultTimeFactor);
         }
@@ -672,24 +614,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     }
 
     /**
-     * updates deviations which are used in some transformations (and would be null
-     * for others)
-     * 
-     * @param inputPoint        the input point
-     * @param lastShingledInput the last shingled input
-     */
-    void updateDeviation(double[] inputPoint, double[] lastShingledInput) {
-        for (int i = 0; i < inputPoint.length; i++) {
-            double value = inputPoint[i];
-            if (transformMethod == TransformMethod.DIFFERENCE
-                    || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
-                value -= lastShingledInput[lastShingledInput.length - inputLength + i];
-            }
-            deviationList[i].update(value);
-        }
-    }
-
-    /**
      * updates the state of the preprocessor
      * 
      * @param inputPoint  the actual input
@@ -702,9 +626,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
             timeStampDeviation.update(timestamp - previous);
         }
         updateTimestamps(timestamp);
-        if (deviationList != null) {
-            updateDeviation(inputPoint, lastShingledInput);
-        }
+        transformer.updateDeviation(inputPoint, getShingledInput(shingleSize - 1));
         updateShingle(inputPoint, scaledInput);
     }
 
@@ -752,49 +674,6 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
     }
 
     /**
-     * transforms the values based on transformMethod
-     * 
-     * @param inputPoint the actual input
-     * @param factors    an array containing normalization factors, used only for
-     *                   the initial segment; otherwise it is null
-     * @return the transformed input
-     */
-    protected double[] transformValues(double[] inputPoint, double[] factors) {
-        if (transformMethod == TransformMethod.NONE) {
-            return inputPoint;
-        }
-        double[] input = new double[inputPoint.length];
-        if (!requireInitialSegment(false, transformMethod)) {
-            if (transformMethod == TransformMethod.WEIGHTED) {
-                for (int i = 0; i < inputPoint.length; i++) {
-                    input[i] = inputPoint[i] * weights[i];
-                }
-            } else if (transformMethod == TransformMethod.SUBTRACT_MA) {
-                for (int i = 0; i < inputPoint.length; i++) {
-                    input[i] = (internalTimeStamp == 0) ? 0 : weights[i] * (inputPoint[i] - deviationList[i].getMean());
-                }
-            } else if (transformMethod == TransformMethod.DIFFERENCE) {
-                for (int i = 0; i < input.length; i++) {
-                    input[i] = (internalTimeStamp == 0) ? 0
-                            : weights[i]
-                                    * (inputPoint[i] - lastShingledInput[lastShingledInput.length - inputLength + i]);
-                }
-            }
-        } else if (transformMethod == TransformMethod.NORMALIZE) {
-            for (int i = 0; i < input.length; i++) {
-                input[i] = weights[i] * normalize(inputPoint[i], deviationList[i], (factors == null) ? 0 : factors[i]);
-            }
-        } else if (transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
-            for (int i = 0; i < input.length; i++) {
-                double value = (internalTimeStamp == 0) ? 0
-                        : inputPoint[i] - lastShingledInput[lastShingledInput.length - inputLength + i];
-                input[i] = weights[i] * normalize(value, deviationList[i], (factors == null) ? 0 : factors[i]);
-            }
-        }
-        return input;
-    }
-
-    /**
      * augments (potentially normalized) input with time (which is always
      * differenced)
      *
@@ -810,7 +689,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
             scaledInput[normalized.length] = 0;
         } else {
             double timeShift = timestamp - previousTimeStamps[shingleSize - 1];
-            scaledInput[normalized.length] = weights[inputLength]
+            scaledInput[normalized.length] = weightTime
                     * ((normalizeTime) ? normalize(timeShift, timeStampDeviation, timeFactor) : timeShift);
         }
         return scaledInput;
@@ -888,14 +767,34 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         return (previousTimeStamps == null) ? null : Arrays.copyOf(previousTimeStamps, previousTimeStamps.length);
     }
 
-    // mapper
+    public Deviation[] getDeviationList() {
+        return transformer.getDeviations();
+    }
+
+    /**
+     * used in mapper; augments weightTime to the weights array to produce a single
+     * array of length inputLength + 1
+     */
     public double[] getWeights() {
-        return copyIfNotnull(weights);
+        double[] basic = transformer.getWeights();
+        double[] answer = new double[inputLength + 1];
+        Arrays.fill(answer, 1.0);
+        if (basic != null) {
+            checkArgument(basic.length == inputLength, " incorrect length returned");
+            System.arraycopy(basic, 0, answer, 0, inputLength);
+        }
+        answer[inputLength] = weightTime;
+        return answer;
     }
 
     // mapper/semi-supervision
     public void setWeights(double[] values) {
-        weights = copyIfNotnull(values);
+        checkArgument(values.length == inputLength, "incorrect length");
+        transformer.setWeights(values);
+    }
+
+    public void setWeightTime(double weightTime) {
+        this.weightTime = weightTime;
     }
 
     // mapper

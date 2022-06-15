@@ -50,7 +50,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
                 .fillValues(state.getDefaultFill()).inputLength(state.getInputLength()).weights(state.getWeights())
                 .transformMethod(TransformMethod.valueOf(state.getTransformMethod()))
                 .startNormalization(state.getStartNormalization()).useImputedFraction(state.getUseImputedFraction())
-                .timeDeviation(timeStampDeviation).dataQuality(dataQuality);
+                .timeDeviation(timeStampDeviation).dataQuality(dataQuality).timeDecay(state.getTimeDecay());
 
         if (deviations != null) {
             preprocessorBuilder.deviations(deviations);
@@ -95,6 +95,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         DeviationMapper deviationMapper = new DeviationMapper();
         state.setTimeStampDeviationState(deviationMapper.toState(model.getTimeStampDeviation()));
         state.setDataQualityState(deviationMapper.toState(model.getDataQuality()));
+        state.setTimeDecay(model.getTimeDecay());
         DeviationState[] deviationStates = null;
         if (model.getDeviationList() != null) {
             Deviation[] list = model.getDeviationList();

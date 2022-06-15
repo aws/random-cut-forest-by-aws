@@ -16,6 +16,8 @@
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 import java.util.Arrays;
 
@@ -77,28 +79,21 @@ public class RangeVector {
         this.lower = Arrays.copyOf(base.lower, dimensions);
     }
 
-    public void shiftDivide(int i, float shift, float weight) {
+    public void shift(int i, float shift) {
         checkArgument(i >= 0 && i < values.length, "incorrect index");
-        if (weight == Float.MAX_VALUE) {
-            upper[i] = lower[i] = values[i] = 0.0f;
-        } else {
-            checkArgument(weight > 0, " negative weight not permitted");
-            upper[i] = (shift + upper[i]) / weight;
-            lower[i] = (shift + lower[i]) / weight;
-            values[i] = (shift + values[i]) / weight;
-        }
+        values[i] += shift;
+        // managing precision
+        upper[i] = max(values[i], upper[i] + shift);
+        lower[i] = min(values[i], lower[i] + shift);
     }
 
-    public void divideShift(int i, float shift, float weight) {
+    public void scale(int i, float weight) {
         checkArgument(i >= 0 && i < values.length, "incorrect index");
-        if (weight == Float.MAX_VALUE) {
-            upper[i] = lower[i] = values[i] = shift;
-        } else {
-            checkArgument(weight > 0, " negative weight not permitted");
-            upper[i] = shift + upper[i] / weight;
-            lower[i] = shift + lower[i] / weight;
-            values[i] = shift + values[i] / weight;
-        }
+        checkArgument(weight > 0, " negative weight not permitted");
+        values[i] = values[i] * weight;
+        // managing precision
+        upper[i] = max(upper[i] * weight, values[i]);
+        lower[i] = min(lower[i] * weight, values[i]);
     }
 
 }

@@ -263,7 +263,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @param isImputed is the current input imputed
      */
     void updateForest(boolean changeForest, double[] input, long timestamp, RandomCutForest forest, boolean isImputed) {
-        double[] scaledInput = transformValues(input, null);
+        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, getShingledInput(shingleSize - 1),
+                null, clipFactor);
         updateShingle(input, scaledInput);
         updateTimestamps(timestamp);
         if (isImputed) {
@@ -278,7 +279,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * The postprocessing now has to handle imputation while changing the state;
      * note that the imputation is repeated to avoid storing potentially large
      * number of transient shingles (which would not be admitted to the forest
-     * anyways unless there is at least one actual value in the shingle)
+     * unless there is at least one actual value in the shingle)
      * 
      * @param result                the descriptor of the evaluation on the current
      *                              point
@@ -335,7 +336,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                     // the last impute corresponds to the current observed value
                     for (int j = 0; j < numberToImpute; j++) {
                         double[] result = basicImpute(step * (j + 1), previous, initialValues[i], DEFAULT_INITIAL);
-                        double[] scaledInput = transformValues(result, factors);
+                        double[] scaledInput = transformer.transformValues(internalTimeStamp, result,
+                                getShingledInput(shingleSize - 1), factors, clipFactor);
                         updateShingle(result, scaledInput);
                         updateTimestamps(initialTimeStamps[i]);
                         numberOfImputed = numberOfImputed + 1;
@@ -345,7 +347,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                     }
                 }
             }
-            double[] scaledInput = transformValues(initialValues[i], factors);
+            double[] scaledInput = transformer.transformValues(internalTimeStamp, initialValues[i],
+                    getShingledInput(shingleSize - 1), factors, clipFactor);
             updateState(initialValues[i], scaledInput, initialTimeStamps[i], lastInputTimeStamp);
             if (updateAllowed()) {
                 forest.update(lastShingledPoint);
@@ -398,7 +401,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
          */
 
         checkArgument(internalTimeStamp > 0, "imputation should have forced normalization");
-        double[] savedInputShingle = Arrays.copyOf(lastShingledInput, lastShingledInput.length);
+        double[] savedInput = getShingledInput(shingleSize - 1);
 
         // previous value should be defined
         double[] previous = new double[inputLength];
@@ -419,9 +422,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         updateForest(changeForest, newInput, timestamp, forest, false);
         if (changeForest) {
             timeStampDeviation.update(timestamp - lastInputTimeStamp);
-            if (deviationList != null) {
-                updateDeviation(newInput, savedInputShingle);
-            }
+            transformer.updateDeviation(newInput, savedInput);
         }
         return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
     }
@@ -510,7 +511,8 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         } else {
             checkArgument(partialInput != null, "incorrect input");
             missingIndices = Arrays.copyOf(missingValues, missingValues.length);
-            double[] scaledInput = transformValues(partialInput, null);
+            double[] scaledInput = transformer.transformValues(internalTimeStamp, partialInput,
+                    getShingledInput(shingleSize - 1), null, clipFactor);
             copyAtEnd(temp, scaledInput);
         }
         double[] newPoint = forest.imputeMissingValues(temp, missingIndices.length, missingIndices);

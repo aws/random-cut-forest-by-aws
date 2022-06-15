@@ -79,7 +79,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         if (requireInitialSegment(false, transformMethod)) {
             Deviation[] tempList = new Deviation[inputLength];
             for (int j = 0; j < inputLength; j++) {
-                tempList[j] = new Deviation(deviationList[j].getDiscount());
+                tempList[j] = new Deviation(timeDecay);
             }
             for (int i = 0; i < initialValues.length; i++) {
                 for (int j = 0; j < inputLength; j++) {
