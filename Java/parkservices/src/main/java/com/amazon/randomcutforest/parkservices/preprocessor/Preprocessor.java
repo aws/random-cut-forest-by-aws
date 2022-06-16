@@ -280,8 +280,12 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         description.setShingleSize(shingleSize);
         description.setInputLength(inputLength);
         description.setDimension(dimension);
-        description.setReasonableForecast(
-                (internalTimeStamp > MINIMUM_OBSERVATIONS_FOR_EXPECTED) && (shingleSize * inputLength >= 4));
+        // the adjustments ensure that external and internal shingling always follow the
+        // same path
+        long adjustedInternal = internalTimeStamp + (forest.isInternalShinglingEnabled() ? 0 : shingleSize - 1);
+        int dataDimension = forest.isInternalShinglingEnabled() ? inputLength * shingleSize : inputLength;
+        description
+                .setReasonableForecast((adjustedInternal > MINIMUM_OBSERVATIONS_FOR_EXPECTED) && (dataDimension >= 4));
 
         return description;
     }
