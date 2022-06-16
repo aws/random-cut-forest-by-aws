@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
@@ -76,10 +77,20 @@ public class ForecastTest {
             // setting centrality = 0 would correspond to random sampling from the leaves
             // reached by
             // impute visitor
-            RangeVector forecast = forest.extrapolate(horizon, true, 1.0);
+
+            TimedRangeVector extrapolate = forest.extrapolate(horizon, true, 1.0);
+            RangeVector forecast = extrapolate.rangeVector;
             assert (forecast.values.length == horizon);
+            assert (extrapolate.timeStamps.length == horizon);
+            assert (extrapolate.lowerTimeStamps.length == horizon);
+            assert (extrapolate.upperTimeStamps.length == horizon);
             for (int i = 0; i < horizon; i++) {
                 // check ranges
+                if (j > sampleSize) {
+                    assert (extrapolate.timeStamps[i] == j + i);
+                    assert (extrapolate.upperTimeStamps[i] == j + i);
+                    assert (extrapolate.lowerTimeStamps[i] == j + i);
+                }
                 assert (forecast.values[i] >= forecast.lower[i]);
                 assert (forecast.values[i] <= forecast.upper[i]);
                 // compute errors
@@ -92,7 +103,7 @@ public class ForecastTest {
                     upperError[i] += t * t;
                 }
             }
-            forest.process(dataWithKeys.data[j], 0L);
+            forest.process(dataWithKeys.data[j], j);
         }
 
         System.out.println(forest.getTransformMethod().name() + " RMSE (as horizon increases) ");
@@ -156,10 +167,17 @@ public class ForecastTest {
             // setting centrality = 0 would correspond to random sampling from the leaves
             // reached by
             // impute visitor
-            RangeVector forecast = forest.extrapolate(horizon, true, 1.0);
-
+            TimedRangeVector extrapolate = forest.extrapolate(horizon, true, 1.0);
+            RangeVector forecast = extrapolate.rangeVector;
             assert (forecast.values.length == horizon);
+            assert (extrapolate.timeStamps.length == horizon);
+            assert (extrapolate.lowerTimeStamps.length == horizon);
+            assert (extrapolate.upperTimeStamps.length == horizon);
+
             for (int i = 0; i < horizon; i++) {
+                assert (extrapolate.timeStamps[i] == 0);
+                assert (extrapolate.upperTimeStamps[i] == 0);
+                assert (extrapolate.lowerTimeStamps[i] == 0);
                 // check ranges
                 assert (forecast.values[i] >= forecast.lower[i]);
                 assert (forecast.values[i] <= forecast.upper[i]);
@@ -241,7 +259,7 @@ public class ForecastTest {
             // setting centrality = 0 would correspond to random sampling from the leaves
             // reached by
             // impute visitor
-            RangeVector forecast = forest.extrapolate(horizon, true, 1.0);
+            RangeVector forecast = forest.extrapolate(horizon, true, 1.0).rangeVector;
 
             assert (forecast.values.length == horizon);
             for (int i = 0; i < horizon; i++) {
@@ -311,19 +329,25 @@ public class ForecastTest {
             forest.process(data, time);
             ++count;
         }
-        RangeVector range = forest.extrapolate(horizon, false, 1.0);
+        TimedRangeVector extrapolate = forest.extrapolate(horizon, true, 1.0);
+        RangeVector range = extrapolate.rangeVector;
+        assert (range.values.length == baseDimensions * horizon);
+        assert (extrapolate.timeStamps.length == horizon);
+        assert (extrapolate.lowerTimeStamps.length == horizon);
+        assert (extrapolate.upperTimeStamps.length == horizon);
 
         /*
          * the forecasted time stamps should be close to 1000 * (count + i) the data
          * values should remain as in data[]
          */
 
-        assert (range.values.length == horizon * (baseDimensions + 1));
         for (int i = 0; i < horizon; i++) {
-            assertEquals(range.values[i * (baseDimensions + 1)], data[0]);
-            assertEquals(range.upper[i * (baseDimensions + 1)], data[0]);
-            assertEquals(range.lower[i * (baseDimensions + 1)], data[0]);
-            assertEquals(Math.round(range.values[i * (baseDimensions + 1) + 1] * 0.001), count + i);
+            assertEquals(range.values[i], data[0]);
+            assertEquals(range.upper[i], data[0]);
+            assertEquals(range.lower[i], data[0]);
+            assertEquals(Math.round(extrapolate.timeStamps[i] * 0.001), count + i);
+            assert (extrapolate.timeStamps[i] >= extrapolate.lowerTimeStamps[i]);
+            assert (extrapolate.upperTimeStamps[i] >= extrapolate.timeStamps[i]);
         }
     }
 

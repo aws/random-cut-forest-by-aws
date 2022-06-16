@@ -49,6 +49,7 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
@@ -264,12 +265,17 @@ public class ThresholdedRandomCutForest {
      *                   (hence external to this code) it may be possible to use
      *                   this parameter and the range information for confidence
      *                   bounds.
-     * @return a range vector where the values[i] correspond to the forecast for
-     *         horizon (i+1). The upper and lower arrays indicate the corresponding
-     *         bounds based on the conditional sampling (and treansformation)
+     * @return a timed range vector where the values[i] correspond to the forecast
+     *         for horizon (i+1). The upper and lower arrays indicate the
+     *         corresponding bounds based on the conditional sampling (and
+     *         transformation). Note that TRCF manages time in process() and thus
+     *         the forecasts always have timestamps associated which makes treatment
+     *         of (to be enabled later) STREAMING_IMPUTE, STANDARD and
+     *         TIME_AUGMENTED uniform. Finally note that setting weight of time to
+     *         be 0 will 0 out the time forecasts.
      */
 
-    public RangeVector extrapolate(int horizon, boolean correct, double centrality) {
+    public TimedRangeVector extrapolate(int horizon, boolean correct, double centrality) {
         checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet supported");
         checkArgument(
                 (transformMethod != TransformMethod.DIFFERENCE
@@ -306,11 +312,10 @@ public class ThresholdedRandomCutForest {
                 forest.setBoundingBoxCacheFraction(0);
             }
         }
-        preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
-        return answer;
+        return preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
     }
 
-    public RangeVector extrapolate(int horizon) {
+    public TimedRangeVector extrapolate(int horizon) {
         return extrapolate(horizon, true, 1.0);
     }
 
