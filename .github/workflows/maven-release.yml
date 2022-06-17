@@ -30,19 +30,19 @@ jobs:
         server-password: MAVEN_PASSWORD
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
         gpg-passphrase: MAVEN_GPG_PASSPHRASE
-
+    - name: Extract project version
+      id: project
+      run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
     - name: Build with Maven
       run: mvn -B package --file pom.xml
-
     - name: Publish to Maven central
+      if: ${{ !endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
       run: mvn deploy --file pom.xml
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-    - name: Extract project version
-      id: project
-      run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+    
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
