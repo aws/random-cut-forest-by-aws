@@ -1,6 +1,11 @@
 # This workflow will build a package using Maven and then publish it to
-# Maven central each time a release is created on github.
+# to our staging repo for a final release to maven central
 
+# This workflow will also create a tag and github release for the current commit
+# The github release will be have '-java' added to name to distinguish rust vs java releases
+# Example:
+# current version in POM.XML and in maven central = 3.1.0
+# tag and github release = 3.1.0-java
 name: Publish Official Release to Maven Staging
 
 defaults:
@@ -9,11 +14,6 @@ defaults:
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: The version to tag the release with, e.g., 1.2.0, 1.2.1-alpha.1
-        required: true
-
 
 jobs:
   build:
@@ -40,3 +40,16 @@ jobs:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+    - name: Extract project version
+      id: project
+      run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.project.outputs.version }}-java
+        release_name: ${{ steps.project.outputs.version }}-java
+        draft: false
+        prerelease: false
