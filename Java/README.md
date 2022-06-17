@@ -135,7 +135,11 @@ vector data point, scores the data point, and then updates the model with this
 point. The program output appends a column of anomaly scores to the input:
 
 ```text
+<<<<<<< HEAD
 $ java -cp core/target/randomcutforest-core-3.0.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
+=======
+$ java -cp core/target/randomcutforest-core-3.0-rc4-SNAPSHOT.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
+>>>>>>> 9222dd1 (update read me with new snapshot version)
 $ tail example_output.csv
 -5.0029,0.0170,-0.0057,0.8129401629464965
 -4.9975,-0.0102,-0.0065,0.6591046054520615
