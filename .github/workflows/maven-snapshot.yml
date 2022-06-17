@@ -23,7 +23,7 @@ jobs:
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
       - name: Build with Maven
-          run: mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml
       - name: Extract project version
         id: project
         run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
