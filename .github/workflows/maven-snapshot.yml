@@ -28,7 +28,7 @@ jobs:
         id: project
         run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
       - name: Publish to snapshot repo
-        if: ${{ !endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
+        if: ${{ endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
         run: mvn clean deploy
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
