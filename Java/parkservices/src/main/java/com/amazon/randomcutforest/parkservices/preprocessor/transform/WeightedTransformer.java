@@ -25,6 +25,23 @@ import lombok.Setter;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
+/**
+ * A weighted transformer maintains 2X data structures that measure discounted
+ * averages and the corresponding standard deviation. The the element i
+ * corresponds to discounted average of the variable i and element (X+i)
+ * corresponds to the discounted average of the single step differences of the
+ * same variable i. These two quantities together can help answer a number of
+ * estimation questions of a time series, and in particular help solve for
+ * simple linear drifts. Even though the discounted averages are not obviously
+ * required -- they are useful in forecasts.
+ *
+ * We note that more complicated drifts may require different (and complicated)
+ * solutions in a streaming context and are not implemented yet.
+ *
+ * It transforms the variable i by multiplying with weight[i].
+ *
+ *
+ */
 @Getter
 @Setter
 public class WeightedTransformer implements ITransformer {
@@ -42,8 +59,16 @@ public class WeightedTransformer implements ITransformer {
         }
     }
 
+    /**
+     * the inversion does not require previousInput; note that weight == 0, would
+     * produce 0 values in the inversion
+     *
+     * @param values        what the RCF would like to observe
+     * @param previousInput what was the real (or previously imputed) observation
+     * @return the observations that would (approximately) transform to values[]
+     */
     @Override
-    public double[] invert(double[] values, double[] correspondingInput) {
+    public double[] invert(double[] values, double[] previousInput) {
         double[] output = new double[values.length];
         for (int i = 0; i < values.length; i++) {
             output[i] = (weights[i] == 0) ? 0 : values[i] / weights[i];
@@ -51,7 +76,16 @@ public class WeightedTransformer implements ITransformer {
         return output;
     }
 
-    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] lastInput) {
+    /**
+     * inverts a forecast (and upper and lower limits) provided by RangeVector range
+     * note that the expected difference maintained in deviation[j + inpulLength] is
+     * added for each attribute j
+     * 
+     * @param ranges        provides p50 values with upper and lower estimates
+     * @param baseDimension the number of variables being forecast (often 1)
+     * @param previousInput the last input of length baseDimension
+     */
+    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
         int horizon = ranges.values.length / baseDimension;
         int inputLength = weights.length;
         for (int i = 0; i < horizon; i++) {
@@ -63,29 +97,42 @@ public class WeightedTransformer implements ITransformer {
         }
     }
 
+    /**
+     * updates the 2*inputPoint.length statistics; the statistic i corresponds to
+     * discounted average of variable i and statistic i + inputPoint.length
+     * corresponds to the discounted average single step difference
+     * 
+     * @param inputPoint    the input seen by TRCF
+     * @param previousInput the previous input
+     */
     @Override
-    public void updateDeviation(double[] inputPoint, double[] lastInput) {
+    public void updateDeviation(double[] inputPoint, double[] previousInput) {
         checkArgument(inputPoint.length * 2 == deviations.length, "incorrect lengths");
         for (int i = 0; i < inputPoint.length; i++) {
             deviations[i].update(inputPoint[i]);
             if (deviations[i + inputPoint.length].getCount() == 0) {
                 deviations[i + inputPoint.length].update(0);
             } else {
-                deviations[i + inputPoint.length].update(inputPoint[i] - lastInput[i]);
+                deviations[i + inputPoint.length].update(inputPoint[i] - previousInput[i]);
             }
         }
     }
 
     /**
-     * transforms the values based on transformMethod
+     * a transformation that transforms the multivariate values by multiplying with
+     * weights
      * 
-     * @param inputPoint the actual input
-     * @param factors    an array containing normalization factors, used only for
-     *                   the initial segment; otherwise it is null
-     * @return the transformed input
+     * @param internalTimeStamp timestamp corresponding to this operation; used to
+     *                          ensure smoothness at 0
+     * @param inputPoint        the actual input
+     * @param previousInput     the previous input
+     * @param factors           an array containing normalization factors, used only
+     *                          for the initial segment; otherwise it is null
+     * @param clipFactor        the factor used in clipping the normalized values
+     * @return the transformed values to be shingled and used in RCF
      */
-    public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] lastInput, double[] factors,
-            double clipFactor) {
+    public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
+            double[] factors, double clipFactor) {
         double[] input = new double[inputPoint.length];
         for (int i = 0; i < inputPoint.length; i++) {
             input[i] = inputPoint[i] * weights[i];
