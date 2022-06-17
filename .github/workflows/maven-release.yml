@@ -1,30 +1,35 @@
 # This workflow will build a package using Maven and then publish it to
 # Maven central each time a release is created on github.
 
-name: Publish Maven Package
+name: Publish Official Release to Maven Staging
 
 defaults:
   run:
     working-directory: Java/
 
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to tag the release with, e.g., 1.2.0, 1.2.1-alpha.1
+        required: true
+
 
 jobs:
   build:
-
+    name: Build project and publish release
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-        server-id: ossrh
+        server-id: ossrh-release
         server-username: MAVEN_USERNAME
         server-password: MAVEN_PASSWORD
+        gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
     - name: Build with Maven
       run: mvn -B package --file pom.xml
@@ -34,4 +39,4 @@ jobs:
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
