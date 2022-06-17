@@ -4,7 +4,11 @@
 
     <groupId>software.amazon.randomcutforest</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-    <version>3.0.0</version>
+<<<<<<< HEAD
+    <version>3.0.0-SNAPSHOT</version>
+=======
+    <version>3.0-rc4-SNAPSHOT</version>
+>>>>>>> Adding seperate working snapshot and official release workflows
     <packaging>pom</packaging>
 
     <name>software.amazon.randomcutforest:randomcutforest</name>
@@ -224,11 +228,11 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>ossrh</id>
+            <id>ossrh-snapshot</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
         <repository>
-            <id>ossrh</id>
+            <id>ossrh-release</id>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
