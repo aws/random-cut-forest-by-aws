@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +24,7 @@ import java.util.Random;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -128,8 +130,9 @@ public class ForecastTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "NORMALIZE", "SUBTRACT_MA", "WEIGHTED" })
-    public void linearShift(String string) {
+    @CsvSource({ "NORMALIZE,true", "NORMALIZE,false", "SUBTRACT_MA,true", "SUBTRACT_MA,false", "WEIGHTED,true",
+            "WEIGHTED,false" })
+    public void linearShift(String methodString, String normalizeTime) {
         int sampleSize = 256;
         int baseDimensions = 1;
         int shingleSize = 8;
@@ -142,7 +145,8 @@ public class ForecastTest {
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
                 .shingleSize(shingleSize).timeDecay(1.0 / 1024).outputAfter(outputAfter)
-                .transformMethod(TransformMethod.valueOf(string)).build();
+                .transformMethod(TransformMethod.valueOf(methodString))
+                .normalizeTime(Boolean.parseBoolean(normalizeTime)).build();
 
         // as the ratio of amplitude (signal) to noise is changed, the estimation range
         // in forecast
@@ -175,9 +179,12 @@ public class ForecastTest {
             assert (extrapolate.upperTimeStamps.length == horizon);
 
             for (int i = 0; i < horizon; i++) {
-                assert (extrapolate.timeStamps[i] == 0);
-                assert (extrapolate.upperTimeStamps[i] == 0);
-                assert (extrapolate.lowerTimeStamps[i] == 0);
+
+                if (j > outputAfter) {
+                    assert (extrapolate.timeStamps[i] == i + j);
+                    assert (extrapolate.upperTimeStamps[i] == i + j);
+                    assert (extrapolate.lowerTimeStamps[i] == i + j);
+                }
                 // check ranges
                 assert (forecast.values[i] >= forecast.lower[i]);
                 assert (forecast.values[i] <= forecast.upper[i]);
@@ -191,7 +198,7 @@ public class ForecastTest {
                     upperError[i] += t * t;
                 }
             }
-            forest.process(dataWithKeys.data[j], 0L);
+            forest.process(dataWithKeys.data[j], j);
         }
 
         System.out.println(forest.getTransformMethod().name() + " RMSE (as horizon increases)");
@@ -216,8 +223,8 @@ public class ForecastTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "DIFFERENCE", "NORMALIZE_DIFFERENCE" })
-    public void linearShiftDifference(String string) {
+    @CsvSource({ "DIFFERENCE,true", "DIFFERENCE,false", "NORMALIZE_DIFFERENCE,true", "NORMALIZE_DIFFERENCE,false" })
+    public void linearShiftDifference(String methodString, String normalizeTime) {
         int sampleSize = 256;
         int baseDimensions = 1;
         int shingleSize = 8;
@@ -231,7 +238,8 @@ public class ForecastTest {
         ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
                 .shingleSize(shingleSize).timeDecay(1.0 / 1024).outputAfter(outputAfter)
-                .transformMethod(TransformMethod.valueOf(string)).build();
+                .transformMethod(TransformMethod.valueOf(methodString))
+                .normalizeTime(Boolean.parseBoolean(normalizeTime)).build();
 
         // as the ratio of amplitude (signal) to noise is changed, the estimation range
         // in forecast
@@ -255,15 +263,19 @@ public class ForecastTest {
         double[] upperError = new double[horizon];
 
         for (int j = 0; j < dataWithKeys.data.length; j++) {
-            // forecast first; change centrality to achieve a control over the sampling
-            // setting centrality = 0 would correspond to random sampling from the leaves
-            // reached by
-            // impute visitor
-            RangeVector forecast = forest.extrapolate(horizon, true, 1.0).rangeVector;
 
+            TimedRangeVector extrapolate = forest.extrapolate(horizon, true, 1.0);
+            RangeVector forecast = extrapolate.rangeVector;
             assert (forecast.values.length == horizon);
+            assert (extrapolate.timeStamps.length == horizon);
+            assert (extrapolate.lowerTimeStamps.length == horizon);
+            assert (extrapolate.upperTimeStamps.length == horizon);
+
             for (int i = 0; i < horizon; i++) {
                 // check ranges
+                assertEquals(extrapolate.timeStamps[i], 0);
+                assertEquals(extrapolate.upperTimeStamps[i], 0);
+                assertEquals(extrapolate.lowerTimeStamps[i], 0);
                 assert (forecast.values[i] >= forecast.lower[i]);
                 assert (forecast.values[i] <= forecast.upper[i]);
                 // compute errors
@@ -349,6 +361,106 @@ public class ForecastTest {
             assert (extrapolate.timeStamps[i] >= extrapolate.lowerTimeStamps[i]);
             assert (extrapolate.upperTimeStamps[i] >= extrapolate.timeStamps[i]);
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransformMethod.class)
+    public void streamingImputeTest(TransformMethod method) {
+        int shingleSize = 8;
+        int numberOfTrees = 100;
+        int sampleSize = 256;
+        Precision precision = Precision.FLOAT_32;
+        int dataSize = 4 * sampleSize;
+        int outputAfter = sampleSize;
+
+        // change this to try different number of attributes,
+        int baseDimensions = 1;
+
+        int dropped = 0;
+        long seed = 2022L;
+
+        // the following simulates random drops
+        long dropSeed = 7L;
+        Random dropPRG = new Random(dropSeed);
+
+        System.out.println("seed = " + seed);
+        System.out.println("dropping seed = " + dropSeed);
+
+        int dimensions = baseDimensions * shingleSize;
+        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STREAMING_IMPUTE)
+                .transformMethod(method).imputationMethod(RCF).build();
+
+        // limited to shingleSize/2+1 due to the differenced methods
+        int horizon = shingleSize / 2 + 1;
+
+        double[] error = new double[horizon];
+        double[] lowerError = new double[horizon];
+        double[] upperError = new double[horizon];
+
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
+                100, 5, seed, baseDimensions, true);
+        System.out.println(dataWithKeys.changes.length + " anomalies injected ");
+        for (int j = 0; j < dataWithKeys.data.length; j++) {
+
+            if (dropPRG.nextDouble() < 0.2) {
+                ++dropped;
+            } else {
+
+                // note that the forecast does not change without a new reading in streaming
+                // impute
+                // in this case the forecast corresponds to j+1 .. j + horizon
+                // so we will add the j'th entry and then measure error against j+1 ...
+                // j+horizon values
+
+                long newStamp = 1000L * j + 10 * dropPRG.nextInt(10) - 5;
+                forest.process(dataWithKeys.data[j], newStamp);
+                TimedRangeVector extrapolate = forest.extrapolate(horizon, true, 1.0);
+                RangeVector forecast = extrapolate.rangeVector;
+                assert (forecast.values.length == horizon);
+                assert (extrapolate.timeStamps.length == horizon);
+
+                for (int i = 0; i < horizon; i++) {
+                    // check ranges
+                    assert (forecast.values[i] >= forecast.lower[i]);
+                    assert (forecast.values[i] <= forecast.upper[i]);
+                    assertEquals(extrapolate.timeStamps[i], 0);
+                    assertEquals(extrapolate.upperTimeStamps[i], 0);
+                    assertEquals(extrapolate.lowerTimeStamps[i], 0);
+                    // compute errors
+                    // NOTE the +1 since we are predicting the unseen values in the data
+                    if (j > outputAfter + shingleSize - 1 && j + i + 1 < dataWithKeys.data.length) {
+                        double t = dataWithKeys.data[j + i + 1][0] - forecast.values[i];
+                        error[i] += t * t;
+                        t = dataWithKeys.data[j + i + 1][0] - forecast.lower[i];
+                        lowerError[i] += t * t;
+                        t = dataWithKeys.data[j + i + 1][0] - forecast.upper[i];
+                        upperError[i] += t * t;
+                    }
+                }
+            }
+        }
+        System.out.println("Impute with " + dropped + " dropped values from " + dataWithKeys.data.length + " values");
+        System.out.println(forest.getTransformMethod().name() + " RMSE (as horizon increases)");
+        for (int i = 0; i < horizon; i++) {
+            double t = error[i] / (dataWithKeys.data.length - shingleSize + 1 - outputAfter - i - dropped);
+            System.out.print(Math.sqrt(t) + " ");
+        }
+        System.out.println();
+        System.out.println("RMSE Lower (as horizon increases)");
+        for (int i = 0; i < horizon; i++) {
+            double t = lowerError[i] / (dataWithKeys.data.length - shingleSize + 1 - outputAfter - i - dropped);
+            System.out.print(Math.sqrt(t) + " ");
+        }
+        System.out.println();
+        System.out.println("RMSE Upper (as horizon increases)");
+        for (int i = 0; i < horizon; i++) {
+            double t = upperError[i] / (dataWithKeys.data.length - shingleSize + 1 - outputAfter - i - dropped);
+            System.out.print(Math.sqrt(t) + " ");
+        }
+        System.out.println();
+
     }
 
 }

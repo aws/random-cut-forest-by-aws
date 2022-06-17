@@ -269,14 +269,21 @@ public class ThresholdedRandomCutForest {
      *         for horizon (i+1). The upper and lower arrays indicate the
      *         corresponding bounds based on the conditional sampling (and
      *         transformation). Note that TRCF manages time in process() and thus
-     *         the forecasts always have timestamps associated which makes treatment
-     *         of (to be enabled later) STREAMING_IMPUTE, STANDARD and
-     *         TIME_AUGMENTED uniform. Finally note that setting weight of time to
-     *         be 0 will 0 out the time forecasts.
+     *         the forecasts always have timestamps associated which makes it easier
+     *         to execute the same code for various forest modes such as
+     *         STREAMING_IMPUTE, STANDARD and TIME_AUGMENTED. For STREAMING_IMPUTE
+     *         the time components of the prediction will be 0 because the time
+     *         information is already being used to fill in missing entries. For
+     *         STANDARD mode the time components would correspond to average arrival
+     *         difference. For TIME_AUGMENTED mode the time componentes would be the
+     *         result of the joint prediction. Finally note that setting weight of
+     *         time or any of the input columns will also 0 out the corresponding
+     *         forecast.
      */
 
     public TimedRangeVector extrapolate(int horizon, boolean correct, double centrality) {
-        checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet supported");
+        // checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet
+        // supported");
         checkArgument(
                 (transformMethod != TransformMethod.DIFFERENCE
                         && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE)

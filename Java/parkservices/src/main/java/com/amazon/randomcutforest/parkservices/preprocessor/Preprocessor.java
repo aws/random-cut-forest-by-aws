@@ -539,7 +539,8 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      * @param ranges                the forecast with ranges
      * @param lastAnomalyDescriptor description of last anomaly
      * @return a timed range vector that also contains the time information
-     *         corresponding to the forecasts
+     *         corresponding to the forecasts; note that the time values would be 0
+     *         for STREAMING_IMPUTE mode
      */
     public TimedRangeVector invertForecastRange(RangeVector ranges, IRCFComputeDescriptor lastAnomalyDescriptor) {
         int baseDimension = inputLength + (mode == ForestMode.TIME_AUGMENTED ? 1 : 0);
@@ -552,15 +553,25 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
         TimedRangeVector timedRangeVector;
         if (mode != ForestMode.TIME_AUGMENTED) {
             timedRangeVector = new TimedRangeVector(ranges, horizon);
-            for (int i = 0; i < horizon; i++) {
-                timedRangeVector.timeStamps[i] = inverseMapTimeValue(timeStampDeviation.getMean(), localTimeStamp);
-                timedRangeVector.upperTimeStamps[i] = max(timedRangeVector.timeStamps[i], inverseMapTimeValue(
-                        timeStampDeviation.getMean() + 2.5 * timeStampDeviation.getDeviation(), localTimeStamp));
-                timedRangeVector.lowerTimeStamps[i] = min(timedRangeVector.timeStamps[i],
-                        inverseMapTimeValue(
-                                max(0, timeStampDeviation.getMean() - 2.5 * timeStampDeviation.getDeviation()),
-                                localTimeStamp));
-                localTimeStamp = timedRangeVector.upperTimeStamps[i];
+            // Note that STREAMING_IMPUTE we are already using the time values
+            // to fill in values -- moreover such missing values can be large in number
+            // predicting next timestamps in the future in such a scenario would correspond
+            // to a
+            // joint prediction and TIME_AUGMENTED mode may be more suitable.
+            // and therefore for STREAMING_INPUTE the timestamps values are not predicted
+            // and kept at 0
+            if (mode != ForestMode.STREAMING_IMPUTE) {
+                double timeGap = (normalizeTime) ? 0 : timeStampDeviation.getMean();
+                double timeBound = (normalizeTime) ? 2.5 : 2.5 * timeStampDeviation.getDeviation();
+
+                for (int i = 0; i < horizon; i++) {
+                    timedRangeVector.timeStamps[i] = inverseMapTimeValue(timeGap, localTimeStamp);
+                    timedRangeVector.upperTimeStamps[i] = max(timedRangeVector.timeStamps[i],
+                            inverseMapTimeValue(timeGap + timeBound, localTimeStamp));
+                    timedRangeVector.lowerTimeStamps[i] = min(timedRangeVector.timeStamps[i],
+                            inverseMapTimeValue(max(0, timeGap - timeBound), localTimeStamp));
+                    localTimeStamp = timedRangeVector.upperTimeStamps[i];
+                }
             }
         } else {
             timedRangeVector = new TimedRangeVector(inputLength * horizon, horizon);

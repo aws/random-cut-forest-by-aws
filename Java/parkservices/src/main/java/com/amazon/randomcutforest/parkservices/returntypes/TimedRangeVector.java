@@ -30,6 +30,9 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
  * transformation applied by TRCF as it invokes RCF). The timeStamps correspond
  * to the predicted timestamps The upper and lower ranges are also present
  * similar to RangeVector
+ *
+ * Note that if the timestamps cannot be predicted meaningfully (for example in
+ * STREAMING_IMPUTE mode), then those entries would be 0
  */
 public class TimedRangeVector {
 
