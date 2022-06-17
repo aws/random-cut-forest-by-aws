@@ -4,11 +4,7 @@
 
     <groupId>software.amazon.randomcutforest</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-<<<<<<< HEAD
     <version>3.0.0-SNAPSHOT</version>
-=======
-    <version>3.0-rc4-SNAPSHOT</version>
->>>>>>> Adding seperate working snapshot and official release workflows
     <packaging>pom</packaging>
 
     <name>software.amazon.randomcutforest:randomcutforest</name>
