@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.parkservices;
 import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static java.lang.Math.min;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
@@ -86,6 +87,15 @@ public class ForecastTest {
             assert (extrapolate.timeStamps.length == horizon);
             assert (extrapolate.lowerTimeStamps.length == horizon);
             assert (extrapolate.upperTimeStamps.length == horizon);
+
+            RangeVector alternative = forest.extrapolate(horizon, true, 1.0).rangeVector;
+
+            // repeated invocations of extrapolate should return same result
+            // for the same values of correction,centrality
+            assertArrayEquals(forecast.values, alternative.values, 1e-6f);
+            assertArrayEquals(forecast.lower, alternative.lower, 1e-6f);
+            assertArrayEquals(forecast.upper, alternative.upper, 1e-6f);
+
             for (int i = 0; i < horizon; i++) {
                 // check ranges
                 if (j > sampleSize) {
@@ -177,6 +187,14 @@ public class ForecastTest {
             assert (extrapolate.timeStamps.length == horizon);
             assert (extrapolate.lowerTimeStamps.length == horizon);
             assert (extrapolate.upperTimeStamps.length == horizon);
+
+            RangeVector alternative = forest.extrapolate(horizon, true, 1.0).rangeVector;
+
+            // repeated invocations of extrapolate should return same result
+            // for the same values of correction,centrality
+            assertArrayEquals(forecast.values, alternative.values, 1e-6f);
+            assertArrayEquals(forecast.lower, alternative.lower, 1e-6f);
+            assertArrayEquals(forecast.upper, alternative.upper, 1e-6f);
 
             for (int i = 0; i < horizon; i++) {
 
@@ -270,6 +288,14 @@ public class ForecastTest {
             assert (extrapolate.timeStamps.length == horizon);
             assert (extrapolate.lowerTimeStamps.length == horizon);
             assert (extrapolate.upperTimeStamps.length == horizon);
+
+            RangeVector alternative = forest.extrapolate(horizon, true, 1.0).rangeVector;
+
+            // repeated invocations of extrapolate should return same result
+            // for the same values of correction,centrality
+            assertArrayEquals(forecast.values, alternative.values, 1e-6f);
+            assertArrayEquals(forecast.lower, alternative.lower, 1e-6f);
+            assertArrayEquals(forecast.upper, alternative.upper, 1e-6f);
 
             for (int i = 0; i < horizon; i++) {
                 // check ranges
@@ -420,6 +446,14 @@ public class ForecastTest {
                 RangeVector forecast = extrapolate.rangeVector;
                 assert (forecast.values.length == horizon);
                 assert (extrapolate.timeStamps.length == horizon);
+
+                RangeVector alternative = forest.extrapolate(horizon, true, 1.0).rangeVector;
+
+                // repeated invocations of extrapolate should return same result
+                // for the same values of correction,centrality
+                assertArrayEquals(forecast.values, alternative.values, 1e-6f);
+                assertArrayEquals(forecast.lower, alternative.lower, 1e-6f);
+                assertArrayEquals(forecast.upper, alternative.upper, 1e-6f);
 
                 for (int i = 0; i < horizon; i++) {
                     // check ranges
