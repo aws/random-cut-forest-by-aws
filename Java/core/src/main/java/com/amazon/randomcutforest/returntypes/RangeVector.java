@@ -16,6 +16,8 @@
 package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 import java.util.Arrays;
 
@@ -76,4 +78,22 @@ public class RangeVector {
         this.upper = Arrays.copyOf(base.upper, dimensions);
         this.lower = Arrays.copyOf(base.lower, dimensions);
     }
+
+    public void shift(int i, float shift) {
+        checkArgument(i >= 0 && i < values.length, "incorrect index");
+        values[i] += shift;
+        // managing precision
+        upper[i] = max(values[i], upper[i] + shift);
+        lower[i] = min(values[i], lower[i] + shift);
+    }
+
+    public void scale(int i, float weight) {
+        checkArgument(i >= 0 && i < values.length, "incorrect index");
+        checkArgument(weight > 0, " negative weight not permitted");
+        values[i] = values[i] * weight;
+        // managing precision
+        upper[i] = max(upper[i] * weight, values[i]);
+        lower[i] = min(lower[i] * weight, values[i]);
+    }
+
 }
