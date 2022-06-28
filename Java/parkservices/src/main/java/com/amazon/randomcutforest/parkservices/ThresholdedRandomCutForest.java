@@ -184,16 +184,16 @@ public class ThresholdedRandomCutForest {
      */
     public <T extends IRCFComputeDescriptor> T singleStepProcess(T input, IPreprocessor<T> preprocessor,
             Function<T, T> core) {
-        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
+        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
         T answer;
         try {
-            if (ifZero) { // turn caching on temporarily
+            if (cacheDisabled) { // turn caching on temporarily
                 forest.setBoundingBoxCacheFraction(1.0);
             }
             answer = preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
                     lastAnomalyDescriptor, forest);
         } finally {
-            if (ifZero) { // turn caching off
+            if (cacheDisabled) { // turn caching off
                 forest.setBoundingBoxCacheFraction(0);
             }
         }
@@ -295,11 +295,11 @@ public class ThresholdedRandomCutForest {
         int dimensions = forest.getDimensions();
         int blockSize = dimensions / shingleSize;
         double[] lastPoint = preprocessor.getLastShingledPoint();
-        boolean ifZero = (forest.getBoundingBoxCacheFraction() == 0);
+        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
         RangeVector answer = new RangeVector(horizon * blockSize);
         int gap = (int) (preprocessor.getInternalTimeStamp() - lastAnomalyDescriptor.getInternalTimeStamp());
         try {
-            if (ifZero) { // turn caching on temporarily
+            if (cacheDisabled) { // turn caching on temporarily
                 forest.setBoundingBoxCacheFraction(1.0);
             }
             float[] newPoint = toFloatArray(lastPoint);
@@ -315,7 +315,7 @@ public class ThresholdedRandomCutForest {
             }
             answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
         } finally {
-            if (ifZero) { // turn caching off
+            if (cacheDisabled) { // turn caching off
                 forest.setBoundingBoxCacheFraction(0);
             }
         }

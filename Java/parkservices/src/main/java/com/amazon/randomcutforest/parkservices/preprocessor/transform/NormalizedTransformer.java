@@ -41,6 +41,7 @@ public class NormalizedTransformer extends WeightedTransformer {
      * @param previousInput what was the real (or previously imputed) observation
      * @return the observations that would (approximately) transform to values[]
      */
+    @Override
     public double[] invert(double[] values, double[] previousInput) {
         double[] output = new double[values.length];
         for (int i = 0; i < values.length; i++) {
@@ -54,13 +55,14 @@ public class NormalizedTransformer extends WeightedTransformer {
     /**
      * inverts a forecast (and upper and lower limits) provided by RangeVector range
      * the values are scaled by the factor used in normalization note that the
-     * expected difference maintained in deviation[j + inpulLength] is added for
+     * expected difference maintained in deviation[j + inputLength] is added for
      * each attribute j, along with the mean from the normalization
      * 
      * @param ranges        provides p50 values with upper and lower estimates
      * @param baseDimension the number of variables being forecast (often 1)
      * @param previousInput the last input of length baseDimension
      */
+    @Override
     public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
         int inputLength = weights.length;
         int horizon = ranges.values.length / baseDimension;
@@ -84,7 +86,7 @@ public class NormalizedTransformer extends WeightedTransformer {
      *                   discounted standard deviation
      * @param factor     an alternate set of factors that are used at
      *                   initialization; the specific use case corresponds to
-     *                   bufferring 10 or 20 values and then starting the
+     *                   buffering 10 or 20 values and then starting the
      *                   normalization; otherwise the initial values would have
      *                   oversize impact
      * @param clipFactor the output value is bound is in [-clipFactor,clipFactor]
@@ -115,6 +117,7 @@ public class NormalizedTransformer extends WeightedTransformer {
      * @param clipFactor        the factor used in clipping the normalized values
      * @return the transformed values to be shingled and used in RCF
      */
+    @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
             double[] factors, double clipFactor) {
         double[] output = new double[inputPoint.length];

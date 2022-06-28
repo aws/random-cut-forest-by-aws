@@ -85,6 +85,7 @@ public class SubtractMATransformer extends WeightedTransformer {
      * @param clipFactor        the factor used in clipping the normalized values
      * @return the transformed values to be shingled and used in RCF
      */
+    @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
             double[] factors, double clipFactor) {
         double[] output = new double[inputPoint.length];

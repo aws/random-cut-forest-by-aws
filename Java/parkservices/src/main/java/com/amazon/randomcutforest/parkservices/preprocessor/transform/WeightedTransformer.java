@@ -27,13 +27,13 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 
 /**
  * A weighted transformer maintains 2X data structures that measure discounted
- * averages and the corresponding standard deviation. The the element i
- * corresponds to discounted average of the variable i and element (X+i)
- * corresponds to the discounted average of the single step differences of the
- * same variable i. These two quantities together can help answer a number of
- * estimation questions of a time series, and in particular help solve for
- * simple linear drifts. Even though the discounted averages are not obviously
- * required -- they are useful in forecasts.
+ * averages and the corresponding standard deviation. The element i corresponds
+ * to discounted average of the variable i and element (X+i) corresponds to the
+ * discounted average of the single step differences of the same variable i.
+ * These two quantities together can help answer a number of estimation
+ * questions of a time series, and in particular help solve for simple linear
+ * drifts. Even though the discounted averages are not obviously required --
+ * they are useful in forecasts.
  *
  * We note that more complicated drifts may require different (and complicated)
  * solutions in a streaming context and are not implemented yet.
@@ -65,9 +65,9 @@ public class WeightedTransformer implements ITransformer {
      *
      * @param values        what the RCF would like to observe
      * @param previousInput what was the real (or previously imputed) observation
-     * @return the observations that would (approximately) transform to values[]
+     * @return the observations that would (approximately) transform to the array
+     *         values[]
      */
-    @Override
     public double[] invert(double[] values, double[] previousInput) {
         double[] output = new double[values.length];
         for (int i = 0; i < values.length; i++) {
@@ -78,7 +78,7 @@ public class WeightedTransformer implements ITransformer {
 
     /**
      * inverts a forecast (and upper and lower limits) provided by RangeVector range
-     * note that the expected difference maintained in deviation[j + inpulLength] is
+     * note that the expected difference maintained in deviation[j + inputLength] is
      * added for each attribute j
      * 
      * @param ranges        provides p50 values with upper and lower estimates
@@ -105,7 +105,6 @@ public class WeightedTransformer implements ITransformer {
      * @param inputPoint    the input seen by TRCF
      * @param previousInput the previous input
      */
-    @Override
     public void updateDeviation(double[] inputPoint, double[] previousInput) {
         checkArgument(inputPoint.length * 2 == deviations.length, "incorrect lengths");
         for (int i = 0; i < inputPoint.length; i++) {

@@ -38,6 +38,7 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
      * @param previousInput what was the real (or previously imputed) observation
      * @return the observations that would (approximately) transform to values[]
      */
+    @Override
     public double[] invert(double[] values, double[] previousInput) {
         double[] output = new double[values.length];
         for (int i = 0; i < values.length; i++) {
@@ -51,7 +52,7 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
     /**
      * inverts a forecast (and upper and lower limits) provided by RangeVector range
      * the values are scaled by the factor used in the transformation note that the
-     * expected difference maintained in deviation[j + inpulLength] is added for
+     * expected difference maintained in deviation[j + inputLength] is added for
      * each attribute j, once for each iteration; and the resulting value is added
      * back as an inverse of the differencing operation.
      * 
@@ -59,6 +60,7 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
      * @param baseDimension the number of variables being forecast (often 1)
      * @param previousInput the last input of length baseDimension
      */
+    @Override
     public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
 
         int inputLength = weights.length;
@@ -91,6 +93,7 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
      * @param clipFactor        the factor used in clipping the normalized values
      * @return the transformed values to be shingled and used in RCF
      */
+    @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
             double[] factors, double clipFactor) {
         double[] input = new double[inputPoint.length];

@@ -123,8 +123,8 @@ public class ThresholdedPredictive implements Example {
             if (lastActualSum > alertThreshold && sumValue > alertThreshold) {
                 if (!actualCrossingAlerted) {
                     if (printEvents) {
-                        System.out.println(
-                                " Crossing " + alertThreshold + " at consecutive sequences " + (i - 1) + " " + i);
+                        System.out.println(" Crossing " + alertThreshold + " at consecutive sequence indices " + (i - 1)
+                                + " " + i);
                     }
                     actualCrossingAlerted = true;
                 }

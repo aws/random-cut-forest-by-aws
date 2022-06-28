@@ -38,6 +38,7 @@ public class DifferenceTransformer extends WeightedTransformer {
      * @param previousInput what was the real (or previously imputed) observation
      * @return the observations that would (approximately) transform to values[]
      */
+    @Override
     public double[] invert(double[] values, double[] previousInput) {
         double[] output = new double[values.length];
         for (int i = 0; i < values.length; i++) {
@@ -57,6 +58,7 @@ public class DifferenceTransformer extends WeightedTransformer {
      * @param baseDimension the number of variables being forecast (often 1)
      * @param previousInput the last input of length baseDimension
      */
+    @Override
     public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
         int inputLength = weights.length;
         int horizon = ranges.values.length / baseDimension;
@@ -83,6 +85,7 @@ public class DifferenceTransformer extends WeightedTransformer {
      * @param clipFactor        the factor used in clipping the normalized values
      * @return the transformed values to be shingled and used in RCF
      */
+    @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
             double[] factors, double clipFactor) {
 
