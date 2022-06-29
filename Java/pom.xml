@@ -4,7 +4,7 @@
 
     <groupId>software.amazon.randomcutforest</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-    <version>3.0-rc3</version>
+    <version>3.0.0</version>
     <packaging>pom</packaging>
 
     <name>software.amazon.randomcutforest:randomcutforest</name>
