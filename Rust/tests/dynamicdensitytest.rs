@@ -4,13 +4,11 @@ extern crate rcflib;
 
 use std::f32::consts::PI;
 
-use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rcflib::{
     common::multidimdatawithkey::MultiDimDataWithKey,
     rcf::{create_rcf, RCF},
-    visitor::visitor::VisitorInfo,
 };
 
 /// try cargo test --release
@@ -58,7 +56,7 @@ fn dynamic_density() {
             );
         }
 
-        let density = forest.directional_density(&query_point);
+        let density = forest.directional_density(&query_point).unwrap();
         let value = density.total();
 
         if (degree <= 60)

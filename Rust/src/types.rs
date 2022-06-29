@@ -1,3 +1,5 @@
+use crate::errors;
+
 /// A trait that defines a maximum value constant.
 pub trait Max {
     const MAX: Self;
@@ -28,3 +30,5 @@ pub trait Location:
 impl Location for u8 {}
 impl Location for u16 {}
 impl Location for usize {}
+
+pub type Result<R> = std::result::Result<R, errors::RCFError>;

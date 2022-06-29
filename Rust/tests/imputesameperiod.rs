@@ -65,7 +65,7 @@ fn impute_same_period() {
 
     for i in 0..data_with_key.data.len() {
         if i > 200 {
-            let next_values = forest.extrapolate(1);
+            let next_values = forest.extrapolate(1).unwrap();
             assert!(next_values.len() == base_dimension);
             error += next_values
                 .iter()
@@ -77,9 +77,9 @@ fn impute_same_period() {
         forest.update(&data_with_key.data[i], 0);
     }
 
-    println!("Success! {}", forest.get_entries_seen());
-    println!("PointStore Size {} ", forest.get_point_store_size());
-    println!("Total size {} bytes (approx)", forest.get_size());
+    println!("Success! {}", forest.entries_seen());
+    println!("PointStore Size {} ", forest.point_store_size());
+    println!("Total size {} bytes (approx)", forest.size());
     println!(
         " RMSE {},  noise {} ",
         f64::sqrt(error / count as f64),

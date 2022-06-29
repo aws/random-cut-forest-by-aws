@@ -63,7 +63,7 @@ fn anomalydetection_score_and_update() {
     let _next_index = 0;
 
     for i in 0..data_with_key.data.len() {
-        let new_score = forest.score(&data_with_key.data[i]);
+        let new_score = forest.score(&data_with_key.data[i]).unwrap();
         //println!("{} {} score {}",y,i,new_score);
         /*
         if next_index < data_with_key.change_indices.len() && data_with_key.change_indices[next_index] == i {
@@ -84,7 +84,7 @@ fn anomalydetection_score_and_update() {
         score < data_with_key.data.len() as f64,
         " average score is above 1"
     );
-    println!("Success! {}", forest.get_entries_seen());
-    println!("PointStore Size {} ", forest.get_point_store_size());
-    println!("Total size {} bytes (approx)", forest.get_size());
+    println!("Success! {}", forest.entries_seen());
+    println!("PointStore Size {} ", forest.point_store_size());
+    println!("Total size {} bytes (approx)", forest.size());
 }
