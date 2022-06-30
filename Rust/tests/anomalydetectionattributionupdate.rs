@@ -64,8 +64,8 @@ fn anomalydetection_attribution_and_update() {
     let _next_index = 0;
 
     for i in 0..data_with_key.data.len() {
-        let attribution = forest.attribution(&data_with_key.data[i]);
-        let new_score = forest.score(&data_with_key.data[i]);
+        let attribution = forest.attribution(&data_with_key.data[i]).unwrap();
+        let new_score = forest.score(&data_with_key.data[i]).unwrap();
         assert!(abs(new_score - attribution.total()) < 1e-6);
 
         /*
@@ -87,7 +87,7 @@ fn anomalydetection_attribution_and_update() {
         score < data_with_key.data.len() as f64,
         " average score is above 1"
     );
-    println!("Success! {}", forest.get_entries_seen());
-    println!("PointStore Size {} ", forest.get_point_store_size());
-    println!("Total size {} bytes (approx)", forest.get_size());
+    println!("Success! {}", forest.entries_seen());
+    println!("PointStore Size {} ", forest.point_store_size());
+    println!("Total size {} bytes (approx)", forest.size());
 }

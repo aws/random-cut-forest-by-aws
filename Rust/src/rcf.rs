@@ -19,8 +19,8 @@ use crate::{
     samplerplustree::{
         nodestore::VectorNodeStore, nodeview::UpdatableNodeView, samplerplustree::SamplerPlusTree,
     },
-    types::Location,
-    util::{add_nbr, add_to, divide, nbr_finish},
+    types::{Location, Result},
+    util::{add_nbr, add_to, check_argument, divide, nbr_finish},
     visitor::{
         attributionvisitor::AttributionVisitor,
         imputevisitor::ImputeVisitor,
@@ -43,7 +43,7 @@ pub(crate) fn damp(x: usize, y: usize) -> f64 {
     1.0 - (x as f64) / (2.0 * y as f64)
 }
 
-pub(crate) fn score_seen_displacement(x: usize, y: usize) -> f64 {
+pub(crate) fn score_seen_displacement(_x: usize, y: usize) -> f64 {
     1.0 / (1.0 + y as f64)
 }
 
@@ -52,7 +52,7 @@ pub(crate) fn score_seen_displacement(x: usize, y: usize) -> f64 {
 // (previously) unseen points have little distinction
 // that distinction can be crucial for some applications of anomaly detection
 
-pub(crate) fn score_unseen_displacement(x: usize, y: usize) -> f64 {
+pub(crate) fn score_unseen_displacement(_x: usize, y: usize) -> f64 {
     y as f64
 }
 
@@ -67,32 +67,21 @@ pub(crate) fn identity(x: f64, _y: usize) -> f64 {
     x
 }
 
-const max_number_in_summary: usize = 5;
-
 pub trait RCF {
-    fn validate_update(&self, point: &[f32]) {
-        let expected = if !self.is_internal_shingling_enabled() {
-            self.get_dimensions()
-        } else {
-            self.get_dimensions() / self.get_shingle_size()
-        };
-        if point.len() != expected {
-            println!("The point must be '{}' floats", expected);
-            panic!();
-        }
-    }
-    fn update(&mut self, point: &[f32], timestamp: u64);
+    fn update(&mut self, point: &[f32], timestamp: u64) -> Result<()>;
 
-    fn get_dimensions(&self) -> usize;
-    fn get_shingle_size(&self) -> usize;
+    fn dimensions(&self) -> usize;
+    fn shingle_size(&self) -> usize;
     fn is_internal_shingling_enabled(&self) -> bool;
-    fn get_entries_seen(&self) -> u64;
+    fn entries_seen(&self) -> u64;
+    fn size(&self) -> usize;
+    fn point_store_size(&self) -> usize;
 
-    fn score(&self, point: &[f32]) -> f64 {
+    fn score(&self, point: &[f32]) -> Result<f64> {
         self.score_visitor_traversal(point, &VisitorInfo::default())
     }
 
-    fn displacement_score(&self, point: &[f32]) -> f64 {
+    fn displacement_score(&self, point: &[f32]) -> Result<f64> {
         self.score_visitor_traversal(point, &VisitorInfo::displacement())
     }
 
@@ -104,16 +93,16 @@ pub trait RCF {
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> f64 {
+    ) -> Result<f64> {
         self.score_visitor_traversal(
             point,
             &VisitorInfo::use_score(ignore_mass, score_seen, score_unseen, damp, normalizer),
         )
     }
 
-    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> f64;
+    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> Result<f64>;
 
-    fn attribution(&self, point: &[f32]) -> DiVector {
+    fn attribution(&self, point: &[f32]) -> Result<DiVector> {
         self.attribution_visitor_traversal(point, &VisitorInfo::default())
     }
 
@@ -125,26 +114,30 @@ pub trait RCF {
         score_unseen: fn(usize, usize) -> f64,
         damp: fn(usize, usize) -> f64,
         normalizer: fn(f64, usize) -> f64,
-    ) -> DiVector {
+    ) -> Result<DiVector> {
         self.attribution_visitor_traversal(
             point,
             &VisitorInfo::use_score(ignore_mass, score_seen, score_unseen, damp, normalizer),
         )
     }
 
-    fn attribution_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> DiVector;
+    fn attribution_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info: &VisitorInfo,
+    ) -> Result<DiVector>;
 
-    fn density(&self, point: &[f32]) -> f64 {
+    fn density(&self, point: &[f32]) -> Result<f64> {
         self.interpolation_visitor_traversal(point, &VisitorInfo::density())
-            .density()
+            .map(|meas| meas.density())
     }
 
-    fn directional_density(&self, point: &[f32]) -> DiVector {
+    fn directional_density(&self, point: &[f32]) -> Result<DiVector> {
         self.interpolation_visitor_traversal(point, &VisitorInfo::density())
-            .directional_density()
+            .map(|meas| meas.directional_density())
     }
 
-    fn density_interpolant(&self, point: &[f32]) -> InterpolationMeasure {
+    fn density_interpolant(&self, point: &[f32]) -> Result<InterpolationMeasure> {
         self.interpolation_visitor_traversal(point, &VisitorInfo::density())
     }
 
@@ -152,10 +145,14 @@ pub trait RCF {
         &self,
         point: &[f32],
         visitor_info: &VisitorInfo,
-    ) -> InterpolationMeasure;
+    ) -> Result<InterpolationMeasure>;
 
     /// the answer format is (score, point, distance from original)
-    fn near_neighbor_list(&self, point: &[f32], percentile: usize) -> Vec<(f64, Vec<f32>, f64)> {
+    fn near_neighbor_list(
+        &self,
+        point: &[f32],
+        percentile: usize,
+    ) -> Result<Vec<(f64, Vec<f32>, f64)>> {
         self.near_neighbor_traversal(point, percentile, &VisitorInfo::default())
     }
 
@@ -164,15 +161,15 @@ pub trait RCF {
         point: &[f32],
         percentile: usize,
         visitor_info: &VisitorInfo,
-    ) -> Vec<(f64, Vec<f32>, f64)>;
+    ) -> Result<Vec<(f64, Vec<f32>, f64)>>;
 
-    fn impute_missing_values(&self, positions: &[usize], point: &[f32]) -> Vec<f32> {
+    fn impute_missing_values(&self, positions: &[usize], point: &[f32]) -> Result<Vec<f32>> {
         assert!(positions.len() > 0, "nothing to impute");
         self.conditional_field(positions, point, 1.0, true, 0)
-            .median
+            .map(|summary| summary.median)
     }
 
-    fn extrapolate(&self, look_ahead: usize) -> Vec<f32>;
+    fn extrapolate(&self, look_ahead: usize) -> Result<Vec<f32>>;
 
     fn conditional_field(
         &self,
@@ -181,7 +178,7 @@ pub trait RCF {
         centrality: f64,
         project: bool,
         max_number: usize,
-    ) -> SampleSummary {
+    ) -> Result<SampleSummary> {
         self.generic_conditional_field_visitor(
             positions,
             point,
@@ -200,10 +197,7 @@ pub trait RCF {
         project: bool,
         max_number: usize,
         visitor_info: &VisitorInfo,
-    ) -> SampleSummary;
-
-    fn get_size(&self) -> usize;
-    fn get_point_store_size(&self) -> usize;
+    ) -> Result<SampleSummary>;
 
     // to be extended to match Java version
 }
@@ -374,17 +368,18 @@ where
         initial: &S,
         collect_to: fn(&R, &mut S),
         finish: fn(&mut S, usize),
-    ) -> S
+    ) -> Result<S>
     where
         NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, VectorizedPointStore<L>>,
         V: Visitor<NodeView, R>,
         R: Clone + std::marker::Send + std::marker::Sync,
         S: Clone,
     {
-        assert!(
+        check_argument(
             point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions,
-            "incorrect input length"
-        );
+            "invalid input length",
+        )?;
+
         let mut answer = initial.clone();
         let new_point = self.point_store.get_shingled_point(point);
 
@@ -424,7 +419,7 @@ where
                 .for_each(|m| collect_to(&m, &mut answer));
         }
         (finish)(&mut answer, self.sampler_plus_trees.len());
-        answer.clone()
+        Ok(answer)
     }
 }
 
@@ -526,7 +521,7 @@ where
     <P as TryFrom<usize>>::Error: Debug,
     <N as TryFrom<usize>>::Error: Debug,
 {
-    fn update(&mut self, point: &[f32], _timestamp: u64) {
+    fn update(&mut self, point: &[f32], _timestamp: u64) -> Result<()> {
         let point_index = self.point_store.add(&point);
         if point_index != usize::MAX {
             let result: Vec<(usize, usize)> = if self.parallel_enabled {
@@ -544,13 +539,14 @@ where
             self.point_store.dec(point_index);
             self.entries_seen += 1;
         }
+        Ok(())
     }
 
-    fn get_dimensions(&self) -> usize {
+    fn dimensions(&self) -> usize {
         self.dimensions
     }
 
-    fn get_shingle_size(&self) -> usize {
+    fn shingle_size(&self) -> usize {
         self.shingle_size
     }
 
@@ -558,11 +554,11 @@ where
         self.internal_shingling
     }
 
-    fn get_entries_seen(&self) -> u64 {
+    fn entries_seen(&self) -> u64 {
         self.entries_seen
     }
 
-    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> f64 {
+    fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> Result<f64> {
         // parameter unused for score traversal
         self.simple_traversal(
             point,
@@ -576,7 +572,11 @@ where
         )
     }
 
-    fn attribution_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> DiVector {
+    fn attribution_visitor_traversal(
+        &self,
+        point: &[f32],
+        visitor_info: &VisitorInfo,
+    ) -> Result<DiVector> {
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
         self.simple_traversal(
@@ -595,7 +595,7 @@ where
         &self,
         point: &[f32],
         visitor_info: &VisitorInfo,
-    ) -> InterpolationMeasure {
+    ) -> Result<InterpolationMeasure> {
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
         self.simple_traversal(
@@ -615,7 +615,7 @@ where
         point: &[f32],
         percentile: usize,
         visitor_info: &VisitorInfo,
-    ) -> Vec<(f64, Vec<f32>, f64)> {
+    ) -> Result<Vec<(f64, Vec<f32>, f64)>> {
         let x = (0.0f64, usize::MAX, f64::MAX);
         let parameters = &vec![percentile];
         let list = self.simple_traversal(
@@ -627,12 +627,12 @@ where
             &Vec::new(),
             add_nbr,
             nbr_finish,
-        );
+        )?;
         let mut answer = Vec::new();
         for e in list.iter() {
             answer.push((e.0, self.point_store.get_copy(e.1), e.2));
         }
-        answer
+        Ok(answer)
     }
 
     fn generic_conditional_field_visitor(
@@ -643,11 +643,11 @@ where
         project: bool,
         max_number: usize,
         visitor_info: &VisitorInfo,
-    ) -> SampleSummary {
-        assert!(
+    ) -> Result<SampleSummary> {
+        check_argument(
             point.len() == self.dimensions || point.len() * self.shingle_size == self.dimensions,
-            "incorrect input length"
-        );
+            "invalid input length",
+        )?;
         let new_positions = if point.len() == self.dimensions {
             Vec::from(positions)
         } else {
@@ -662,34 +662,34 @@ where
             visitor_info,
         );
         let field_summarizer = FieldSummarizer::new(centrality, project, max_number, l1distance);
-        field_summarizer.summarize_list(&self.point_store, &raw_list, &new_positions)
+        Ok(field_summarizer.summarize_list(&self.point_store, &raw_list, &new_positions))
     }
 
-    fn extrapolate(&self, look_ahead: usize) -> Vec<f32> {
-        assert!(
+    fn extrapolate(&self, look_ahead: usize) -> Result<Vec<f32>> {
+        check_argument(
             self.internal_shingling,
-            " look ahead is not meaningful without internal shingling mechanism "
-        );
-        assert!(
+            "look ahead is not meaningful without internal shingling mechanism",
+        )?;
+        check_argument(
             self.shingle_size > 1,
-            " need shingle size > 1 for extrapolation"
-        );
+            "need shingle size > 1 for extrapolation",
+        )?;
         let mut answer = Vec::new();
         let base = self.dimensions / self.shingle_size;
         let mut fictitious_point = self.point_store.get_shingled_point(&vec![0.0f32; base]);
         for i in 0..look_ahead {
             let missing = self.point_store.get_next_indices(i);
             assert!(missing.len() == base, "incorrect imputation");
-            let values = self.impute_missing_values(&missing, &fictitious_point);
+            let values = self.impute_missing_values(&missing, &fictitious_point)?;
             for j in 0..base {
                 answer.push(values[j]);
                 fictitious_point[missing[j]] = values[j];
             }
         }
-        answer
+        Ok(answer)
     }
 
-    fn get_size(&self) -> usize {
+    fn size(&self) -> usize {
         let mut sum: usize = 0;
         for model in &self.sampler_plus_trees {
             sum += model.get_size();
@@ -697,7 +697,7 @@ where
         sum + self.point_store.get_size() + std::mem::size_of::<RCFStruct<C, L, P, N>>()
     }
 
-    fn get_point_store_size(&self) -> usize {
+    fn point_store_size(&self) -> usize {
         self.point_store.get_size()
     }
 }

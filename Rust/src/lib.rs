@@ -1,4 +1,5 @@
 pub mod common;
+pub mod errors;
 mod pointstore;
 pub mod rcf;
 mod samplerplustree;

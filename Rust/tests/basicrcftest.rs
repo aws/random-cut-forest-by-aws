@@ -3,8 +3,6 @@ extern crate rand_chacha;
 extern crate rcflib;
 
 use num::abs;
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 use rcflib::{
     common::multidimdatawithkey::MultiDimDataWithKey,
     rcf::{create_rcf, RCF},
@@ -78,10 +76,12 @@ fn two_distribution_test_static() {
 
     let anomaly = vec![0.0f32; dimensions];
 
-    assert!(forest.score(&anomaly) > 1.5);
-    assert!(forest.displacement_score(&anomaly) * f64::log2(capacity as f64) > 1.5);
-    let interpolant = forest.interpolation_visitor_traversal(&anomaly, &VisitorInfo::default());
-    let attribution = forest.attribution(&anomaly);
+    assert!(forest.score(&anomaly).unwrap() > 1.5);
+    assert!(forest.displacement_score(&anomaly).unwrap() * f64::log2(capacity as f64) > 1.5);
+    let interpolant = forest
+        .interpolation_visitor_traversal(&anomaly, &VisitorInfo::default())
+        .unwrap();
+    let attribution = forest.attribution(&anomaly).unwrap();
     assert!(attribution.high[0] > 0.75);
     assert!(attribution.low[0] > 0.75);
     for i in 1..dimensions {
@@ -108,33 +108,39 @@ fn two_distribution_test_static() {
     assert!(interpolant.probability_mass.low[1] < 0.1);
     assert!(interpolant.probability_mass.high[0] > 0.4);
     assert!(interpolant.probability_mass.low[0] > 0.4);
-    let score = forest.score(&anomaly);
+    let score = forest.score(&anomaly).unwrap();
 
     assert!(abs(score - attribution.total()) < 1e-6);
     // score is calibrated for clear cut anomalies, even if sample size doubles ...
-    assert!(abs(score - another_forest.score(&anomaly)) < 0.1 * score);
+    assert!(abs(score - another_forest.score(&anomaly).unwrap()) < 0.1 * score);
 
     // scores of non-anomalies are not calibrated to be he same but
     // are below 1 and should be close
 
-    assert!(abs(forest.score(&vec1) - another_forest.score(&vec1)) < 0.1);
-    assert!(abs(forest.score(&vec2) - another_forest.score(&vec2)) < 0.1);
-    assert!(forest.score(&vec1) < 0.8);
-    assert!(forest.score(&vec2) < 0.8);
+    assert!(abs(forest.score(&vec1).unwrap() - another_forest.score(&vec1).unwrap()) < 0.1);
+    assert!(abs(forest.score(&vec2).unwrap() - another_forest.score(&vec2).unwrap()) < 0.1);
+    assert!(forest.score(&vec1).unwrap() < 0.8);
+    assert!(forest.score(&vec2).unwrap() < 0.8);
 
-    let displacement_score = forest.displacement_score(&anomaly);
+    let displacement_score = forest.displacement_score(&anomaly).unwrap();
     // displacement is calibrated for clear cut anomalies
     // samplesize did not matter for such
     assert!(
-        abs(displacement_score - another_forest.displacement_score(&anomaly))
+        abs(displacement_score - another_forest.displacement_score(&anomaly).unwrap())
             < 0.1 * displacement_score
     );
 
     // displacement is NOT the same for dense regions; larger samplesize
     // leads to lower score; in fact the gap is close to the ratio of samplesize
     // due to normalization
-    assert!(forest.displacement_score(&vec1) > 1.5 * another_forest.displacement_score(&vec1));
-    assert!(forest.displacement_score(&vec2) > 1.5 * another_forest.displacement_score(&vec2));
+    assert!(
+        forest.displacement_score(&vec1).unwrap()
+            > 1.5 * another_forest.displacement_score(&vec1).unwrap()
+    );
+    assert!(
+        forest.displacement_score(&vec2).unwrap()
+            > 1.5 * another_forest.displacement_score(&vec2).unwrap()
+    );
 
     // multiplied by log_2 ; the displacement score is in the same numeric
     // range [0..log_2(sample size) as the regular score
@@ -142,19 +148,21 @@ fn two_distribution_test_static() {
 
     // in contrast to displacement, density is calibrated at the dense points
     assert!(
-        abs(forest.density(&vec1) - another_forest.density(&vec1)) < 0.1 * forest.density(&vec1)
+        abs(forest.density(&vec1).unwrap() - another_forest.density(&vec1).unwrap())
+            < 0.1 * forest.density(&vec1).unwrap()
     );
     assert!(
-        abs(forest.density(&vec2) - another_forest.density(&vec2)) < 0.1 * forest.density(&vec2)
+        abs(forest.density(&vec2).unwrap() - another_forest.density(&vec2).unwrap())
+            < 0.1 * forest.density(&vec2).unwrap()
     );
     // and much more than at anomalous points
-    assert!(forest.density(&vec1) > capacity as f64 * forest.density(&anomaly));
-    assert!(forest.density(&vec2) > capacity as f64 * forest.density(&anomaly));
+    assert!(forest.density(&vec1).unwrap() > capacity as f64 * forest.density(&anomaly).unwrap());
+    assert!(forest.density(&vec2).unwrap() > capacity as f64 * forest.density(&anomaly).unwrap());
 
     // but now, unlike displacement, the  calibration is awry at potential anomalies
     // and moreover is in the other direction; larger samplesize gives larger densities because
     // of spurious points coming closer. This is a core intuition of observations/observability; the
     // calibration of central tendency (often used in forecast, also densities of dense regions)
     // has different requirements compared to callibration at extremeties (anomalies, sparse regions)
-    assert!(another_forest.density(&anomaly) > 1.5 * forest.density(&anomaly));
+    assert!(another_forest.density(&anomaly).unwrap() > 1.5 * forest.density(&anomaly).unwrap());
 }

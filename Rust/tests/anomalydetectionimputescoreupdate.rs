@@ -66,7 +66,7 @@ fn anomalydetection_impute_score_and_update() {
 
     for i in 0..data_with_key.data.len() {
         if i > 200 {
-            let next_values = forest.extrapolate(1);
+            let next_values = forest.extrapolate(1).unwrap();
             assert!(next_values.len() == base_dimension);
             error += next_values
                 .iter()
@@ -76,7 +76,7 @@ fn anomalydetection_impute_score_and_update() {
             count += base_dimension;
         }
 
-        let new_score = forest.score(&data_with_key.data[i]);
+        let new_score = forest.score(&data_with_key.data[i]).unwrap();
         //println!("{} {} score {}",y,i,new_score);
         /*
         if next_index < data_with_key.change_indices.len() && data_with_key.change_indices[next_index] == i {
@@ -93,9 +93,9 @@ fn anomalydetection_impute_score_and_update() {
         "Average score {} ",
         (score / data_with_key.data.len() as f64)
     );
-    println!("Success! {}", forest.get_entries_seen());
-    println!("PointStore Size {} ", forest.get_point_store_size());
-    println!("Total size {} bytes (approx)", forest.get_size());
+    println!("Success! {}", forest.entries_seen());
+    println!("PointStore Size {} ", forest.point_store_size());
+    println!("Total size {} bytes (approx)", forest.size());
     println!(
         " RMSE {},  noise {} ",
         f64::sqrt(error / count as f64),
