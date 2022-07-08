@@ -1,0 +1,35 @@
+name: Build and publish snapshot on push to main
+on:
+  push:
+    branches:
+      - main
+
+defaults:
+  run:
+    working-directory: Java/
+
+jobs:
+  build:
+    name: Build project and publish SNAPSHOT
+    runs-on: ubuntu-latest  
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+      - name: Set up java for publishing snapshot
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+          server-id: ossrh-snapshot
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+      - name: Extract project version
+        id: project
+        run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+      - name: Publish to snapshot repo
+        if: ${{ endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
+        run: mvn clean deploy
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
