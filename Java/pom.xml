@@ -4,7 +4,7 @@
 
     <groupId>software.amazon.randomcutforest</groupId>
     <artifactId>randomcutforest-parent</artifactId>
-    <version>3.0.0</version>
+    <version>3.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>software.amazon.randomcutforest:randomcutforest</name>
@@ -236,6 +236,6 @@
     <scm>
         <connection>scm:git:git://github.com/aws/random-cut-forest-by-aws.git</connection>
         <developerConnection>scm:git:ssh://github.com/aws/random-cut-forest-by-aws.git</developerConnection>
-        <url>https://github.com/aws/random-cut-forest-by-aws/tree/master</url>
+        <url>https://github.com/aws/random-cut-forest-by-aws/tree/main</url>
     </scm>
 </project>
