@@ -55,7 +55,11 @@ impl Deviation {
     }
 
     pub fn update(&mut self, score: f64) {
-        let factor = if self.discount == 0.0 {1.0} else {min(1 - self.discount, 1 - 1.0 / (self.count + 2))};
+        let factor = if self.discount == 0.0 {1.0} else {
+            let a = 1.0 - self.discount;
+            let b= 1.0 - 1.0 / (self.count + 2) as f64;
+            if (a<b) {a} else {b}
+        };
         self.sum = self.sum * factor + score;
         self.sum_squared = self.sum_squared * factor + score * score;
         self.weight = self.weight * factor + 1.0;
@@ -67,7 +71,7 @@ impl Deviation {
             return 0.0;
         }
         let temp = self.sum / self.weight;
-        let answer = self.sumSquared / self.weight - temp * temp;
+        let answer = self.sum_squared / self.weight - temp * temp;
         if answer > 0.0 {
             f64::sqrt(answer)
         } else {

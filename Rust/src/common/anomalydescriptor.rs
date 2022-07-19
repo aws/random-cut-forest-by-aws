@@ -10,16 +10,16 @@ use crate::common::divector::DiVector;
 pub struct AnomalyDescriptor {
 
     // the current input point; can have missing values
-    pub current_input: vec<f32>,
+    pub current_input: Vec<f32>,
 
     // current timestamp
     pub current_timestamp: usize,
 
     // potential missing values in the current input (ideally None)
-    pub missing_values: Option<vec<i32>>,
+    pub missing_values: Option<Vec<i32>>,
 
     // potentially transformed point used by RCF, can have different dimensions than input
-    pub rcf_point: Option<vec<f32>>,
+    pub rcf_point: Option<Vec<f32>>,
 
     pub score: f32,
 
@@ -34,7 +34,7 @@ pub struct AnomalyDescriptor {
     // present only if grade > 0
     pub attribution: Option<DiVector>,
 
-    pub expected_rcf_point: Option<vec<f32>>,
+    pub expected_rcf_point: Option<Vec<f32>>,
 
     pub relative_index: Option<usize>,
 
@@ -45,23 +45,23 @@ pub struct AnomalyDescriptor {
 
     pub in_high_score_region: Option<bool>,
 
-    pub relevant_attribution: Option<vec<f32>>,
+    pub relevant_attribution: Option<Vec<f32>>,
 
     pub time_attribution: Option<f32>,
 
     // the values being replaced; may correspond to past
-    pub past_values: Option<vec<f32>>,
+    pub past_values: Option<Vec<f32>>,
 
     pub past_timestamp: Option<usize>,
 
     pub expected_values_list: Option<Vec<Vec<f32>>>,
 
-    pub likelihood_of_values: Option<vec<f32>>
+    pub likelihood_of_values: Option<Vec<f32>>
 
 }
 
 impl AnomalyDescriptor {
-    pub fn default(point: vec<f32>, timestamp: usize) -> Self {
+    pub fn default(point: Vec<f32>, timestamp: usize) -> Self {
         AnomalyDescriptor {
             current_input: point.clone(),
             current_timestamp: timestamp,
@@ -87,10 +87,10 @@ impl AnomalyDescriptor {
         }
     }
 
-    pub fn new(point: vec<f32>, timestamp: usize, missing_values: vec<i32>) -> Self {
-        assert!(missing_values.len <= point.len, "incorrect input");
-        for i in missing_values {
-            assert!( i >=0 && i<point.len, "incorrect input")
+    pub fn new(point: Vec<f32>, timestamp: usize, missing_values: Vec<i32>) -> Self {
+        assert!(missing_values.len() <= point.len(), "incorrect input");
+        for i in &missing_values {
+            assert!( *i >=0 && (*i as usize) < point.len(), "incorrect input")
         }
         AnomalyDescriptor {
             current_input: point.clone(),
