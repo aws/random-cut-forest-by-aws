@@ -37,7 +37,7 @@ jobs:
       run: mvn -B package --file pom.xml
     - name: Publish to Maven central
       if: ${{ !endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
-      run: mvn deploy --file pom.xml
+      run: mvn --batch-mode -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} deploy --file pom.xml
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}

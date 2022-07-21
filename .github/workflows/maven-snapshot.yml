@@ -22,6 +22,8 @@ jobs:
           server-id: ossrh-snapshot
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Build with Maven
         run: mvn -B package --file pom.xml
       - name: Extract project version
@@ -29,7 +31,8 @@ jobs:
         run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
       - name: Publish to snapshot repo
         if: ${{ endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
-        run: mvn clean deploy
+        run: mvn clean --batch-mode -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} deploy 
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
