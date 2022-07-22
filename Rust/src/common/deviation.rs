@@ -47,7 +47,7 @@ impl Deviation {
     }
 
     pub fn mean(&self) -> f64 {
-        if self.empty() {
+        if self.is_empty() {
             0.0
         } else {
             self.sum / self.weight
@@ -67,7 +67,7 @@ impl Deviation {
     }
 
     pub fn deviation(&self) -> f64{
-        if self.empty() {
+        if self.is_empty() {
             return 0.0;
         }
         let temp = self.sum / self.weight;
@@ -79,7 +79,7 @@ impl Deviation {
         }
     }
 
-    pub fn empty(&self) -> bool{
+    pub fn is_empty(&self) -> bool{
         self.weight <= 0.0
     }
 

@@ -61,7 +61,7 @@ pub struct AnomalyDescriptor {
 }
 
 impl AnomalyDescriptor {
-    pub fn default(point: Vec<f32>, timestamp: usize) -> Self {
+    pub fn new(point: Vec<f32>, timestamp: usize) -> Self {
         AnomalyDescriptor {
             current_input: point.clone(),
             current_timestamp: timestamp,
@@ -87,7 +87,7 @@ impl AnomalyDescriptor {
         }
     }
 
-    pub fn new(point: Vec<f32>, timestamp: usize, missing_values: Vec<i32>) -> Self {
+    pub fn new_with_missing_values(point: Vec<f32>, timestamp: usize, missing_values: Vec<i32>) -> Self {
         assert!(missing_values.len() <= point.len(), "incorrect input");
         for i in &missing_values {
             assert!( *i >=0 && (*i as usize) < point.len(), "incorrect input")
