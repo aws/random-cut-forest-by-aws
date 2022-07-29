@@ -33,6 +33,10 @@ const PHASE2_THRESHOLD: usize = 2;
 
 const LENGTH_BOUND: usize = 1000;
 
+const UPPER_FRACTION : f64 = 0.9;
+
+const LOWER_FRACTION : f64 = 0.1;
+
 #[repr(C)]
 pub struct SampleSummary {
     pub summary_points: Vec<Vec<f32>>,
@@ -48,6 +52,10 @@ pub struct SampleSummary {
     pub mean: Vec<f32>,
     pub median: Vec<f32>,
 
+    // percentiles and bounds
+    pub upper: Vec<f32>,
+    pub lower : Vec<f32>,
+
     // This is the global deviation,
     pub deviation: Vec<f32>,
 }
@@ -59,6 +67,8 @@ impl SampleSummary {
         relative_weight: Vec<f32>,
         median: Vec<f32>,
         mean: Vec<f32>,
+        upper: Vec<f32>,
+        lower: Vec<f32>,
         deviation: Vec<f32>,
     ) -> Self {
         SampleSummary {
@@ -67,6 +77,8 @@ impl SampleSummary {
             relative_weight: relative_weight.clone(),
             median: median.clone(),
             mean: mean.clone(),
+            upper: upper.clone(),
+            lower: lower.clone(),
             deviation: deviation.clone(),
         }
     }
@@ -76,8 +88,21 @@ impl SampleSummary {
         self.relative_weight = relative_weight.clone();
     }
 
-    pub fn from_Points(points: &[(Vec<f32>, f32)]) -> Self {
+    pub fn pick(weighted_points : &[(f32,f32)], weight: f64, start: usize, initial_weight : f64) -> (usize,f64) {
+        let mut running = initial_weight;
+        let mut index = start;
+        while index + 1 < weighted_points.len() && weighted_points[index].1 as f64 + running < weight {
+            running += weighted_points[index].1 as f64;
+            index += 1;
+        }
+        (index, running)
+    }
+
+
+    pub fn from_points(points: &[(Vec<f32>, f32)], lower_fraction: f64, upper_fraction:f64) -> Self {
         assert!(points.len() > 0, "cannot be empty list");
+        assert!(lower_fraction < 0.5, " has to be less than half");
+        assert!(upper_fraction > 0.5, "has to be larger than half");
         let dimensions = points[0].0.len();
         assert!(dimensions > 0, " cannot have 0 dimensions");
         let total_weight: f64 = points.iter().map(|x| x.1 as f64).sum();
@@ -107,11 +132,20 @@ impl SampleSummary {
             deviation[j] = f64::sqrt(if t > 0.0 { t } else { 0.0 }) as f32;
         }
         let mut median = vec![0.0f32; dimensions];
-        let num = points.len();
+        let mut upper_vec = vec![0.0f32;dimensions];
+        let mut lower_vec = vec![0.0f32;dimensions];
+        let num = total_weight/2.0;
+        let lower = total_weight * lower_fraction;
+        let upper = total_weight * upper_fraction;
         for j in 0..dimensions {
-            let mut v: Vec<f32> = points.iter().map(|x| x.0[j]).collect();
-            v.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            median[j] = v[num / 2];
+            let mut y: Vec<(f32,f32)> = points.iter().map(|x| (x.0[j],x.1)).collect();
+            y.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            let first = Self::pick(&y,lower,0,0.0);
+            lower_vec[j] = y[first.0].0;
+            let second = Self::pick(&y,num,first.0,first.1);
+            median[j] = y[second.0].0;
+            let third = Self::pick(&y,upper,second.0,second.1);
+            upper_vec[j] = y[third.0].0;
         }
 
         SampleSummary {
@@ -119,6 +153,8 @@ impl SampleSummary {
             relative_weight: Vec::new(),
             total_weight: total_weight as f32,
             mean,
+            upper: upper_vec,
+            lower: lower_vec,
             median,
             deviation,
         }
@@ -132,7 +168,7 @@ pub fn summarize(
     parallel_enabled: bool,
 ) -> SampleSummary {
     assert!(max_number < 51, " for large number of clusters, other methods may be better, consider recursively removing clusters");
-    let mut summary = SampleSummary::from_Points(&points);
+    let mut summary = SampleSummary::from_points(&points,LOWER_FRACTION,UPPER_FRACTION);
 
     if max_number > 0 {
         let dimensions = points[0].0.len();
