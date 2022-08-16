@@ -176,4 +176,23 @@ impl DiVector {
     pub fn high_low_sum(&self, index: usize) -> f64 {
         self.high[index] + self.low[index]
     }
+
+    pub fn max_contribution(&self, base_dimension: usize) -> usize {
+        let mut val = 0.0;
+        let mut index = 0;
+        for i in 0..base_dimension {
+            val += self.high_low_sum(i);
+        }
+        for j in 1..(self.dimensions() / base_dimension) {
+            let mut sum = 0.0;
+            for i in 0..base_dimension {
+                sum += self.high_low_sum(j * base_dimension + i);
+            }
+            if sum > val {
+                val = sum;
+                index = j;
+            }
+        }
+        index
+    }
 }

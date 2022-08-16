@@ -70,7 +70,7 @@ fn impute_different_period() {
 
     for i in 0..data_with_key.data.len() {
         if i > 200 {
-            let next_values = forest.extrapolate(1).unwrap();
+            let next_values = forest.extrapolate(1).unwrap().values;
             assert!(next_values.len() == base_dimension);
             error += next_values
                 .iter()

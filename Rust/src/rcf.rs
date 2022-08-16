@@ -29,6 +29,7 @@ use crate::{
         visitor::{Visitor, VisitorInfo},
     },
 };
+use crate::common::rangevector::RangeVector;
 
 pub(crate) fn score_seen(x: usize, y: usize) -> f64 {
     1.0 / (x as f64 + f64::log2(1.0 + y as f64))
@@ -76,6 +77,7 @@ pub trait RCF {
     fn entries_seen(&self) -> u64;
     fn size(&self) -> usize;
     fn point_store_size(&self) -> usize;
+    fn shingled_point(&self,point:&[f32]) -> Vec<f32>;
 
     fn score(&self, point: &[f32]) -> Result<f64> {
         self.score_visitor_traversal(point, &VisitorInfo::default())
@@ -169,7 +171,7 @@ pub trait RCF {
             .map(|summary| summary.median)
     }
 
-    fn extrapolate(&self, look_ahead: usize) -> Result<Vec<f32>>;
+    fn extrapolate(&self, look_ahead: usize) -> Result<RangeVector>;
 
     fn conditional_field(
         &self,
@@ -227,6 +229,7 @@ where
     bounding_box_cache_fraction: f64,
     parallel_enabled: bool,
     random_seed: u64,
+    output_after: usize,
     point_store: VectorizedPointStore<L>,
 }
 
@@ -263,6 +266,7 @@ where
         time_decay: f64,
         initial_accept_fraction: f64,
         bounding_box_cache_fraction: f64,
+        output_after: usize,
     ) -> Self {
         let mut point_store_capacity: usize = (capacity * number_of_trees + 1).try_into().unwrap();
         if point_store_capacity < 2 * capacity {
@@ -316,6 +320,7 @@ where
             ),
             internal_shingling,
             internal_rotation,
+            output_after
         }
     }
 
@@ -435,7 +440,7 @@ pub fn create_rcf(
     internal_rotation: bool,
     time_decay: f64,
     initial_accept_fraction: f64,
-    bounding_box_cache_fraction: f64,
+    bounding_box_cache_fraction: f64
 ) -> Box<dyn RCF> {
     if (dimensions < u8::MAX as usize) && (capacity - 1 <= u8::MAX as usize) {
         if capacity * (1 + number_of_trees) * shingle_size <= u16::MAX as usize {
@@ -453,6 +458,7 @@ pub fn create_rcf(
                 time_decay,
                 initial_accept_fraction,
                 bounding_box_cache_fraction,
+                capacity/4
             ))
         } else {
             println!(" choosing RCF_Small");
@@ -469,6 +475,7 @@ pub fn create_rcf(
                 time_decay,
                 initial_accept_fraction,
                 bounding_box_cache_fraction,
+                capacity/4
             ))
         }
     } else if (dimensions < u16::MAX as usize) && (capacity - 1 <= u16::MAX as usize) {
@@ -486,6 +493,7 @@ pub fn create_rcf(
             time_decay,
             initial_accept_fraction,
             bounding_box_cache_fraction,
+            capacity/4
         ))
     } else {
         println!(" choosing large");
@@ -502,6 +510,7 @@ pub fn create_rcf(
             time_decay,
             initial_accept_fraction,
             bounding_box_cache_fraction,
+            capacity/4
         ))
     }
 }
@@ -521,6 +530,11 @@ where
     <P as TryFrom<usize>>::Error: Debug,
     <N as TryFrom<usize>>::Error: Debug,
 {
+    fn shingled_point(&self,point:&[f32]) -> Vec<f32> {
+        assert!(self.is_internal_shingling_enabled(), " incorrect function call");
+        self.point_store.get_shingled_point(point)
+    }
+
     fn update(&mut self, point: &[f32], _timestamp: u64) -> Result<()> {
         let point_index = self.point_store.add(&point);
         if point_index != usize::MAX {
@@ -560,6 +574,9 @@ where
 
     fn score_visitor_traversal(&self, point: &[f32], visitor_info: &VisitorInfo) -> Result<f64> {
         // parameter unused for score traversal
+        if self.output_after > self.entries_seen as usize {
+            return Ok(0.0);
+        }
         self.simple_traversal(
             point,
             &Vec::new(),
@@ -577,6 +594,9 @@ where
         point: &[f32],
         visitor_info: &VisitorInfo,
     ) -> Result<DiVector> {
+        if self.output_after > self.entries_seen as usize {
+            return Ok(DiVector::empty(self.dimensions));
+        }
         // tells the visitor what dimension to expect for each tree
         let parameters = &vec![self.dimensions];
         self.simple_traversal(
@@ -665,7 +685,7 @@ where
         Ok(field_summarizer.summarize_list(&self.point_store, &raw_list, &new_positions))
     }
 
-    fn extrapolate(&self, look_ahead: usize) -> Result<Vec<f32>> {
+    fn extrapolate(&self, look_ahead: usize) -> Result<RangeVector> {
         check_argument(
             self.internal_shingling,
             "look ahead is not meaningful without internal shingling mechanism",
@@ -674,19 +694,23 @@ where
             self.shingle_size > 1,
             "need shingle size > 1 for extrapolation",
         )?;
-        let mut answer = Vec::new();
+        let mut values = Vec::new();
+        let mut upper = Vec::new();
+        let mut lower = Vec::new();
         let base = self.dimensions / self.shingle_size;
         let mut fictitious_point = self.point_store.get_shingled_point(&vec![0.0f32; base]);
         for i in 0..look_ahead {
             let missing = self.point_store.get_next_indices(i);
             assert!(missing.len() == base, "incorrect imputation");
-            let values = self.impute_missing_values(&missing, &fictitious_point)?;
+            let iterate = self.conditional_field(&missing, &fictitious_point, 1.0, true, 0).unwrap();
             for j in 0..base {
-                answer.push(values[j]);
+                values.push(iterate.median[j]);
+                lower.push(iterate.lower[j]);
+                upper.push(iterate.upper[j]);
                 fictitious_point[missing[j]] = values[j];
             }
         }
-        Ok(answer)
+        Ok(RangeVector::create(&values,&upper,&lower))
     }
 
     fn size(&self) -> usize {

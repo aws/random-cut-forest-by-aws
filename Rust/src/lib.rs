@@ -6,6 +6,7 @@ mod samplerplustree;
 mod types;
 mod util;
 pub mod visitor;
+pub mod trcf;
 
 extern crate rand;
 extern crate rand_chacha;

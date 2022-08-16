@@ -31,12 +31,14 @@ pub struct AnomalyDescriptor {
 
     pub data_confidence: f32,
 
+    pub forecast_reasonable: bool,
+
     // present only if grade > 0
     pub attribution: Option<DiVector>,
 
     pub expected_rcf_point: Option<Vec<f32>>,
 
-    pub relative_index: Option<usize>,
+    pub relative_index: Option<i32>,
 
     // useful for time augmented forests
     pub expected_timestamp: Option<usize>,
@@ -61,9 +63,9 @@ pub struct AnomalyDescriptor {
 }
 
 impl AnomalyDescriptor {
-    pub fn new(point: Vec<f32>, timestamp: usize) -> Self {
+    pub fn new(point: &[f32], timestamp: usize) -> Self {
         AnomalyDescriptor {
-            current_input: point.clone(),
+            current_input: Vec::from(point),
             current_timestamp: timestamp,
             missing_values: None,
             rcf_point: None,
@@ -72,6 +74,7 @@ impl AnomalyDescriptor {
             threshold: 0.0,
             anomaly_grade: 0.0,
             data_confidence: 0.0,
+            forecast_reasonable: false,
             attribution: None,
             expected_rcf_point: None,
             relative_index: None,
@@ -102,6 +105,7 @@ impl AnomalyDescriptor {
             threshold: 0.0,
             anomaly_grade: 0.0,
             data_confidence: 0.0,
+            forecast_reasonable: false,
             attribution: None,
             expected_rcf_point: None,
             relative_index: None,
