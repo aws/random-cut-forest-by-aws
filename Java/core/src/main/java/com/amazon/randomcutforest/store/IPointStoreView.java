@@ -15,6 +15,10 @@
 
 package com.amazon.randomcutforest.store;
 
+import com.amazon.randomcutforest.summarization.ICluster;
+
+import java.util.List;
+
 /**
  * A view of the PointStore that forces a read only access to the store.
  */
@@ -60,5 +64,21 @@ public interface IPointStoreView<Point> {
      * @return a string that can be printed
      */
     String toString(int index);
+
+    /**
+     * a function that exposes an L1 clustering of the points stored in pointstore
+     * @param maxAllowed the maximum number of clusters one is interested in
+     * @param shrinkage a parameter used in CURE algorithm that can produce a combination of behaviors (=1 corresponds
+     *                  to centroid clustering, =0 resembles robust Minimum Spanning Tree)
+     * @param numberOfRepresentatives another parameter used to control the plausible (potentially non-spherical) shapes
+     *                                of the clusters
+     * @param separationRatio a parameter that controls how aggressively we go below maxAllowed -- this is often set to
+     *                        a DEFAULT_SEPARATION_RATIO_FOR_MERGE
+     * @param previous a (possibly null) list of previous clusters which can be used to seed the current clusters to ensure
+     *                 some smoothness
+     * @return a list of clusters
+     */
+
+    List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives, double separationRatio, List<ICluster<float[]>> previous);
 
 }
