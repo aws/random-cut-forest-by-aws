@@ -15,15 +15,10 @@
 
 package com.amazon.randomcutforest;
 
-import com.amazon.randomcutforest.summarization.ICluster;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.Weighted;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static java.lang.Math.min;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,10 +26,16 @@ import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static java.lang.Math.min;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
 
 @Tag("functional")
 public class MultiCenterTest {
@@ -62,10 +63,10 @@ public class MultiCenterTest {
 
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
-            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, false, false, distance,
-                    random.nextInt(), false,random.nextDouble(),1);
-            System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for "
-                    + newDimensions + " dimensions, seed : " + seed);
+            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
+                    false, false, distance, random.nextInt(), false, random.nextDouble(), 1);
+            System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
+                    + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {
                 ++under;
             } else if (summary.size() > 2 * newDimensions) {
@@ -91,10 +92,10 @@ public class MultiCenterTest {
 
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
-            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, false, false, distance,
-                    random.nextInt(), false,random.nextDouble(),5);
-            System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for "
-                    + newDimensions + " dimensions, seed : " + seed);
+            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
+                    false, false, distance, random.nextInt(), false, random.nextDouble(), 5);
+            System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
+                    + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {
                 ++under;
             } else if (summary.size() > 2 * newDimensions) {
@@ -118,22 +119,22 @@ public class MultiCenterTest {
         System.out.println("checking parallelEnabled seed : " + seed);
         int nextSeed = random.nextInt();
         // these can differ for shinkage != 0 due to floating point issues
-        List<ICluster<float[]>> summary1 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, false, false, distance,
-                nextSeed, false,0,5);
-        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, false, false, distance,
-                nextSeed, true,0,5);
-        //assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
-        assertEquals(summary2.size(), summary1.size(),
-                " incorrect number of clusters");
+        List<ICluster<float[]>> summary1 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
+                false, false, distance, nextSeed, false, 0, 5);
+        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
+                false, false, distance, nextSeed, true, 0, 5);
+        // assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling
+        // inconsistent");
+        assertEquals(summary2.size(), summary1.size(), " incorrect number of clusters");
         for (int i = 0; i < summary2.size(); i++) {
             assertEquals(summary1.get(i).getWeight(), summary2.get(i).getWeight(), 1e-6);
             assertEquals(summary1.get(i).averageRadius(), summary2.get(i).averageRadius(), 1e-6);
-            List<Weighted<float[]>> reps1= summary1.get(i).getRepresentatives();
-            List<Weighted<float[]>> reps2= summary2.get(i).getRepresentatives();
-            assertEquals(reps1.size(),reps2.size());
-            for(int j=0;j<reps1.size();j++){
-                assertEquals(reps1.get(j).weight,reps2.get(j).weight,1e-6);
-                assertArrayEquals(reps1.get(j).index,reps2.get(j).index,1e-6f);
+            List<Weighted<float[]>> reps1 = summary1.get(i).getRepresentatives();
+            List<Weighted<float[]>> reps2 = summary2.get(i).getRepresentatives();
+            assertEquals(reps1.size(), reps2.size());
+            for (int j = 0; j < reps1.size(); j++) {
+                assertEquals(reps1.get(j).weight, reps2.get(j).weight, 1e-6);
+                assertArrayEquals(reps1.get(j).index, reps2.get(j).index, 1e-6f);
             }
         }
 
@@ -149,26 +150,24 @@ public class MultiCenterTest {
         int numberOfStrings = 200000;
 
         String[] points = new String[numberOfStrings];
-        for(int i = 0;i<numberOfStrings;i++){
-            if (random.nextDouble()<0.5) {
+        for (int i = 0; i < numberOfStrings; i++) {
+            if (random.nextDouble() < 0.5) {
                 points[i] = getABString(size, 0.9, random);
             } else {
-                points[i] = getABString(size,0.1,random);
+                points[i] = getABString(size, 0.1, random);
             }
         }
 
-
         int nextSeed = random.nextInt();
-        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 5, 10, false, false, MultiCenterTest::toyDistance,
-                nextSeed, false,0.1,5);
+        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 5, 10, false, false,
+                MultiCenterTest::toyDistance, nextSeed, false, 0.1, 5);
         System.out.println();
-        assertEquals(summary.size(),2);
+        assertEquals(summary.size(), 2);
     }
 
-
     public static double toyDistance(String a, String b) {
-        if (a.length()>b.length()){
-            return toyDistance(b,a);
+        if (a.length() > b.length()) {
+            return toyDistance(b, a);
         }
         double[][] dist = new double[2][b.length() + 1];
         for (int j = 0; j < b.length() + 1; j++) {
@@ -181,7 +180,7 @@ public class MultiCenterTest {
                 double t = dist[0][j - 1] + ((a.charAt(i - 1) == b.charAt(j - 1)) ? 0 : 1);
                 dist[1][j] = min(min(t, dist[0][j] + 1), dist[1][j - 1] + 1);
             }
-            for(int j=0;j<b.length()+1;j++){
+            for (int j = 0; j < b.length() + 1; j++) {
                 dist[0][j] = dist[1][j];
             }
         }
@@ -227,11 +226,10 @@ public class MultiCenterTest {
         return floatData;
     }
 
-
-    public String getABString(int size,double probabilityOfA, Random random){
-        StringBuilder stringBuilder= new StringBuilder();
-        int newSize = size + random.nextInt(size/5);
-        for(int i = 0;i < newSize;i++){
+    public String getABString(int size, double probabilityOfA, Random random) {
+        StringBuilder stringBuilder = new StringBuilder();
+        int newSize = size + random.nextInt(size / 5);
+        for (int i = 0; i < newSize; i++) {
             if (random.nextDouble() < probabilityOfA) {
                 stringBuilder.append("-");
             } else {

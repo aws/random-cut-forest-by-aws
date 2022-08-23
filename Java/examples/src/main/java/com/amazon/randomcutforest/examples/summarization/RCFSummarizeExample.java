@@ -15,28 +15,32 @@
 
 package com.amazon.randomcutforest.examples.summarization;
 
-import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static java.lang.Math.abs;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
 
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static java.lang.Math.abs;
+import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 /**
- * The following example is based off a test of summarization and provides an example use of summarization
- * based on centroidal representation. The clustering takes a distance function float[] x float [] -> double as
- * input, along with a maximum number of allowed clusters and provides a summary which contains the list of cluster
- * centers as "typical points" along with relative likelihood.
+ * The following example is based off a test of summarization and provides an
+ * example use of summarization based on centroidal representation. The
+ * clustering takes a distance function from (float[],float []) into double as
+ * input, along with a maximum number of allowed clusters and provides a summary
+ * which contains the list of cluster centers as "typical points" along with
+ * relative likelihood.
  *
- * The specific example below corresponds to 2*d clusters (one each in +ve and -ve axis for each of the d dimensions)
- * where d is chosen at random between 3 and 13. The clusters are designed to almost touch -- but are separable (with high probability)
- * and should be discoverable separately. Note that the algorithm does not require the knowledge of the true number of
- * clusters (2*d) but is run with a maximum allowed number 5*d.
+ * The specific example below corresponds to 2*d clusters (one each in +ve and
+ * -ve axis for each of the d dimensions) where d is chosen at random between 3
+ * and 13. The clusters are designed to almost touch -- but are separable (with
+ * high probability) and should be discoverable separately. Note that the
+ * algorithm does not require the knowledge of the true number of clusters (2*d)
+ * but is run with a maximum allowed number 5*d.
  */
 public class RCFSummarizeExample implements Example {
 
@@ -64,40 +68,41 @@ public class RCFSummarizeExample implements Example {
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
         SampleSummary summary = Summarizer.summarize(points, 5 * newDimensions);
-        System.out.println(summary.summaryPoints.length + " clusters for "
-                + newDimensions + " dimensions, seed : " + seed);
+        System.out.println(
+                summary.summaryPoints.length + " clusters for " + newDimensions + " dimensions, seed : " + seed);
         double epsilon = 0.01;
         System.out.println("Total weight " + summary.weightOfSamples + " rounding to multiples of " + epsilon);
         System.out.println();
-        for(int i= 0;i<summary.summaryPoints.length;i++){
-            long t = Math.round(summary.relativeWeight[i]/epsilon);
-            System.out.print("Cluster " + i + " relative weight " + ((float) t*epsilon) +  " center (approx): ");
-            printArray(summary.summaryPoints[i],epsilon);
+        for (int i = 0; i < summary.summaryPoints.length; i++) {
+            long t = Math.round(summary.relativeWeight[i] / epsilon);
+            System.out.print("Cluster " + i + " relative weight " + ((float) t * epsilon) + " center (approx): ");
+            printArray(summary.summaryPoints[i], epsilon);
             System.out.println();
         }
 
     }
-    void printArray(float[] values, double epsilon){
+
+    void printArray(float[] values, double epsilon) {
         System.out.print(" [");
         if (abs(values[0]) < epsilon) {
-            System.out.print( "0");
+            System.out.print("0");
         } else {
-            if (epsilon <= 0 ) {
+            if (epsilon <= 0) {
                 System.out.print(values[0]);
             } else {
-                long t = (int) Math.round(values[0]/epsilon);
-                System.out.print((float) t*epsilon);
+                long t = (int) Math.round(values[0] / epsilon);
+                System.out.print((float) t * epsilon);
             }
         }
-        for(int i=1;i<values.length;i++){
+        for (int i = 1; i < values.length; i++) {
             if (abs(values[i]) < epsilon) {
-                System.out.print( ", 0");
+                System.out.print(", 0");
             } else {
-                if (epsilon <= 0 ) {
+                if (epsilon <= 0) {
                     System.out.print(", " + values[i]);
                 } else {
-                    long t = Math.round(values[i]/epsilon);
-                    System.out.print(", " + ((float) t*epsilon));
+                    long t = Math.round(values[i] / epsilon);
+                    System.out.print(", " + ((float) t * epsilon));
                 }
             }
         }
@@ -142,6 +147,5 @@ public class RCFSummarizeExample implements Example {
 
         return floatData;
     }
-
 
 }

@@ -15,8 +15,10 @@
 
 package com.amazon.randomcutforest.summarization;
 
-import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.util.Weighted;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.util.Weighted.createSample;
+import static com.amazon.randomcutforest.util.Weighted.prefixPick;
+import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,10 +28,8 @@ import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.util.Weighted.createSample;
-import static com.amazon.randomcutforest.util.Weighted.prefixPick;
-import static java.lang.Math.max;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class Summarizer {
 
@@ -88,8 +88,8 @@ public class Summarizer {
      *                        cluster by cluster recomputation. Using parallel mode
      *                        during the assignment of points does not seem to help
      */
-    public static <R> void assignAndRecompute(List<Weighted<Integer>> sampledPoints, Function<Integer,R> getPoint, ArrayList<ICluster<R>> clusters,
-            BiFunction<R, R, Double> distance, boolean parallelEnabled) {
+    public static <R> void assignAndRecompute(List<Weighted<Integer>> sampledPoints, Function<Integer, R> getPoint,
+            ArrayList<ICluster<R>> clusters, BiFunction<R, R, Double> distance, boolean parallelEnabled) {
         checkArgument(clusters.size() > 0, " cannot be empty list of clusters");
         checkArgument(sampledPoints.size() > 0, " cannot be empty list of points");
 
@@ -116,7 +116,8 @@ public class Summarizer {
                 }
 
                 if (minDist == 0) {
-                    clusters.get(minDistNbr).addPoint(point.index, point.weight, 0,getPoint.apply(point.index),distance);
+                    clusters.get(minDistNbr).addPoint(point.index, point.weight, 0, getPoint.apply(point.index),
+                            distance);
                 } else {
                     double sum = 0;
                     for (int i = 0; i < clusters.size(); i++) {
@@ -178,24 +179,27 @@ public class Summarizer {
      * @param parallelEnabled    a flag controlling (limited) parallelism
      * @param phase1reassign     should the centers be optimized during phase 1?
      *                           (default suggestion is false)
-     * @param phase2reassign same for phase 2, when the number of clusters is close to maxallowed
-     *                           (default suggestion is true)
+     * @param phase2reassign     same for phase 2, when the number of clusters is
+     *                           close to maxallowed (default suggestion is true)
      * @param enablePhase3       should phase 3 take place?
      * @param overlapParameter   a parameter that controls the ordering of cluster
      *                           merges
-     * @param previousClustering a list of previous clusters which can be used to seed the clusters (with 0 weight;
-     *                           only the most recent data in SampledPoints have non-zero weight). This may be useful for
-     *                           maintaining smoothness in dynamic clustering environments.
+     * @param previousClustering a list of previous clusters which can be used to
+     *                           seed the clusters (with 0 weight; only the most
+     *                           recent data in SampledPoints have non-zero weight).
+     *                           This may be useful for maintaining smoothness in
+     *                           dynamic clustering environments.
      * @param <Q>                type of the cluster, so that this same framework
      *                           can be used for multiple clustering algorithms that
      *                           correspond to different implementations
      * @return a list of cluster centers
      */
 
-    public static <R,Q extends ICluster<R>> List<ICluster<R>>
-    iterativeClustering(int maxAllowed, int initial, List<Weighted<Integer>> sampledPoints, Function<Integer,R> getPoint, BiFunction<R, R, Double> distance,
-                        BiFunction<R, Float, Q> clusterInitializer, long seed, boolean parallelEnabled,
-                        boolean phase1reassign, boolean phase2reassign, boolean enablePhase3, double overlapParameter, List<ICluster<R>> previousClustering) {
+    public static <R, Q extends ICluster<R>> List<ICluster<R>> iterativeClustering(int maxAllowed, int initial,
+            List<Weighted<Integer>> sampledPoints, Function<Integer, R> getPoint, BiFunction<R, R, Double> distance,
+            BiFunction<R, Float, Q> clusterInitializer, long seed, boolean parallelEnabled, boolean phase1reassign,
+            boolean phase2reassign, boolean enablePhase3, double overlapParameter,
+            List<ICluster<R>> previousClustering) {
 
         checkArgument(sampledPoints.size() > 0, "empty list, nothing to do");
         double sampledSum = sampledPoints.stream().map(e -> (double) e.weight).reduce(Double::sum).get();
@@ -212,11 +216,11 @@ public class Summarizer {
                 centers.add(clusterInitializer.apply(getPoint.apply(picked.index), picked.weight));
             }
         }
-        if (previousClustering != null){
-            for(ICluster<R> previousCluster : previousClustering) {
+        if (previousClustering != null) {
+            for (ICluster<R> previousCluster : previousClustering) {
                 List<Weighted<R>> representatives = previousCluster.getRepresentatives();
-                for( Weighted<R> representative: representatives){
-                    centers.add(clusterInitializer.apply(representative.index,0f));
+                for (Weighted<R> representative : representatives) {
+                    centers.add(clusterInitializer.apply(representative.index, 0f));
                 }
             }
         }
@@ -283,7 +287,7 @@ public class Summarizer {
                     centers.remove(firstOfMerge);
                     assignAndRecompute(sampledPoints, getPoint, centers, distance, parallelEnabled);
                 } else {
-                    centers.get(secondOfMerge).recompute(getPoint,distance);
+                    centers.get(secondOfMerge).recompute(getPoint, distance);
                     centers.remove(firstOfMerge);
                 }
                 centers.sort(Comparator.comparingDouble(ICluster::getWeight));
@@ -314,8 +318,8 @@ public class Summarizer {
      *                        performed until the number of clusters fall below
      *                        PHASE_THRESHOLD times the maximum number of clusters
      *                        allowed
-     * @param phase2Reassign same, for phase 2, when the number of clusters are close to
-     *                       the maximum allowed
+     * @param phase2Reassign  same, for phase 2, when the number of clusters are
+     *                        close to the maximum allowed
      * @param distance        a distance function for the points, that determines
      *                        the order of the reverse delete however the EM like
      *                        step uses L1 measure (to be robust to noise)
@@ -326,7 +330,8 @@ public class Summarizer {
      *         true applications of summarization)
      */
     public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
-            boolean phase1reassign, boolean phase2Reassign, BiFunction<float[], float[], Double> distance, long seed, boolean parallelEnabled, List<ICluster<float[]>> previousClustering) {
+            boolean phase1reassign, boolean phase2Reassign, BiFunction<float[], float[], Double> distance, long seed,
+            boolean parallelEnabled, List<ICluster<float[]>> previousClustering) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
@@ -337,13 +342,14 @@ public class Summarizer {
         List<Weighted<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
 
         ArrayList<Weighted<Integer>> refs = new ArrayList<>();
-        for(int i=0;i<sampledPoints.size();i++){
-            refs.add(new Weighted<>(i,sampledPoints.get(i).weight));
+        for (int i = 0; i < sampledPoints.size(); i++) {
+            refs.add(new Weighted<>(i, sampledPoints.get(i).weight));
         }
 
-        Function<Integer,float[]> getPoint = (i) -> sampledPoints.get(i).index;
+        Function<Integer, float[]> getPoint = (i) -> sampledPoints.get(i).index;
         List<ICluster<float[]>> centers = iterativeClustering(maxAllowed, initial, refs, getPoint, distance,
-                Center::initialize, rng.nextLong(), parallelEnabled, phase1reassign, phase2Reassign, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,previousClustering);
+                Center::initialize, rng.nextLong(), parallelEnabled, phase1reassign, phase2Reassign, true,
+                DEFAULT_SEPARATION_RATIO_FOR_MERGE, previousClustering);
 
         // sort in decreasing weight
         centers.sort((o1, o2) -> Double.compare(o2.getWeight(), o1.getWeight()));
@@ -369,7 +375,8 @@ public class Summarizer {
      *                        facilitator of coninuity (large numbers would
      *                        correspond to MST like clustering)
      * @param reassignPerStep a boolean deciding if reassignment is performed each
-     *                        step, corresponding to phase 1. Phase 2 default is true.
+     *                        step, corresponding to phase 1. Phase 2 default is
+     *                        true.
      * @param distance        distance metric over float []
      * @param seed            random seed
      * @param parallelEnabled flag enabling (limited) parallelism
@@ -381,7 +388,7 @@ public class Summarizer {
         for (float[] point : points) {
             weighted.add(new Weighted<>(point, 1.0f));
         }
-        return summarize(weighted, maxAllowed, initial, reassignPerStep, true, distance, seed, parallelEnabled,null);
+        return summarize(weighted, maxAllowed, initial, reassignPerStep, true, distance, seed, parallelEnabled, null);
     }
 
     /**
@@ -396,8 +403,8 @@ public class Summarizer {
      */
     public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
             boolean reassignPerStep) {
-        return summarize(points, maxAllowed, initial, reassignPerStep, false, Summarizer::L2distance, new Random().nextLong(),
-                false,null);
+        return summarize(points, maxAllowed, initial, reassignPerStep, false, Summarizer::L2distance,
+                new Random().nextLong(), false, null);
     }
 
     /**
@@ -424,7 +431,8 @@ public class Summarizer {
      *                        performed until the number of clusters fall below
      *                        PHASE_THRESHOLD times the maximum number of clusters
      *                        allowed which defines phase 2
-     * @param phase2reassign same as above, till the nunber of clusters fall to maximum allowed
+     * @param phase2reassign  same as above, till the nunber of clusters fall to
+     *                        maximum allowed
      * @param distance        a distance function for the points, that determines
      *                        the order of the reverse delete however the EM like
      *                        step uses L1 measure (to be robust to noise)
@@ -434,13 +442,15 @@ public class Summarizer {
      *         approximate median; exact computation is unlikely to be critical for
      *         true applications of summarization)
      */
-    public static <R>  List<ICluster<R>> multiSummarize(List<Weighted<R>> points, int maxAllowed, int initial,
-                                                       boolean phase1reassign, boolean phase2reassign, BiFunction<R, R, Double> distance, long seed, boolean parallelEnabled,
-                                                       double shrinkage, int numberOfRepresentatives, List<ICluster<R>> previousClustering) {
+    public static <R> List<ICluster<R>> multiSummarize(List<Weighted<R>> points, int maxAllowed, int initial,
+            boolean phase1reassign, boolean phase2reassign, BiFunction<R, R, Double> distance, long seed,
+            boolean parallelEnabled, double shrinkage, int numberOfRepresentatives,
+            List<ICluster<R>> previousClustering) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
-        checkArgument(shrinkage>=0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
-        checkArgument(numberOfRepresentatives>0 && numberOfRepresentatives <= 100, " the number of representatives has to be in (0,100]");
+        checkArgument(shrinkage >= 0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
+        checkArgument(numberOfRepresentatives > 0 && numberOfRepresentatives <= 100,
+                " the number of representatives has to be in (0,100]");
 
         double totalWeight = points.stream().map(e -> (double) e.weight).reduce(0.0, Double::sum);
         checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
@@ -449,14 +459,16 @@ public class Summarizer {
         List<Weighted<R>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
 
         ArrayList<Weighted<Integer>> refs = new ArrayList<>();
-        for(int i=0;i<sampledPoints.size();i++){
-            refs.add(new Weighted<>(i,sampledPoints.get(i).weight));
+        for (int i = 0; i < sampledPoints.size(); i++) {
+            refs.add(new Weighted<>(i, sampledPoints.get(i).weight));
         }
 
-        Function<Integer,R> getPoint = (i) -> sampledPoints.get(i).index;
-        BiFunction<R, Float, ICluster<R>> clusterInitializer = (a,b) -> MultiCenter.initialize(a,b,shrinkage,numberOfRepresentatives);
-        List<ICluster<R>> centers = iterativeClustering(maxAllowed, initial, refs,getPoint, distance,
-                clusterInitializer, rng.nextLong(), parallelEnabled, phase1reassign, phase2reassign,true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,previousClustering);
+        Function<Integer, R> getPoint = (i) -> sampledPoints.get(i).index;
+        BiFunction<R, Float, ICluster<R>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b, shrinkage,
+                numberOfRepresentatives);
+        List<ICluster<R>> centers = iterativeClustering(maxAllowed, initial, refs, getPoint, distance,
+                clusterInitializer, rng.nextLong(), parallelEnabled, phase1reassign, phase2reassign, true,
+                DEFAULT_SEPARATION_RATIO_FOR_MERGE, previousClustering);
 
         // sort in decreasing weight
         centers.sort((o1, o2) -> Double.compare(o2.getWeight(), o1.getWeight()));
@@ -465,56 +477,68 @@ public class Summarizer {
 
     /**
      *
-     * @param points          points represented by R[]
-     * @param maxAllowed      maximum number of clusters in output
-     * @param initial         initial number of points to seed; a control parameter
-     *                        that serves both as a denoiser, as well as as a
-     *                        facilitator of coninuity (large numbers would
-     *                        correspond to MST like clustering)
-     * @param phase1Reassign a boolean deciding if reassignment is performed each
-     *                        step in phase 1 (default false)
-     * @param phase2reassign same, for phase 2 (default true)
-     * @param distance        distance metric over float []
-     * @param seed            random seed
-     * @param parallelEnabled flag enabling (limited) parallelism
-     * @param shrinkage a parameter that morphs from centroidal behavior (=1) to robust Minimum Spanning Tree (=0)
-     * @param numberOfRepresentatives the number of representatives ina multicentrod representation used to cluster
-     *                                potentially non-spherical shapes
+     * @param points                  points represented by R[]
+     * @param maxAllowed              maximum number of clusters in output
+     * @param initial                 initial number of points to seed; a control
+     *                                parameter that serves both as a denoiser, as
+     *                                well as as a facilitator of coninuity (large
+     *                                numbers would correspond to MST like
+     *                                clustering)
+     * @param phase1Reassign          a boolean deciding if reassignment is
+     *                                performed each step in phase 1 (default false)
+     * @param phase2reassign          same, for phase 2 (default true)
+     * @param distance                distance metric over float []
+     * @param seed                    random seed
+     * @param parallelEnabled         flag enabling (limited) parallelism
+     * @param shrinkage               a parameter that morphs from centroidal
+     *                                behavior (=1) to robust Minimum Spanning Tree
+     *                                (=0)
+     * @param numberOfRepresentatives the number of representatives ina multicentrod
+     *                                representation used to cluster potentially
+     *                                non-spherical shapes
      * @return a list of centers with weights
      */
-    public static <R> List<ICluster<R>> multiSummarize(R[] points, int maxAllowed, int initial, boolean phase1Reassign, boolean phase2reassign,
-                                                       BiFunction<R, R, Double> distance, long seed, Boolean parallelEnabled, double shrinkage, int numberOfRepresentatives) {
+    public static <R> List<ICluster<R>> multiSummarize(R[] points, int maxAllowed, int initial, boolean phase1Reassign,
+            boolean phase2reassign, BiFunction<R, R, Double> distance, long seed, Boolean parallelEnabled,
+            double shrinkage, int numberOfRepresentatives) {
 
         ArrayList<Weighted<R>> weighted = new ArrayList<>();
         for (R point : points) {
             weighted.add(new Weighted<>(point, 1.0f));
         }
-        return multiSummarize(weighted, maxAllowed, initial, phase1Reassign,phase2reassign, distance, seed, parallelEnabled,shrinkage,numberOfRepresentatives,null);
+        return multiSummarize(weighted, maxAllowed, initial, phase1Reassign, phase2reassign, distance, seed,
+                parallelEnabled, shrinkage, numberOfRepresentatives, null);
     }
 
     // same as above, without worrying about any previous clusters
-    public static <R> List<ICluster<R>> multiSummarize(List<R> points, int maxAllowed, int initial, boolean reassignPerStep, boolean phase2reassign,
-                                                       BiFunction<R, R, Double> distance, long seed, Boolean parallelEnabled, double shrinkage, int numberOfRepresentatives) {
+    public static <R> List<ICluster<R>> multiSummarize(List<R> points, int maxAllowed, int initial,
+            boolean reassignPerStep, boolean phase2reassign, BiFunction<R, R, Double> distance, long seed,
+            Boolean parallelEnabled, double shrinkage, int numberOfRepresentatives) {
 
         ArrayList<Weighted<R>> weighted = new ArrayList<>();
         for (R point : points) {
             weighted.add(new Weighted<>(point, 1.0f));
         }
-        return multiSummarize(weighted, maxAllowed, initial, reassignPerStep, phase2reassign, distance, seed, parallelEnabled,shrinkage,numberOfRepresentatives,null);
+        return multiSummarize(weighted, maxAllowed, initial, reassignPerStep, phase2reassign, distance, seed,
+                parallelEnabled, shrinkage, numberOfRepresentatives, null);
     }
 
     /**
      * Same as above, with the most common use cases filled in
      *
-     * @param points     points in float[][], each of weight 1.0
-     * @param maxAllowed maximum number of clusters one is interested in
-     * @param shringkage the parameter determing centroidal behavior (=1) or MST (=0)
-     * @param numberOfRepresentatives number of representives for multicentorid cluster
+     * @param points                  points in float[][], each of weight 1.0
+     * @param maxAllowed              maximum number of clusters one is interested
+     *                                in
+     * @param shringkage              the parameter determing centroidal behavior
+     *                                (=1) or MST (=0)
+     * @param numberOfRepresentatives number of representives for multicentorid
+     *                                cluster
      * @return a summarization based on L2distance
      */
-    public static List<ICluster<float[]>> multiSummarize(float[][] points, int maxAllowed, double shringkage, int numberOfRepresentatives) {
-        return multiSummarize(points, maxAllowed, 4 * maxAllowed, false, false,Summarizer::L2distance, new Random().nextLong(),
-                false,shringkage,numberOfRepresentatives);
+    public static List<ICluster<float[]>> multiSummarize(float[][] points, int maxAllowed, double shringkage,
+            int numberOfRepresentatives) {
+        return multiSummarize(points, maxAllowed, 4 * maxAllowed, false, false, Summarizer::L2distance,
+                new Random().nextLong(), false, shringkage, numberOfRepresentatives);
     }
 
 }

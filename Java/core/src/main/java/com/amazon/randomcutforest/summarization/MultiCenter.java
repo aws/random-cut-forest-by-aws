@@ -15,31 +15,35 @@
 
 package com.amazon.randomcutforest.summarization;
 
-import com.amazon.randomcutforest.util.Weighted;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.min;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static java.lang.Math.min;
+import com.amazon.randomcutforest.util.Weighted;
 
 /**
  * the following class abstracts a single centroid representation of a group of
  * points. The class is modeled after the well scattered representatives used in
  * CURE https://en.wikipedia.org/wiki/CURE_algorithm
  *
- * The number of representatives (refered as c in above) determines the possible shapes that
- * can be represented. Setting c=1 corresponds to stnadard centroid based clustering
+ * The number of representatives (refered as c in above) determines the possible
+ * shapes that can be represented. Setting c=1 corresponds to stnadard centroid
+ * based clustering
  *
- * The parameter shrinkage is slightly different from its usage in CURE, although the idea of its use
- * is similar. The main reason is that CURE was designed for geometric spaces, and RCFSummarize is designed to
- * support arbitrary distance based clustering; once the user provides a distance function (R, R) -> double
- * based on ideas of STREAM https://en.wikipedia.org/wiki/Data_stream_clustering
- * In CURE, shrinkage was used to create representatives close to the center of a cluster which is impossible
- * for generic types R. Instead shrinkage value in [0,1] corresponds to morphing the distance function to "pretend"
- * as if the distance is to the primary representative of the cluster.
+ * The parameter shrinkage is slightly different from its usage in CURE,
+ * although the idea of its use is similar. The main reason is that CURE was
+ * designed for geometric spaces, and RCFSummarize is designed to support
+ * arbitrary distance based clustering; once the user provides a distance
+ * function from (R, R) into double based on ideas of STREAM
+ * https://en.wikipedia.org/wiki/Data_stream_clustering In CURE, shrinkage was
+ * used to create representatives close to the center of a cluster which is
+ * impossible for generic types R. Instead shrinkage value in [0,1] corresponds
+ * to morphing the distance function to "pretend" as if the distance is to the
+ * primary representative of the cluster.
  */
 public class MultiCenter<R> implements ICluster<R> {
 
@@ -59,7 +63,7 @@ public class MultiCenter<R> implements ICluster<R> {
     MultiCenter(R coordinate, float weight, double shrinkage, int numberOfRepresentatives) {
         // explicitly copied because array elements will change
         this.representatives = new ArrayList<>();
-        this.representatives.add(new Weighted<>(coordinate,weight));
+        this.representatives.add(new Weighted<>(coordinate, weight));
         this.weight = weight;
         this.numberOfRepresentatives = numberOfRepresentatives;
         this.shrinkage = shrinkage;
@@ -67,24 +71,26 @@ public class MultiCenter<R> implements ICluster<R> {
     }
 
     public static <R> MultiCenter<R> initialize(R coordinate, float weight) {
-        return new MultiCenter<>(coordinate, weight,DEFAULT_SHRINKAGE,DEFAULT_NUMBER_OF_REPRESENTATIVES);
+        return new MultiCenter<>(coordinate, weight, DEFAULT_SHRINKAGE, DEFAULT_NUMBER_OF_REPRESENTATIVES);
     }
 
-    public static <R> MultiCenter<R> initialize(R coordinate, float weight, double shrinkage, int numberOfRepresentatives) {
-        checkArgument(shrinkage>=0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
-        checkArgument(numberOfRepresentatives>0 && numberOfRepresentatives <= 100, " the number of representatives has to be in (0,100]");
-        return new MultiCenter<>(coordinate, weight,shrinkage,numberOfRepresentatives);
+    public static <R> MultiCenter<R> initialize(R coordinate, float weight, double shrinkage,
+            int numberOfRepresentatives) {
+        checkArgument(shrinkage >= 0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
+        checkArgument(numberOfRepresentatives > 0 && numberOfRepresentatives <= 100,
+                " the number of representatives has to be in (0,100]");
+        return new MultiCenter<>(coordinate, weight, shrinkage, numberOfRepresentatives);
     }
 
     // adds a point; only the index to keep space bounds lower
     // note that the weight may not be the entire weight of a point in case of a
     // "soft" assignment
-    public void addPoint(int index, float weight, double dist, R point, BiFunction<R,R, Double> distance) {
+    public void addPoint(int index, float weight, double dist, R point, BiFunction<R, R, Double> distance) {
         assignedPoints.add(new Weighted<>(index, weight));
         // accounting for the closest representative
         Weighted<R> closest = representatives.get(0);
-        double newDist = distance.apply(point,representatives.get(0).index);
-        for (int i=1;i<representatives.size();i++) {
+        double newDist = distance.apply(point, representatives.get(0).index);
+        for (int i = 1; i < representatives.size(); i++) {
             double t = distance.apply(point, representatives.get(i).index);
             if (t < newDist) {
                 newDist = t;
@@ -102,7 +108,7 @@ public class MultiCenter<R> implements ICluster<R> {
         assignedPoints = new ArrayList<>();
         previousWeight = weight;
         weight = 0;
-        for(int i=0; i<representatives.size();i++) {
+        for (int i = 0; i < representatives.size(); i++) {
             representatives.get(i).weight = 0;
         }
         previousSumOFRadius = sumOfRadius;
@@ -124,7 +130,7 @@ public class MultiCenter<R> implements ICluster<R> {
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
-    public double recompute(Function<Integer,R> getPoint, BiFunction<R,R, Double> distanceFunction) {
+    public double recompute(Function<Integer, R> getPoint, BiFunction<R, R, Double> distanceFunction) {
         if (assignedPoints.size() == 0 || weight == 0.0) {
             return 0;
         }
@@ -132,7 +138,7 @@ public class MultiCenter<R> implements ICluster<R> {
         previousSumOFRadius = sumOfRadius;
         sumOfRadius = 0;
         for (int j = 0; j < assignedPoints.size(); j++) {
-            sumOfRadius += distance(getPoint.apply(assignedPoints.get(j).index),distanceFunction)
+            sumOfRadius += distance(getPoint.apply(assignedPoints.get(j).index), distanceFunction)
                     * assignedPoints.get(j).weight;
         }
         return (previousSumOFRadius - sumOfRadius);
@@ -146,33 +152,34 @@ public class MultiCenter<R> implements ICluster<R> {
 
         int maxIndex = 0;
         float weight = savedRepresentatives.get(0).weight;
-        for(int i = 1;i<savedRepresentatives.size();i++){
-                if (weight < savedRepresentatives.get(i).weight) {
-                    weight = savedRepresentatives.get(i).weight;
-                    maxIndex = i;
+        for (int i = 1; i < savedRepresentatives.size(); i++) {
+            if (weight < savedRepresentatives.get(i).weight) {
+                weight = savedRepresentatives.get(i).weight;
+                maxIndex = i;
             }
         }
         this.representatives.add(savedRepresentatives.get(maxIndex));
         savedRepresentatives.remove(maxIndex);
-        sumOfRadius += other.averageRadius()*other.getWeight();
+        sumOfRadius += other.averageRadius() * other.getWeight();
         this.weight += other.getWeight();
 
         /**
-         * create a list of representatives based on the farthest point method, which correspond to a
-         * well scattered set. See https://en.wikipedia.org/wiki/CURE_algorithm
+         * create a list of representatives based on the farthest point method, which
+         * correspond to a well scattered set. See
+         * https://en.wikipedia.org/wiki/CURE_algorithm
          */
-        while (savedRepresentatives.size()>0 && this.representatives.size() < numberOfRepresentatives) {
+        while (savedRepresentatives.size() > 0 && this.representatives.size() < numberOfRepresentatives) {
             double farthestWeightedDistance = 0.0;
             int farthestIndex = Integer.MAX_VALUE;
-            for(int j=0;j<savedRepresentatives.size();j++) {
-                double newWeightedDist = distance.apply(this.representatives.get(0).index, savedRepresentatives.get(j).index) *
-                        savedRepresentatives.get(j).weight;
+            for (int j = 0; j < savedRepresentatives.size(); j++) {
+                double newWeightedDist = distance.apply(this.representatives.get(0).index,
+                        savedRepresentatives.get(j).index) * savedRepresentatives.get(j).weight;
                 for (int i = 1; i < this.representatives.size(); i++) {
                     newWeightedDist = min(newWeightedDist,
-                            distance.apply(this.representatives.get(i).index, savedRepresentatives.get(j).index)) *
-                            savedRepresentatives.get(j).weight;
+                            distance.apply(this.representatives.get(i).index, savedRepresentatives.get(j).index))
+                            * savedRepresentatives.get(j).weight;
                 }
-                if (newWeightedDist>farthestWeightedDistance){
+                if (newWeightedDist > farthestWeightedDistance) {
                     farthestWeightedDistance = newWeightedDist;
                     farthestIndex = j;
                 }
@@ -185,44 +192,45 @@ public class MultiCenter<R> implements ICluster<R> {
         }
 
         // absorb the remainder into existing represen tatives
-        for(Weighted<R> representative: savedRepresentatives) {
-            double dist = distance.apply(representative.index,this.representatives.get(0).index);
+        for (Weighted<R> representative : savedRepresentatives) {
+            double dist = distance.apply(representative.index, this.representatives.get(0).index);
             double minDist = dist;
             int minIndex = 0;
             for (int i = 1; i < this.representatives.size(); i++) {
                 double newDist = distance.apply(this.representatives.get(i).index, representative.index);
-                if (newDist<minDist) {
+                if (newDist < minDist) {
                     minDist = newDist;
                     minIndex = i;
                 }
             }
             this.representatives.get(minIndex).weight += representative.weight;
-            sumOfRadius += representative.weight * ((1-shrinkage)*minDist + dist*shrinkage);
+            sumOfRadius += representative.weight * ((1 - shrinkage) * minDist + dist * shrinkage);
         }
 
     }
 
     @Override
     public double distance(R point, BiFunction<R, R, Double> distanceFunction) {
-        double dist = distanceFunction.apply(this.representatives.get(0).index,point);
+        double dist = distanceFunction.apply(this.representatives.get(0).index, point);
         double newDist = dist;
-        for(int i=1;i<this.representatives.size();i++){
-            newDist=min(newDist,distanceFunction.apply(this.representatives.get(i).index,point));
+        for (int i = 1; i < this.representatives.size(); i++) {
+            newDist = min(newDist, distanceFunction.apply(this.representatives.get(i).index, point));
         }
-        return (1-shrinkage)*newDist + shrinkage*dist;
+        return (1 - shrinkage) * newDist + shrinkage * dist;
     }
 
     @Override
     public double distance(ICluster<R> other, BiFunction<R, R, Double> distanceFunction) {
         List<Weighted<R>> representatives = other.getRepresentatives();
-        double dist = distanceFunction.apply(this.representatives.get(0).index,representatives.get(0).index);
+        double dist = distanceFunction.apply(this.representatives.get(0).index, representatives.get(0).index);
         double newDist = dist;
-        for(int i=1;i<this.representatives.size();i++){
-            for(int j=1; j<representatives.size();j++) {
-                newDist = min(newDist, distanceFunction.apply(this.representatives.get(i).index, representatives.get(j).index));
+        for (int i = 1; i < this.representatives.size(); i++) {
+            for (int j = 1; j < representatives.size(); j++) {
+                newDist = min(newDist,
+                        distanceFunction.apply(this.representatives.get(i).index, representatives.get(j).index));
             }
         }
-        return (1-shrinkage)*newDist + shrinkage*dist;
+        return (1 - shrinkage) * newDist + shrinkage * dist;
     }
 
     @Override
@@ -236,7 +244,7 @@ public class MultiCenter<R> implements ICluster<R> {
     }
 
     @Override
-    public List<Weighted<Integer>> getAssignedPoints(){
+    public List<Weighted<Integer>> getAssignedPoints() {
         return assignedPoints;
     }
 }

@@ -15,29 +15,33 @@
 
 package com.amazon.randomcutforest.examples.summarization;
 
-import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.summarization.ICluster;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.Weighted;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static java.lang.Math.abs;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
 
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static java.lang.Math.abs;
+import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
 
 /**
- * centroidal clustering fails in many scenarios; primarily because a single point in combination with a distance metric
- * can only represent a sphere. A reasonable solution is to use multiple well scattered centroids to represent a cluster
- * and has been long in use, see CURE https://en.wikipedia.org/wiki/CURE_algorithm
+ * centroidal clustering fails in many scenarios; primarily because a single
+ * point in combination with a distance metric can only represent a sphere. A
+ * reasonable solution is to use multiple well scattered centroids to represent
+ * a cluster and has been long in use, see CURE
+ * https://en.wikipedia.org/wiki/CURE_algorithm
  *
- * The following example demonstrates the use of a multicentroid clustering; the data corresponds to 2*d clusters
- * in d dimensions (d chosen randomly) such that the clusters almost touch, but remain separable. Note that the knowledge
- * of the true number of clusters is not required -- the clustering is invoked with a maximum of 5*d potential clusters,
- * and yet the example often finds the true 2*d clusters.
+ * The following example demonstrates the use of a multicentroid clustering; the
+ * data corresponds to 2*d clusters in d dimensions (d chosen randomly) such
+ * that the clusters almost touch, but remain separable. Note that the knowledge
+ * of the true number of clusters is not required -- the clustering is invoked
+ * with a maximum of 5*d potential clusters, and yet the example often finds the
+ * true 2*d clusters.
  */
 public class RCFMultiSummarizeExample implements Example {
 
@@ -65,21 +69,23 @@ public class RCFMultiSummarizeExample implements Example {
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
         double epsilon = 0.01;
-        List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions,0.1,5);
+        List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.1, 5);
         System.out.println(summary.size() + " clusters for " + newDimensions + " dimensions, seed : " + seed);
-        double weight = summary.stream().map( e -> e.getWeight()).reduce(Double::sum).get();
-        System.out.println("Total weight " +  ((float) Math.round(weight*1000)*0.001) + " rounding to multiples of " + epsilon);
+        double weight = summary.stream().map(e -> e.getWeight()).reduce(Double::sum).get();
+        System.out.println(
+                "Total weight " + ((float) Math.round(weight * 1000) * 0.001) + " rounding to multiples of " + epsilon);
         System.out.println();
 
         for (int i = 0; i < summary.size(); i++) {
             double clusterWeight = summary.get(i).getWeight();
-            System.out.println("Cluster " + i + " representatives, weight " + ((float) Math.round(1000*clusterWeight)*0.001));
+            System.out.println(
+                    "Cluster " + i + " representatives, weight " + ((float) Math.round(1000 * clusterWeight) * 0.001));
             List<Weighted<float[]>> representatives = summary.get(i).getRepresentatives();
             for (int j = 0; j < representatives.size(); j++) {
                 double t = representatives.get(j).weight;
-                t = Math.round(1000.0*t/clusterWeight)*0.001;
+                t = Math.round(1000.0 * t / clusterWeight) * 0.001;
                 System.out.print("relative weight " + (float) t + " center (approx)  ");
-                printArray(representatives.get(j).index,epsilon);
+                printArray(representatives.get(j).index, epsilon);
                 System.out.println();
             }
             System.out.println();
@@ -87,27 +93,27 @@ public class RCFMultiSummarizeExample implements Example {
 
     }
 
-    void printArray(float[] values, double epsilon){
+    void printArray(float[] values, double epsilon) {
         System.out.print(" [");
         if (abs(values[0]) < epsilon) {
-            System.out.print( "0");
+            System.out.print("0");
         } else {
-            if (epsilon <= 0 ) {
+            if (epsilon <= 0) {
                 System.out.print(values[0]);
             } else {
-                long t = (int) Math.round(values[0]/epsilon);
-                System.out.print(t*epsilon);
+                long t = (int) Math.round(values[0] / epsilon);
+                System.out.print(t * epsilon);
             }
         }
-        for(int i=1;i<values.length;i++){
+        for (int i = 1; i < values.length; i++) {
             if (abs(values[i]) < epsilon) {
-                System.out.print( ", 0");
+                System.out.print(", 0");
             } else {
-                if (epsilon <= 0 ) {
+                if (epsilon <= 0) {
                     System.out.print(", " + values[i]);
                 } else {
-                    long t = Math.round(values[i]/epsilon);
-                    System.out.print(", " + t*epsilon);
+                    long t = Math.round(values[i] / epsilon);
+                    System.out.print(", " + t * epsilon);
                 }
             }
         }
@@ -152,6 +158,5 @@ public class RCFMultiSummarizeExample implements Example {
 
         return floatData;
     }
-
 
 }

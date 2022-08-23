@@ -15,20 +15,23 @@
 
 package com.amazon.randomcutforest.summarization;
 
-import com.amazon.randomcutforest.util.Weighted;
-
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.amazon.randomcutforest.util.Weighted;
+
 /**
- * a set of cunstions that a conceptual "cluster" should satisfy for any generic distance based clustering
- * where a distance function of type (R,R) -> double is provided externally. It is not feasible (short of
- * various assumptions) to check for the validity of a distance function and the clustering would not perform
- * any validity checks. The user is referred to https://en.wikipedia.org/wiki/Metric_(mathematics)
+ * a set of cunstions that a conceptual "cluster" should satisfy for any generic
+ * distance based clustering where a distance function of type from (R,R) into
+ * double is provided externally. It is not feasible (short of various
+ * assumptions) to check for the validity of a distance function and the
+ * clustering would not perform any validity checks. The user is referred to
+ * https://en.wikipedia.org/wiki/Metric_(mathematics)
  *
- * It does not escape our attention that the clustering can use multiple different distance functions
- * over its execution. But such should be performed with caution.
+ * It does not escape our attention that the clustering can use multiple
+ * different distance functions over its execution. But such should be performed
+ * with caution.
  */
 public interface ICluster<R> {
 
@@ -48,7 +51,7 @@ public interface ICluster<R> {
     void absorb(ICluster<R> other, BiFunction<R, R, Double> distance);
 
     // distance of apoint from a cluster
-    double distance(R point, BiFunction<R,R, Double> distance);
+    double distance(R point, BiFunction<R, R, Double> distance);
 
     // distance of another cluster from this cluster
     double distance(ICluster<R> other, BiFunction<R, R, Double> distance);
@@ -62,10 +65,9 @@ public interface ICluster<R> {
     List<Weighted<Integer>> getAssignedPoints();
 
     // optimize the cluster representation based on assigned points
-    double recompute(Function<Integer,R> getPoint, BiFunction<R,R, Double> distance);
+    double recompute(Function<Integer, R> getPoint, BiFunction<R, R, Double> distance);
 
     // adding a point to a cluster
-    void addPoint(int index, float weight, double dist, R point, BiFunction<R,R, Double> distance);
-
+    void addPoint(int index, float weight, double dist, R point, BiFunction<R, R, Double> distance);
 
 }
