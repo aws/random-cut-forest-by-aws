@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.store;
 
 import java.util.List;
+import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.summarization.ICluster;
 
@@ -80,6 +81,7 @@ public interface IPointStoreView<Point> {
      * @param separationRatio         a parameter that controls how aggressively we
      *                                go below maxAllowed -- this is often set to a
      *                                DEFAULT_SEPARATION_RATIO_FOR_MERGE
+     * @param distance                a distance function
      * @param previous                a (possibly null) list of previous clusters
      *                                which can be used to seed the current clusters
      *                                to ensure some smoothness
@@ -87,6 +89,6 @@ public interface IPointStoreView<Point> {
      */
 
     List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
-            double separationRatio, List<ICluster<float[]>> previous);
+            double separationRatio, BiFunction<float[], float[], Double> distance, List<ICluster<float[]>> previous);
 
 }

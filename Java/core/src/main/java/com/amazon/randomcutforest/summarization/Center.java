@@ -69,8 +69,8 @@ public class Center implements ICluster<float[]> {
         previousSumOFRadius = sumOfRadius;
     }
 
-    // average radius computation
-    public double averageRadius() {
+    // average radius computation, provides an extent measure
+    public double extentMeasure() {
         return (weight > 0) ? sumOfRadius / weight : 0;
     }
 
@@ -85,7 +85,8 @@ public class Center implements ICluster<float[]> {
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
-    public double recompute(Function<Integer, float[]> getPoint, BiFunction<float[], float[], Double> distance) {
+    public double recompute(Function<Integer, float[]> getPoint, boolean approx,
+            BiFunction<float[], float[], Double> distance) {
         if (assignedPoints.size() == 0 || weight == 0.0) {
             Arrays.fill(representative, 0); // zero out values
             return 0;

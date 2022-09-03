@@ -59,23 +59,24 @@ public class RCFStringSummarizeExample implements Example {
     @Override
     public void run() throws Exception {
 
-        long seed = new Random().nextLong();
+        long seed = -8436172895711381300L;
+        new Random().nextLong();
         System.out.println("String summarization seed : " + seed);
         Random random = new Random(seed);
         int size = 100;
-        int numberOfStrings = 200000;
+        int numberOfStrings = 20000;
 
         String[] points = new String[numberOfStrings];
         for (int i = 0; i < numberOfStrings; i++) {
             if (random.nextDouble() < 0.5) {
-                points[i] = getABString(size, 0.66, random);
+                points[i] = getABString(size, 0.8, random);
             } else {
-                points[i] = getABString(size, 0.33, random);
+                points[i] = getABString(size, 0.2, random);
             }
         }
 
         int nextSeed = random.nextInt();
-        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 10, 40, false, false,
+        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 5, 10, 1, false, 0.8,
                 RCFStringSummarizeExample::toyDistance, nextSeed, true, 0.1, 5);
         System.out.println();
         for (int i = 0; i < summary.size(); i++) {

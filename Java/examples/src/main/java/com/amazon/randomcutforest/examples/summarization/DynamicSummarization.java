@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.examples.summarization;
 
-import static com.amazon.randomcutforest.summarization.Summarizer.DEFAULT_SEPARATION_RATIO_FOR_MERGE;
 import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
 import static java.lang.Math.PI;
 
@@ -85,7 +84,7 @@ public class DynamicSummarization implements Example {
         int newDimensions = 2;
         long randomSeed = 123;
         int dataSize = 1350;
-        int numberOfBlades = 3;
+        int numberOfBlades = 9;
 
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(256)
                 .dimensions(newDimensions).randomSeed(randomSeed).timeDecay(1.0 / 800).centerOfMassEnabled(true)
@@ -94,8 +93,8 @@ public class DynamicSummarization implements Example {
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
         double[][] data = getData(dataSize, 0, numberOfBlades);
 
-        boolean printData = true;
-        boolean printClusters = false;
+        boolean printData = false;
+        boolean printClusters = true;
 
         List<ICluster<float[]>> oldSummary = null;
         int[] oldColors = null;
@@ -115,17 +114,10 @@ public class DynamicSummarization implements Example {
                 file.append("\n");
             }
 
-            double shrinkage = 1.0 / (2 * numberOfBlades);
-            // if the maxAllowed is increased, decrease the shrikage ratio to get
-            // counterbalance the test for
-            // sumary.size() == numberOfFans
-            // for example,
-            // List<ICluster<float[]>> summary =
-            // newForest.summarize(5*numberOfFans,0.1,5,0.5,oldSummary);
-
-            List<ICluster<float[]>> summary = newForest.summarize(2 * numberOfBlades, shrinkage, 5,
-                    DEFAULT_SEPARATION_RATIO_FOR_MERGE, oldSummary);
+            List<ICluster<float[]>> summary = newForest.summarize(2 * numberOfBlades + 2, 0.05, 5, 0.8,
+                    Summarizer::L2distance, oldSummary);
             sum += summary.size();
+            System.out.println(degree + " " + summary.size());
             if (summary.size() == numberOfBlades) {
                 ++count;
             }

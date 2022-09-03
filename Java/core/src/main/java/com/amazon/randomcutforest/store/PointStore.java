@@ -31,7 +31,6 @@ import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.MultiCenter;
-import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.util.Weighted;
 
 public abstract class PointStore implements IPointStore<float[]> {
@@ -896,22 +895,18 @@ public abstract class PointStore implements IPointStore<float[]> {
      */
 
     public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
-            double separationRatio, List<ICluster<float[]>> previous) {
-        int[] refs = getRefCount();
-        ArrayList<Weighted<Integer>> indices = new ArrayList<>();
-        for (int i = 0; i < refs.length; i++) {
-            if (refs[i] != 0) {
-                indices.add(new Weighted<>(i, (float) refs[i]));
+            double separationRatio, BiFunction<float[], float[], Double> distance, List<ICluster<float[]>> previous) {
+        int[] counts = getRefCount();
+        ArrayList<Weighted<Integer>> refs = new ArrayList<>();
+        for (int i = 0; i < counts.length; i++) {
+            if (counts[i] != 0) {
+                refs.add(new Weighted<>(i, (float) counts[i]));
             }
         }
-        BiFunction<float[], Float, MultiCenter<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
                 shrinkage, numberOfRepresentatives);
-        List<ICluster<float[]>> centers = iterativeClustering(maxAllowed, 4 * maxAllowed, indices, this::get,
-                Summarizer::L1distance, clusterInitializer, 42, false, false, true, true, separationRatio, previous);
-
-        // sort in decreasing weight
-        centers.sort((o1, o2) -> Double.compare(o2.getWeight(), o1.getWeight()));
-        return centers;
+        return iterativeClustering(maxAllowed, 4 * maxAllowed, 1, refs, this::get, distance, clusterInitializer, 42,
+                false, true, separationRatio, previous);
     }
 
 }

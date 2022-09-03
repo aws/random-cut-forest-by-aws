@@ -64,7 +64,7 @@ public class MultiCenterTest {
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
             List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
-                    false, false, distance, random.nextInt(), false, random.nextDouble(), 1);
+                    1, false, 0.8, distance, random.nextInt(), false, random.nextDouble(), 1);
             System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
                     + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {
@@ -74,7 +74,6 @@ public class MultiCenterTest {
             }
         }
         assert (under <= 1);
-        assert (over <= 1);
     }
 
     @ParameterizedTest
@@ -93,7 +92,7 @@ public class MultiCenterTest {
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
 
             List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
-                    false, false, distance, random.nextInt(), false, random.nextDouble(), 5);
+                    1, false, 0.8, distance, random.nextInt(), false, random.nextDouble(), 5);
             System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
                     + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {
@@ -103,7 +102,6 @@ public class MultiCenterTest {
             }
         }
         assert (under <= 1);
-        assert (over <= 1);
     }
 
     @ParameterizedTest
@@ -119,16 +117,16 @@ public class MultiCenterTest {
         System.out.println("checking parallelEnabled seed : " + seed);
         int nextSeed = random.nextInt();
         // these can differ for shinkage != 0 due to floating point issues
-        List<ICluster<float[]>> summary1 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
-                false, false, distance, nextSeed, false, 0, 5);
-        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
-                false, false, distance, nextSeed, true, 0, 5);
+        List<ICluster<float[]>> summary1 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, 1,
+                false, 0.8, distance, nextSeed, false, 0, 5);
+        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, 1,
+                false, 0.8, distance, nextSeed, true, 0, 5);
         // assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling
         // inconsistent");
         assertEquals(summary2.size(), summary1.size(), " incorrect number of clusters");
         for (int i = 0; i < summary2.size(); i++) {
             assertEquals(summary1.get(i).getWeight(), summary2.get(i).getWeight(), 1e-6);
-            assertEquals(summary1.get(i).averageRadius(), summary2.get(i).averageRadius(), 1e-6);
+            assertEquals(summary1.get(i).extentMeasure(), summary2.get(i).extentMeasure(), 1e-6);
             List<Weighted<float[]>> reps1 = summary1.get(i).getRepresentatives();
             List<Weighted<float[]>> reps2 = summary2.get(i).getRepresentatives();
             assertEquals(reps1.size(), reps2.size());
@@ -147,19 +145,20 @@ public class MultiCenterTest {
         System.out.println("checking String summarization seed : " + seed);
         Random random = new Random(seed);
         int size = 100;
-        int numberOfStrings = 200000;
+        int numberOfStrings = 20000;
 
         String[] points = new String[numberOfStrings];
         for (int i = 0; i < numberOfStrings; i++) {
             if (random.nextDouble() < 0.5) {
-                points[i] = getABString(size, 0.9, random);
+                points[i] = getABString(size, 0.8, random);
             } else {
-                points[i] = getABString(size, 0.1, random);
+                points[i] = getABString(size, 0.2, random);
             }
         }
 
         int nextSeed = random.nextInt();
-        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 5, 10, false, false,
+
+        List<ICluster<String>> summary = Summarizer.multiSummarize(points, 5, 10, 1, false, 0.8,
                 MultiCenterTest::toyDistance, nextSeed, false, 0.1, 5);
         System.out.println();
         assertEquals(summary.size(), 2);

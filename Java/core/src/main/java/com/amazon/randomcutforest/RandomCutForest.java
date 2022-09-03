@@ -68,6 +68,7 @@ import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
@@ -1326,6 +1327,7 @@ public class RandomCutForest {
      *                                a single cluster. The option is provided since
      *                                it can be of use in the future to produce
      *                                dendograms and similar information.
+     * @param distance                a distance function for points
      * @param previous                a (possibly null) list of previous clustering
      *                                obtained. If the list is non-null then the
      *                                representatives of the previous cluster would
@@ -1337,16 +1339,16 @@ public class RandomCutForest {
      * @return a list of clusters
      */
     public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
-            double separationRatio, List<ICluster<float[]>> previous) {
+            double separationRatio, BiFunction<float[], float[], Double> distance, List<ICluster<float[]>> previous) {
         return stateCoordinator.getStore().summarize(maxAllowed, shrinkage, numberOfRepresentatives, separationRatio,
-                previous);
+                distance, previous);
     }
 
     // same as above with default filled in
     public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
             List<ICluster<float[]>> previous) {
         return stateCoordinator.getStore().summarize(maxAllowed, shrinkage, numberOfRepresentatives,
-                DEFAULT_SEPARATION_RATIO_FOR_MERGE, previous);
+                DEFAULT_SEPARATION_RATIO_FOR_MERGE, Summarizer::L1distance, previous);
     }
 
     public static class Builder<T extends Builder<T>> {
