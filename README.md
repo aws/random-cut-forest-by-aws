@@ -8,6 +8,9 @@ and forecasting.
 The different directories correspond to equivalent implementations in different languages, and bindings to
 to those base implementations, using language specific features for greater flexibility of use. 
 
+The package randomcutforest-examples showcases several example scenarios for using the repository. 
+They also provide examples for some of the parameter settings. Many of these examples are built in tests.
+
 ## Documentation
 
 * Guha, S., Mishra, N., Roy, G., & Schrijvers, O. (2016, June). Robust random cut forest based anomaly detection on streams. In *International conference on machine learning* (pp. 2712-2721).

@@ -18,12 +18,20 @@ package com.amazon.randomcutforest.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.summarization.Summarizer.iterativeClustering;
 import static java.lang.Math.max;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Vector;
+import java.util.function.BiFunction;
+
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.MultiCenter;
+import com.amazon.randomcutforest.util.Weighted;
 
 public abstract class PointStore implements IPointStore<float[]> {
 
@@ -827,8 +835,8 @@ public abstract class PointStore implements IPointStore<float[]> {
     @Override
     public float[] get(int index) {
         checkArgument(index >= 0 && index < locationListLength(), " index not supported by store");
-        checkFeasible(index);
         int address = getLocation(index);
+        checkFeasible(index);
 
         if (!rotationEnabled) {
             return Arrays.copyOfRange(store, address, address + dimensions);
@@ -863,6 +871,42 @@ public abstract class PointStore implements IPointStore<float[]> {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * a function that exposes an L1 clustering of the points stored in pointstore
+     * 
+     * @param maxAllowed              the maximum number of clusters one is
+     *                                interested in
+     * @param shrinkage               a parameter used in CURE algorithm that can
+     *                                produce a combination of behaviors (=1
+     *                                corresponds to centroid clustering, =0
+     *                                resembles robust Minimum Spanning Tree)
+     * @param numberOfRepresentatives another parameter used to control the
+     *                                plausible (potentially non-spherical) shapes
+     *                                of the clusters
+     * @param separationRatio         a parameter that controls how aggressively we
+     *                                go below maxAllowed -- this is often set to a
+     *                                DEFAULT_SEPARATION_RATIO_FOR_MERGE
+     * @param previous                a (possibly null) list of previous clusters
+     *                                which can be used to seed the current clusters
+     *                                to ensure some smoothness
+     * @return a list of clusters
+     */
+
+    public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
+            double separationRatio, BiFunction<float[], float[], Double> distance, List<ICluster<float[]>> previous) {
+        int[] counts = getRefCount();
+        ArrayList<Weighted<Integer>> refs = new ArrayList<>();
+        for (int i = 0; i < counts.length; i++) {
+            if (counts[i] != 0) {
+                refs.add(new Weighted<>(i, (float) counts[i]));
+            }
+        }
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
+                shrinkage, numberOfRepresentatives);
+        return iterativeClustering(maxAllowed, 4 * maxAllowed, 1, refs, this::get, distance, clusterInitializer, 42,
+                false, true, separationRatio, previous);
     }
 
 }

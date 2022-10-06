@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.summarization.Summarizer.DEFAULT_SEPARATION_RATIO_FOR_MERGE;
 import static java.lang.Math.max;
 
 import java.util.ArrayList;
@@ -66,6 +67,8 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.sampler.IStreamSampler;
 import com.amazon.randomcutforest.store.IPointStore;
 import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
@@ -1294,6 +1297,58 @@ public class RandomCutForest {
      */
     public long getTotalUpdates() {
         return stateCoordinator.getTotalUpdates();
+    }
+
+    /**
+     * an L1 clustering primitive that shows the aggregation of the points stored in
+     * RCF the clustering uses multi-centroid clustering introduced in CURE
+     * https://en.wikipedia.org/wiki/CURE_algorithm However CURE also shrunk the
+     * well scattered points by a fraction alpha (there by creating new points);
+     * while that concept is used herein, the (multi) summarization algorithm
+     * changes the distance metric as opposed to creating new points since
+     * continuity of values is not an useful assumption in context of RCFs. The
+     * usage of distance metric is similar to the discussion in
+     * https://en.wikipedia.org/wiki/Data_stream_clustering See the examples package
+     * for an example of dynamic summarization. /
+     * 
+     * @param maxAllowed              maximum number of clusters one is willing to
+     *                                see
+     * @param shrinkage               a parameter that controls between spherical
+     *                                nature (=1) and MST (=0), this corresponds to
+     *                                the parameter alpha in the description above
+     * @param numberOfRepresentatives number of centroids used to represent a
+     *                                cluster, this is the parameter c in the
+     *                                description of CURE
+     * @param separationRatio         a parameter in [0,1] that controls how
+     *                                zealously should the algorithm reduce the
+     *                                number of clusters a default value of 0.8 is a
+     *                                reasonable value for many settings. A value
+     *                                close to 0 would tend to merge eveything into
+     *                                a single cluster. The option is provided since
+     *                                it can be of use in the future to produce
+     *                                dendograms and similar information.
+     * @param distance                a distance function for points
+     * @param previous                a (possibly null) list of previous clustering
+     *                                obtained. If the list is non-null then the
+     *                                representatives of the previous cluster would
+     *                                be added as zero weight points, ensuring that
+     *                                the summarization is more smooth (in contrast
+     *                                to two independent summarizations). The zero
+     *                                weight points of the past can serve as
+     *                                representatives of the current clustering.
+     * @return a list of clusters
+     */
+    public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
+            double separationRatio, BiFunction<float[], float[], Double> distance, List<ICluster<float[]>> previous) {
+        return stateCoordinator.getStore().summarize(maxAllowed, shrinkage, numberOfRepresentatives, separationRatio,
+                distance, previous);
+    }
+
+    // same as above with default filled in
+    public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
+            List<ICluster<float[]>> previous) {
+        return stateCoordinator.getStore().summarize(maxAllowed, shrinkage, numberOfRepresentatives,
+                DEFAULT_SEPARATION_RATIO_FOR_MERGE, Summarizer::L1distance, previous);
     }
 
     public static class Builder<T extends Builder<T>> {

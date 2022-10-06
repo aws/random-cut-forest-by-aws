@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.amazon.randomcutforest.util.Weighted;
 
@@ -28,7 +29,7 @@ import com.amazon.randomcutforest.util.Weighted;
  * the following class abstracts a single centroid representation of a group of
  * points
  */
-public class Center implements IPointIndexCluster {
+public class Center implements ICluster<float[]> {
 
     float[] representative;
     double weight;
@@ -52,7 +53,8 @@ public class Center implements IPointIndexCluster {
     // adds a point; only the index to keep space bounds lower
     // note that the weight may not be the entire weight of a point in case of a
     // "soft" assignment
-    public void addPoint(int index, float weight, double dist) {
+    public void addPoint(int index, float weight, double dist, float[] point,
+            BiFunction<float[], float[], Double> distance) {
         assignedPoints.add(new Weighted<>(index, weight));
         this.weight += weight;
         this.sumOfRadius += weight * dist;
@@ -67,8 +69,8 @@ public class Center implements IPointIndexCluster {
         previousSumOFRadius = sumOfRadius;
     }
 
-    // average radius computation
-    public double averageRadius() {
+    // average radius computation, provides an extent measure
+    public double extentMeasure() {
         return (weight > 0) ? sumOfRadius / weight : 0;
     }
 
@@ -83,7 +85,8 @@ public class Center implements IPointIndexCluster {
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
-    public double recompute(List<Weighted<float[]>> points, BiFunction<float[], float[], Double> distance) {
+    public double recompute(Function<Integer, float[]> getPoint, boolean approx,
+            BiFunction<float[], float[], Double> distance) {
         if (assignedPoints.size() == 0 || weight == 0.0) {
             Arrays.fill(representative, 0); // zero out values
             return 0;
@@ -94,8 +97,8 @@ public class Center implements IPointIndexCluster {
         for (int i = 0; i < representative.length; i++) {
             int index = i;
             // the following would be significantly slow unless points are backed by arrays
-            assignedPoints.sort(
-                    (o1, o2) -> Double.compare(points.get(o1.index).index[index], points.get(o2.index).index[index]));
+            assignedPoints
+                    .sort((o1, o2) -> Double.compare(getPoint.apply(o1.index)[index], getPoint.apply(o2.index)[index]));
             double runningWeight = weight / 2;
             int position = 0;
             while (runningWeight >= 0 && position < assignedPoints.size()) {
@@ -106,21 +109,26 @@ public class Center implements IPointIndexCluster {
                     break;
                 }
             }
-            representative[index] = points.get(assignedPoints.get(position).index).index[index];
+            representative[index] = getPoint.apply(assignedPoints.get(position).index)[index];
         }
         for (int j = 0; j < assignedPoints.size(); j++) {
-            sumOfRadius += distance.apply(representative, points.get(assignedPoints.get(j).index).index)
+            sumOfRadius += distance.apply(representative, getPoint.apply(assignedPoints.get(j).index))
                     * assignedPoints.get(j).weight;
         }
         return (previousSumOFRadius - sumOfRadius);
 
     }
 
+    @Override
+    public List<Weighted<Integer>> getAssignedPoints() {
+        return assignedPoints;
+    }
+
     // merges a center into another
     // this can be followed by a reassignment step; however the merger uses a
     // sigmoid based weightage
     // for robustness
-    public void absorb(ICluster other, BiFunction<float[], float[], Double> distance) {
+    public void absorb(ICluster<float[]> other, BiFunction<float[], float[], Double> distance) {
         List<Weighted<float[]>> representatives = other.getRepresentatives();
         float[] closest = representatives.get(0).index;
         double dist = Double.MAX_VALUE;
@@ -142,6 +150,8 @@ public class Center implements IPointIndexCluster {
         // this computation is meant to be approximate
         sumOfRadius += (weight * (1.0 - factor) + otherWeight * factor) * dist;
         weight += otherWeight;
+        assignedPoints.addAll(other.getAssignedPoints());
+        other.reset();
     }
 
     public double distance(float[] point, BiFunction<float[], float[], Double> distance) {
@@ -149,7 +159,7 @@ public class Center implements IPointIndexCluster {
     }
 
     @Override
-    public double distance(ICluster other, BiFunction<float[], float[], Double> distance) {
+    public double distance(ICluster<float[]> other, BiFunction<float[], float[], Double> distance) {
         return other.distance(representative, distance);
     }
 
