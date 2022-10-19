@@ -2,6 +2,7 @@
 name = "rcf"
 version = "3.0.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [profile.test]
 opt-level = 3
