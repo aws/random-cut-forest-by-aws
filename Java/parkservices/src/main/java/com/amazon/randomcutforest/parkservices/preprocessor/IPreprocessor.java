@@ -16,13 +16,16 @@
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
 import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
-public interface IPreprocessor<P extends IRCFComputeDescriptor> {
+public interface IPreprocessor {
 
     int getShingleSize();
+
+    int getInputLength();
 
     double[] getLastShingledPoint();
 
@@ -30,7 +33,7 @@ public interface IPreprocessor<P extends IRCFComputeDescriptor> {
 
     TimedRangeVector invertForecastRange(RangeVector ranges, IRCFComputeDescriptor lastRelevant);
 
-    P preProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
+    <P extends AnomalyDescriptor> P preProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
 
-    P postProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
+    <P extends AnomalyDescriptor> P postProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
 }
