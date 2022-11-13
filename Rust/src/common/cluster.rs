@@ -1,10 +1,8 @@
-use std::cmp::{max, min};
+use std::cmp::max;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
-
-use crate::common::samplesummary::SampleSummary;
 
 const PHASE2_THRESHOLD: usize = 2;
 const SEPARATION_RATIO_FOR_MERGE: f64 = 0.8;
@@ -144,7 +142,7 @@ impl Cluster<Vec<f32>, [f32]> for Center {
             self.sum_of_radii += self.points[j].1 as f64
                 * distance(&self.representative, points[self.points[j].0].0) as f64;
         }
-        (old_value - self.sum_of_radii)
+        old_value - self.sum_of_radii
     }
 
     fn distance_to_point(&self, point: &[f32], distance: fn(&[f32], &[f32]) -> f64) -> f64 {
@@ -223,8 +221,6 @@ where
     for j in 0..centers.len() {
         centers[j].reset();
     }
-    // the generator will keep varying as the number changes
-    let mut rng = ChaCha20Rng::seed_from_u64(centers.len() as u64);
     for i in 0..points.len() {
         let mut dist = vec![0.0; centers.len()];
         let mut min_distance = f64::MAX;

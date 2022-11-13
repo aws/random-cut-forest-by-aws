@@ -83,7 +83,7 @@ fn main() {
         */
 
         score += new_score;
-        forest.update(&data_with_key.data[i], 0);
+        forest.update(&data_with_key.data[i], 0).unwrap();
     }
 
     println!(

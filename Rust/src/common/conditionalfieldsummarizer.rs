@@ -1,5 +1,3 @@
-use num::abs;
-
 use crate::{
     common::samplesummary::{summarize, SampleSummary},
     pointstore::PointStore,

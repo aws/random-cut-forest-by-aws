@@ -1,5 +1,3 @@
-use std::cmp::min;
-
 /**
  * This class maintains a simple discounted statistics. Setters are avoided
  * except for discount rate which is useful as initialization from raw scores
@@ -58,7 +56,7 @@ impl Deviation {
         let factor = if self.discount == 0.0 {1.0} else {
             let a = 1.0 - self.discount;
             let b= 1.0 - 1.0 / (self.count + 2) as f64;
-            if (a<b) {a} else {b}
+            if a<b {a} else {b}
         };
         self.sum = self.sum * factor + score;
         self.sum_squared = self.sum_squared * factor + score * score;

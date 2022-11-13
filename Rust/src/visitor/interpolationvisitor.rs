@@ -1,7 +1,5 @@
-use num::abs;
-
 use crate::{
-    common::{directionaldensity::InterpolationMeasure, divector::DiVector},
+    common::{directionaldensity::InterpolationMeasure},
     samplerplustree::nodeview::LargeNodeView,
     visitor::visitor::{Visitor, VisitorInfo},
 };

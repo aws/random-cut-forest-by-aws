@@ -1,4 +1,3 @@
-use std::cmp::min;
 use crate::common::divector::DiVector;
 
 /**
