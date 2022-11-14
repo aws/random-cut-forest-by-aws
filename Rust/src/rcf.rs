@@ -444,7 +444,6 @@ pub fn create_rcf(
 ) -> Box<dyn RCF> {
     if (dimensions < u8::MAX as usize) && (capacity - 1 <= u8::MAX as usize) {
         if capacity * (1 + number_of_trees) * shingle_size <= u16::MAX as usize {
-            println!(" choosing RCF_Tiny");
             Box::new(RCFTiny::new(
                 dimensions,
                 shingle_size,
@@ -461,7 +460,6 @@ pub fn create_rcf(
                 capacity/4
             ))
         } else {
-            println!(" choosing RCF_Small");
             Box::new(RCFSmall::new(
                 dimensions,
                 shingle_size,
@@ -479,7 +477,6 @@ pub fn create_rcf(
             ))
         }
     } else if (dimensions < u16::MAX as usize) && (capacity - 1 <= u16::MAX as usize) {
-        println!(" choosing medium");
         Box::new(RCFMedium::new(
             dimensions,
             shingle_size,
@@ -496,7 +493,6 @@ pub fn create_rcf(
             capacity/4
         ))
     } else {
-        println!(" choosing large");
         Box::new(RCFLarge::new(
             dimensions,
             shingle_size,
