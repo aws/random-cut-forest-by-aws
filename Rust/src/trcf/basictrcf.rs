@@ -1,10 +1,8 @@
 
 use crate::common::anomalydescriptor::AnomalyDescriptor;
 use crate::common::rangevector::RangeVector;
-use crate::common::samplesummary::SampleSummary;
 use crate::rcf::{create_rcf, RCF};
-use crate::types::{Location, Result};
-use crate::errors::RCFError;
+use crate::types::Result;
 use crate::trcf::predictorcorrector::PredictorCorrector;
 
 pub struct BasicTRCF {
@@ -64,7 +62,7 @@ impl BasicTRCF {
             self.last_anomaly_descriptor = result.clone();
         }
 
-        self.rcf.update(point,timestamp as u64);
+        self.rcf.update(point,timestamp as u64)?;
         Ok(result)
     }
 

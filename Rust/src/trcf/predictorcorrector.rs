@@ -149,7 +149,7 @@ impl PredictorCorrector {
                 }
                 let internal_timestamp = result.internal_timestamp;
                 let base_dimension = forest.dimensions() / shingle_size;
-                let mut start_position = (shingle_size - 1) * base_dimension;
+                let start_position = (shingle_size - 1) * base_dimension;
                 result.threshold = self.basic_thresholder.threshold();
                 let previous = self.basic_thresholder.in_potential_anomaly();
 
@@ -188,7 +188,7 @@ impl PredictorCorrector {
 
                 let attribution = forest.attribution(point).unwrap();
                 // index is 0 .. (shingle_size - 1); this is a departure from java version
-                let mut index = attribution.max_contribution(base_dimension);
+                let index = attribution.max_contribution(base_dimension);
 
                 if !previous && self.trigger(&attribution, gap, base_dimension, None, false, last_anomaly_descriptor) {
                     result.anomaly_grade = self.basic_thresholder.anomaly_grade(score, false);

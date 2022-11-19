@@ -1,5 +1,3 @@
-use crate::common::divector::DiVector;
-
 #[repr(C)]
 pub struct BoundingBox {
     range_sum: f64,

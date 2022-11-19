@@ -1,6 +1,5 @@
-use std::cmp::{max, min};
+use std::cmp::min;
 
-use num::abs;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 
