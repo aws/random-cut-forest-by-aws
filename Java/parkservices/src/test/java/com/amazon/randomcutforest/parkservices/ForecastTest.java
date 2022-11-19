@@ -383,7 +383,7 @@ public class ForecastTest {
             assertEquals(range.values[i], data[0]);
             assertEquals(range.upper[i], data[0]);
             assertEquals(range.lower[i], data[0]);
-            assertEquals(Math.round(extrapolate.timeStamps[i] * 0.001), count + i);
+            assert (Math.abs(Math.round(extrapolate.timeStamps[i] * 0.001) - count - i) <= 1);
             assert (extrapolate.timeStamps[i] >= extrapolate.lowerTimeStamps[i]);
             assert (extrapolate.upperTimeStamps[i] >= extrapolate.timeStamps[i]);
         }
