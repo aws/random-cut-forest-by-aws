@@ -39,7 +39,7 @@ pub trait Cluster<Q, T: ?Sized> {
     fn representatives(&self) -> Vec<(Q, f32)>;
     // a function to distill all representatives into a single representative under a given
     // distance function over the base type of the points
-    fn primary_representative(&self, distance: fn(&T, &T) -> f64) -> Q;
+    fn primary_representative(&self, _distance: fn(&T, &T) -> f64) -> Q;
 }
 
 #[repr(C)]
@@ -189,7 +189,7 @@ impl Cluster<Vec<f32>, [f32]> for Center {
         vec![(self.representative.clone(), self.weight as f32); 1]
     }
 
-    fn primary_representative(&self, distance: fn(&[f32], &[f32]) -> f64) -> Vec<f32> {
+    fn primary_representative(&self, _distance: fn(&[f32], &[f32]) -> f64) -> Vec<f32> {
         self.representative.clone()
     }
 }

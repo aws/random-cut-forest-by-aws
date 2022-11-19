@@ -5,7 +5,6 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rcflib::{
     common::multidimdatawithkey,
-    rcf::{create_rcf, RCF},
     trcf::basictrcf::BasicTRCF
 };
 
@@ -24,9 +23,6 @@ fn test_basic_trcf() {
     let bounding_box_cache_fraction = 1.0;
     let random_seed = 17;
     let parallel_enabled: bool = false;
-    let store_attributes: bool = false;
-    let internal_shingling: bool = true;
-    let internal_rotation = false;
     let noise = 5.0;
 
     let mut trcf = BasicTRCF::new(
@@ -70,7 +66,7 @@ fn test_basic_trcf() {
         let result = trcf.process(&data_with_key.data[i], 0).unwrap();
         if result.anomaly_grade > 0.0 {
             print!("timestamp {} ", i);
-            if (result.relative_index.unwrap() != 0) {
+            if result.relative_index.unwrap() != 0 {
                 let gap = -result.relative_index.unwrap();
                 if gap == 1 {
                     print!("1 step ago, ");
@@ -108,9 +104,6 @@ fn test_basic_trcf_scale() {
     let bounding_box_cache_fraction = 1.0;
     let random_seed = 17;
     let parallel_enabled: bool = false;
-    let store_attributes: bool = false;
-    let internal_shingling: bool = true;
-    let internal_rotation = false;
     let noise = 5.0;
 
     let mut trcf = BasicTRCF::new(
@@ -140,7 +133,6 @@ fn test_basic_trcf_scale() {
     );
 
     let mut potential_anomalies:Vec<usize> = Vec::new();
-    let mut late= 0;
 
     for i in 0..data_with_key.data.len() {
         let result = trcf.process(&data_with_key.data[i], 0).unwrap();

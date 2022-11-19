@@ -49,7 +49,7 @@ where
     pub internal_node_manager: IntervalStoreManager<usize>,
 }
 
-const switch_threshold: f64 = 0.5;
+const SWITCH_THRESHOLD: f64 = 0.5;
 
 pub trait NodeStore {
     fn get_mass(&self, index: usize) -> usize;
@@ -853,7 +853,7 @@ where
     }
 
     fn use_path_for_box(&self) -> bool {
-        self.bounding_box_cache_fraction < switch_threshold
+        self.bounding_box_cache_fraction < SWITCH_THRESHOLD
     }
 
     fn get_distribution(&self, index: usize) -> (usize, f32, usize, usize) {

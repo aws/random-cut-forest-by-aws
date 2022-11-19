@@ -43,7 +43,7 @@ impl RangeVector {
     }
 
     pub fn shift(&mut self, i:usize, shift: f32) {
-        for j in 0..self.values.len() {
+        for _ in 0..self.values.len() {
             self.values[i] += shift;
             self.upper[i] += shift;
             self.lower[i] += shift;
@@ -58,7 +58,7 @@ impl RangeVector {
     }
 
     pub fn scale(&mut self, i:usize, scale: f32) {
-        for j in 0..self.values.len() {
+        for _ in 0..self.values.len() {
             self.values[i] *= scale;
             self.upper[i] *= scale;
             self.lower[i] *= scale;

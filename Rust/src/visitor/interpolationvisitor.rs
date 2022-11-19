@@ -46,7 +46,6 @@ impl Visitor<LargeNodeView, InterpolationMeasure> for InterpolationVisitor {
         node_view: &LargeNodeView,
     ) {
         let mass = node_view.get_mass();
-        let leaf_point = node_view.get_leaf_point();
         self.leaf_index = node_view.get_leaf_index();
         if mass > visitor_info.ignore_mass {
             if node_view.is_duplicate() {

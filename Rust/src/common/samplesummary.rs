@@ -26,7 +26,7 @@ use crate::common::cluster::{iterative_clustering, Center, Cluster};
 ///
 ///
 
-const max_number_per_dimension: usize = 5;
+const MAX_NUMBER_PER_DIMENSION: usize = 5;
 
 const PHASE2_THRESHOLD: usize = 2;
 
@@ -171,7 +171,7 @@ pub fn summarize(
 
     if max_number > 0 {
         let dimensions = points[0].0.len();
-        let max_allowed = min(dimensions * max_number_per_dimension, max_number);
+        let max_allowed = min(dimensions * MAX_NUMBER_PER_DIMENSION, max_number);
         let total_weight: f64 = points.iter().map(|x| x.1 as f64).sum();
         let mut rng = ChaCha20Rng::seed_from_u64(max_allowed as u64);
 
