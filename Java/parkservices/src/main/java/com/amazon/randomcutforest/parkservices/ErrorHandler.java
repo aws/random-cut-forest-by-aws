@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -26,6 +25,16 @@ import java.util.function.BiFunction;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+
+// we recommend the article "Regret in the On-Line Decision Problem", by Foster and Vohra,
+// Games and Economic Behavior, Vol=29 (1-2), 1999
+// the discussion is applicable to non-regret scenarios as well; but essentially boils down to
+// fixed point/minimax computation. One could use multiplicative update type methods which would be
+// uniform over all quantiles, provided sufficient data and a large enough calibration horizon.
+// Multiplicative updates are scale free -- but providing scale free forecasting over a stream raises the
+// issue "what is the current scale of the stream". While such questions can be answered, that discussion
+// can be involved and out of current scope of this library. We simplify the issue to calibrating two
+// fixed quantiles and hence additive updates are reasonable.
 
 public class ErrorHandler {
 
@@ -38,14 +47,28 @@ public class ErrorHandler {
     double percentile;
     int forecastHorizon;
     int errorHorizon;
+    // the following arrays store the state of the sequential computation
+    // these can be optimized -- for example once could store the errors; which
+    // would see much fewer
+    // increments. However for a small enough errorHorizon, the genrality of
+    // changing the error function
+    // outweighs the benefit of recomputation. The search in the ensemble tree is
+    // still a larger bottleneck than
+    // these computations at the moment; not to mention issues of saving and
+    // restoring state.
     protected RangeVector[] pastForecasts;
     protected float[][] actuals;
     // the following are derived quantities and present for efficiency reasons
     RangeVector errorDistribution;
     DiVector errorRMSE;
     float[] errorMean;
-    DiVector multipliers;
     float[] intervalPrecision;
+
+    // We keep the multiplers defined for potential
+    // future use.
+
+    RangeVector multipliers;
+    RangeVector adders;
 
     public ErrorHandler(RCFCaster.Builder builder) {
         checkArgument(builder.errorHorizon >= builder.forecastHorizon,
@@ -64,9 +87,10 @@ public class ErrorHandler {
         sequenceIndex = 0;
         errorMean = new float[length];
         errorRMSE = new DiVector(length);
-        multipliers = new DiVector(length);
-        Arrays.fill(multipliers.high, 1);
-        Arrays.fill(multipliers.low, 1);
+        multipliers = new RangeVector(length);
+        Arrays.fill(multipliers.upper, 1);
+        Arrays.fill(multipliers.lower, 1);
+        adders = new RangeVector(length);
         intervalPrecision = new float[length];
         errorDistribution = new RangeVector(length);
         Arrays.fill(errorDistribution.upper, Float.MAX_VALUE);
@@ -100,7 +124,7 @@ public class ErrorHandler {
         this.errorMean = new float[length];
         this.errorRMSE = new DiVector(length);
         this.intervalPrecision = new float[length];
-        this.multipliers = new DiVector(length);
+        this.multipliers = new RangeVector(length);
         this.errorDistribution = new RangeVector(length);
 
         if (pastForecastsFlattened != null) {
@@ -139,20 +163,11 @@ public class ErrorHandler {
         ++sequenceIndex;
         calibrate();
         if (calibrationMethod != Calibration.NONE) {
-            // adjusting intervals based on past performance always seem to be a good idea
-            for (int i = 0; i < inputLength * forecastHorizon; i++) {
-                descriptor.timedForecast.rangeVector.upper[i] = max(descriptor.timedForecast.rangeVector.upper[i],
-                        descriptor.timedForecast.rangeVector.values[i] + errorDistribution.upper[i]);
-                descriptor.timedForecast.rangeVector.lower[i] = min(descriptor.timedForecast.rangeVector.lower[i],
-                        descriptor.timedForecast.rangeVector.values[i] + errorDistribution.lower[i]);
-            }
-            // changing the forecast has actual consequences to the error; and since this is
-            // feedback system
-            // should be done with deliberation
             if (calibrationMethod == Calibration.SIMPLE) {
-                for (int i = 0; i < inputLength * forecastHorizon; i++) {
-                    descriptor.timedForecast.rangeVector.values[i] += errorDistribution.values[i];
-                }
+                adjust(descriptor.timedForecast.rangeVector, errorDistribution);
+            }
+            if (calibrationMethod == Calibration.MINIMAL) {
+                adjustMinimal(descriptor.timedForecast.rangeVector, errorDistribution);
             }
         }
         descriptor.setErrorMean(errorMean);
@@ -181,8 +196,12 @@ public class ErrorHandler {
         return Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 
-    public DiVector getMultipliers() {
-        return new DiVector(multipliers);
+    public RangeVector getMultipliers() {
+        return new RangeVector(multipliers);
+    }
+
+    public RangeVector getAdders() {
+        return new RangeVector(adders);
     }
 
     public RangeVector computeErrorPercentile(double percentile, BiFunction<Float, Float, Float> error) {
@@ -255,14 +274,15 @@ public class ErrorHandler {
 
     /*
      * this method computes a lot of different quantities, some of which would be
-     * useful in the future.
+     * useful in the future.In particular it splits the RMSE into positive and
+     * negative contribution which is informative about directionality of error.
      */
     protected void calibrate() {
         int inputLength = actuals[0].length;
         int arrayLength = pastForecasts.length;
         int errorIndex = (sequenceIndex - 1 + arrayLength) % arrayLength;
-        double[] copy = new double[errorHorizon];
-        Double[] errorintervals = new Double[errorHorizon];
+        double[] medianError = new double[errorHorizon];
+
         Arrays.fill(intervalPrecision, 0);
         for (int i = 0; i < forecastHorizon; i++) {
             // this is the only place where the newer (possibly shorter) horizon matters
@@ -279,48 +299,27 @@ public class ErrorHandler {
                     for (int k = 0; k < len; k++) {
                         int pastIndex = (errorIndex - (i + 1) - k + arrayLength) % arrayLength;
                         int index = (errorIndex - k + arrayLength) % arrayLength;
-                        intervalPrecision[pos] += (actuals[index][j] <= pastForecasts[pastIndex].upper[pos]
-                                && actuals[index][j] >= pastForecasts[pastIndex].lower[pos]) ? 1 : 0;
                         double error = actuals[index][j] - pastForecasts[pastIndex].values[pos];
+                        medianError[k] = error;
+                        intervalPrecision[pos] += (pastForecasts[pastIndex].upper[pos] >= actuals[index][j]
+                                && actuals[index][j] >= pastForecasts[pastIndex].lower[pos]) ? 1 : 0;
+
                         if (error >= 0) {
                             positiveSum += error;
                             positiveSqSum += error * error;
                             ++positiveCount;
-                            double t = actuals[index][j] - pastForecasts[pastIndex].upper[pos];
-                            errorintervals[k] = (t <= 0 || t >= error) ? 1.0 : error / (error - t);
                         } else {
                             negativeSum += error;
                             negativeSqSum += error * error;
-                            double t = actuals[index][j] - pastForecasts[pastIndex].lower[pos];
-                            errorintervals[k] = (t >= 0 || t <= error) ? 1.0 : error / (t - error);
                         }
-                        copy[k] = error;
                     }
                     errorMean[pos] = (float) (positiveSum + negativeSum) / len;
                     errorRMSE.high[pos] = (positiveCount > 0) ? Math.sqrt(positiveSqSum / positiveCount) : 0;
                     errorRMSE.low[pos] = (positiveCount < len) ? -Math.sqrt(negativeSqSum / (len - positiveCount)) : 0;
-                    Arrays.sort(copy, 0, len);
-                    errorDistribution.values[pos] = interpolatedMedian(copy);
-                    errorDistribution.upper[pos] = interpolatedUpperRank(copy, len, len * percentile);
-                    errorDistribution.lower[pos] = interpolatedLowerRank(copy, len * percentile);
-                    Arrays.sort(errorintervals, 0, len, (x, y) -> Double.compare(abs((double) y), abs((double) (x))));
-                    double t = errorintervals[(int) Math.floor(RCFCaster.DEFAULT_ERROR_PERCENTILE * len)];
-                    double positive = 0;
-                    int posCount = 0;
-                    double negative = 0;
-                    int negCount = 0;
-                    for (int k = 0; k < len; k++) {
-                        if (errorintervals[k] < abs(t) && errorintervals[k] > 0) {
-                            positive += errorintervals[k];
-                            posCount++;
-                        }
-                        if (-errorintervals[k] < abs(t) && errorintervals[k] < 0) {
-                            negative += -errorintervals[k];
-                            negCount++;
-                        }
-                    }
-                    multipliers.high[pos] = (posCount > 0) ? positive / posCount : 1;
-                    multipliers.low[pos] = (negCount > 0) ? negative / negCount : 1;
+                    Arrays.sort(medianError, 0, len);
+                    errorDistribution.values[pos] = interpolatedMedian(medianError);
+                    errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile);
+                    errorDistribution.lower[pos] = interpolatedLowerRank(medianError, len * percentile);
                     intervalPrecision[pos] = intervalPrecision[pos] / len;
                 } else {
                     errorMean[pos] = 0;
@@ -328,7 +327,7 @@ public class ErrorHandler {
                     errorDistribution.values[pos] = 0;
                     errorDistribution.upper[pos] = Float.MAX_VALUE;
                     errorDistribution.lower[pos] = -Float.MAX_VALUE;
-                    multipliers.high[pos] = multipliers.low[pos] = 1;
+                    adders.upper[pos] = adders.lower[pos] = adders.values[pos] = 0;
                     intervalPrecision[pos] = 0;
                 }
             }
@@ -369,4 +368,22 @@ public class ErrorHandler {
         return (float) (array[len - rank] + (fracRank - rank) * (array[len - rank - 1] - array[len - rank]));
     }
 
+    void adjust(RangeVector rangeVector, RangeVector other) {
+        checkArgument(other.values.length == rangeVector.values.length, " mismatch in lengths");
+        for (int i = 0; i < rangeVector.values.length; i++) {
+            rangeVector.values[i] += other.values[i];
+            rangeVector.upper[i] = max(rangeVector.values[i], rangeVector.upper[i] + other.upper[i]);
+            rangeVector.lower[i] = min(rangeVector.values[i], rangeVector.lower[i] + other.lower[i]);
+        }
+    }
+
+    void adjustMinimal(RangeVector rangeVector, RangeVector other) {
+        checkArgument(other.values.length == rangeVector.values.length, " mismatch in lengths");
+        for (int i = 0; i < rangeVector.values.length; i++) {
+            float oldVal = rangeVector.values[i];
+            rangeVector.values[i] += other.values[i];
+            rangeVector.upper[i] = max(rangeVector.values[i], oldVal + other.upper[i]);
+            rangeVector.lower[i] = min(rangeVector.values[i], oldVal + other.lower[i]);
+        }
+    }
 }

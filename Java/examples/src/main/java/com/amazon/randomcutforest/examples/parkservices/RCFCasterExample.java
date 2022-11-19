@@ -48,12 +48,13 @@ import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
  * "blue" fs transparent solid 0.3 noborder t "Calibrated uncertainty range
  * (future)", "example" index (i+2) u 1:7:6 w filledcurves fc "brown" fs
  * transparent solid 0.5 noborder t "Observed error distribution range (past)",
- * "example" i (i+1) u 1:2 w impulses t "", 0 lc "gray" t "", 100 lc "gray" t ""
- * }
+ * "example" i (i+1) u 1:2 w impulses t "", 0 lc "gray" t "", 100 lc "gray" t
+ * "", 80 lc "gray" t"" }
  *
- * The struggle of past and new data would become obvious; however the algorithm
+ * Try different calibrations below to see the precision over the intervals. The
+ * struggle of past and new data would become obvious; however the algorithm
  * would self-calibrate eventually. Changing the different values for
- * transformDecay() would correspond to different moving average analysis
+ * transformDecay() would correspond to different moving average analysis.
  *
  */
 public class RCFCasterExample implements Example {
@@ -118,7 +119,7 @@ public class RCFCasterExample implements Example {
         TransformMethod transformMethod = TransformMethod.NORMALIZE;
         RCFCaster caster = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1).numberOfTrees(numberOfTrees)
                 .shingleSize(shingleSize).sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision)
-                .anomalyRate(0.01).outputAfter(outputAfter).calibration(Calibration.SIMPLE)
+                .anomalyRate(0.01).outputAfter(outputAfter).calibration(Calibration.MINIMAL)
                 // the following affects the moving average in many of the transformations
                 // the 0.02 corresponds to a half life of 1/0.02 = 50 observations
                 // this is different from the timeDecay() of RCF; however it is a similar

@@ -20,14 +20,16 @@ public enum Calibration {
     NONE,
 
     /**
-     * a basic staring point where the forecasts p50 are unchanged but the itervals
-     * are adjusted
+     * a basic staring point where the itervals are adjusted to be the minimal
+     * necessary based on past error the intervals are smaller -- but the interval
+     * precision will likely be close to 1 - 2 * percentile
      */
     MINIMAL,
 
     /**
-     * to be extended; the forecast p50 are updated; and this would set up a
-     * feedback loop
+     * a Markov inequality based interval, where the past error and model errors are
+     * additive. The interval precision is likely higher than MINIMAL but so are the
+     * interval.
      */
     SIMPLE;
 
