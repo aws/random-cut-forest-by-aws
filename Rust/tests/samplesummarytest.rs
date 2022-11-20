@@ -19,12 +19,11 @@ assert!(core(1000000,test_dimension,0,distance));
 }}
 
 fn core(
-    _data_size: usize,
+    data_size: usize,
     test_dimension: usize,
     seed: u64,
     distance: fn(&[f32], &[f32]) -> f64,
 ) -> bool {
-    let data_size = 200000;
     let mut mean = Vec::new();
     let mut scale = Vec::new();
     let yard_stick = distance(&vec![0.0; test_dimension], &vec![1.0; test_dimension]) as f32;
