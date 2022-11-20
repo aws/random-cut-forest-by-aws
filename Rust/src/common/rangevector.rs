@@ -43,32 +43,28 @@ impl RangeVector {
     }
 
     pub fn shift(&mut self, i:usize, shift: f32) {
-        for _ in 0..self.values.len() {
-            self.values[i] += shift;
-            self.upper[i] += shift;
-            self.lower[i] += shift;
-            // managing precision explicitly
-            if self.upper[i] < self.values[i] {
-                self.upper[i] = self.values[i];
-            }
-            if self.lower[i] > self.values[i] {
-                self.lower[i] = self.values[i];
-            }
+        self.values[i] += shift;
+        self.upper[i] += shift;
+        self.lower[i] += shift;
+        // managing precision explicitly
+        if self.upper[i] < self.values[i] {
+            self.upper[i] = self.values[i];
+        }
+        if self.lower[i] > self.values[i] {
+            self.lower[i] = self.values[i];
         }
     }
 
     pub fn scale(&mut self, i:usize, scale: f32) {
-        for _ in 0..self.values.len() {
-            self.values[i] *= scale;
-            self.upper[i] *= scale;
-            self.lower[i] *= scale;
-            // managing precision explicitly
-            if self.upper[i] < self.values[i] {
-                self.upper[i] = self.values[i];
-            }
-            if self.lower[i] > self.values[i] {
-                self.lower[i] = self.values[i];
-            }
+        self.values[i] *= scale;
+        self.upper[i] *= scale;
+        self.lower[i] *= scale;
+        // managing precision explicitly
+        if self.upper[i] < self.values[i] {
+            self.upper[i] = self.values[i];
+        }
+        if self.lower[i] > self.values[i] {
+            self.lower[i] = self.values[i];
         }
     }
 }
