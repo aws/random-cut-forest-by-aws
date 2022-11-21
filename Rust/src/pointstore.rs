@@ -351,7 +351,7 @@ where
         reverse_reference.sort();
         let mut fresh_start: usize = 0;
         let mut j_static: usize = 0;
-        let mut j_dynamic: usize = 0;
+        let mut j_dynamic: usize;
         let end: usize = reverse_reference.len();
         while j_static < end {
             let mut block_start: usize = reverse_reference[j_static].0;

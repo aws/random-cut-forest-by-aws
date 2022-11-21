@@ -13,7 +13,7 @@ pub struct ScalarScoreVisitor {
 }
 
 impl ScalarScoreVisitor {
-    pub fn Default(tree_mass: usize, _parameters: &[usize], _visitor_info: &VisitorInfo) -> Self {
+    pub fn default(tree_mass: usize, _parameters: &[usize], _visitor_info: &VisitorInfo) -> Self {
         ScalarScoreVisitor {
             tree_mass,
             leaf_index: usize::MAX,

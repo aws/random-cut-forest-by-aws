@@ -5,7 +5,6 @@ extern crate rcflib;
 use num::abs;
 /// try cargo test --release
 /// these tests are designed to be longish
-use parameterized_test::create;
 use rand::{prelude::ThreadRng, Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
@@ -25,8 +24,6 @@ fn core(
     seed: u64,
     distance: fn(&[f32], &[f32]) -> f64,
 ) -> bool {
-    let mut rng = ChaCha20Rng::seed_from_u64(seed);
-    let data_size = 200000;
     let mut mean = Vec::new();
     let mut scale = Vec::new();
     let yard_stick = distance(&vec![0.0; test_dimension], &vec![1.0; test_dimension]) as f32;
@@ -45,7 +42,7 @@ fn core(
         data_size,
         &mean,
         &scale,
-        &vec![(0.5 / test_dimension as f32); 2 * test_dimension],
+        &vec![0.5 / test_dimension as f32; 2 * test_dimension],
         seed,
     );
 
@@ -92,7 +89,7 @@ fn benchmark() {
     let mut rng = ChaCha20Rng::seed_from_u64(one_seed);
 
     let mut error = 0;
-    for i in 0..10 {
+    for _ in 0..10 {
         let seed = rng.next_u64();
         let d = rng.gen_range(3..23);
         error += (core(200000, d, seed, l1distance) == false) as i32;

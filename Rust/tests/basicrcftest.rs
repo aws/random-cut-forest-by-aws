@@ -70,8 +70,8 @@ fn two_distribution_test_static() {
     );
 
     for i in 0..data_with_key.data.len() {
-        forest.update(&data_with_key.data[i], 0);
-        another_forest.update(&data_with_key.data[i], 0);
+        forest.update(&data_with_key.data[i], 0).unwrap();
+        another_forest.update(&data_with_key.data[i], 0).unwrap();
     }
 
     let anomaly = vec![0.0f32; dimensions];

@@ -577,7 +577,7 @@ where
             point,
             &Vec::new(),
             visitor_info,
-            ScalarScoreVisitor::Default,
+            ScalarScoreVisitor::default,
             &0.0,
             &0.0,
             add_to,

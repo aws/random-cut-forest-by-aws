@@ -76,7 +76,7 @@ fn anomalydetection_attribution_and_update() {
         */
 
         score += attribution.total();
-        forest.update(&data_with_key.data[i], 0);
+        forest.update(&data_with_key.data[i], 0).unwrap();
     }
 
     println!(

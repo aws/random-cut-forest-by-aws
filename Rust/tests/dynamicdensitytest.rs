@@ -53,7 +53,7 @@ fn dynamic_density() {
             forest.update(
                 &rotate_clockwise(&data[j], 2.0 * PI * degree as f32 / 360.0),
                 0,
-            );
+            ).unwrap();
         }
 
         let density = forest.directional_density(&query_point).unwrap();
@@ -143,8 +143,8 @@ fn generate_fan(num_per_blade: usize, blades: usize) -> Vec<Vec<f32>> {
     for point in data_with_key.data {
         let toss: f64 = rng.gen();
         let mut i = 0;
-        while (i < blades + 1) {
-            if (toss < i as f64 / blades as f64) {
+        while i < blades + 1 {
+            if toss < i as f64 / blades as f64 {
                 let theta = 2.0 * PI * i as f32 / blades as f32;
                 let mut vec = rotate_clockwise(&point, theta);
                 vec[0] += 0.6 * theta.sin();

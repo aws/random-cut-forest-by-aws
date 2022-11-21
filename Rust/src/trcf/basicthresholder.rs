@@ -134,15 +134,15 @@ impl BasicThresholder {
             if score < self.longterm_threshold(factor) - elastic_addition {
                 return 0.0;
             }
-            let mut t_Factor = self.upper_z_factor;
+            let mut t_factor = self.upper_z_factor;
             let longterm_deviation = self.longterm_deviation();
             if longterm_deviation > 0.0 {
                 let t =  (score - self.primary_deviation.mean() as f32) / longterm_deviation;
-                if (t as f32) < t_Factor {
-                    t_Factor = t as f32;
+                if (t as f32) < t_factor {
+                    t_factor = t as f32;
                 }
             }
-            return (t_Factor - self.z_factor) / (self.upper_z_factor - self.z_factor);
+            return (t_factor - self.z_factor) / (self.upper_z_factor - self.z_factor);
         } else {
             let t = self.short_term_threshold(factor, intermediate_fraction);
             if score < t - elastic_addition {

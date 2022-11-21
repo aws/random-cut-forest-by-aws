@@ -74,7 +74,7 @@ fn impute_same_period() {
                 .sum::<f64>();
             count += base_dimension;
         }
-        forest.update(&data_with_key.data[i], 0);
+        forest.update(&data_with_key.data[i], 0).unwrap();
     }
 
     println!("Success! {}", forest.entries_seen());
