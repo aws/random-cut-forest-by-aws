@@ -195,8 +195,10 @@ public class PredictorCorrector {
                 for (int i = dimensions - difference; i < dimensions; i++) {
                     remainder += candidate.getHighLowSum(i);
                 }
-                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly,
-                        triggerFactor) > 0;
+                // simplifying the following since remainder * dimensions/difference corresponds
+                // to the
+                // impact of the new data since the last anomaly
+                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly) > 0;
             } else {
                 double differentialRemainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {

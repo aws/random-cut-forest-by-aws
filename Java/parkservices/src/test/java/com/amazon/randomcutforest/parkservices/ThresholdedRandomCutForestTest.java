@@ -39,6 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -405,4 +406,47 @@ public class ThresholdedRandomCutForestTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2, 3, 4, 5, 6 })
+    void smallGap(int gap) {
+        int shingleSize = 4;
+        int numberOfTrees = 50;
+        int sampleSize = 256;
+        Precision precision = Precision.FLOAT_32;
+        int dataSize = 4 * sampleSize;
+
+        // change this to try different number of attributes,
+        // this parameter is not expected to be larger than 5 for this example
+        int baseDimensions = 1;
+        // 10 trials each
+        int numTrials = 10;
+
+        int correct = 0;
+        for (int z = 0; z < numTrials; z++) {
+            int dimensions = baseDimensions * shingleSize;
+            TransformMethod transformMethod = TransformMethod.NORMALIZE;
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                    .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                    .build();
+
+            long seed = new Random().nextLong();
+            System.out.println("seed = " + seed);
+            Random rng = new Random(seed);
+            for (int i = 0; i < dataSize; i++) {
+                double[] point = new double[] { 0.6 + 0.2 * (2 * rng.nextDouble() - 1) };
+                AnomalyDescriptor result = forest.process(point, 0L);
+            }
+            AnomalyDescriptor result = forest.process(new double[] { 11.2 }, 0L);
+            for (int y = 0; y < gap; y++) {
+                result = forest.process(new double[] { 0.6 + 0.2 * (2 * rng.nextDouble() - 1) }, 0L);
+            }
+            result = forest.process(new double[] { 10.0 }, 0L);
+            if (result.getAnomalyGrade() > 0) {
+                ++correct;
+            }
+            ;
+        }
+        assert (correct > 0.9 * numTrials);
+    }
 }
