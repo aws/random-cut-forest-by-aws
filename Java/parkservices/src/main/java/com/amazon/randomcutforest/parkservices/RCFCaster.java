@@ -103,7 +103,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     public RCFCaster(Builder builder) {
         super(builder);
         checkArgument(errorHorizon >= 2 * forecastHorizon,
-                "intervalPrecision horizon should be at least twice as large as forecast horizon");
+                "Error (used to compute interval precision of forecasts) horizon should be at least twice as large as forecast horizon");
         forecastHorizon = builder.forecastHorizon;
         errorHorizon = builder.errorHorizon;
         errorHandler = new ErrorHandler(builder);

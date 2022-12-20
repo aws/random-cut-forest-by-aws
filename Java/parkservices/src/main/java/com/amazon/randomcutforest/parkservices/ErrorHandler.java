@@ -221,7 +221,7 @@ public class ErrorHandler {
      *                   these error percentiles will be less meaningful
      * @param newHorizon a horizon which could be smaller than the errorHorizon (for
      *                   auditing)
-     * @param error      the function that defies error
+     * @param error      the function that defines error
      * @return a RangeVector where the value field corresponds to the p50 and the
      *         upper and lower arrays correspond to percentile and 1-percentile
      *         quantiles. We reiterate that do be cautious in use of percentiles.

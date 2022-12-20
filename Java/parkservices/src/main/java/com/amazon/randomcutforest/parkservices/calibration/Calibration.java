@@ -20,7 +20,7 @@ public enum Calibration {
     NONE,
 
     /**
-     * a basic staring point where the itervals are adjusted to be the minimal
+     * a basic staring point where the intervals are adjusted to be the minimal
      * necessary based on past error the intervals are smaller -- but the interval
      * precision will likely be close to 1 - 2 * percentile
      */
@@ -29,7 +29,7 @@ public enum Calibration {
     /**
      * a Markov inequality based interval, where the past error and model errors are
      * additive. The interval precision is likely higher than MINIMAL but so are the
-     * interval.
+     * intervals.
      */
     SIMPLE;
 

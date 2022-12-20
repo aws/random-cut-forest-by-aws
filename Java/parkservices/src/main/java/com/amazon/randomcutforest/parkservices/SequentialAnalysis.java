@@ -83,7 +83,8 @@ public class SequentialAnalysis {
     }
 
     /**
-     * Same as the anomaly detector but provides a
+     * Same as the anomaly detector but provides a list of anomalies as well as a
+     * calibrated (with testing) interval and forecasts.
      * 
      * @param inputArray      the input
      * @param shingleSize     shingle size of RCF
