@@ -21,12 +21,19 @@ import static java.lang.Math.max;
 
 import java.util.function.BiFunction;
 
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
+@Getter
+@Setter
 public class RCFCaster extends ThresholdedRandomCutForest {
 
     public static double DEFAULT_ERROR_PERCENTILE = 0.1;
@@ -76,6 +83,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
             return this;
         }
 
+        @Override
         public RCFCaster build() {
             checkArgument(forecastHorizon > 0, "need non-negative horizon");
             checkArgument(shingleSize > 0, "need shingle size > 1");
@@ -108,6 +116,17 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         errorHorizon = builder.errorHorizon;
         errorHandler = new ErrorHandler(builder);
         calibrationMethod = builder.calibrationMethod;
+    }
+
+    // for mappers
+    public RCFCaster(ForestMode forestMode, TransformMethod transformMethod, RandomCutForest forest,
+            PredictorCorrector predictorCorrector, Preprocessor preprocessor, RCFComputeDescriptor descriptor,
+            int forecastHorizon, ErrorHandler errorHandler, int errorHorizon, Calibration calibrationMethod) {
+        super(forestMode, transformMethod, forest, predictorCorrector, preprocessor, descriptor);
+        this.forecastHorizon = forecastHorizon;
+        this.errorHandler = errorHandler;
+        this.errorHorizon = errorHorizon;
+        this.calibrationMethod = calibrationMethod;
     }
 
     /**

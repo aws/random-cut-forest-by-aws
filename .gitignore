@@ -2,3 +2,10 @@ build
 target
 .idea
 *.iml
+.project
+.settings
+.classpath
+._.DS_Store
+.DS_Store
+Java/*/bin/
+

@@ -13,11 +13,22 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state;
+package com.amazon.randomcutforest.parkservices.state;
 
-public class Version {
-    public static final String V2_0 = "2.0";
-    public static final String V2_1 = "2.1";
-    public static final String V3_0 = "3.0";
-    public static final String V3_5 = "3.5";
+import java.io.Serializable;
+
+import lombok.Data;
+
+@Data
+public class ErrorHandlerState implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private int sequenceIndex;
+    private double percentile;
+    private int forecastHorizon;
+    private int errorHorizon;
+    private float[] pastForecastsFlattened;
+    private float[] actualsFlattened;
+    private int inputLength;
+    private int dimensions;
 }
