@@ -195,8 +195,10 @@ public class PredictorCorrector {
                 for (int i = dimensions - difference; i < dimensions; i++) {
                     remainder += candidate.getHighLowSum(i);
                 }
-                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly,
-                        triggerFactor) > 0;
+                // simplifying the following since remainder * dimensions/difference corresponds
+                // to the
+                // impact of the new data since the last anomaly
+                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly) > 0;
             } else {
                 double differentialRemainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {
@@ -242,7 +244,7 @@ public class PredictorCorrector {
             System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
                     point.length - gap * baseDimensions);
         }
-        if (lastRelativeIndex == 0) { // is is possible to fix other cases, but is more complicated
+        if (lastRelativeIndex == 0) { // it is possible to fix other cases, but is more complicated
             TransformMethod transformMethod = lastAnomalyDescriptor.getTransformMethod();
             if (transformMethod == TransformMethod.DIFFERENCE
                     || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
@@ -272,7 +274,7 @@ public class PredictorCorrector {
      * @param lastAnomalyDescriptor state of the computation for the last anomaly
      * @return the anomaly descriptor result (which has plausibly mutated)
      */
-    protected AnomalyDescriptor detect(AnomalyDescriptor result, IRCFComputeDescriptor lastAnomalyDescriptor,
+    protected <P extends AnomalyDescriptor> P detect(P result, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
         double[] point = result.getRCFPoint();
         if (point == null) {

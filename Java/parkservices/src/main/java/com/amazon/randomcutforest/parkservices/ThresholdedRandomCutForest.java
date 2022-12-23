@@ -73,7 +73,7 @@ public class ThresholdedRandomCutForest {
 
     protected PredictorCorrector predictorCorrector;
 
-    protected IPreprocessor<AnomalyDescriptor> preprocessor;
+    protected IPreprocessor preprocessor;
 
     public ThresholdedRandomCutForest(Builder<?> builder) {
 
@@ -109,7 +109,7 @@ public class ThresholdedRandomCutForest {
         forest = builder.buildForest();
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
-        preprocessorBuilder.timeDecay(forest.getTimeDecay());
+        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(forest.getTimeDecay()));
 
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder
@@ -182,8 +182,7 @@ public class ThresholdedRandomCutForest {
      * @param <T>          the type of the input
      * @return the final result (switching caching off if needed)
      */
-    public <T extends IRCFComputeDescriptor> T singleStepProcess(T input, IPreprocessor<T> preprocessor,
-            Function<T, T> core) {
+    public <T extends AnomalyDescriptor> T singleStepProcess(T input, IPreprocessor preprocessor, Function<T, T> core) {
         boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
         T answer;
         try {
@@ -392,6 +391,7 @@ public class ThresholdedRandomCutForest {
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected boolean adjustThreshold = false;
+        protected Optional<Double> transformDecay = Optional.empty();
 
         void validate() {
             if (forestMode == ForestMode.TIME_AUGMENTED) {
@@ -477,6 +477,11 @@ public class ThresholdedRandomCutForest {
 
         public T timeDecay(double timeDecay) {
             this.timeDecay = Optional.of(timeDecay);
+            return (T) this;
+        }
+
+        public T transformDecay(double transformDecay) {
+            this.transformDecay = Optional.of(transformDecay);
             return (T) this;
         }
 

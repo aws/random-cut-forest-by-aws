@@ -49,7 +49,7 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
 @Setter
-public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
+public class Preprocessor implements IPreprocessor {
 
     // in case of normalization, uses this constant in denominator to ensure
     // smoothness near 0
@@ -269,7 +269,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      * @param forest                the RCF
      * @return the descriptor to be used for anomaly scoring
      */
-    AnomalyDescriptor initialSetup(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    <P extends AnomalyDescriptor> P initialSetup(P description, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
         description.setForestMode(mode);
         description.setTransformMethod(transformMethod);
@@ -305,7 +305,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      * @return the initialized AnomalyDescriptor with the actual RCF point filled in
      *         (could be a result of multiple transformations)
      */
-    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public <P extends AnomalyDescriptor> P preProcess(P description, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         initialSetup(description, lastAnomalyDescriptor, forest);
@@ -344,7 +344,7 @@ public class Preprocessor implements IPreprocessor<AnomalyDescriptor> {
      * @param forest the resident RCF
      * @return the descriptor (mutated and augmented appropriately)
      */
-    public AnomalyDescriptor postProcess(AnomalyDescriptor result, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public <P extends AnomalyDescriptor> P postProcess(P result, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         double[] point = result.getRCFPoint();
