@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
@@ -30,9 +32,9 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
 public class RCFCasterMapperTest {
-    @Test
-    public void testRoundTripStandardShingleSizeEight() {
-        int inputLength = 1;
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2 })
+    public void testRoundTripStandardShingleSizeEight(int inputLength) {
         int shingleSize = 8;
         int dimensions = inputLength * shingleSize;
         int forecastHorizon = shingleSize * 3;

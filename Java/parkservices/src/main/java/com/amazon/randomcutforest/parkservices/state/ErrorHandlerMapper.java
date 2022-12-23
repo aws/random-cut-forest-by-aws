@@ -47,14 +47,13 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
                 "actuals array length %d and pastForecasts array length %d is not equal", actuals.length, arrayLength));
         int forecastHorizon = model.getForecastHorizon();
         float[] pastForecastsFlattened = null;
+        int inputLength = 0;
         if (pastForecasts.length == 0 || pastForecasts[0].values == null || pastForecasts[0].values.length == 0) {
             pastForecastsFlattened = new float[0];
-            errorHandlerState.setDimensions(0);
         } else {
             int pastForecastsLength = pastForecasts[0].values.length;
-            int dimensions = pastForecastsLength / forecastHorizon;
-            errorHandlerState.setDimensions(dimensions);
-            pastForecastsFlattened = new float[arrayLength * 3 * forecastHorizon * dimensions];
+            inputLength = pastForecastsLength / forecastHorizon;
+            pastForecastsFlattened = new float[arrayLength * 3 * forecastHorizon * inputLength];
 
             for (int i = 0; i < arrayLength; i++) {
                 System.arraycopy(pastForecasts[i].values, 0, pastForecastsFlattened, 3 * i * pastForecastsLength,
@@ -65,15 +64,13 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
                         pastForecastsLength);
             }
         }
+        errorHandlerState.setInputLength(inputLength);
         errorHandlerState.setPastForecastsFlattened(pastForecastsFlattened);
 
         float[] actualsFlattened = null;
         if (actuals.length == 0 || actuals[0].length == 0) {
             actualsFlattened = new float[0];
-            errorHandlerState.setInputLength(0);
         } else {
-            int inputLength = actuals[0].length;
-            errorHandlerState.setInputLength(inputLength);
             actualsFlattened = new float[arrayLength * inputLength];
             for (int i = 0; i < arrayLength; i++) {
                 System.arraycopy(actuals[i], 0, actualsFlattened, i * inputLength, inputLength);
@@ -86,7 +83,7 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
     @Override
     public ErrorHandler toModel(ErrorHandlerState state, long seed) {
         return new ErrorHandler(state.getErrorHorizon(), state.getForecastHorizon(), state.getSequenceIndex(),
-                state.getPercentile(), state.getInputLength(), state.getDimensions(), state.getActualsFlattened(),
+                state.getPercentile(), state.getInputLength(), state.getActualsFlattened(),
                 state.getPastForecastsFlattened(), null);
     }
 

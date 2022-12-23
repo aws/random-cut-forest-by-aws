@@ -30,5 +30,10 @@ public class ErrorHandlerState implements Serializable {
     private float[] pastForecastsFlattened;
     private float[] actualsFlattened;
     private int inputLength;
-    private int dimensions;
+    // not used now. Kept for regret computation later.
+    // Regret is what we feel when we realize that we should have been better off
+    // had we done something else. A basic requirement of regret computation is that
+    // it should avoid or at least reduce the regret that will be felt.
+    private float[] addersFlattened;
+    private float[] multipliersFlattened;
 }

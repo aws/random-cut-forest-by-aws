@@ -106,12 +106,12 @@ public class ErrorHandler {
      * the folloqing would be useful when states and mappers get written
      */
     public ErrorHandler(int errorHorizon, int forecastHorizon, int sequenceIndex, double percentile, int inputLength,
-            int dimensions, float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
+            float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
         checkArgument(forecastHorizon > 0, " incorrect forecast horizon");
         checkArgument(errorHorizon >= forecastHorizon, "incorrect error horizon");
         checkArgument(actualsFlattened != null || pastForecastsFlattened == null,
                 " actuals and forecasts are a mismatch");
-        checkArgument(inputLength > 0 && dimensions > 0 && dimensions % inputLength == 0, "incorrect parameters");
+        checkArgument(inputLength > 0, "incorrect parameters");
         this.sequenceIndex = sequenceIndex;
         this.errorHorizon = errorHorizon;
         this.percentile = percentile;
@@ -125,8 +125,13 @@ public class ErrorHandler {
         this.actuals = new float[arrayLength][inputLength];
 
         int length = forecastHorizon * inputLength;
-        checkArgument(forecastLength == currentLength * dimensions * 3 * forecastHorizon / inputLength,
-                "misaligned forecasts");
+        // currentLength = (number of actual time steps stored) x inputLength and for
+        // each of the stored time steps we get a forecast whose length is
+        // forecastHorizon x inputLength (and then upper and lower for each, hence x 3)
+        // so forecastLength = number of actual time steps stored x forecastHorizon x
+        // inputLength x 3
+        // = currentLength x forecastHorizon x 3
+        checkArgument(forecastLength == currentLength * 3 * forecastHorizon, "misaligned forecasts");
 
         this.errorMean = new float[length];
         this.errorRMSE = new DiVector(length);
@@ -135,15 +140,11 @@ public class ErrorHandler {
         this.multipliers = new RangeVector(length);
         this.errorDistribution = new RangeVector(length);
 
-        int pastForecastsLength = forecastHorizon * dimensions;
         if (pastForecastsFlattened != null) {
             for (int i = 0; i < arrayLength; i++) {
-                float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * pastForecastsLength,
-                        (i * 3 + 1) * pastForecastsLength);
-                float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * pastForecastsLength,
-                        (i * 3 + 2) * pastForecastsLength);
-                float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 2) * pastForecastsLength,
-                        (i * 3 + 3) * pastForecastsLength);
+                float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * length, (i * 3 + 1) * length);
+                float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * length, (i * 3 + 2) * length);
+                float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 2) * length, (i * 3 + 3) * length);
                 pastForecasts[i] = new RangeVector(values, upper, lower);
                 System.arraycopy(actualsFlattened, i * inputLength, actuals[i], 0, inputLength);
             }
