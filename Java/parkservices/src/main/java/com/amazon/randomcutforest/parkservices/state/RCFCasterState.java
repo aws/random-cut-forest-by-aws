@@ -13,11 +13,19 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state;
+package com.amazon.randomcutforest.parkservices.state;
 
-public class Version {
-    public static final String V2_0 = "2.0";
-    public static final String V2_1 = "2.1";
-    public static final String V3_0 = "3.0";
-    public static final String V3_5 = "3.5";
+import static com.amazon.randomcutforest.state.Version.V3_5;
+
+import lombok.Data;
+
+@Data
+public class RCFCasterState extends ThresholdedRandomCutForestState {
+    private static final long serialVersionUID = 1L;
+    private String version = V3_5;
+
+    private int forecastHorizon;
+    private ErrorHandlerState errorHandler;
+    private int errorHorizon;
+    private String calibrationMethod;
 }

@@ -22,6 +22,9 @@ import static java.lang.Math.min;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
@@ -36,6 +39,8 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 // can be involved and out of current scope of this library. We simplify the issue to calibrating two
 // fixed quantiles and hence additive updates are reasonable.
 
+@Getter
+@Setter
 public class ErrorHandler {
 
     /**
@@ -101,12 +106,12 @@ public class ErrorHandler {
      * the folloqing would be useful when states and mappers get written
      */
     public ErrorHandler(int errorHorizon, int forecastHorizon, int sequenceIndex, double percentile, int inputLength,
-            int dimensions, float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
+            float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
         checkArgument(forecastHorizon > 0, " incorrect forecast horizon");
         checkArgument(errorHorizon >= forecastHorizon, "incorrect error horizon");
         checkArgument(actualsFlattened != null || pastForecastsFlattened == null,
                 " actuals and forecasts are a mismatch");
-        checkArgument(inputLength > 0 && dimensions > 0 && dimensions % inputLength == 0, "incorrect parameters");
+        checkArgument(inputLength > 0, "incorrect parameters");
         this.sequenceIndex = sequenceIndex;
         this.errorHorizon = errorHorizon;
         this.percentile = percentile;
@@ -114,27 +119,32 @@ public class ErrorHandler {
         int currentLength = (actualsFlattened == null) ? 0 : actualsFlattened.length;
         checkArgument(currentLength % inputLength == 0, "actuals array is incorrect");
         int forecastLength = (pastForecastsFlattened == null) ? 0 : pastForecastsFlattened.length;
-        checkArgument(forecastLength == currentLength * dimensions * 3 / inputLength, "misaligned forecasts");
+
         int arrayLength = max(forecastHorizon + errorHorizon, currentLength / inputLength);
         this.pastForecasts = new RangeVector[arrayLength];
         this.actuals = new float[arrayLength][inputLength];
 
         int length = forecastHorizon * inputLength;
+        // currentLength = (number of actual time steps stored) x inputLength and for
+        // each of the stored time steps we get a forecast whose length is
+        // forecastHorizon x inputLength (and then upper and lower for each, hence x 3)
+        // so forecastLength = number of actual time steps stored x forecastHorizon x
+        // inputLength x 3
+        // = currentLength x forecastHorizon x 3
+        checkArgument(forecastLength == currentLength * 3 * forecastHorizon, "misaligned forecasts");
 
         this.errorMean = new float[length];
         this.errorRMSE = new DiVector(length);
         this.intervalPrecision = new float[length];
+        this.adders = new RangeVector(length);
         this.multipliers = new RangeVector(length);
         this.errorDistribution = new RangeVector(length);
 
         if (pastForecastsFlattened != null) {
-            for (int i = 0; i < currentLength / inputLength; i++) {
-                float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * dimensions,
-                        (i * 3 + 1) * dimensions);
-                float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * dimensions,
-                        (i * 3 + 2) * dimensions);
-                float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 3) * dimensions,
-                        (i * 3 + 3) * dimensions);
+            for (int i = 0; i < arrayLength; i++) {
+                float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * length, (i * 3 + 1) * length);
+                float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * length, (i * 3 + 2) * length);
+                float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 2) * length, (i * 3 + 3) * length);
                 pastForecasts[i] = new RangeVector(values, upper, lower);
                 System.arraycopy(actualsFlattened, i * inputLength, actuals[i], 0, inputLength);
             }
@@ -145,7 +155,7 @@ public class ErrorHandler {
     /**
      * the following the core subroutine, which calibrates; but the application of
      * the calibration is controlled
-     * 
+     *
      * @param descriptor        the current forecast
      * @param calibrationMethod the choice of the callibration
      */
@@ -212,7 +222,7 @@ public class ErrorHandler {
      * the following function is provided such that the calibration of errors can be
      * performed using a different function. e.g., SMAPE type evaluation using
      * RCFCaster.alternateError
-     * 
+     *
      * @param percentile the desired percentile (we recomment leaving this at 0.1 --
      *                   the algorithm likely will never have sufficiently many
      *                   observations to have a very fine grain distribution;
