@@ -63,7 +63,7 @@ impl FieldSummarizer {
         let mut threshold = 0.0;
         if self.centrality > 0.0 {
             let mut always_include = 0;
-            while always_include < point_list_with_distance.len()
+            while always_include < point_list_with_distance.len() - 1
                 && distance_list[always_include] == 0.0
             {
                 always_include += 1;
