@@ -107,7 +107,11 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      */
     protected AcceptPointState acceptPointState;
 
-    public abstract boolean acceptPoint(long sequenceIndex);
+    public boolean acceptPoint(long sequenceIndex) {
+        return acceptPoint(sequenceIndex, 1.0f);
+    }
+
+    public abstract boolean acceptPoint(long sequenceIndex, float weight);
 
     @Override
     public abstract void addPoint(P pointIndex);
@@ -136,16 +140,18 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
      *
      * @param sequenceIndex The sequenceIndex of the point whose score is being
      *                      computed.
+     * @param sampleWeight  the positive weight (often 1.0) used in sampling; the
+     *                      weight should be checked in the calling routine
      * @return the weight value used to define point priority
      */
-    protected float computeWeight(long sequenceIndex) {
+    protected float computeWeight(long sequenceIndex, float sampleWeight) {
         double randomNumber = 0d;
         while (randomNumber == 0d) {
             randomNumber = random.nextDouble();
         }
         maxSequenceIndex = (maxSequenceIndex < sequenceIndex) ? sequenceIndex : maxSequenceIndex;
         return (float) (-(sequenceIndex - mostRecentTimeDecayUpdate) * timeDecay - accumuluatedTimeDecay
-                + Math.log(-Math.log(randomNumber)));
+                + Math.log(-Math.log(randomNumber) / sampleWeight));
     }
 
     /**

@@ -15,19 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -46,6 +33,18 @@ import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 @Getter
 @Setter
@@ -606,8 +605,10 @@ public class Preprocessor implements IPreprocessor {
      */
     protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
             double defaultTimeFactor) {
-        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, getShingledInput(shingleSize - 1),
-                defaultFactors, clipFactor);
+        double[] previous = (input.length == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
+        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, previous, defaultFactors,
+                clipFactor);
         if (mode == ForestMode.TIME_AUGMENTED) {
             scaledInput = augmentTime(scaledInput, timestamp, defaultTimeFactor);
         }
@@ -662,7 +663,9 @@ public class Preprocessor implements IPreprocessor {
             timeStampDeviation.update(timestamp - previous);
         }
         updateTimestamps(timestamp);
-        transformer.updateDeviation(inputPoint, getShingledInput(shingleSize - 1));
+        double[] previousInput = (inputLength == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
+        transformer.updateDeviation(inputPoint, previousInput);
         updateShingle(inputPoint, scaledInput);
     }
 

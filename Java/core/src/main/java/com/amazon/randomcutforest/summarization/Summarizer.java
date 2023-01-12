@@ -106,6 +106,7 @@ public class Summarizer {
                 int minDistNbr = -1;
                 for (int i = 0; i < clusters.size(); i++) {
                     dist[i] = clusters.get(i).distance(getPoint.apply(point.index), distance);
+                    checkArgument(dist[i] >= 0, "distance cannot be negative");
                     if (minDist > dist[i]) {
                         minDist = dist[i];
                         minDistNbr = i;
@@ -346,7 +347,10 @@ public class Summarizer {
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
         checkArgument(stopAt > 0 && stopAt <= maxAllowed, "lower bound set incorrectly");
 
-        double totalWeight = points.stream().map(e -> (double) e.weight).reduce(0.0, Double::sum);
+        double totalWeight = points.stream().map(e -> {
+            checkArgument(e.weight >= 0.0, "negative weights are not meaningful");
+            return (double) e.weight;
+        }).reduce(0.0, Double::sum);
         checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
                 " weights have to finite and non-NaN");
         Random rng = new Random(seed);
@@ -398,7 +402,10 @@ public class Summarizer {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
-        double totalWeight = points.stream().map(e -> (double) e.weight).reduce(0.0, Double::sum);
+        double totalWeight = points.stream().map(e -> {
+            checkArgument(e.weight >= 0.0, "negative weights are not meaningful");
+            return (double) e.weight;
+        }).reduce(0.0, Double::sum);
         checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
                 " weights have to finite and non-NaN");
         Random rng = new Random(seed);

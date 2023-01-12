@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.summarization;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static java.lang.Math.exp;
 
 import java.util.ArrayList;
@@ -69,6 +70,10 @@ public class Center implements ICluster<float[]> {
         previousSumOFRadius = sumOfRadius;
     }
 
+    public double averageRadius() {
+        return (weight > 0) ? sumOfRadius / weight : 0;
+    }
+
     // average radius computation, provides an extent measure
     public double extentMeasure() {
         return (weight > 0) ? sumOfRadius / weight : 0;
@@ -112,8 +117,10 @@ public class Center implements ICluster<float[]> {
             representative[index] = getPoint.apply(assignedPoints.get(position).index)[index];
         }
         for (int j = 0; j < assignedPoints.size(); j++) {
-            sumOfRadius += distance.apply(representative, getPoint.apply(assignedPoints.get(j).index))
+            double addTerm = distance.apply(representative, getPoint.apply(assignedPoints.get(j).index))
                     * assignedPoints.get(j).weight;
+            checkArgument(addTerm >= 0, "distances or weights cannot be negative");
+            sumOfRadius += addTerm;
         }
         return (previousSumOFRadius - sumOfRadius);
 
@@ -134,6 +141,7 @@ public class Center implements ICluster<float[]> {
         double dist = Double.MAX_VALUE;
         for (Weighted<float[]> e : representatives) {
             double t = distance.apply(e.index, representative);
+            checkArgument(t >= 0, "distances cannot be negative");
             if (t < dist) {
                 dist = t;
                 closest = e.index;

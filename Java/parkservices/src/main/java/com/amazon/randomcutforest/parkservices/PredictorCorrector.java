@@ -280,7 +280,15 @@ public class PredictorCorrector {
         if (point == null) {
             return result;
         }
-        double score = forest.getAnomalyScore(point);
+        double score = 0;
+        DiVector attribution = null;
+        if (result.forestMode != ForestMode.DISTANCE) {
+            score = forest.getAnomalyScore(point);
+        } else {
+            attribution = forest.getSimpleDensity(point).distances;
+            score = attribution.getHighLowSum();
+        }
+
         result.setRCFScore(score);
         result.setRCFPoint(point);
         long internalTimeStamp = result.getInternalTimeStamp();
@@ -292,16 +300,22 @@ public class PredictorCorrector {
         int shingleSize = result.getShingleSize();
         int baseDimensions = result.getDimension() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
+        boolean previousIsPotentialAnomaly = (shingleSize > 1) && thresholder.isInPotentialAnomaly();
 
-        result.setThreshold(thresholder.threshold());
-
-        boolean previousIsPotentialAnomaly = thresholder.isInPotentialAnomaly();
+        double workingGrade = 0;
+        if (result.forestMode != ForestMode.DISTANCE) {
+            result.setThreshold(thresholder.threshold());
+            workingGrade = thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly);
+        } else {
+            result.setThreshold(thresholder.getPrimaryThreshold());
+            workingGrade = thresholder.getPrimaryGrade(score);
+        }
 
         /*
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
          */
-        if (thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly) == 0) {
+        if (workingGrade == 0) {
             result.setAnomalyGrade(0);
             // inHighScoreRegion = false;
             result.setInHighScoreRegion(false);
@@ -334,13 +348,23 @@ public class PredictorCorrector {
         // the forecast may not be reasonable with less data
         boolean reasonableForecast = result.isReasonableForecast();
 
-        if (reasonableForecast && lastAnomalyDescriptor.getRCFPoint() != null
+        // note that the following is bupassed for shingleSize = 1 because it would not
+        // make
+        // sense to connect the current evaluation with a previous value
+        if (reasonableForecast && lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
                 && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap > 0 && gap <= shingleSize) {
             double[] correctedPoint = applyBasicCorrector(point, gap, shingleSize, baseDimensions,
                     lastAnomalyDescriptor);
-            double correctedScore = forest.getAnomalyScore(correctedPoint);
+            double correctedScore = 0;
+            if (result.forestMode != ForestMode.DISTANCE) {
+                correctedScore = forest.getAnomalyScore(correctedPoint);
+                workingGrade = thresholder.getAnomalyGrade(correctedScore, true);
+            } else {
+                correctedScore = forest.getSimpleDensity(correctedPoint).distances.getHighLowSum();
+                workingGrade = thresholder.getPrimaryGrade(correctedScore);
+            }
             // we know we are looking previous anomalies
-            if (thresholder.getAnomalyGrade(correctedScore, true) == 0) {
+            if (workingGrade == 0) {
                 // fixing the past makes this anomaly go away; nothing to do but process the
                 // score
                 // we will not change inHighScoreRegion however, because the score has been
@@ -360,7 +384,9 @@ public class PredictorCorrector {
          * available.
          */
 
-        DiVector attribution = forest.getAnomalyAttribution(point);
+        if (result.forestMode != ForestMode.DISTANCE) {
+            attribution = forest.getAnomalyAttribution(point);
+        }
 
         double[] newPoint = null;
         double newScore = score;
@@ -372,21 +398,23 @@ public class PredictorCorrector {
          * most egregious attribution was due to the past values in the shingle
          */
 
-        int index = maxContribution(attribution, baseDimensions, -shingleSize) + 1;
+        int index = (shingleSize == 1) ? 0 : maxContribution(attribution, baseDimensions, -shingleSize) + 1;
 
         /*
          * if we are transitioning from low score to high score range (given by
          * inAnomaly) then we check if the new part of the input could have triggered
          * anomaly on its own That decision is vended by trigger() which extrapolates a
-         * partial shingle
+         * partial shingle. ShingleSize == 1 will be in if() block if ignoreSimilar ==
+         * false
          */
 
         if (!previousIsPotentialAnomaly
                 && trigger(attribution, gap, baseDimensions, null, false, lastAnomalyDescriptor)) {
-            result.setAnomalyGrade(thresholder.getAnomalyGrade(score, false));
+            result.setAnomalyGrade(workingGrade);
             result.setStartOfAnomaly(true);
             thresholder.update(score, score, 0, true);
         } else {
+            checkArgument(shingleSize > 1 || ignoreSimilar, "incorrect branch");
             /*
              * we again check if the new input produces an anomaly/not on its own
              */

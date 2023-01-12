@@ -39,6 +39,8 @@ public interface ICluster<R> {
     // restting statistics for a potential reassignment
     void reset();
 
+    double averageRadius();
+
     // a measure of the noise/blur around a cluster; for single centroid clustering
     // this is the average distance of a point from a cluster representative
     double extentMeasure();

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices.threshold;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.max;
 
 import java.util.List;
 
@@ -94,16 +95,16 @@ public class BasicThresholder {
 
     protected boolean inPotentialAnomaly;
 
-    public BasicThresholder(double discount, boolean adjust) {
-        primaryDeviation = new Deviation(discount);
-        secondaryDeviation = new Deviation(discount);
+    public BasicThresholder(double primaryDiscount, double secondaryDiscount, boolean adjust) {
+        primaryDeviation = new Deviation(primaryDiscount);
+        secondaryDeviation = new Deviation(secondaryDiscount);
         // a longer horizon to adjust
-        thresholdDeviation = new Deviation(discount / 2);
+        thresholdDeviation = new Deviation(primaryDiscount / 2);
         autoThreshold = adjust;
     }
 
     public BasicThresholder(double discount) {
-        this(discount, false);
+        this(discount, discount, false);
     }
 
     public BasicThresholder(Deviation primary, Deviation secondary, Deviation threshold) {
@@ -181,9 +182,9 @@ public class BasicThresholder {
      */
     protected double notLongTermThreshold(double factor, double intermediateTermFraction) {
         if (!isDeviationReady()) { // count < minimumScore is this branch
-            return Math.max(initialThreshold, lowerThreshold);
+            return max(initialThreshold, lowerThreshold);
         } else {
-            return Math.max(lowerThreshold, intermediateTermFraction * longTermThreshold(factor)
+            return max(lowerThreshold, intermediateTermFraction * longTermThreshold(factor)
                     + (1 - intermediateTermFraction) * initialThreshold);
         }
 
@@ -194,7 +195,7 @@ public class BasicThresholder {
     }
 
     protected double longTermThreshold(double factor) {
-        return Math.max(lowerThreshold, primaryDeviation.getMean() + factor * longTermDeviation());
+        return max(lowerThreshold, primaryDeviation.getMean() + factor * longTermDeviation());
     }
 
     protected double longTermDeviation() {
@@ -202,6 +203,28 @@ public class BasicThresholder {
         double b = secondaryDeviation.getDeviation();
         // the following is a convex combination that allows control of the behavior
         return (horizon * a + (1 - horizon) * b);
+    }
+
+    public double getPrimaryThreshold() {
+        return primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation();
+    }
+
+    /**
+     * The simplest thresholder that does not use any auxilliary correction, an can
+     * be used for multiple scoring capabilities.
+     * 
+     * @param score the value being thresholded
+     * @return a computation of grade between [-1,1], grades in the range (0,1] are
+     *         to be considered anomalous
+     */
+    public double getPrimaryGrade(double score) {
+        double tFactor = upperZfactor;
+        double deviation = primaryDeviation.getDeviation();
+        if (deviation > 0) {
+            tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / deviation);
+        }
+        double t = (tFactor - zFactor) / (upperZfactor - zFactor);
+        return max(0, t);
     }
 
     public double getAnomalyGrade(double score, boolean previous, double factor) {
@@ -225,7 +248,7 @@ public class BasicThresholder {
             if (score < t - elasticScore) {
                 return 0;
             }
-            double upper = Math.max(upperThreshold, 2 * t);
+            double upper = max(upperThreshold, 2 * t);
             double quasiScore = Math.min(score, upper);
             return (quasiScore - t) / (upper - t);
         }
@@ -301,8 +324,8 @@ public class BasicThresholder {
      * @param factor new z-factor
      */
     public void setZfactor(double factor) {
-        zFactor = Math.max(factor, DEFAULT_Z_FACTOR);
-        upperZfactor = Math.max(upperZfactor, 2 * zFactor);
+        zFactor = max(factor, DEFAULT_Z_FACTOR);
+        upperZfactor = max(upperZfactor, 2 * zFactor);
     }
 
     /**
@@ -312,7 +335,7 @@ public class BasicThresholder {
      * @param factor new upper-Zfactor
      */
     public void setUpperZfactor(double factor) {
-        upperZfactor = Math.max(factor, 2 * zFactor);
+        upperZfactor = max(factor, 2 * zFactor);
     }
 
     /**
@@ -326,10 +349,10 @@ public class BasicThresholder {
      * @param lower new lower threshold
      */
     public void setLowerThreshold(double lower, boolean adjust) {
-        lowerThreshold = Math.max(lower, absoluteThreshold);
+        lowerThreshold = max(lower, absoluteThreshold);
         autoThreshold = adjust;
-        initialThreshold = Math.max(initialThreshold, lowerThreshold);
-        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+        initialThreshold = max(initialThreshold, lowerThreshold);
+        upperThreshold = max(upperThreshold, 2 * lowerThreshold);
     }
 
     /**
@@ -350,8 +373,8 @@ public class BasicThresholder {
      * @param initial new initial threshold
      */
     public void setInitialThreshold(double initial) {
-        initialThreshold = Math.max(initial, lowerThreshold);
-        upperThreshold = Math.max(upperThreshold, initial);
+        initialThreshold = max(initial, lowerThreshold);
+        upperThreshold = max(upperThreshold, initial);
     }
 
     /**
@@ -361,8 +384,8 @@ public class BasicThresholder {
      * @param upper new upper threshold
      */
     public void setUpperThreshold(double upper) {
-        upperThreshold = Math.max(upper, initialThreshold);
-        upperThreshold = Math.max(upperThreshold, 2 * lowerThreshold);
+        upperThreshold = max(upper, initialThreshold);
+        upperThreshold = max(upperThreshold, 2 * lowerThreshold);
     }
 
     public void setHorizon(double horizon) {

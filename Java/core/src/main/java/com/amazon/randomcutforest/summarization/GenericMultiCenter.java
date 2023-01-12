@@ -117,9 +117,13 @@ public class GenericMultiCenter<R> implements ICluster<R> {
         sumOfRadius = 0;
     }
 
+    public double averageRadius() {
+        return (weight > 0) ? sumOfRadius / weight : 0;
+    }
+
     // forces a nearest neighbor merge
     public double extentMeasure() {
-        return (weight > 0) ? 0.1 * sumOfRadius / weight : 0;
+        return (weight > 0) ? 0.5 * sumOfRadius / (numberOfRepresentatives * weight) : 0;
     }
 
     public double getWeight() {
@@ -167,10 +171,12 @@ public class GenericMultiCenter<R> implements ICluster<R> {
                 if (savedRepresentatives.get(j).weight > weight / (2 * numberOfRepresentatives)) {
                     double newWeightedDist = distance.apply(this.representatives.get(0).index,
                             savedRepresentatives.get(j).index) * savedRepresentatives.get(j).weight;
+                    checkArgument(newWeightedDist >= 0, " weights or distances cannot be negative");
                     for (int i = 1; i < this.representatives.size(); i++) {
                         newWeightedDist = min(newWeightedDist,
                                 distance.apply(this.representatives.get(i).index, savedRepresentatives.get(j).index))
                                 * savedRepresentatives.get(j).weight;
+                        checkArgument(newWeightedDist >= 0, " weights or distances cannot be negative");
                     }
                     if (newWeightedDist > farthestWeightedDistance) {
                         farthestWeightedDistance = newWeightedDist;
@@ -188,10 +194,12 @@ public class GenericMultiCenter<R> implements ICluster<R> {
         // absorb the remainder into existing represen tatives
         for (Weighted<R> representative : savedRepresentatives) {
             double dist = distance.apply(representative.index, this.representatives.get(0).index);
+            checkArgument(dist >= 0, "distance cannot be negative");
             double minDist = dist;
             int minIndex = 0;
             for (int i = 1; i < this.representatives.size(); i++) {
                 double newDist = distance.apply(this.representatives.get(i).index, representative.index);
+                checkArgument(newDist >= 0, "distance cannot be negative");
                 if (newDist < minDist) {
                     minDist = newDist;
                     minIndex = i;
@@ -205,9 +213,11 @@ public class GenericMultiCenter<R> implements ICluster<R> {
     @Override
     public double distance(R point, BiFunction<R, R, Double> distanceFunction) {
         double dist = distanceFunction.apply(this.representatives.get(0).index, point);
+        checkArgument(dist >= 0, "distance cannot be negative");
         double newDist = dist;
         for (int i = 1; i < this.representatives.size(); i++) {
             newDist = min(newDist, distanceFunction.apply(this.representatives.get(i).index, point));
+            checkArgument(newDist >= 0, "distance cannot be negative");
         }
         return (1 - shrinkage) * newDist + shrinkage * dist;
     }
@@ -216,11 +226,13 @@ public class GenericMultiCenter<R> implements ICluster<R> {
     public double distance(ICluster<R> other, BiFunction<R, R, Double> distanceFunction) {
         List<Weighted<R>> representatives = other.getRepresentatives();
         double dist = distanceFunction.apply(this.representatives.get(0).index, representatives.get(0).index);
+        checkArgument(dist >= 0, "distance cannot be negative");
         double newDist = dist;
         for (int i = 1; i < this.representatives.size(); i++) {
             for (int j = 1; j < representatives.size(); j++) {
                 newDist = min(newDist,
                         distanceFunction.apply(this.representatives.get(i).index, representatives.get(j).index));
+                checkArgument(newDist >= 0, "distance cannot be negative");
             }
         }
         return (1 - shrinkage) * newDist + shrinkage * dist;
