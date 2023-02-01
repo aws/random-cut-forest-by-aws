@@ -15,23 +15,43 @@
 
 package com.amazon.randomcutforest.parkservices.returntypes;
 
+import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
+
+import com.amazon.randomcutforest.util.Weighted;
 
 @Getter
 @Setter
 public class GenericAnomalyDescriptor<P> {
 
-    P representative;
+    // the following corresponds to the list of extected points in AnomalyDetector,
+    // which is returned from
+    // TRCF. The list corresponds to plausible values (cluster centers) and a weight
+    // representing the likelihood
+    // The list is sorted in decreasing order of likelihood. Most often, the first
+    // element should suffice.
+    // in case of an anomalous point, however the information here can provide more
+    // insight
+    List<Weighted<P>> representativeList;
 
+    // standard, as in AnomalyDetector; we do not recommend attempting to
+    // disambiguate scores of non-anomalous
+    // points. Note that scores can be low.
     double score;
 
+    // standard as in AnomalyDetector
     double threshold;
 
+    // a value between [0,1] indicating the strength of the anomaly, it can be
+    // viewed as a confidence score
+    // projected by the algorithm.
     double anomalyGrade;
 
-    public GenericAnomalyDescriptor(P representative, double score, double threshold, double anomalyGrade) {
-        this.representative = representative;
+    public GenericAnomalyDescriptor(List<Weighted<P>> representative, double score, double threshold,
+            double anomalyGrade) {
+        this.representativeList = representativeList;
         this.score = score;
         this.threshold = threshold;
         this.anomalyGrade = anomalyGrade;

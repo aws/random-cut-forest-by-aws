@@ -136,7 +136,7 @@ public class NumericGLADexample implements Example {
 
         String name = "clustering_example";
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
-        boolean printData = false;
+        boolean printData = true;
         boolean printAnomalies = false;
         // use one or the other prints below
         boolean printFlaggedRCF = false;

@@ -22,12 +22,13 @@ import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWi
 import static java.lang.Math.PI;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
 
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
-import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.util.Weighted;
@@ -93,6 +93,17 @@ public class TestGlobalLocalAnomalyDetector {
                 });
             }
             GenericAnomalyDescriptor<char[]> result = reservoir.process(points[y], 1.0f, null, true);
+
+            if (result.getRepresentativeList() != null) {
+                double sum = 0;
+                for (Weighted<char[]> rep : result.getRepresentativeList()) {
+                    assert (rep.weight <= 1.0);
+                    sum += rep.weight;
+                }
+                // checking likelihood summing to 1
+                assertEquals(sum, 1.0, 1e-6);
+            }
+
             if (result.getAnomalyGrade() > 0) {
                 if (!injected[y]) {
                     ++falsePos;
@@ -140,35 +151,6 @@ public class TestGlobalLocalAnomalyDetector {
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_RED = "\u001B[31m";
     public static final String ANSI_BLUE = "\u001B[34m";
-
-    public static void printCharArray(char[] a) {
-        for (int i = 0; i < a.length; i++) {
-            if (a[i] == '-') {
-                System.out.print(ANSI_RED + a[i] + ANSI_RESET);
-            } else {
-                System.out.print(ANSI_BLUE + a[i] + ANSI_RESET);
-            }
-        }
-
-    }
-
-    public void printClusters(List<ICluster<char[]>> summary) {
-        for (int i = 0; i < summary.size(); i++) {
-            double weight = summary.get(i).getWeight();
-            System.out.println("Cluster " + i + " representatives, weight "
-                    + ((float) Math.round(1000 * weight) * 0.001) + " avg radius " + summary.get(i).averageRadius());
-            List<Weighted<char[]>> representatives = summary.get(i).getRepresentatives();
-            for (int j = 0; j < representatives.size(); j++) {
-                double t = representatives.get(j).weight;
-                t = Math.round(1000.0 * t / weight) * 0.001;
-                System.out
-                        .print("relative weight " + (float) t + " length " + representatives.get(j).index.length + " ");
-                printCharArray(representatives.get(j).index);
-                System.out.println();
-            }
-            System.out.println();
-        }
-    }
 
     public char[] getABArray(int size, double probabilityOfA, Random random, Boolean changeInMiddle, double fraction) {
 
@@ -264,6 +246,15 @@ public class TestGlobalLocalAnomalyDetector {
                 AnomalyDescriptor res = test.process(toDoubleArray(vec), 0L);
                 double grade = res.getAnomalyGrade();
 
+                if (result.getRepresentativeList() != null) {
+                    double sum = 0;
+                    for (Weighted<float[]> rep : result.getRepresentativeList()) {
+                        assert (rep.weight <= 1.0);
+                        sum += rep.weight;
+                    }
+                    // checking likelihood summing to 1
+                    assertEquals(sum, 1.0, 1e-6);
+                }
                 if (injected) {
                     if (result.getAnomalyGrade() > 0) {
                         ++truePos;
@@ -311,15 +302,19 @@ public class TestGlobalLocalAnomalyDetector {
         GlobalLocalAnomalyDetector.Builder builder = GlobalLocalAnomalyDetector.builder().capacity(size)
                 .shrinkage(newShrinkage).numberOfRepresentatives(reps).timeDecay(timedecay).randomSeed(number);
         GlobalLocalAnomalyDetector<float[]> newDetector = new GlobalLocalAnomalyDetector<>(reservoir, reservoir,
-                builder, Summarizer::L1distance);
+                builder, true, Summarizer::L1distance);
         assertEquals(newDetector.getCapacity(), size);
-        assertEquals(newDetector.getClusters(), null);
+        assertNotEquals(newDetector.getClusters(), null);
         assertEquals(newDetector.numberOfRepresentatives, reps);
         assertEquals(newDetector.shrinkage, newShrinkage);
+        assert (newDetector.getClusters() != null);
         float[] weight = newDetector.sampler.getWeightArray();
         for (int i = 0; i < size - 1; i += 2) {
             assert (weight[i] >= weight[i + 1]);
         }
+        GlobalLocalAnomalyDetector<float[]> another = new GlobalLocalAnomalyDetector<>(reservoir, reservoir, builder,
+                false, Summarizer::L2distance);
+        assertNull(another.getClusters());
         file.close();
     }
 

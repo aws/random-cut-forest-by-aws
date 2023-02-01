@@ -64,7 +64,7 @@ public class StringGLADexample implements Example {
         double anomalyRate = 0.05;
         char[][] points = new char[numberOfStrings][];
         boolean[] injected = new boolean[numberOfStrings];
-        boolean printClusters = false;
+        boolean printClusters = true;
         boolean printFalseNeg = false;
         boolean printFalsePos = false;
         int numberOfInjected = 0;
@@ -102,10 +102,11 @@ public class StringGLADexample implements Example {
             if (result.getAnomalyGrade() > 0) {
                 if (!injected[y]) {
                     ++falsePos;
+                    List<Weighted<char[]>> list = result.getRepresentativeList();
                     if (printFalsePos) {
                         System.out.println(result.getScore() + " " + injected[y] + " at " + y + " dist "
-                                + dist.apply(points[y], result.getRepresentative()) + " " + result.getThreshold());
-                        printCharArray(result.getRepresentative());
+                                + dist.apply(points[y], list.get(0).index) + " " + result.getThreshold());
+                        printCharArray(list.get(0).index);
                         System.out.println();
                         printCharArray(points[y]);
                         System.out.println();

@@ -15,23 +15,24 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
-import com.amazon.randomcutforest.summarization.GenericMultiCenter;
-import com.amazon.randomcutforest.summarization.ICluster;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.util.Weighted;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_NUMBER_OF_REPRESENTATIVES;
+import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_SHRINKAGE;
+import static java.lang.Math.abs;
+import static java.lang.Math.exp;
+import static java.lang.Math.min;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_NUMBER_OF_REPRESENTATIVES;
-import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_SHRINKAGE;
-import static java.lang.Math.abs;
-import static java.lang.Math.min;
+import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
+import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.summarization.GenericMultiCenter;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
 
@@ -191,10 +192,12 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
      *                          used
      * @param considerOcclusion consider occlusion by smaller dense clusters, when
      *                          adjacent to larger and more spread out clusters
-     * @return a generic descriptor with score, anomaly grade, nearest
-     *         representative and threshold (anomaly grade greater than zero is
-     *         likely anomalous; anomaly grade can be -ve to allow down stream
-     *         correction using semi-supervision or other means)
+     * @return a generic descriptor with score, threshold, anomaly grade (anomaly
+     *         grade greater than zero is likely anomalous; anomaly grade can be -ve
+     *         to allow down stream correction using semi-supervision or other
+     *         means) and a list of cluster representatives (sorted by distance)
+     *         with corresponding scores (lowest score may not correspond to lowest
+     *         distance) which can be used to investigate anomalous points further
      */
     public GenericAnomalyDescriptor<P> process(P object, float weight, BiFunction<P, P, Double> localDistance,
             boolean considerOcclusion) {
@@ -211,19 +214,35 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                         globalDistance, null);
             }
         }
-        Weighted<P> result = score(object, localDistance, considerOcclusion);
-
+        List<Weighted<P>> result = score(object, localDistance, considerOcclusion);
         double threshold = thresholder.threshold();
         double grade = 0;
-        if (result.weight > 0) {
-            grade = thresholder.getAnomalyGrade(result.weight, false);
-        }
+        float score = 0;
+        if (result != null) {
+            score = result.stream().map(a -> a.weight).reduce(FLOAT_MAX, Float::min);
+            if (score < FLOAT_MAX) {
+                // an exponential attribution
+                double sum = result.stream()
+                        .map(a -> (double) ((a.weight == FLOAT_MAX) ? 0 : exp(-a.weight * a.weight)))
+                        .reduce(0.0, Double::sum);
+                for (Weighted<P> item : result) {
+                    item.weight = (item.weight == FLOAT_MAX) ? 0.0f
+                            : (float) min(1.0f, (float) exp(-item.weight * item.weight) / sum);
+                }
+            } else {
+                // uniform attribution
+                for (Weighted<P> item : result) {
+                    item.weight = (float) 1.0 / (result.size());
+                }
+            }
+            grade = thresholder.getAnomalyGrade(score, false);
 
+        }
         // note average score would be 1
-        thresholder.update(result.weight, min(result.weight, thresholder.getZFactor()));
+        thresholder.update(score, min(score, thresholder.getZFactor()));
         sample(object, weight);
 
-        return new GenericAnomalyDescriptor<>(result.index, result.weight, threshold, grade);
+        return new GenericAnomalyDescriptor<>(result, score, threshold, grade);
     }
 
     /**
@@ -242,14 +261,14 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
      * @param considerOcclusion a boolean that determines if closeby dense clusters
      *                          can occlude membership in further away "less dense
      *                          cluster"
-     * @return A Weighted type where the index is the closest representative (based
-     *         on local distance) and the weight is the score (which may be due to a
-     *         different representative in a different cluster which has larger
-     *         radius). Both of these pieces of information are likely to be of use.
+     * @return A list of weighted type where the index is a representative (based on
+     *         local distance) and the weight is the score corresponding to that
+     *         representative. The scores are sorted from least anomalous to most
+     *         anomalous.
      */
-    public Weighted<P> score(P current, BiFunction<P, P, Double> localDistance, boolean considerOcclusion) {
+    public List<Weighted<P>> score(P current, BiFunction<P, P, Double> localDistance, boolean considerOcclusion) {
         if (clusters == null) {
-            return new Weighted<>(null, 0f);
+            return null;
         } else {
             BiFunction<P, P, Double> local = (localDistance != null) ? localDistance : globalDistance;
             double totalWeight = clusters.stream().map(e -> e.getWeight()).reduce(0.0, Double::sum);
@@ -275,11 +294,11 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                 }
             }
             candidateList.sort((o1, o2) -> Double.compare(o1.distance, o2.distance));
-            checkArgument(candidateList.size() > 0, " should not happen");
-            Float measure = FLOAT_MAX;
-            P closest = candidateList.get(0).representative;
+            checkArgument(candidateList.size() > 0, "empty candidate list, should not happen");
+            ArrayList<Weighted<P>> answer = new ArrayList<>();
             if (candidateList.get(0).distance == 0.0) {
-                return new Weighted<P>(closest, 0.0f);
+                answer.add(new Weighted<P>(candidateList.get(0).representative, 0.0f));
+                return answer;
             }
             int index = 0;
             while (index < candidateList.size()) {
@@ -289,7 +308,7 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                 float tempMeasure = (head.averageRadiusOfCluster > 0.0)
                         ? min(FLOAT_MAX, (float) (dist / head.averageRadiusOfCluster))
                         : FLOAT_MAX;
-                measure = min(measure, tempMeasure);
+                answer.add(new Weighted<P>(head.representative, tempMeasure));
                 if (considerOcclusion) {
                     for (int j = index + 1; j < candidateList.size(); j++) {
                         double occludeDistance = local.apply(head.representative, candidateList.get(j).representative);
@@ -303,7 +322,9 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                 }
                 ++index;
             }
-            return new Weighted<P>(closest, measure);
+            // we will not resort answer; the scores will be in order of distance
+            // we note that score() should be invoked with care and likely postprocessing
+            return answer;
         }
     }
 
@@ -312,13 +333,14 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
      * distributed analysis. Note that there is no point of storing sequence indices
      * explicitly in case of a merge.
      * 
-     * @param first    the first model
-     * @param second   the second model
-     * @param builder  the parameters of the new clustering
-     * @param distance the distance function of the new clustering
+     * @param first     the first model
+     * @param second    the second model
+     * @param builder   the parameters of the new clustering
+     * @param recluster a boolean that determines immediate reclustering
+     * @param distance  the distance function of the new clustering
      */
     public GlobalLocalAnomalyDetector(GlobalLocalAnomalyDetector first, GlobalLocalAnomalyDetector second,
-            Builder<?> builder, BiFunction<P, P, Double> distance) {
+            Builder<?> builder, boolean recluster, BiFunction<P, P, Double> distance) {
         super(first, second, builder.capacity, builder.timeDecay, builder.randomSeed);
         thresholder = new BasicThresholder(builder.timeDecay);
         thresholder.setAbsoluteThreshold(1.2);
@@ -327,6 +349,11 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
         maxAllowed = builder.maxAllowed;
         numberOfRepresentatives = builder.numberOfRepresentatives;
         globalDistance = distance;
+        if (recluster) {
+            lastCluster = sequenceNumber;
+            clusters = getClusters(maxAllowed, 4 * maxAllowed, 1, numberOfRepresentatives, shrinkage, globalDistance,
+                    null);
+        }
     }
 
     /**
