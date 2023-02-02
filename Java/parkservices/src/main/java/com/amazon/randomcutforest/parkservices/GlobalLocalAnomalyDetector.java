@@ -99,6 +99,7 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
         shrinkage = builder.shrinkage;
         maxAllowed = builder.maxAllowed;
         numberOfRepresentatives = builder.numberOfRepresentatives;
+        ignoreBelow = builder.ignoreBelow;
     }
 
     protected GlobalLocalAnomalyDetector(Builder<?> builder, BiFunction<P, P, Double> distance) {
@@ -342,7 +343,7 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
     public GlobalLocalAnomalyDetector(GlobalLocalAnomalyDetector first, GlobalLocalAnomalyDetector second,
             Builder<?> builder, boolean recluster, BiFunction<P, P, Double> distance) {
         super(first, second, builder.capacity, builder.timeDecay, builder.randomSeed);
-        thresholder = new BasicThresholder(builder.timeDecay);
+        thresholder = new BasicThresholder(builder.timeDecay, builder.anomalyRate, false);
         thresholder.setAbsoluteThreshold(1.2);
         doNotreclusterWithin = builder.doNotReclusterWithin.orElse(builder.capacity / 2);
         shrinkage = builder.shrinkage;
@@ -397,6 +398,7 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
         protected int numberOfRepresentatives = DEFAULT_NUMBER_OF_REPRESENTATIVES;
         protected Optional<Integer> doNotReclusterWithin = Optional.empty();
         protected int maxAllowed = DEFAULT_MAX;
+        protected double anomalyRate = 0.01;
 
         // ignores small clusters with population weight below this threshold
         public T ignoreBelow(double ignoreBelow) {
@@ -426,6 +428,12 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
         // parameters of the multi-representative CURE algorithm
         public T numberOfRepresentatives(int number) {
             this.numberOfRepresentatives = number;
+            return (T) this;
+        }
+
+        // a flag that can adjust to the burstiness of anomalies
+        public T anomalyRate(double anomalyRate) {
+            this.anomalyRate = anomalyRate;
             return (T) this;
         }
 

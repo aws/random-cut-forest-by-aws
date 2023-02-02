@@ -348,7 +348,7 @@ public class PredictorCorrector {
         // the forecast may not be reasonable with less data
         boolean reasonableForecast = result.isReasonableForecast();
 
-        // note that the following is bupassed for shingleSize = 1 because it would not
+        // note that the following is bypassed for shingleSize = 1 because it would not
         // make
         // sense to connect the current evaluation with a previous value
         if (reasonableForecast && lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
