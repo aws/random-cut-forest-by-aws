@@ -606,8 +606,10 @@ public class Preprocessor implements IPreprocessor {
      */
     protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
             double defaultTimeFactor) {
-        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, getShingledInput(shingleSize - 1),
-                defaultFactors, clipFactor);
+        double[] previous = (input.length == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
+        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, previous, defaultFactors,
+                clipFactor);
         if (mode == ForestMode.TIME_AUGMENTED) {
             scaledInput = augmentTime(scaledInput, timestamp, defaultTimeFactor);
         }
@@ -662,7 +664,9 @@ public class Preprocessor implements IPreprocessor {
             timeStampDeviation.update(timestamp - previous);
         }
         updateTimestamps(timestamp);
-        transformer.updateDeviation(inputPoint, getShingledInput(shingleSize - 1));
+        double[] previousInput = (inputLength == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
+        transformer.updateDeviation(inputPoint, previousInput);
         updateShingle(inputPoint, scaledInput);
     }
 

@@ -140,18 +140,21 @@ public class CompactSampler extends AbstractStreamSampler<Integer> {
     }
 
     @Override
-    public boolean acceptPoint(long sequenceIndex) {
+    public boolean acceptPoint(long sequenceIndex, float samplingWeight) {
+        checkArgument(samplingWeight >= 0, " weight has to be non-negative");
         checkState(sequenceIndex >= mostRecentTimeDecayUpdate, "incorrect sequences submitted to sampler");
         evictedPoint = null;
-        float weight = computeWeight(sequenceIndex);
-        boolean initial = (size < capacity && random.nextDouble() < initialAcceptProbability(size));
-        if (initial || (weight < this.weight[0])) {
-            acceptPointState = new AcceptPointState(sequenceIndex, weight);
-            if (!initial) {
-                evictMax();
+        if (samplingWeight > 0) {
+            float weight = computeWeight(sequenceIndex, samplingWeight);
+            boolean initial = (size < capacity && random.nextDouble() < initialAcceptProbability(size));
+            if (initial || (weight < this.weight[0])) {
+                acceptPointState = new AcceptPointState(sequenceIndex, weight);
+                if (!initial) {
+                    evictMax();
+                }
+                return true;
             }
-            return true;
-        }
+        } // 0 weight implies ignore sample
         return false;
     }
 

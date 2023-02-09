@@ -58,11 +58,6 @@ public class MultiCenter extends GenericMultiCenter<float[]> {
         assignedPoints = new ArrayList<>();
     }
 
-    // average radius computation
-    public double extentMeasure() {
-        return (weight > 0) ? sumOfRadius / weight : 0;
-    }
-
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
@@ -75,8 +70,10 @@ public class MultiCenter extends GenericMultiCenter<float[]> {
         previousSumOFRadius = sumOfRadius;
         sumOfRadius = 0;
         for (int j = 0; j < assignedPoints.size(); j++) {
-            sumOfRadius += distance(getPoint.apply(assignedPoints.get(j).index), distanceFunction)
+            double addTerm = distance(getPoint.apply(assignedPoints.get(j).index), distanceFunction)
                     * assignedPoints.get(j).weight;
+            checkArgument(addTerm >= 0, "distances or weights cannot be negative");
+            sumOfRadius += addTerm;
         }
         return (previousSumOFRadius - sumOfRadius);
 

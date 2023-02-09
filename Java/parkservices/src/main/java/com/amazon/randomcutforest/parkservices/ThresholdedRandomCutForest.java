@@ -101,6 +101,7 @@ public class ThresholdedRandomCutForest {
             builder.internalShinglingEnabled = Optional.of(false);
             preprocessorBuilder.useImputedFraction(builder.useImputedFraction.orElse(0.5));
         } else {
+            // applies to both STANDARD and DISTANCE
             boolean smallInput = builder.internalShinglingEnabled.orElse(DEFAULT_INTERNAL_SHINGLING_ENABLED);
             preprocessorBuilder
                     .inputLength((smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions);
@@ -118,7 +119,8 @@ public class ThresholdedRandomCutForest {
                 .startNormalization(builder.startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION));
 
         preprocessor = preprocessorBuilder.build();
-        predictorCorrector = new PredictorCorrector(new BasicThresholder(builder.anomalyRate, builder.adjustThreshold));
+        predictorCorrector = new PredictorCorrector(
+                new BasicThresholder(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
