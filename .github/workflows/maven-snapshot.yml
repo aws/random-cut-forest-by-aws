@@ -31,7 +31,7 @@ jobs:
         run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
       - name: Publish to snapshot repo
         if: ${{ endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
-        run: mvn clean --batch-mode -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} deploy 
+        run: mvn -B deploy --file pom.xml -Pgpg-sign
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
