@@ -148,7 +148,7 @@ fn next_element(mean: f32, scale: f32, rng: &mut ChaCha20Rng) -> f32 {
     }
 }
 
-fn new_vec(mean: &[f32], scale: &[f32], rng: &mut ChaCha20Rng) -> Vec<f32> {
+pub fn new_vec(mean: &[f32], scale: &[f32], rng: &mut ChaCha20Rng) -> Vec<f32> {
     let dimensions = mean.len();
     let mut answer = Vec::new();
     for i in 0..dimensions {

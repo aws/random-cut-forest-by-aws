@@ -1,3 +1,4 @@
+
 use crate::common::deviation::Deviation;
 
 const DEFAULT_ELASTICITY : f32= 0.01;
@@ -11,7 +12,7 @@ const DEFAULT_LOWER_THRESHOLD :f32 = 1.0;
 const DEFAULT_LOWER_THRESHOLD_ONED :f32 = 1.1;
 const DEFAULT_LOWER_THRESHOLD_NORMALIZED : f32 = 0.9;
 const DEFAULT_INITIAL_THRESHOLD :f32= 1.5;
-const DEFAULT_Z_FACTOR :f32 = 2.0;
+const DEFAULT_Z_FACTOR :f32 = 2.5;
 const DEFAULT_UPPER_FACTOR :f32 = 5.0;
 const DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD :bool = false;
 const DEFAULT_THRESHOLD_STEP :f32 = 0.1;
@@ -92,19 +93,11 @@ impl BasicThresholder {
 
     fn short_term_threshold(&self, factor : f32, intermediate_fraction : f32) -> f32{
         if !self.is_deviation_ready() { // count < minimumScore is this branch
-            if self.initial_threshold>self.lower_threshold{
-                self.initial_threshold
-            } else {
-                self.lower_threshold
-            }
+            f32::max(self.initial_threshold,self.lower_threshold)
         } else {
             let t = intermediate_fraction *self.longterm_threshold(factor) +
                 (1.0 -intermediate_fraction)*self.initial_threshold;
-            if t>self.lower_threshold{
-                t
-            } else {
-                self.lower_threshold
-            }
+            f32::max(t,self.lower_threshold)
         }
     }
 
@@ -114,11 +107,7 @@ impl BasicThresholder {
 
     pub fn longterm_threshold(&self, factor:f32) -> f32 {
         let t= (self.primary_deviation.mean() as f32) + factor * self.longterm_deviation();
-        if t >self.lower_threshold {
-            t
-        } else {
-            self.lower_threshold
-        }
+        f32::min(t,self.lower_threshold)
     }
 
     fn longterm_deviation(&self) -> f32{
@@ -201,6 +190,7 @@ impl BasicThresholder {
 
     pub fn set_z_factor(&mut self, factor : f32) {
         let z_factor = if factor > DEFAULT_Z_FACTOR {factor} else {DEFAULT_Z_FACTOR};
+        self.z_factor = z_factor;
         if self.upper_z_factor < 2.0 * z_factor {
             self.upper_z_factor = 2.0 * z_factor;
         }
@@ -209,6 +199,10 @@ impl BasicThresholder {
     pub fn set_upper_z_factor(&mut self, factor : f32) {
         let t = if factor> 2.0*self.z_factor {factor} else {2.0*self.z_factor};
         self.upper_z_factor = t
+    }
+
+    pub fn z_factor(&self) -> f32 {
+        self.z_factor
     }
 
     // the next set of functions maintain the invariant that
@@ -259,6 +253,14 @@ impl BasicThresholder {
 
     pub fn last_score(&self) -> f32{
         self.last_score
+    }
+
+    pub fn primary_mean(&self) -> f64 {
+        self.primary_deviation.mean()
+    }
+
+    pub fn primary_deviation(&self) -> f64 {
+        self.primary_deviation.deviation()
     }
 
 }
