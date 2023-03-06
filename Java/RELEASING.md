@@ -19,6 +19,6 @@ Repositories create consistent release labels, such as `3.0.0-java`. Use release
 
 The release process is run by a release manager volunteering from amongst the maintainers.
 
-1. Create a PR to bump version to desired release candidate (e.g. 3.0.0)
-2. Click run on the maven-release workflow in Github Actions which uploads the artifacts to our staging repository, creates a new tag, and a new Github release
-3. Login into the nexus staging repositor , verify artifact was signed succesfully and click release to officially push to maven central.
+1. Create a PR to bump version to desired release candidate (e.g. 3.0.0).
+2. Click run on the maven-release workflow in Github Actions which uploads the artifacts to our staging repository, creates a new tag, and a new Github release.
+3. Login into the nexus staging repository, verify artifact was signed successfully and click release to officially push to maven central.
