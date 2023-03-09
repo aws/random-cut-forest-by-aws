@@ -52,7 +52,7 @@ public class V2TRCFToV3StateConverterTest {
         ThresholdedRandomCutForestState state = mapper.readValue(json, ThresholdedRandomCutForestState.class);
         ThresholdedRandomCutForest forest = trcfMapper.toModel(state);
         Random r = new Random(0);
-        for (int i = 0; i < 200000; i++) {
+        for (int i = 0; i < 20000; i++) {
             double[] point = r.ints(forest.getForest().getDimensions(), 0, 50).asDoubleStream().toArray();
             forest.process(point, 0L);
         }

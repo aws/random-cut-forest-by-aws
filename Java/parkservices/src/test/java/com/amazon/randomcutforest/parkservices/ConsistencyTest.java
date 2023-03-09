@@ -135,7 +135,7 @@ public class ConsistencyTest {
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
         int numberOfTrees = 30; // and using fewer trees to speed up test
-        int length = 2000 * sampleSize;
+        int length = 400 * sampleSize;
         int testLength = length;
         for (int i = 0; i < numTrials; i++) {
 

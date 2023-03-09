@@ -122,8 +122,9 @@ public class NormalizedTransformer extends WeightedTransformer {
             double[] factors, double clipFactor) {
         double[] output = new double[inputPoint.length];
         for (int i = 0; i < inputPoint.length; i++) {
-            output[i] = weights[i]
-                    * normalize(inputPoint[i], deviations[i], (factors == null) ? 0 : factors[i], clipFactor);
+            output[i] = (internalTimeStamp == 0) ? 0
+                    : weights[i]
+                            * normalize(inputPoint[i], deviations[i], (factors == null) ? 0 : factors[i], clipFactor);
         }
         return output;
     }

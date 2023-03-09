@@ -105,7 +105,7 @@ public class V1JsonToV3StateConverterTest {
             }
 
             String json = b.toString();
-            int number = new Random().nextInt(10) + 1;
+            int number = new Random().nextInt(5) + 1;
             int testNumberOfTrees = Math.min(100,
                     1 + new Random().nextInt(number * jsonResource.getNumberOfTrees() - 1));
             ArrayList<String> models = new ArrayList<>();

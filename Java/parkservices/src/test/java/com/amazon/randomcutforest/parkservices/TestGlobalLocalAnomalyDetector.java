@@ -15,6 +15,19 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
+import org.junit.jupiter.api.Test;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Random;
+import java.util.function.BiFunction;
+
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
@@ -25,20 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Random;
-import java.util.function.BiFunction;
-
-import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.Weighted;
 
 public class TestGlobalLocalAnomalyDetector {
 
@@ -298,7 +297,7 @@ public class TestGlobalLocalAnomalyDetector {
         long number = new Random().nextLong();
         int size = reservoirSize - new Random().nextInt(100);
         double newShrinkage = new Random().nextDouble();
-        int reps = new Random().nextInt(10);
+        int reps = new Random().nextInt(10) + 1; // cannot be 0
         GlobalLocalAnomalyDetector.Builder builder = GlobalLocalAnomalyDetector.builder().capacity(size)
                 .shrinkage(newShrinkage).numberOfRepresentatives(reps).timeDecay(timedecay).randomSeed(number);
         GlobalLocalAnomalyDetector<float[]> newDetector = new GlobalLocalAnomalyDetector<>(reservoir, reservoir,
