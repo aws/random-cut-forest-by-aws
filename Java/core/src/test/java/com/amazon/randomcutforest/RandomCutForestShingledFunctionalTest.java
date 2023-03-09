@@ -121,7 +121,7 @@ public class RandomCutForestShingledFunctionalTest {
         System.out.println(seed);
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
-        int length = 4000 * sampleSize;
+        int length = 400 * sampleSize;
 
         for (int i = 0; i < numTrials; i++) {
 

@@ -16,9 +16,11 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_OUTPUT_AFTER_FRACTION;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
+import java.util.Optional;
 import java.util.function.BiFunction;
 
 import lombok.Getter;
@@ -40,7 +42,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
 
     public static boolean USE_INTERPOLATION_IN_DISTRIBUTION = true;
 
-    public static Calibration DEFAULT_CALIBRATION = Calibration.NONE;
+    public static Calibration DEFAULT_CALIBRATION = Calibration.SIMPLE;
 
     public static BiFunction<Float, Float, Float> defaultError = (x, y) -> x - y;
 
@@ -98,6 +100,11 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                     "internal shingling only");
             if (errorHorizon == 0) {
                 errorHorizon = max(sampleSize, 2 * forecastHorizon);
+            }
+            if (outputAfter.isPresent()) {
+                startNormalization = Optional.of(outputAfter.get() + shingleSize - 1);
+            } else {
+                startNormalization = Optional.of((int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION) + shingleSize - 1);
             }
             validate();
             return new RCFCaster(this);
@@ -167,7 +174,10 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                 forest.setBoundingBoxCacheFraction(1.0);
             }
             // forecast first
-            TimedRangeVector timedForecast = extrapolate(forecastHorizon, true, 1.0 - 2 * errorHandler.percentile);
+            // if calibration is not set then RCF has to produce the model errors; otherwise
+            // RCF can focus on p50
+            double centralty = (calibrationMethod == Calibration.NONE) ? 1.0 - 2 * errorHandler.percentile : 1.0;
+            TimedRangeVector timedForecast = extrapolate(forecastHorizon, true, centralty);
             // anomaly computation next; and subsequent update
             answer = preprocessor.postProcess(
                     predictorCorrector.detect(preprocessor.preProcess(initial, lastAnomalyDescriptor, forest),

@@ -298,7 +298,7 @@ public class TestGlobalLocalAnomalyDetector {
         long number = new Random().nextLong();
         int size = reservoirSize - new Random().nextInt(100);
         double newShrinkage = new Random().nextDouble();
-        int reps = new Random().nextInt(10);
+        int reps = new Random().nextInt(10) + 1; // cannot be 0
         GlobalLocalAnomalyDetector.Builder builder = GlobalLocalAnomalyDetector.builder().capacity(size)
                 .shrinkage(newShrinkage).numberOfRepresentatives(reps).timeDecay(timedecay).randomSeed(number);
         GlobalLocalAnomalyDetector<float[]> newDetector = new GlobalLocalAnomalyDetector<>(reservoir, reservoir,
