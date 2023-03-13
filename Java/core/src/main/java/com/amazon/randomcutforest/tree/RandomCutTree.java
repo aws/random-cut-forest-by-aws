@@ -123,13 +123,18 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     /**
      * Return a new {@link Cut}, which is chosen uniformly over the space of
-     * possible cuts for the given bounding box.
+     * possible cuts for a bounding box and its union with a point. The cut must
+     * exist unless the union box is a single point. There are floating point issues
+     * -- even though the original values are in float anf the calculations are in
+     * double, which can show up with large number of dimensions (each trigerring an
+     * addition/substraction).
      *
      * @param factor A random cut
+     * @param point  the point whose union is taken with the box
      * @param box    A bounding box that we want to find a random cut for.
      * @return A new Cut corresponding to a random cut in the bounding box.
      */
-    protected Cut randomCut(double factor, float[] point, BoundingBox box) {
+    protected static Cut randomCut(double factor, float[] point, BoundingBox box) {
         double range = 0.0;
 
         for (int i = 0; i < point.length; i++) {
@@ -142,6 +147,9 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             }
             range += maxValue - minValue;
         }
+
+        checkArgument(range > 0, " the union is a single point " + Arrays.toString(point)
+                + "or the box is inappropriate, box" + box.toString() + "factor =" + factor);
 
         double breakPoint = factor * range;
 
@@ -169,7 +177,50 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             breakPoint -= gap;
         }
 
-        throw new IllegalStateException("The break point did not lie inside the expected range");
+        // if we are here then factor is likely almost 1 and we have floating point
+        // issues
+        // we will randomize between the first and the last non-zero ranges and choose
+        // the
+        // same cutValue as using nextAfter above -- we will use the factor as a seed
+        // and
+        // not be optimizing this sequel (either in execution or code) to ensure easier
+        // debugging
+        // this should be an anomaly - no pun intended.
+
+        Random rng = new Random((long) factor);
+        if (rng.nextDouble() < 0.5) {
+            for (int i = 0; i < box.getDimensions(); i++) {
+                float minValue = (float) box.getMinValue(i);
+                float maxValue = (float) box.getMaxValue(i);
+                if (point[i] < minValue) {
+                    minValue = point[i];
+                } else if (point[i] > maxValue) {
+                    maxValue = point[i];
+                }
+                if (maxValue > minValue) {
+                    double cutValue = Math.nextAfter((float) maxValue, minValue);
+                    return new Cut(i, cutValue);
+                }
+            }
+        } else {
+            for (int i = box.getDimensions() - 1; i >= 0; i--) {
+                float minValue = (float) box.getMinValue(i);
+                float maxValue = (float) box.getMaxValue(i);
+                if (point[i] < minValue) {
+                    minValue = point[i];
+                } else if (point[i] > maxValue) {
+                    maxValue = point[i];
+                }
+                if (maxValue > minValue) {
+                    double cutValue = Math.nextAfter((float) maxValue, minValue);
+                    return new Cut(i, cutValue);
+                }
+            }
+        }
+
+        throw new IllegalStateException("The break point did not lie inside the expected range; factor " + factor
+                + ", point " + Arrays.toString(point) + " box " + box.toString());
+
     }
 
     public Integer addPoint(Integer pointIndex, long sequenceIndex) {

@@ -890,11 +890,13 @@ public class RandomCutForestTest {
         int dimensions = 16;
         int numberOfTrees = 41;
         int sampleSize = 64;
+        long seed = new Random().nextLong();
+        System.out.println(" seed " + seed);
         int dataSize = 4000 * sampleSize;
         double[][] big = generateShingledData(dataSize, dimensions, 2);
         RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(Precision.FLOAT_32)
-                .randomSeed(2051627799894425983L).boundingBoxCacheFraction(1.0).build();
+                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(Precision.FLOAT_32).randomSeed(seed)
+                .boundingBoxCacheFraction(1.0).build();
 
         int num = 0;
         for (double[] point : big) {

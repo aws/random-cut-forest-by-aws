@@ -366,4 +366,32 @@ public class RandomCutTreeTest {
             tree.addPoint(i % points.size(), point.getSequenceIndex());
         }
     }
+
+    @Test
+    public void testfloat() {
+        float x = 110.13f;
+        double sum = 0;
+        int trials = 230000;
+        for (int i = 0; i < trials; i++) {
+            float z = (x * (trials - i + 1) - x);
+            sum += z;
+        }
+        System.out.println(sum);
+        for (int i = 0; i < trials - 1; i++) {
+            float z = (x * (trials - i + 1) - x);
+            sum -= z;
+        }
+        System.out.println(sum + " " + (double) x + " " + (sum <= (double) x));
+        float[] possible = new float[trials];
+        float[] alsoPossible = new float[trials];
+        for (int i = 0; i < trials; i++) {
+            possible[i] = x;
+            alsoPossible[i] = (trials - i + 1) * x;
+        }
+        BoundingBox box = new BoundingBox(possible, alsoPossible);
+        System.out.println("rangesum " + box.getRangeSum());
+        double factor = 1.0 - 1e-16;
+        System.out.println(factor);
+        Cut cut = RandomCutTree.randomCut(factor, possible, box);
+    }
 }
