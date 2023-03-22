@@ -98,7 +98,7 @@ public class NodeStoreSmall extends AbstractNodeStore {
 
     @Override
     public int addNode(Stack<int[]> pathToRoot, float[] point, long sequenceIndex, int pointIndex, int childIndex,
-            int cutDimension, float cutValue, BoundingBox box) {
+            int childMassIfLeaf, int cutDimension, float cutValue, BoundingBox box) {
         int index = freeNodeManager.takeIndex();
         this.cutValue[index] = cutValue;
         this.cutDimension[index] = (byte) cutDimension;
@@ -109,8 +109,8 @@ public class NodeStoreSmall extends AbstractNodeStore {
             this.rightIndex[index] = (char) (pointIndex + capacity + 1);
             this.leftIndex[index] = (char) childIndex;
         }
-        this.mass[index] = (byte) (((byte) getMass(childIndex) + 1) % (capacity + 1));
-        addLeaf(pointIndex, sequenceIndex);
+        this.mass[index] = (byte) ((((childMassIfLeaf > 0) ? childMassIfLeaf : getMass(childIndex)) + 1)
+                % (capacity + 1));
         int parentIndex = (pathToRoot.size() == 0) ? Null : pathToRoot.lastElement()[0];
         if (this.parentIndex != null) {
             this.parentIndex[index] = (byte) parentIndex;
@@ -118,26 +118,19 @@ public class NodeStoreSmall extends AbstractNodeStore {
                 this.parentIndex[childIndex] = (byte) (index);
             }
         }
-        addBox(index, point, box);
         if (parentIndex != Null) {
             spliceEdge(parentIndex, childIndex, index);
-            manageAncestorsAdd(pathToRoot, point, pointStoreView);
-        }
-        if (pointSum != null) {
-            recomputePointSum(index);
         }
         return index;
     }
 
     @Override
-    public void addToPartialTree(Stack<int[]> pathToRoot, float[] point, int pointIndex) {
-        int node = pathToRoot.lastElement()[0];
+    public void assignInPartialTree(int node, float[] point, int childReference) {
         if (leftOf(node, point)) {
-            leftIndex[node] = (char) (pointIndex + capacity + 1);
+            leftIndex[node] = (char) childReference;
         } else {
-            rightIndex[node] = (char) (pointIndex + capacity + 1);
+            rightIndex[node] = (char) childReference;
         }
-        manageAncestorsAdd(pathToRoot, point, pointStoreView);
     }
 
     public int getLeftIndex(int index) {
@@ -171,18 +164,11 @@ public class NodeStoreSmall extends AbstractNodeStore {
         if (parentIndex != null) {
             parentIndex[index] = (byte) capacity;
         }
-        if (pointSum != null) {
-            invalidatePointSum(index);
-        }
-        int idx = translate(index);
-        if (idx != Integer.MAX_VALUE) {
-            rangeSumData[idx] = 0.0;
-        }
         freeNodeManager.releaseIndex(index);
     }
 
     public int getMass(int index) {
-        return (isLeaf(index)) ? getLeafMass(index) : mass[index] != 0 ? (mass[index] & 0xff) : (capacity + 1);
+        return mass[index] != 0 ? (mass[index] & 0xff) : (capacity + 1);
     }
 
     public void spliceEdge(int parent, int node, int newNode) {

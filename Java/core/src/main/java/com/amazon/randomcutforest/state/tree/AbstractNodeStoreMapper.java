@@ -59,9 +59,8 @@ public class AbstractNodeStoreMapper
         }
         // note boundingBoxCache is not set deliberately
         return AbstractNodeStore.builder().capacity(capacity).useRoot(root).leftIndex(leftIndex).rightIndex(rightIndex)
-                .cutDimension(cutDimension).cutValues(cutValue)
-                .dimensions(compactRandomCutTreeContext.getPointStore().getDimensions())
-                .pointStoreView(compactRandomCutTreeContext.getPointStore()).build();
+                .cutDimension(cutDimension).cutValues(cutValue).dimension(compactRandomCutTreeContext.getDimension())
+                .build();
     }
 
     @Override

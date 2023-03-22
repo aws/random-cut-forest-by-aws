@@ -34,9 +34,13 @@ public interface ITree<PointReference, Point> extends ITraversable, IDynamicConf
 
     double[] liftFromTree(double[] result);
 
-    public int[] projectMissingIndices(int[] list);
+    int[] projectMissingIndices(int[] list);
 
     PointReference addPoint(PointReference point, long sequenceIndex);
+
+    void addPointToPartialTree(PointReference point, long sequenceIndex);
+
+    void validateAndReconstruct();
 
     PointReference deletePoint(PointReference point, long sequenceIndex);
 

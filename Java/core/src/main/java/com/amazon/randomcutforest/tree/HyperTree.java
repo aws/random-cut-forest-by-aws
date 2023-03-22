@@ -51,12 +51,11 @@ public class HyperTree extends RandomCutTree {
             int[] cutDimension = new int[numberOfLeaves - 1];
             float[] cutValue = new float[numberOfLeaves - 1];
             root = makeTreeInt(list, seed, 0, this.gVecBuild, leftIndex, rightIndex, cutDimension, cutValue);
-            nodeStore = AbstractNodeStore.builder().storeSequencesEnabled(false).pointStoreView(pointStoreView)
-                    .dimensions(dimension).capacity(numberOfLeaves - 1).leftIndex(leftIndex).rightIndex(rightIndex)
-                    .cutDimension(cutDimension).cutValues(cutValue).build();
+            nodeStore = AbstractNodeStore.builder().dimension(dimension).capacity(numberOfLeaves - 1)
+                    .leftIndex(leftIndex).rightIndex(rightIndex).cutDimension(cutDimension).cutValues(cutValue).build();
             // the cuts are specififed; now build tree
             for (int i = 0; i < list.size(); i++) {
-                addPoint(list.get(i), 0L);
+                addPointToPartialTree(list.get(i), 0L);
             }
         } else {
             root = Null;

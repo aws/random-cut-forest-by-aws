@@ -22,40 +22,42 @@ import java.util.HashMap;
 import com.amazon.randomcutforest.store.IPointStoreView;
 
 public class NodeView implements INodeView {
-    AbstractNodeStore nodeStore;
+
+    public static double SWITCH_FRACTION = 0.499;
+
+    RandomCutTree tree;
     int currentNodeOffset;
     float[] leafPoint;
-    IPointStoreView<float[]> pointStoreView;
     BoundingBox currentBox;
 
-    public NodeView(AbstractNodeStore nodeStore, IPointStoreView<float[]> pointStoreView, int root) {
+    public NodeView(RandomCutTree tree, IPointStoreView<float[]> pointStoreView, int root) {
         this.currentNodeOffset = root;
-        this.pointStoreView = pointStoreView;
-        this.nodeStore = nodeStore;
+        this.tree = tree;
     }
 
     public int getMass() {
-        return nodeStore.getMass(currentNodeOffset);
+        return tree.getMass(currentNodeOffset);
     }
 
     public IBoundingBoxView getBoundingBox() {
         if (currentBox == null) {
-            return nodeStore.getBox(currentNodeOffset);
+            return tree.getBox(currentNodeOffset);
         }
         return currentBox;
     }
 
     public IBoundingBoxView getSiblingBoundingBox(float[] point) {
-        return (toLeft(point)) ? nodeStore.getRightBox(currentNodeOffset) : nodeStore.getLeftBox(currentNodeOffset);
+        return (toLeft(point)) ? tree.getBox(tree.nodeStore.getRightIndex(currentNodeOffset))
+                : tree.getBox(tree.nodeStore.getLeftIndex(currentNodeOffset));
     }
 
     public int getCutDimension() {
-        return nodeStore.getCutDimension(currentNodeOffset);
+        return tree.nodeStore.getCutDimension(currentNodeOffset);
     }
 
     @Override
     public double getCutValue() {
-        return nodeStore.getCutValue(currentNodeOffset);
+        return tree.nodeStore.getCutValue(currentNodeOffset);
     }
 
     public float[] getLeafPoint() {
@@ -64,8 +66,8 @@ public class NodeView implements INodeView {
 
     public HashMap<Long, Integer> getSequenceIndexes() {
         checkState(isLeaf(), "can only be invoked for a leaf");
-        if (nodeStore.storeSequenceIndexesEnabled) {
-            return nodeStore.sequenceMap.get(nodeStore.getPointIndex(currentNodeOffset));
+        if (tree.storeSequenceIndexesEnabled) {
+            return tree.getSequenceMap(tree.getPointIndex(currentNodeOffset));
         } else {
             return new HashMap<>();
         }
@@ -73,23 +75,22 @@ public class NodeView implements INodeView {
 
     @Override
     public double probailityOfSeparation(float[] point) {
-        return nodeStore.probabilityOfCut(currentNodeOffset, point, pointStoreView, currentBox);
+        return tree.probabilityOfCut(currentNodeOffset, point, currentBox);
     }
 
     @Override
     public int getLeafPointIndex() {
-        checkState(isLeaf(), "cannot invoke 'getLeafPointIndex' from a non-leaf node");
-        return nodeStore.getPointIndex(currentNodeOffset);
+        return tree.getPointIndex(currentNodeOffset);
     }
 
     public boolean isLeaf() {
-        return nodeStore.isLeaf(currentNodeOffset);
+        return tree.nodeStore.isLeaf(currentNodeOffset);
     }
 
     protected void setCurrentNode(int newNode, int index, boolean setBox) {
         currentNodeOffset = newNode;
-        leafPoint = pointStoreView.get(index);
-        if (setBox && nodeStore.boundingboxCacheFraction < AbstractNodeStore.SWITCH_FRACTION) {
+        leafPoint = tree.pointStoreView.get(index);
+        if (setBox && tree.boundingBoxCacheFraction < SWITCH_FRACTION) {
             currentBox = new BoundingBox(leafPoint, leafPoint);
         }
     }
@@ -100,14 +101,15 @@ public class NodeView implements INodeView {
 
     public void updateToParent(int parent, int currentSibling, boolean updateBox) {
         currentNodeOffset = parent;
-        if (updateBox && nodeStore.boundingboxCacheFraction < AbstractNodeStore.SWITCH_FRACTION) {
-            nodeStore.growNodeBox(currentBox, pointStoreView, parent, currentSibling);
+        if (updateBox && tree.boundingBoxCacheFraction < SWITCH_FRACTION) {
+            tree.growNodeBox(currentBox, tree.pointStoreView, parent, currentSibling);
         }
     }
 
     // this function exists for matching the behavior of RCF2.0 and will be replaced
     // this function explicitly uses the encoding of the new nodestore
     protected boolean toLeft(float[] point) {
-        return point[nodeStore.getCutDimension(currentNodeOffset)] <= nodeStore.getCutValue(currentNodeOffset);
+        return point[tree.nodeStore.getCutDimension(currentNodeOffset)] <= tree.nodeStore
+                .getCutValue(currentNodeOffset);
     }
 }
