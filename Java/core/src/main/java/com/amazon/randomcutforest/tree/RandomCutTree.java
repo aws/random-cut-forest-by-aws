@@ -105,7 +105,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public <T> void setConfig(String name, T value, Class<T> clazz) {
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
             checkArgument(Double.class.isAssignableFrom(clazz),
-                    String.format("Setting '%s' must be a double value", name));
+                    () -> String.format("Setting '%s' must be a double value", name));
             setBoundingBoxCacheFraction((Double) value);
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
@@ -117,7 +117,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         checkNotNull(clazz, "clazz must not be null");
         if (Config.BOUNDING_BOX_CACHE_FRACTION.equals(name)) {
             checkArgument(clazz.isAssignableFrom(Double.class),
-                    String.format("Setting '%s' must be a double value", name));
+                    () -> String.format("Setting '%s' must be a double value", name));
             return clazz.cast(boundingBoxCacheFraction);
         } else {
             throw new IllegalArgumentException("Unsupported configuration setting: " + name);
@@ -161,10 +161,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             range += maxValue - minValue;
         }
 
-        if (range <= 0) {
-            throw new IllegalStateException(" the union is a single point " + Arrays.toString(point)
-                    + "or the box is inappropriate, box" + box.toString() + "factor =" + factor);
-        }
+        checkArgument(range > 0, () -> " the union is a single point " + Arrays.toString(point)
+                + "or the box is inappropriate, box" + box.toString() + "factor =" + factor);
 
         double breakPoint = factor * range;
 
@@ -247,9 +245,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         } else {
 
             float[] point = projectToTree(pointStoreView.get(pointIndex));
-            if (point.length != dimension) {
-                throw new IllegalStateException(" mismatch in dimensions for " + pointIndex);
-            }
+            checkArgument(point.length == dimension, () -> " mismatch in dimensions for " + pointIndex);
             Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
             int[] first = pathToRoot.pop();
             int leafNode = first[0];
@@ -258,10 +254,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             int sibling = leafSavedSibling;
             int leafPointIndex = getPointIndex(leafNode);
             float[] oldPoint = projectToTree(pointStoreView.get(leafPointIndex));
-            if (oldPoint.length != dimension) {
-                throw new IllegalStateException(" mismatch in dimensions for " + pointIndex);
-            }
-            ;
+            checkArgument(oldPoint.length == dimension, () -> " mismatch in dimensions for " + pointIndex);
+
             Stack<int[]> parentPath = new Stack<>();
 
             if (Arrays.equals(point, oldPoint)) {
@@ -365,9 +359,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
         checkArgument(root != Null, " a null root is not a partial tree");
         float[] point = projectToTree(pointStoreView.get(pointIndex));
-        if (point.length != dimension) {
-            throw new IllegalStateException(" incorrect projection at index " + pointIndex);
-        }
+        checkArgument(point.length == dimension, () -> " incorrect projection at index " + pointIndex);
+
         Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
         int[] first = pathToRoot.pop();
         int leafNode = first[0];
@@ -385,9 +378,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         int leafPointIndex = getPointIndex(leafNode);
         float[] oldPoint = projectToTree(pointStoreView.get(leafPointIndex));
 
-        if (oldPoint.length != dimension || !Arrays.equals(point, oldPoint)) {
-            throw new IllegalStateException("incorrect state on adding " + pointIndex);
-        }
+        checkArgument(oldPoint.length == dimension && Arrays.equals(point, oldPoint),
+                () -> "incorrect state on adding " + pointIndex);
         increaseLeafMass(leafNode);
         checkArgument(!nodeStore.freeNodeManager.isEmpty(), "incorrect/impossible state");
         nodeStore.manageInternalNodesPartial(pathToRoot);
@@ -397,22 +389,17 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     public Integer deletePoint(Integer pointIndex, long sequenceIndex) {
 
-        if (root == Null) {
-            throw new IllegalStateException(" deleting from an empty tree");
-        }
+        checkArgument(root != Null, " deleting from an empty tree");
         float[] point = projectToTree(pointStoreView.get(pointIndex));
-        if (point.length != dimension) {
-            throw new IllegalStateException(" incorrect projection at index " + pointIndex);
-        }
+        checkArgument(point.length == dimension, () -> " incorrect projection at index " + pointIndex);
         Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
         int[] first = pathToRoot.pop();
         int leafSavedSibling = first[1];
         int leafNode = first[0];
         int leafPointIndex = getPointIndex(leafNode);
 
-        if (leafPointIndex != pointIndex) {
-            throw new IllegalStateException(" deleting wrong node " + leafPointIndex + " instead of " + pointIndex);
-        }
+        checkArgument(leafPointIndex == pointIndex,
+                () -> " deleting wrong node " + leafPointIndex + " instead of " + pointIndex);
 
         removeLeaf(leafPointIndex, sequenceIndex);
 
@@ -477,37 +464,27 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     }
 
     public int getPointIndex(int index) {
-        if (index < numberOfLeaves) {
-            throw new IllegalStateException(" does not have a point associated " + index);
-        }
+        checkArgument(index >= numberOfLeaves, () -> " does not have a point associated " + index);
         return index - numberOfLeaves;
     }
 
     public int getLeftChild(int index) {
-        if (!isInternal(index)) {
-            throw new IllegalStateException("incorrect call to get left Index " + index);
-        }
+        checkArgument(isInternal(index), () -> "incorrect call to get left Index " + index);
         return nodeStore.getLeftIndex(index);
     }
 
     public int getRightChild(int index) {
-        if (!isInternal(index)) {
-            throw new IllegalStateException("incorrect call to get right child " + index);
-        }
+        checkArgument(isInternal(index), () -> "incorrect call to get right child " + index);
         return nodeStore.getRightIndex(index);
     }
 
     public int getCutDimension(int index) {
-        if (!isInternal(index)) {
-            throw new IllegalStateException("incorrect call to get cut dimension " + index);
-        }
+        checkArgument(isInternal(index), () -> "incorrect call to get cut dimension " + index);
         return nodeStore.getCutDimension(index);
     }
 
     public double getCutValue(int index) {
-        if (!isInternal(index)) {
-            throw new IllegalStateException("incorrect call to get cut value " + index);
-        }
+        checkArgument(isInternal(index), () -> "incorrect call to get cut value " + index);
         return nodeStore.getCutValue(index);
     }
 
@@ -604,9 +581,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public BoundingBox getBox(int index) {
         if (isLeaf(index)) {
             float[] point = projectToTree(pointStoreView.get(getPointIndex(index)));
-            if (point.length != dimension) {
-                throw new IllegalStateException("failure in projection at index " + index);
-            }
+            checkArgument(point.length == dimension, () -> "failure in projection at index " + index);
             return new BoundingBox(point, point);
         } else {
             checkArgument(isInternal(index), " incomplete state");
@@ -681,9 +656,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     void growNodeBox(BoundingBox box, IPointStoreView<float[]> pointStoreView, int node, int sibling) {
         if (isLeaf(sibling)) {
             float[] point = projectToTree(pointStoreView.get(getPointIndex(sibling)));
-            if (point.length != dimension) {
-                throw new IllegalStateException(" incorrect projection at index " + sibling);
-            }
+            checkArgument(point.length == dimension, () -> " incorrect projection at index " + sibling);
             box.addPoint(point);
         } else {
             if (!isInternal(sibling)) {
@@ -739,9 +712,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         checkArgument(centerOfMassEnabled, " enable center of mass");
         if (isLeaf(index)) {
             float[] point = projectToTree(pointStoreView.get(getPointIndex(index)));
-            if (point.length != dimension) {
-                throw new IllegalStateException(" incorrect projection");
-            }
+            checkArgument(point.length != dimension, () -> " incorrect projection");
             int mass = getMass(index);
             for (int i = 0; i < point.length; i++) {
                 point[i] *= mass;
@@ -877,9 +848,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             currentNodeView.setCurrentNode(node, getPointIndex(node), true);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
-            if (!isInternal(node)) {
-                throw new IllegalStateException(" incomplete state " + node + " " + depthOfNode);
-            }
+            checkArgument(isInternal(node), () -> " incomplete state " + node + " " + depthOfNode);
             if (nodeStore.toLeft(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, nodeStore.getLeftIndex(node),
                         depthOfNode + 1);

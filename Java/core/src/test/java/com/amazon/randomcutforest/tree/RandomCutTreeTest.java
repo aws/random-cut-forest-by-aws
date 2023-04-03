@@ -15,16 +15,6 @@
 
 package com.amazon.randomcutforest.tree;
 
-import com.amazon.randomcutforest.config.Config;
-import com.amazon.randomcutforest.sampler.Weighted;
-import com.amazon.randomcutforest.store.PointStore;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,6 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.config.Config;
+import com.amazon.randomcutforest.sampler.Weighted;
+import com.amazon.randomcutforest.store.PointStore;
 
 public class RandomCutTreeTest {
 

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 
@@ -31,15 +32,23 @@ public class CommonUtils {
      * Throws an {@link IllegalArgumentException} with the specified message if the
      * specified input is false.
      *
-     * @param condition A condition to test.
-     * @param message   The error message to include in the
-     *                  {@code IllegalArgumentException} if {@code condition} is
-     *                  false.
+     * @param condition       A condition to test.
+     * @param messageSupplier The error message to include in the
+     *                        {@code IllegalArgumentException} if {@code condition}
+     *                        is false.
      * @throws IllegalArgumentException if {@code condition} is false.
      */
     public static void checkArgument(boolean condition, String message) {
+
         if (!condition) {
             throw new IllegalArgumentException(message);
+        }
+    }
+
+    // a lazy equivalent of the above, which avoids parameter evaluation
+    public static void checkArgument(boolean condition, Supplier<String> messageSupplier) {
+        if (!condition) {
+            throw new IllegalArgumentException(messageSupplier.get());
         }
     }
 
