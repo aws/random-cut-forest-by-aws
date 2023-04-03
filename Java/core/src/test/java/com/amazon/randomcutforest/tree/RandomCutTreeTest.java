@@ -94,7 +94,7 @@ public class RandomCutTreeTest {
         assertEquals(pointStoreFloat.add(new float[] { 0, 1 }, 5), 4);
         assertEquals(pointStoreFloat.add(new float[] { 0, 0 }, 6), 5);
 
-        assertThrows(IllegalStateException.class, () -> tree.deletePoint(0, 1));
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
         tree.addPoint(0, 1);
 
         when(rng.nextDouble()).thenReturn(0.625);
@@ -159,7 +159,7 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(tree.getRightChild(node)), is(2));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
-        assertThrows(IllegalStateException.class, () -> tree.deletePoint(5, 6));
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(5, 6));
     }
 
     @Test

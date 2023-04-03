@@ -236,6 +236,15 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     }
 
+    /**
+     * the following function adds a point to the tree
+     * 
+     * @param pointIndex    the number corresponding to the point
+     * @param sequenceIndex sequence index of the point
+     * @return the value of the point index where the point was added; this is
+     *         pointIndex if there are no duplicates; otherwise it is the value of
+     *         the point being duplicated.
+     */
     public Integer addPoint(Integer pointIndex, long sequenceIndex) {
 
         if (root == Null) {
@@ -299,10 +308,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                         parentPath.push(new int[] { node, sibling });
                     }
 
-                    if (savedDim == Integer.MAX_VALUE) {
-                        randomCut(factor, point, currentBox);
-                        throw new IllegalStateException(" cut failed ");
-                    }
+                    checkArgument(savedDim != Integer.MAX_VALUE, () -> " cut failed at index " + pointIndex);
                     if (currentBox.contains(point) || parent == Null) {
                         break;
                     } else {
@@ -355,6 +361,14 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         }
     }
 
+    /**
+     * the following is the same as in addPoint() except this function is used to
+     * rebuild the tree structure. This function does not create auxiliary arrays,
+     * which should be performed using validateAndReconstruct()
+     * 
+     * @param pointIndex    index of point (in point store)
+     * @param sequenceIndex sequence index (stored in sampler)
+     */
     public void addPointToPartialTree(Integer pointIndex, long sequenceIndex) {
 
         checkArgument(root != Null, " a null root is not a partial tree");
