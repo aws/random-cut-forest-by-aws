@@ -32,10 +32,10 @@ public class CommonUtils {
      * Throws an {@link IllegalArgumentException} with the specified message if the
      * specified input is false.
      *
-     * @param condition       A condition to test.
-     * @param messageSupplier The error message to include in the
-     *                        {@code IllegalArgumentException} if {@code condition}
-     *                        is false.
+     * @param condition A condition to test.
+     * @param message   The error message to include in the
+     *                  {@code IllegalArgumentException} if {@code condition} is
+     *                  false.
      * @throws IllegalArgumentException if {@code condition} is false.
      */
     public static void checkArgument(boolean condition, String message) {
