@@ -712,7 +712,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         checkArgument(centerOfMassEnabled, " enable center of mass");
         if (isLeaf(index)) {
             float[] point = projectToTree(pointStoreView.get(getPointIndex(index)));
-            checkArgument(point.length != dimension, () -> " incorrect projection");
+            checkArgument(point.length == dimension, () -> " incorrect projection");
             int mass = getMass(index);
             for (int i = 0; i < point.length; i++) {
                 point[i] *= mass;
