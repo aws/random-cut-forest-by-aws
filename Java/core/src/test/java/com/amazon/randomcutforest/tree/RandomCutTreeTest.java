@@ -94,7 +94,7 @@ public class RandomCutTreeTest {
         assertEquals(pointStoreFloat.add(new float[] { 0, 1 }, 5), 4);
         assertEquals(pointStoreFloat.add(new float[] { 0, 0 }, 6), 5);
 
-        assertThrows(IllegalStateException.class, () -> tree.deletePoint(0, 1));
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
         tree.addPoint(0, 1);
 
         when(rng.nextDouble()).thenReturn(0.625);
@@ -118,57 +118,48 @@ public class RandomCutTreeTest {
         int node = tree.getRoot();
         // the second double[] is intentional
         IBoundingBoxView expectedBox = new BoundingBox(new float[] { -1, -1 }).getMergedBox(new float[] { 1, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(1));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(1));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(5));
-        assertArrayEquals(new double[] { -1, 2 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, -1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(1L), 1);
+        assertArrayEquals(new double[] { -1, 2 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
-        node = tree.nodeStore.getRightIndex(node);
+        node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new BoundingBox(new float[] { 1, 1 }));
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(0.5, EPSILON));
-        assertThat(tree.nodeStore.getMass(node), is(4));
-        assertArrayEquals(new double[] { 0.0, 3.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(0.5, EPSILON));
+        assertThat(tree.getMass(node), is(4));
+        assertArrayEquals(new double[] { 0.0, 3.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 1, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(2L), 1);
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
-        node = tree.nodeStore.getLeftIndex(node);
+        node = tree.getLeftChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
+        assertThat(tree.getBox(node), is(expectedBox));
 
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
-        assertThat(tree.nodeStore.getMass(node), is(3));
-        assertArrayEquals(new double[] { -1.0, 2.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, 0 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(3L), 1);
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getMass(node), is(3));
+        assertArrayEquals(new double[] { -1.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 0, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(2));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(4L), 1);
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(5L), 1);
-        assertThrows(IllegalStateException.class, () -> tree.deletePoint(5, 6));
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(2));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(5, 6));
     }
 
     @Test
@@ -180,44 +171,37 @@ public class RandomCutTreeTest {
 
         int node = tree.getRoot();
         IBoundingBoxView expectedBox = new BoundingBox(new float[] { -1, -1 }).getMergedBox(new float[] { 1, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(1));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(1));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(4));
 
-        assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, -1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(1L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
         // sibling node moves up and bounding box recomputed
 
-        node = tree.nodeStore.getRightIndex(node);
+        node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { 0, 1 }).getMergedBox(new float[] { 1, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(0.5, EPSILON));
-        assertThat(tree.nodeStore.getMass(node), is(3));
-        assertArrayEquals(new double[] { 1.0, 3.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(0.5, EPSILON));
+        assertThat(tree.getMass(node), is(3));
+        assertArrayEquals(new double[] { 1.0, 3.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { 0, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(2));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(4L), 1);
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(5L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(2));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(4L), 1);
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(5L), 1);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 1, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(2L), 1);
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
     }
 
     @Test
@@ -228,41 +212,34 @@ public class RandomCutTreeTest {
 
         int node = tree.getRoot();
         IBoundingBoxView expectedBox = new BoundingBox(new float[] { -1, -1 }).getMergedBox(new float[] { 0, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(1));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(1));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(4));
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, -1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(1L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
         // sibling node moves up and bounding box stays the same
 
-        node = tree.nodeStore.getRightIndex(node);
+        node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, 0 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(3L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 0, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(2));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(4L), 1);
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(5L), 1);
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(2));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
     }
 
     @Test
@@ -273,65 +250,55 @@ public class RandomCutTreeTest {
 
         int node = tree.getRoot();
         IBoundingBoxView expectedBox = new BoundingBox(new float[] { -1, -1 }).getMergedBox(new float[] { 1, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(1));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(1));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(4));
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, -1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(1L), 1);
-        assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
+        assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, -1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(1L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
-        node = tree.nodeStore.getRightIndex(node);
+        node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 1, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(0.5, EPSILON));
-        assertThat(tree.nodeStore.getMass(node), is(3));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(0.5, EPSILON));
+        assertThat(tree.getMass(node), is(3));
 
-        assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 1, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(2L), 1);
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
-        node = tree.nodeStore.getLeftIndex(node);
+        node = tree.getLeftChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
-        assertThat(tree.nodeStore.getBox(node), is(expectedBox));
-        assertEquals(expectedBox.toString(), tree.nodeStore.getBox(node).toString());
-        assertThat(tree.nodeStore.getCutDimension(node), is(0));
-        assertThat(tree.nodeStore.getCutValue(node), closeTo(-0.5, EPSILON));
+        assertThat(tree.getBox(node), is(expectedBox));
+        assertEquals(expectedBox.toString(), tree.getBox(node).toString());
+        assertThat(tree.getCutDimension(node), is(0));
+        assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
         assertThat(tree.getMass(), is(4));
 
-        assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.nodeStore.getPointSum(node)), EPSILON);
+        assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getLeftIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))),
-                is(new float[] { -1, 0 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getLeftIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getLeftIndex(node))).get(3L), 1);
+        assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
-        assertThat(tree.nodeStore.isLeaf(tree.nodeStore.getRightIndex(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))),
-                is(new float[] { 0, 1 }));
-        assertThat(tree.nodeStore.getMass(tree.nodeStore.getRightIndex(node)), is(1));
-        assertEquals(tree.nodeStore.getSequenceMap()
-                .get(tree.nodeStore.getPointIndex(tree.nodeStore.getRightIndex(node))).get(5L), 1);
+        assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
+        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.getMass(tree.getRightChild(node)), is(1));
+        assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
     }
 
     @Test
@@ -392,6 +359,7 @@ public class RandomCutTreeTest {
         System.out.println("rangesum " + box.getRangeSum());
         double factor = 1.0 - 1e-16;
         System.out.println(factor);
-        Cut cut = RandomCutTree.randomCut(factor, possible, box);
+        RandomCutTree tree = RandomCutTree.builder().dimension(trials).build();
+        Cut cut = tree.randomCut(factor, possible, box);
     }
 }

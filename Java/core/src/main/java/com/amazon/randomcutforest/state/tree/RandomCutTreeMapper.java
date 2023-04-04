@@ -33,11 +33,12 @@ public class RandomCutTreeMapper
     @Override
     public RandomCutTree toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context, long seed) {
 
+        int dimension = (state.getDimensions() != 0) ? state.getDimensions() : context.getPointStore().getDimensions();
+        context.setDimension(dimension);
         AbstractNodeStoreMapper nodeStoreMapper = new AbstractNodeStoreMapper();
         nodeStoreMapper.setRoot(state.getRoot());
         AbstractNodeStore nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState(), context);
 
-        int dimension = (state.getDimensions() != 0) ? state.getDimensions() : context.getPointStore().getDimensions();
         // boundingBoxcache is not set deliberately;
         // it should be set after the partial tree is complete
         // likewise all the leaves, including the root, should be set to

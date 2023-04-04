@@ -336,8 +336,9 @@ public class RandomCutForestMapper
                 tree = extTrees.get(i);
             } else if (treeStates != null) {
                 tree = treeMapper.toModel(treeStates.get(i), context, random.nextLong());
-                sampler.getSample().forEach(s -> tree.addPoint(s.getValue(), s.getSequenceIndex()));
+                sampler.getSample().forEach(s -> tree.addPointToPartialTree(s.getValue(), s.getSequenceIndex()));
                 tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, treeStates.get(i).getBoundingBoxCacheFraction());
+                tree.validateAndReconstruct();
             } else {
                 // using boundingBoxCahce for the new tree
                 tree = new RandomCutTree.Builder().capacity(state.getSampleSize()).randomSeed(random.nextLong())

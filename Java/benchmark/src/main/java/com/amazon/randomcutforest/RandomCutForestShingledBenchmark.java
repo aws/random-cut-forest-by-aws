@@ -18,7 +18,6 @@ package com.amazon.randomcutforest;
 import java.util.List;
 import java.util.Random;
 
-import org.github.jamm.MemoryMeter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -130,10 +129,6 @@ public class RandomCutForestShingledBenchmark {
         }
 
         blackhole.consume(score);
-        if (!forest.parallelExecutionEnabled) {
-            MemoryMeter meter = new MemoryMeter();
-            System.out.println(" forest size " + meter.measureDeep(forest));
-        }
         return forest;
     }
 

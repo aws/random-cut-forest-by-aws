@@ -23,6 +23,7 @@ import com.amazon.randomcutforest.store.IPointStore;
 @Data
 public class CompactRandomCutTreeContext {
     private int maxSize;
+    private int dimension;
     private IPointStore<?> pointStore;
     private Precision precision;
 }

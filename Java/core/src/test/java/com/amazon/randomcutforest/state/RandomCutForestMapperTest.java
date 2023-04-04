@@ -152,4 +152,30 @@ public class RandomCutForestMapperTest {
         }
     }
 
+    private static float[] generate(int input) {
+        return new float[] { (float) (20 * Math.sin(input / 10.0)), (float) (20 * Math.cos(input / 10.0)) };
+    }
+
+    @Test
+    void benchmarkMappers() {
+        long seed = new Random().nextLong();
+        System.out.println(" Seed " + seed);
+        Random random = new Random(seed);
+
+        RandomCutForest rcf = RandomCutForest.builder().dimensions(2 * 10).shingleSize(10).sampleSize(628)
+                .internalShinglingEnabled(true).randomSeed(random.nextLong()).build();
+        for (int i = 0; i < 10000; i++) {
+            rcf.update(generate(i));
+        }
+        RandomCutForestMapper mapper = new RandomCutForestMapper();
+        mapper.setSaveExecutorContextEnabled(true);
+        mapper.setSaveTreeStateEnabled(true);
+        for (int j = 0; j < 1000; j++) {
+            RandomCutForest newRCF = mapper.toModel(mapper.toState(rcf));
+            float[] test = generate(10000 + j);
+            assertEquals(newRCF.getAnomalyScore(test), rcf.getAnomalyScore(test), 1e-6);
+            rcf.update(test);
+        }
+    }
+
 }
