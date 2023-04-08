@@ -61,7 +61,7 @@ public class PointStoreTest {
         assertEquals(1, pointStore.getRefCount(offset1));
         assertEquals(1, pointStore.size());
 
-        float[] retrievedPoint1 = pointStore.get(offset1);
+        float[] retrievedPoint1 = pointStore.getNumericVector(offset1);
         assertNotSame(point1, retrievedPoint1);
         assertArrayEquals(point1, retrievedPoint1);
 
@@ -72,12 +72,12 @@ public class PointStoreTest {
         assertEquals(2, pointStore.size());
         assertNotEquals(offset1, offset2);
 
-        float[] retrievedPoint2 = pointStore.get(offset2);
+        float[] retrievedPoint2 = pointStore.getNumericVector(offset2);
         assertNotSame(point2, retrievedPoint2);
         assertArrayEquals(point2, retrievedPoint2);
 
         // check that adding a second point didn't change the first stored point's value
-        retrievedPoint1 = pointStore.get(offset1);
+        retrievedPoint1 = pointStore.getNumericVector(offset1);
         assertNotSame(point1, retrievedPoint1);
         assertArrayEquals(point1, retrievedPoint1);
     }
@@ -97,8 +97,8 @@ public class PointStoreTest {
 
     @Test
     public void testGetInvalid() {
-        assertThrows(IllegalArgumentException.class, () -> pointStore.get(-1));
-        assertThrows(IllegalArgumentException.class, () -> pointStore.get(capacity));
+        assertThrows(IllegalArgumentException.class, () -> pointStore.getNumericVector(-1));
+        assertThrows(IllegalArgumentException.class, () -> pointStore.getNumericVector(capacity));
     }
 
     @Test
@@ -144,18 +144,15 @@ public class PointStoreTest {
     public void testPointEquals() {
         float[] point = { 1.2f, -3.4f };
         int offset = pointStore.add(point, 0);
-        assertTrue(pointStore.pointEquals(offset, point));
-        assertFalse(pointStore.pointEquals(offset, new float[] { 5.6f, -7.8f }));
+        assertArrayEquals(pointStore.getNumericVector(offset), point);
+        assertNotEquals(pointStore.getNumericVector(offset), new float[] { 5.6f, -7.8f });
     }
 
     @Test
     public void testPointEqualsInvalid() {
         float[] point = { 1.2f, -3.4f };
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(-1, point));
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(0, point));
-
-        int offset = pointStore.add(point, 0);
-        assertThrows(IllegalArgumentException.class, () -> pointStore.pointEquals(offset, new float[] { 99.9f }));
+        assertThrows(IllegalArgumentException.class, () -> pointStore.getNumericVector(-1));
+        assertThrows(IllegalArgumentException.class, () -> pointStore.getNumericVector(0));
     }
 
     @Test
@@ -171,7 +168,7 @@ public class PointStoreTest {
             shingle[(i + 3) % shinglesize] = (float) random.nextDouble();
             store.add(new float[] { shingle[(i + 3) % shinglesize] }, i);
         }
-        assertArrayEquals(store.get(9 * shinglesize - 3), shingle, (float) 1e-6);
+        assertArrayEquals(store.getNumericVector(9 * shinglesize - 3), shingle, (float) 1e-6);
         assertArrayEquals(store.getInternalShingle(), shingle, (float) 1e-6);
         assertArrayEquals(store.transformIndices(new int[] { 0 }), new int[] { shinglesize - 1 });
         assertThrows(IllegalArgumentException.class, () -> store.transformIndices(new int[] { 1 }));
@@ -198,14 +195,14 @@ public class PointStoreTest {
         }
         assertEquals(store.getNextSequenceIndex(), 10 * shinglesize + 5);
         assertArrayEquals(temp, shingle, (float) 1e-6);
-        assertArrayEquals(store.get(9 * shinglesize + 5), shingle, (float) 1e-6);
+        assertArrayEquals(store.getNumericVector(9 * shinglesize + 5), shingle, (float) 1e-6);
         assertNotEquals(store.internalShingle, store.getInternalShingle());
-        assertTrue(store.pointEquals(9 * shinglesize + 5, shingle));
-        assertFalse(store.pointEquals(9 * shinglesize + 4, shingle));
+        assertArrayEquals(store.getNumericVector(9 * shinglesize + 5), shingle);
+        assertNotEquals(store.getNumericVector(9 * shinglesize + 4), shingle);
         assertArrayEquals(store.getInternalShingle(), shingle, (float) 1e-6);
         assertArrayEquals(store.transformIndices(new int[] { 0 }), new int[] { 5 });
         assertThrows(IllegalArgumentException.class, () -> store.transformIndices(new int[] { 1 }));
-        assertThrows(IllegalArgumentException.class, () -> store.transformToShingledPoint(new float[] { 1, 2 }));
+        assertEquals(store.transformToShingledPoint(new float[] { 1, 2 }).length, 2);
         assertArrayEquals(store.transformToShingledPoint(new float[] { 0.0f }),
                 store.transformToShingledPoint(new float[] { -0.0f }), (float) 1e-6);
     }
@@ -224,13 +221,13 @@ public class PointStoreTest {
                 store.decrementRefCount(i);
             }
         }
-        assertThrows(IllegalArgumentException.class, () -> store.get(0));
+        assertThrows(IllegalArgumentException.class, () -> store.getNumericVector(0));
         float[] test = new float[shinglesize];
         for (int i = 0; i < shinglesize; i++) {
             test[i] = -(i + shinglesize + 1);
         }
         test[shinglesize - 1] = -shinglesize;
-        assertArrayEquals(store.get(shinglesize - 1), test, 1e-6f);
+        assertArrayEquals(store.getNumericVector(shinglesize - 1), test, 1e-6f);
         store.compact();
         for (int i = 2 * shinglesize; i < 4 * shinglesize - 1; i++) {
             store.add(new float[] { -i - 1 }, i);
@@ -264,14 +261,14 @@ public class PointStoreTest {
             store.add(new float[] { i + 1 }, 0L);
         }
         int finalIndex = store.add(new float[] { 4 + 2 }, 0L);
-        assertArrayEquals(store.get(finalIndex), new float[] { 5, 6 });
+        assertArrayEquals(store.getNumericVector(finalIndex), new float[] { 5, 6 });
         store.decrementRefCount(1);
         store.decrementRefCount(2);
         int index = store.add(new float[] { 7 }, 0L);
-        assertArrayEquals(store.get(index), new float[] { 6, 7 });
+        assertArrayEquals(store.getNumericVector(index), new float[] { 6, 7 });
         store.decrementRefCount(index);
         assertTrue(store.size() < store.capacity);
         index = store.add(new float[] { 8 }, 0L);
-        assertArrayEquals(store.get(index), new float[] { 7, 8 });
+        assertArrayEquals(store.getNumericVector(index), new float[] { 7, 8 });
     }
 }

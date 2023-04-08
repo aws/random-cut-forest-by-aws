@@ -253,7 +253,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             return pointIndex;
         } else {
 
-            float[] point = projectToTree(pointStoreView.get(pointIndex));
+            float[] point = projectToTree(pointStoreView.getNumericVector(pointIndex));
             checkArgument(point.length == dimension, () -> " mismatch in dimensions for " + pointIndex);
             Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
             int[] first = pathToRoot.pop();
@@ -262,7 +262,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             int leafSavedSibling = first[1];
             int sibling = leafSavedSibling;
             int leafPointIndex = getPointIndex(leafNode);
-            float[] oldPoint = projectToTree(pointStoreView.get(leafPointIndex));
+            float[] oldPoint = projectToTree(pointStoreView.getNumericVector(leafPointIndex));
             checkArgument(oldPoint.length == dimension, () -> " mismatch in dimensions for " + pointIndex);
 
             Stack<int[]> parentPath = new Stack<>();
@@ -372,7 +372,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public void addPointToPartialTree(Integer pointIndex, long sequenceIndex) {
 
         checkArgument(root != Null, " a null root is not a partial tree");
-        float[] point = projectToTree(pointStoreView.get(pointIndex));
+        float[] point = projectToTree(pointStoreView.getNumericVector(pointIndex));
         checkArgument(point.length == dimension, () -> " incorrect projection at index " + pointIndex);
 
         Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
@@ -390,7 +390,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             return;
         }
         int leafPointIndex = getPointIndex(leafNode);
-        float[] oldPoint = projectToTree(pointStoreView.get(leafPointIndex));
+        float[] oldPoint = projectToTree(pointStoreView.getNumericVector(leafPointIndex));
 
         checkArgument(oldPoint.length == dimension && Arrays.equals(point, oldPoint),
                 () -> "incorrect state on adding " + pointIndex);
@@ -404,7 +404,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public Integer deletePoint(Integer pointIndex, long sequenceIndex) {
 
         checkArgument(root != Null, " deleting from an empty tree");
-        float[] point = projectToTree(pointStoreView.get(pointIndex));
+        float[] point = projectToTree(pointStoreView.getNumericVector(pointIndex));
         checkArgument(point.length == dimension, () -> " incorrect projection at index " + pointIndex);
         Stack<int[]> pathToRoot = nodeStore.getPath(root, point, false);
         int[] first = pathToRoot.pop();
@@ -594,7 +594,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     public BoundingBox getBox(int index) {
         if (isLeaf(index)) {
-            float[] point = projectToTree(pointStoreView.get(getPointIndex(index)));
+            float[] point = projectToTree(pointStoreView.getNumericVector(getPointIndex(index)));
             checkArgument(point.length == dimension, () -> "failure in projection at index " + index);
             return new BoundingBox(point, point);
         } else {
@@ -669,7 +669,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     void growNodeBox(BoundingBox box, IPointStoreView<float[]> pointStoreView, int node, int sibling) {
         if (isLeaf(sibling)) {
-            float[] point = projectToTree(pointStoreView.get(getPointIndex(sibling)));
+            float[] point = projectToTree(pointStoreView.getNumericVector(getPointIndex(sibling)));
             checkArgument(point.length == dimension, () -> " incorrect projection at index " + sibling);
             box.addPoint(point);
         } else {
@@ -725,7 +725,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public float[] getPointSum(int index) {
         checkArgument(centerOfMassEnabled, " enable center of mass");
         if (isLeaf(index)) {
-            float[] point = projectToTree(pointStoreView.get(getPointIndex(index)));
+            float[] point = projectToTree(pointStoreView.getNumericVector(getPointIndex(index)));
             checkArgument(point.length == dimension, () -> " incorrect projection");
             int mass = getMass(index);
             for (int i = 0; i < point.length; i++) {

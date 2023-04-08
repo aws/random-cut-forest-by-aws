@@ -24,19 +24,18 @@ import com.amazon.randomcutforest.summarization.ICluster;
  * A view of the PointStore that forces a read only access to the store.
  */
 public interface IPointStoreView<Point> {
+
     int getDimensions();
 
     int getCapacity();
 
-    boolean pointEquals(int index, Point point);
-
-    Point get(int index);
+    float[] getNumericVector(int index);
 
     float[] getInternalShingle();
 
     long getNextSequenceIndex();
 
-    float[] transformToShingledPoint(float[] input);
+    float[] transformToShingledPoint(Point input);
 
     boolean isInternalRotationEnabled();
 
@@ -45,17 +44,6 @@ public interface IPointStoreView<Point> {
     int getShingleSize();
 
     int[] transformIndices(int[] indexList);
-
-    /**
-     * useful for managing points, convex combinations, etc., e.g. needed for center
-     * of mass
-     * 
-     * @param index  identifier of the point
-     * @param factor multiplier
-     * @return the new point; or raises an exception if such an object cannot be
-     *         defined
-     */
-    Point getScaledPoint(int index, double factor);
 
     /**
      * Prints the point given the index, irrespective of the encoding of the point.

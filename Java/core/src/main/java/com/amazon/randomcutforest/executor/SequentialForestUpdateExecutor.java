@@ -35,7 +35,7 @@ public class SequentialForestUpdateExecutor<PointReference, Point>
     }
 
     @Override
-    protected List<UpdateResult<PointReference>> update(PointReference point, long seqNum) {
+    protected List<UpdateResult<PointReference>> updateInternal(PointReference point, long seqNum) {
         return components.stream().map(t -> t.update(point, seqNum)).filter(UpdateResult::isStateChange)
                 .collect(Collectors.toList());
     }

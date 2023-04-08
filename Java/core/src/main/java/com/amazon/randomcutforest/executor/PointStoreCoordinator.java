@@ -30,15 +30,15 @@ import com.amazon.randomcutforest.store.PointStore;
 
 public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Integer, Point> {
 
-    private final IPointStore<Point> store;
+    private final IPointStore<Integer, Point> store;
 
-    public PointStoreCoordinator(IPointStore<Point> store) {
+    public PointStoreCoordinator(IPointStore<Integer, Point> store) {
         checkNotNull(store, "store must not be null");
         this.store = store;
     }
 
     @Override
-    public Integer initUpdate(float[] point, long sequenceNumber) {
+    public Integer initUpdate(Point point, long sequenceNumber) {
         int index = store.add(point, sequenceNumber);
         return (index == PointStore.INFEASIBLE_POINTSTORE_INDEX) ? null : index;
     }
@@ -55,7 +55,7 @@ public class PointStoreCoordinator<Point> extends AbstractUpdateCoordinator<Inte
         totalUpdates++;
     }
 
-    public IPointStore<Point> getStore() {
+    public IPointStore<Integer, Point> getStore() {
         return store;
     }
 }

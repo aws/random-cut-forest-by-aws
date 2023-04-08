@@ -20,9 +20,9 @@ package com.amazon.randomcutforest.store;
  * which can be added to a store by the update coordinator and made accessible
  * to the trees in a read only manner.
  * 
- * @param <Point> precision type
+ * @param <Point> type of input point
  */
-public interface IPointStore<Point> extends IPointStoreView<Point> {
+public interface IPointStore<PointReference, Point> extends IPointStoreView<Point> {
     /**
      * Adds to the store; there may be a loss of precision if enableFloat is on in
      * the Forest level. But external interface of the forest is double[]
@@ -31,11 +31,9 @@ public interface IPointStore<Point> extends IPointStoreView<Point> {
      * 
      * @param point       point to be added
      * @param sequenceNum sequence number of the point
-     * @return index of the stored point
+     * @return reference of the stored point
      */
-    int add(float[] point, long sequenceNum);
-
-    int add(double[] point, long sequenceNum);
+    PointReference add(Point point, long sequenceNum);
 
     // increments and returns the incremented value
     int incrementRefCount(int index);

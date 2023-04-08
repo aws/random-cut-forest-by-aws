@@ -16,6 +16,8 @@
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
@@ -320,7 +322,7 @@ public class Preprocessor implements IPreprocessor {
 
         double[] point;
         if (forest.isInternalShinglingEnabled()) {
-            point = forest.transformToShingledPoint(scaledInput);
+            point = toDoubleArray(forest.transformToShingledPoint(toFloatArray(scaledInput)));
         } else {
             int dimension = forest.getDimensions();
             if (scaledInput.length == dimension) {

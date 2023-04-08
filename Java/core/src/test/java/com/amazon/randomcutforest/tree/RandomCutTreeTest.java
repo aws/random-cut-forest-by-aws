@@ -124,7 +124,8 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(), is(5));
         assertArrayEquals(new double[] { -1, 2 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
@@ -137,7 +138,8 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { 0.0, 3.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 1, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
@@ -150,12 +152,14 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(node), is(3));
         assertArrayEquals(new double[] { -1.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, 0 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 0, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(2));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
@@ -179,7 +183,8 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
         // sibling node moves up and bounding box recomputed
@@ -193,13 +198,15 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { 1.0, 3.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { 0, 1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(2));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(4L), 1);
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(5L), 1);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 1, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
     }
@@ -218,7 +225,8 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(), is(4));
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
@@ -231,12 +239,14 @@ public class RandomCutTreeTest {
         assertThat(tree.getCutValue(node), closeTo(-0.5, EPSILON));
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, 0 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 0, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(2));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
@@ -256,13 +266,15 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(), is(4));
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
         assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, -1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
@@ -276,7 +288,8 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 1, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 1, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
@@ -291,12 +304,14 @@ public class RandomCutTreeTest {
         assertArrayEquals(new double[] { -1.0, 1.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
         assertThat(tree.isLeaf(tree.getLeftChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getLeftChild(node))), is(new float[] { -1, 0 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getLeftChild(node))),
+                is(new float[] { -1, 0 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(3L), 1);
 
         assertThat(tree.isLeaf(tree.getRightChild(node)), is(true));
-        assertThat(tree.pointStoreView.get(tree.getPointIndex(tree.getRightChild(node))), is(new float[] { 0, 1 }));
+        assertThat(tree.pointStoreView.getNumericVector(tree.getPointIndex(tree.getRightChild(node))),
+                is(new float[] { 0, 1 }));
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
     }
@@ -325,7 +340,7 @@ public class RandomCutTreeTest {
         pointStoreFloat.add(toFloatArray(points.get(1).getValue()), 1);
         tree.addPoint(0, points.get(0).getSequenceIndex());
         tree.addPoint(1, points.get(1).getSequenceIndex());
-        assertNotEquals(pointStoreFloat.get(0)[0], pointStoreFloat.get(1)[0]);
+        assertNotEquals(pointStoreFloat.getNumericVector(0)[0], pointStoreFloat.getNumericVector(1)[0]);
 
         for (int i = 0; i < 10000; i++) {
             Weighted<double[]> point = points.get(i % points.size());
