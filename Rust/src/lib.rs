@@ -7,6 +7,7 @@ mod types;
 mod util;
 pub mod visitor;
 pub mod trcf;
+pub mod glad;
 
 extern crate rand;
 extern crate rand_chacha;

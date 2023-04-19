@@ -1,6 +1,6 @@
 [package]
 name = "rcf"
-version = "3.0.1"
+version = "3.3.0"
 edition = "2021"
 license = "Apache-2.0"
 

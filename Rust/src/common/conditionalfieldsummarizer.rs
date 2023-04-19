@@ -135,7 +135,7 @@ impl FieldSummarizer {
             upper[j] = y[third.0].0;
         }
 
-        let summary = summarize(&vec, self.distance, self.max_number, false);
+        let summary = summarize(&vec, self.distance, self.max_number, false).unwrap();
         SampleSummary {
             summary_points: summary.summary_points.clone(),
             relative_weight: summary.relative_weight.clone(),
