@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.serialize.json.v1;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -81,10 +82,10 @@ public class V1JsonToV3StateConverter {
     }
 
     static class SamplerConverter {
-        private final IPointStore pointStore;
+        private final IPointStore<Integer, float[]> pointStore;
         private final List<CompactSamplerState> compactSamplerStates;
         private final Precision precision;
-        private final ITree globalTree;
+        private final ITree<Integer, float[]> globalTree;
         private final int maxNumberOfTrees;
 
         public SamplerConverter(int dimensions, int capacity, Precision precision, int maxNumberOfTrees) {
@@ -113,9 +114,9 @@ public class V1JsonToV3StateConverter {
 
                 for (int i = 0; i < samples.length; i++) {
                     V1SerializedRandomCutForest.WeightedSamples sample = samples[i];
-                    double[] point = sample.getPoint();
-                    int index = pointStore.add(point, sample.getSequenceIndex());
-                    pointIndex[i] = (Integer) globalTree.addPoint(index, 0L);
+                    float[] point = toFloatArray(sample.getPoint());
+                    Integer index = pointStore.add(point, sample.getSequenceIndex());
+                    pointIndex[i] = globalTree.addPoint(index, 0L);
                     if (pointIndex[i] != index) {
                         pointStore.incrementRefCount(pointIndex[i]);
                         pointStore.decrementRefCount(index);

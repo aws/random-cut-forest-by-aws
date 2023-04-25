@@ -72,7 +72,6 @@ import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.tree.IBoundingBoxView;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
-import com.amazon.randomcutforest.util.ArrayUtils;
 import com.amazon.randomcutforest.util.ShingleBuilder;
 
 /**
@@ -239,8 +238,8 @@ public class RandomCutForest {
      */
     protected String executionMode;
 
-    protected IStateCoordinator<?, ?> stateCoordinator;
-    protected ComponentList<?, ?> components;
+    protected IStateCoordinator<?, float[]> stateCoordinator;
+    protected ComponentList<?, float[]> components;
 
     /**
      * This flag is initialized to false. It is set to true when all component
@@ -262,10 +261,10 @@ public class RandomCutForest {
     /**
      * An implementation of forest update algorithms.
      */
-    protected AbstractForestUpdateExecutor<?, ?> updateExecutor;
+    protected AbstractForestUpdateExecutor<?, float[]> updateExecutor;
 
-    public <P, Q> RandomCutForest(Builder<?> builder, IStateCoordinator<P, Q> stateCoordinator,
-            ComponentList<P, Q> components, Random random) {
+    public <P> RandomCutForest(Builder<?> builder, IStateCoordinator<P, float[]> stateCoordinator,
+            ComponentList<P, float[]> components, Random random) {
         this(builder, false);
 
         checkNotNull(stateCoordinator, "updateCoordinator must not be null");
@@ -284,9 +283,7 @@ public class RandomCutForest {
 
         PointStore tempStore = PointStore.builder().internalRotationEnabled(builder.internalRotationEnabled)
                 .capacity(pointStoreCapacity).initialSize(initialPointStoreSize)
-                .directLocationEnabled(builder.directLocationMapEnabled)
-                .internalShinglingEnabled(internalShinglingEnabled)
-                .dynamicResizingEnabled(builder.dynamicResizingEnabled).shingleSize(shingleSize).dimensions(dimensions)
+                .internalShinglingEnabled(internalShinglingEnabled).shingleSize(shingleSize).dimensions(dimensions)
                 .build();
 
         IStateCoordinator<Integer, float[]> stateCoordinator = new PointStoreCoordinator<>(tempStore);
@@ -308,8 +305,8 @@ public class RandomCutForest {
         initExecutors(stateCoordinator, components);
     }
 
-    protected <PointReference, Point> void initExecutors(IStateCoordinator<PointReference, Point> updateCoordinator,
-            ComponentList<PointReference, Point> components) {
+    protected <PointReference> void initExecutors(IStateCoordinator<PointReference, float[]> updateCoordinator,
+            ComponentList<PointReference, float[]> components) {
         if (parallelExecutionEnabled) {
             traversalExecutor = new ParallelForestTraversalExecutor(components, threadPoolSize);
             updateExecutor = new ParallelForestUpdateExecutor<>(updateCoordinator, components, threadPoolSize);
@@ -524,18 +521,9 @@ public class RandomCutForest {
      * @param point input point
      * @return a shingled copy or a clean copy
      */
-    public double[] transformToShingledPoint(double[] point) {
-        checkNotNull(point, "point must not be null");
-        return (internalShinglingEnabled && point.length == inputDimensions)
-                ? toDoubleArray(stateCoordinator.getStore().transformToShingledPoint(toFloatArray(point)))
-                : ArrayUtils.cleanCopy(point);
-    }
 
     public float[] transformToShingledPoint(float[] point) {
-        checkNotNull(point, "point must not be null");
-        return (internalShinglingEnabled && point.length == inputDimensions)
-                ? stateCoordinator.getStore().transformToShingledPoint(point)
-                : ArrayUtils.cleanCopy(point);
+        return stateCoordinator.getStore().transformToShingledPoint(point);
     }
 
     /**
@@ -611,13 +599,14 @@ public class RandomCutForest {
      * @param sequenceNum The timestamp of the corresponding point
      */
     public void update(double[] point, long sequenceNum) {
+        checkNotNull(point, "point must not be null");
         update(toFloatArray(point), sequenceNum);
     }
 
     public void update(float[] point, long sequenceNum) {
         checkNotNull(point, "point must not be null");
         checkArgument(!internalShinglingEnabled, "cannot be applied with internal shingling");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         updateExecutor.update(point, sequenceNum);
     }
 
@@ -671,7 +660,7 @@ public class RandomCutForest {
             Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
@@ -703,7 +692,7 @@ public class RandomCutForest {
     public <R, S> S traverseForest(float[] point, IVisitorFactory<R> visitorFactory, Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
@@ -739,7 +728,7 @@ public class RandomCutForest {
             ConvergingAccumulator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
@@ -773,7 +762,7 @@ public class RandomCutForest {
             BinaryOperator<R> accumulator, Function<R, S> finisher) {
 
         checkNotNull(point, "point must not be null");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(accumulator, "accumulator must not be null");
         checkNotNull(finisher, "finisher must not be null");
@@ -806,7 +795,7 @@ public class RandomCutForest {
             Collector<R, ?, S> collector) {
 
         checkNotNull(point, "point must not be null");
-        checkArgument(point.length == dimensions, String.format("point.length must equal %d", dimensions));
+        checkArgument(point.length == dimensions, () -> "point.length must equal to " + dimensions);
         checkNotNull(visitorFactory, "visitorFactory must not be null");
         checkNotNull(collector, "collector must not be null");
 
@@ -1218,7 +1207,7 @@ public class RandomCutForest {
 
     public float[] extrapolateFromCurrentTime(int horizon) {
         checkArgument(internalShinglingEnabled, "incorrect use");
-        IPointStore<?> store = stateCoordinator.getStore();
+        IPointStore<?, ?> store = stateCoordinator.getStore();
         return extrapolateBasic(lastShingledPoint(), horizon, inputDimensions, store.isInternalRotationEnabled(),
                 ((int) nextSequenceIndex()) % shingleSize);
     }

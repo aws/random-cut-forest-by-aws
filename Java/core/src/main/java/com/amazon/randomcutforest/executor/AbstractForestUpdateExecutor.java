@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.executor;
 
-import static com.amazon.randomcutforest.util.ArrayUtils.cleanCopy;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -60,20 +58,19 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      *
      * @param point The point used to update the forest.
      */
-    public void update(float[] point) {
+    public void update(Point point) {
         long internalSequenceNumber = updateCoordinator.getTotalUpdates();
-        IPointStore<?> store = updateCoordinator.getStore();
+        IPointStore<?, ?> store = updateCoordinator.getStore();
         if (store != null && store.isInternalShinglingEnabled()) {
             internalSequenceNumber -= store.getShingleSize() - 1;
         }
         update(point, internalSequenceNumber);
     }
 
-    public void update(float[] point, long sequenceNumber) {
-        float[] pointCopy = cleanCopy(point);
-        PointReference updateInput = updateCoordinator.initUpdate(pointCopy, sequenceNumber);
+    public void update(Point point, long sequenceNumber) {
+        PointReference updateInput = updateCoordinator.initUpdate(point, sequenceNumber);
         List<UpdateResult<PointReference>> results = (updateInput == null) ? Collections.emptyList()
-                : update(updateInput, sequenceNumber);
+                : updateInternal(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
 
@@ -87,6 +84,6 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      * @return a list of points that were deleted from the model as part of the
      *         update.
      */
-    protected abstract List<UpdateResult<PointReference>> update(PointReference updateInput, long currentIndex);
+    protected abstract List<UpdateResult<PointReference>> updateInternal(PointReference updateInput, long currentIndex);
 
 }

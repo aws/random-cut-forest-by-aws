@@ -300,7 +300,7 @@ public class RandomCutForestMapper
     }
 
     public RandomCutForest singlePrecisionForest(RandomCutForest.Builder<?> builder, RandomCutForestState state,
-            IPointStore<float[]> extPointStore, List<ITree<Integer, float[]>> extTrees,
+            IPointStore<Integer, float[]> extPointStore, List<ITree<Integer, float[]>> extTrees,
             List<IStreamSampler<Integer>> extSamplers) {
 
         checkArgument(builder != null, "builder cannot be null");
@@ -313,7 +313,7 @@ public class RandomCutForestMapper
         Random random = builder.getRandom();
         ComponentList<Integer, float[]> components = new ComponentList<>();
         CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
-        IPointStore<float[]> pointStore = (extPointStore == null)
+        IPointStore<Integer, float[]> pointStore = (extPointStore == null)
                 ? new PointStoreMapper().toModel(state.getPointStoreState())
                 : extPointStore;
         PointStoreCoordinator<float[]> coordinator = new PointStoreCoordinator<>(pointStore);

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.store;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.summarization.Summarizer.iterativeClustering;
@@ -31,9 +32,10 @@ import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.MultiCenter;
+import com.amazon.randomcutforest.util.ArrayUtils;
 import com.amazon.randomcutforest.util.Weighted;
 
-public abstract class PointStore implements IPointStore<float[]> {
+public abstract class PointStore implements IPointStore<Integer, float[]> {
 
     public static int INFEASIBLE_POINTSTORE_INDEX = -1;
 
@@ -58,11 +60,6 @@ public abstract class PointStore implements IPointStore<float[]> {
      * last seen timestamp for internal shingling
      */
     protected long nextSequenceIndex;
-    /**
-     * pointers to store locations, this decouples direct addressing and points can
-     * be moved internally
-     */
-    // protected char[] locationList;
 
     /**
      * refCount[i] counts of the number of trees that are currently using the point
@@ -201,7 +198,7 @@ public abstract class PointStore implements IPointStore<float[]> {
         return add(toFloatArray(point), sequenceNum);
     }
 
-    public int add(float[] point, long sequenceNum) {
+    public Integer add(float[] point, long sequenceNum) {
         checkArgument(internalShinglingEnabled || point.length == dimensions,
                 "point.length must be equal to dimensions");
         checkArgument(!internalShinglingEnabled || point.length == baseDimension,
@@ -487,9 +484,11 @@ public abstract class PointStore implements IPointStore<float[]> {
      */
     @Override
     public float[] transformToShingledPoint(float[] point) {
-        checkArgument(internalShinglingEnabled, " only allowed for internal shingling");
-        checkArgument(point.length == baseDimension, " incorrect length");
-        return constructShingleInPlace(copyShingle(), point, rotationEnabled);
+        checkNotNull(point, "point must not be null");
+        if (internalShinglingEnabled && point.length == baseDimension) {
+            return constructShingleInPlace(copyShingle(), point, rotationEnabled);
+        }
+        return ArrayUtils.cleanCopy(point);
     }
 
     private float[] copyShingle() {
@@ -785,44 +784,6 @@ public abstract class PointStore implements IPointStore<float[]> {
     protected abstract void checkFeasible(int index);
 
     /**
-     * Test whether the given point is equal to the point stored at the given index.
-     * This operation uses point-wise <code>==</code> to test for equality.
-     *
-     * @param index The index value of the point we are comparing to.
-     * @param point The point we are comparing for equality.
-     * @return true if the point stored at the index is equal to the given point,
-     *         false otherwise.
-     * @throws IllegalArgumentException if the index value is not valid.
-     * @throws IllegalArgumentException if the current reference count for this
-     *                                  index is nonpositive.
-     * @throws IllegalArgumentException if the length of the point does not match
-     *                                  the point store's dimensions.
-     */
-
-    @Override
-    public boolean pointEquals(int index, float[] point) {
-        checkArgument(point.length == dimensions, "point.length must be equal to dimensions");
-        checkArgument(index >= 0 && index < locationListLength(), " index not supported by store");
-        checkFeasible(index);
-        int address = getLocation(index);
-        if (!rotationEnabled) {
-            for (int j = 0; j < dimensions; j++) {
-                if (point[j] != store[j + address]) {
-                    return false;
-                }
-            }
-        } else {
-            for (int j = 0; j < dimensions; j++) {
-                if (point[(j + address) % dimensions] != store[j + address]) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * Get a copy of the point at the given index.
      *
      * @param index An index value corresponding to a storage location in this point
@@ -833,7 +794,7 @@ public abstract class PointStore implements IPointStore<float[]> {
      *                                  index is nonpositive.
      */
     @Override
-    public float[] get(int index) {
+    public float[] getNumericVector(int index) {
         checkArgument(index >= 0 && index < locationListLength(), " index not supported by store");
         int address = getLocation(index);
         checkFeasible(index);
@@ -849,16 +810,8 @@ public abstract class PointStore implements IPointStore<float[]> {
         }
     }
 
-    public float[] getScaledPoint(int index, double factor) {
-        float[] answer = get(index);
-        for (int i = 0; i < dimensions; i++) {
-            answer[i] *= factor;
-        }
-        return answer;
-    }
-
     public String toString(int index) {
-        return Arrays.toString(get(index));
+        return Arrays.toString(getNumericVector(index));
     }
 
     void copyTo(int dest, int source, int length) {
@@ -905,8 +858,8 @@ public abstract class PointStore implements IPointStore<float[]> {
         }
         BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
                 shrinkage, numberOfRepresentatives);
-        return iterativeClustering(maxAllowed, 4 * maxAllowed, 1, refs, this::get, distance, clusterInitializer, 42,
-                false, true, separationRatio, previous);
+        return iterativeClustering(maxAllowed, 4 * maxAllowed, 1, refs, this::getNumericVector, distance,
+                clusterInitializer, 42, false, true, separationRatio, previous);
     }
 
 }

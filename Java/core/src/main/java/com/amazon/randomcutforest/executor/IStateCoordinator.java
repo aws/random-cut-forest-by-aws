@@ -38,11 +38,11 @@ public interface IStateCoordinator<PointReference, Point> {
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    PointReference initUpdate(float[] point, long sequenceNumber);
+    PointReference initUpdate(Point point, long sequenceNumber);
 
     /**
      * Complete the update. This method is called by IStateCoordinator after all
-     * IUpdabale instances have completed their individual updates. This method
+     * IUpdatable instances have completed their individual updates. This method
      * receives the list of points that were deleted IUpdatable instances for
      * further processing if needed.
      *
@@ -56,7 +56,7 @@ public interface IStateCoordinator<PointReference, Point> {
 
     void setTotalUpdates(long totalUpdates);
 
-    default IPointStore<Point> getStore() {
+    default IPointStore<PointReference, Point> getStore() {
         return null;
     }
 }

@@ -69,9 +69,9 @@ public class HyperTree extends RandomCutTree {
         if (pointList.size() == 0)
             return Null;
 
-        BoundingBox thisBox = new BoundingBox(pointStoreView.get(pointList.get(0)));
+        BoundingBox thisBox = new BoundingBox(pointStoreView.getNumericVector(pointList.get(0)));
         for (int i = 1; i < pointList.size(); i++) {
-            thisBox = (BoundingBox) thisBox.getMergedBox(pointStoreView.get(pointList.get(i)));
+            thisBox = (BoundingBox) thisBox.getMergedBox(pointStoreView.getNumericVector(pointList.get(i)));
         }
         if (thisBox.getRangeSum() <= 0) {
             return pointList.get(0) + nodeStore.getCapacity() + 1;
@@ -86,7 +86,8 @@ public class HyperTree extends RandomCutTree {
         List<Integer> rightList = new ArrayList<>();
 
         for (int j = 0; j < pointList.size(); j++) {
-            if (nodeStore.leftOf((float) cut.getValue(), cut.getDimension(), pointStoreView.get(pointList.get(j)))) {
+            if (nodeStore.leftOf((float) cut.getValue(), cut.getDimension(),
+                    pointStoreView.getNumericVector(pointList.get(j)))) {
                 leftList.add(pointList.get(j));
             } else
                 rightList.add(pointList.get(j));

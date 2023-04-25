@@ -83,7 +83,7 @@ public class ForestUpdateExecutorTest {
 
     @ParameterizedTest
     @ArgumentsSource(TestExecutorProvider.class)
-    public void testUpdate(AbstractForestUpdateExecutor<Integer, ?> executor) {
+    public void testUpdate(AbstractForestUpdateExecutor<Integer, float[]> executor) {
         int addAndDelete = 4;
         int addOnly = 4;
 

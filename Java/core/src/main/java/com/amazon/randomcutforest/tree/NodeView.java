@@ -89,7 +89,7 @@ public class NodeView implements INodeView {
 
     protected void setCurrentNode(int newNode, int index, boolean setBox) {
         currentNodeOffset = newNode;
-        leafPoint = tree.pointStoreView.get(index);
+        leafPoint = tree.pointStoreView.getNumericVector(index);
         if (setBox && tree.boundingBoxCacheFraction < SWITCH_FRACTION) {
             currentBox = new BoundingBox(leafPoint, leafPoint);
         }
