@@ -64,6 +64,7 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
         state.setIgnoreSimilar(model.getPredictorCorrector().isIgnoreSimilar());
         state.setIgnoreSimilarFactor(model.getPredictorCorrector().getIgnoreSimilarFactor());
         state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
+        state.setLastScore(model.getPredictorCorrector().getLastScore());
         state.setForestMode(model.getForestMode().name());
         state.setTransformMethod(model.getTransformMethod().name());
 
@@ -115,6 +116,7 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
         predictorCorrector.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
         predictorCorrector.setTriggerFactor(state.getTriggerFactor());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
+        predictorCorrector.setLastScore(state.getLastScore());
 
         ErrorHandlerMapper errorHandlerMapper = new ErrorHandlerMapper();
         ErrorHandler errorHandler = errorHandlerMapper.toModel(state.getErrorHandler());

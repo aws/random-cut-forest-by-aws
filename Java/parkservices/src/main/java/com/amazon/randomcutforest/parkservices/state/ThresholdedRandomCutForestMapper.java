@@ -71,6 +71,7 @@ public class ThresholdedRandomCutForestMapper
         predictorCorrector.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
         predictorCorrector.setTriggerFactor(state.getTriggerFactor());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
+        predictorCorrector.setLastScore(state.getLastScore());
 
         return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
                 descriptor);
@@ -108,6 +109,7 @@ public class ThresholdedRandomCutForestMapper
         state.setLastAnomalyPoint(descriptor.getRCFPoint());
         state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
         state.setLastRelativeIndex(descriptor.getRelativeIndex());
+        state.setLastScore(model.getLastScore());
 
         return state;
     }

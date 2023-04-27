@@ -321,7 +321,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         double timeFactor = tempTimeDeviation.getMean();
 
         prepareInitialInput();
-        double[] factors = getFactors();
+        Deviation[] deviations = getDeviations();
         Arrays.fill(previousTimeStamps, initialTimeStamps[0]);
         numberOfImputed = shingleSize;
         for (int i = 0; i < valuesSeen; i++) {
@@ -337,7 +337,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                     for (int j = 0; j < numberToImpute; j++) {
                         double[] result = basicImpute(step * (j + 1), previous, initialValues[i], DEFAULT_INITIAL);
                         double[] scaledInput = transformer.transformValues(internalTimeStamp, result,
-                                getShingledInput(shingleSize - 1), factors, clipFactor);
+                                getShingledInput(shingleSize - 1), deviations, clipFactor);
                         updateShingle(result, scaledInput);
                         updateTimestamps(initialTimeStamps[i]);
                         numberOfImputed = numberOfImputed + 1;
@@ -348,7 +348,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 }
             }
             double[] scaledInput = transformer.transformValues(internalTimeStamp, initialValues[i],
-                    getShingledInput(shingleSize - 1), factors, clipFactor);
+                    getShingledInput(shingleSize - 1), deviations, clipFactor);
             updateState(initialValues[i], scaledInput, initialTimeStamps[i], lastInputTimeStamp);
             if (updateAllowed()) {
                 forest.update(lastShingledPoint);

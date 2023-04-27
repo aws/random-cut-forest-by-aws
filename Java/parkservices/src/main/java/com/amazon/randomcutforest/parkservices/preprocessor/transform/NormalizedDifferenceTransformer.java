@@ -31,20 +31,11 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
         super(weights, deviation);
     }
 
-    /**
-     * note that weight == 0, would produce 0 values in the inversion
-     *
-     * @param values        what the RCF would like to observe
-     * @param previousInput what was the real (or previously imputed) observation
-     * @return the observations that would (approximately) transform to values[]
-     */
     @Override
     public double[] invert(double[] values, double[] previousInput) {
-        double[] output = new double[values.length];
+        double[] output = super.invert(values, previousInput);
         for (int i = 0; i < values.length; i++) {
-            double newValue = previousInput[i] + deviations[i + values.length].getMean()
-                    + 2 * values[i] * (deviations[i + values.length].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-            output[i] = (weights[i] == 0) ? 0 : newValue / weights[i];
+            output[i] += previousInput[i];
         }
         return output;
     }
@@ -69,12 +60,10 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
 
         for (int i = 0; i < horizon; i++) {
             for (int j = 0; j < inputLength; j++) {
-                double factor = 2 * (deviations[j + inputLength].getDeviation() + DEFAULT_NORMALIZATION_PRECISION);
-                ranges.scale(i * baseDimension + j, (float) factor);
-                double shift = last[j] + deviations[j + inputLength].getMean();
+                double weight = (weights[j] == 0) ? 0 : getScale(j, deviations) / weights[j];
+                ranges.scale(i * baseDimension + j, (float) weight);
+                double shift = last[j] + getShift(j, deviations);
                 ranges.shift(i * baseDimension + j, (float) shift);
-                float weight = (weights[j] == 0) ? 0f : 1.0f / (float) weights[j];
-                ranges.scale(i * baseDimension + j, weight);
                 last[j] = ranges.values[i * baseDimension + j];
             }
         }
@@ -88,21 +77,29 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
      *                          ensure smoothness at 0
      * @param inputPoint        the actual input
      * @param previousInput     the previous input
-     * @param factors           an array containing normalization factors, used only
-     *                          for the initial segment; otherwise it is null
+     * @param initials          an array containing normalization statistics, used
+     *                          only for the initial segment; otherwise it is null
      * @param clipFactor        the factor used in clipping the normalized values
      * @return the transformed values to be shingled and used in RCF
      */
     @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
-            double[] factors, double clipFactor) {
+            Deviation[] initials, double clipFactor) {
         double[] input = new double[inputPoint.length];
         for (int i = 0; i < input.length; i++) {
-            double value = (internalTimeStamp == 0) ? 0 : inputPoint[i] - previousInput[i];
-            input[i] = weights[i]
-                    * normalize(value, deviations[i + input.length], (factors == null) ? 0 : factors[i], clipFactor);
+            input[i] = (internalTimeStamp == 0) ? 0 : inputPoint[i] - previousInput[i];
         }
-        return input;
+        return super.transformValues(internalTimeStamp, input, null, initials, clipFactor);
+    }
+
+    @Override
+    protected double getShift(int i, Deviation[] devs) {
+        return devs[i + weights.length].getMean();
+    }
+
+    @Override
+    protected double getScale(int i, Deviation[] devs) {
+        return (devs[i + weights.length].getDeviation() + 1.0);
     }
 
 }

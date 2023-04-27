@@ -31,19 +31,11 @@ public class DifferenceTransformer extends WeightedTransformer {
         super(weights, deviation);
     }
 
-    /**
-     * note that weight == 0, would produce 0 values in the inversion
-     *
-     * @param values        what the RCF would like to observe
-     * @param previousInput what was the real (or previously imputed) observation
-     * @return the observations that would (approximately) transform to values[]
-     */
     @Override
     public double[] invert(double[] values, double[] previousInput) {
-        double[] output = new double[values.length];
+        double[] output = super.invert(values, previousInput);
         for (int i = 0; i < values.length; i++) {
-            double newValue = previousInput[i] + values[i];
-            output[i] = (weights[i] == 0) ? 0 : newValue / weights[i];
+            output[i] += previousInput[i];
         }
         return output;
     }
@@ -65,35 +57,23 @@ public class DifferenceTransformer extends WeightedTransformer {
         double[] last = Arrays.copyOf(previousInput, previousInput.length);
         for (int i = 0; i < horizon; i++) {
             for (int j = 0; j < inputLength; j++) {
-                ranges.shift(i * baseDimension + j, (float) last[j]);
                 float weight = (weights[j] == 0) ? 0f : 1.0f / (float) weights[j];
                 ranges.scale(i * baseDimension + j, weight);
+                ranges.shift(i * baseDimension + j, (float) last[j]);
                 last[j] = ranges.values[j];
             }
         }
     }
 
-    /**
-     * a transformation that differences the multivariate values
-     * 
-     * @param internalTimeStamp timestamp corresponding to this operation; used to
-     *                          ensure smoothness at 0
-     * @param inputPoint        the actual input
-     * @param previousInput     the previous input
-     * @param factors           an array containing normalization factors, used only
-     *                          for the initial segment; otherwise it is null
-     * @param clipFactor        the factor used in clipping the normalized values
-     * @return the transformed values to be shingled and used in RCF
-     */
     @Override
     public double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput,
-            double[] factors, double clipFactor) {
+            Deviation[] initials, double clipFactor) {
 
         double[] input = new double[inputPoint.length];
         for (int i = 0; i < input.length; i++) {
-            input[i] = (internalTimeStamp == 0) ? 0 : weights[i] * (inputPoint[i] - previousInput[i]);
+            input[i] = (internalTimeStamp == 0) ? 0 : (inputPoint[i] - previousInput[i]);
         }
-        return input;
+        return super.transformValues(internalTimeStamp, input, null, initials, clipFactor);
     }
 
 }

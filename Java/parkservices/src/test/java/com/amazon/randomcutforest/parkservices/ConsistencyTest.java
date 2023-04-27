@@ -284,7 +284,8 @@ public class ConsistencyTest {
     }
 
     @ParameterizedTest
-    @EnumSource(TransformMethod.class)
+    @EnumSource(value = TransformMethod.class, names = { "WEIGHTED", "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE",
+            "SUBTRACT_MA" })
     public void ImputeTest(TransformMethod transformMethod) {
 
         int sampleSize = 256;

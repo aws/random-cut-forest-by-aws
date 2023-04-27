@@ -162,10 +162,10 @@ public class ThresholdedRandomCutForestMapperTest {
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).shingleSize(shingleSize)
-                .anomalyRate(0.01).build();
+                .internalShinglingEnabled(false).anomalyRate(0.01).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).shingleSize(shingleSize)
-                .anomalyRate(0.01).build();
+                .internalShinglingEnabled(false).anomalyRate(0.01).build();
         RandomCutForest forest = builder.build();
 
         // thresholds should not affect scores
@@ -355,7 +355,8 @@ public class ThresholdedRandomCutForestMapperTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = TransformMethod.class)
+    @EnumSource(value = TransformMethod.class, names = { "WEIGHTED", "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE",
+            "SUBTRACT_MA" })
     public void testRoundTripAugmentedInitial(TransformMethod method) {
         int sampleSize = 256;
         int baseDimensions = 2;
@@ -374,6 +375,49 @@ public class ThresholdedRandomCutForestMapperTest {
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
                 .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0, 2.0 })
                 .build();
+
+        first.setLowerThreshold(value);
+        second.setLowerThreshold(value);
+
+        int count = 0;
+
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(sampleSize, 50, 100, 5, seed,
+                baseDimensions);
+
+        for (double[] point : dataWithKeys.data) {
+
+            AnomalyDescriptor firstResult = first.process(point, 0L);
+            AnomalyDescriptor secondResult = second.process(point, 0L);
+
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
+
+            // serialize + deserialize
+            ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+            second = mapper.toModel(mapper.toState(second));
+        }
+
+    }
+
+    @Test
+    public void testRoundTripAugmentedInitialNone() {
+        int sampleSize = 256;
+        int baseDimensions = 2;
+        int shingleSize = 8;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+        double value = 1.0;// 0.25 * new Random().nextDouble();
+
+        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).adjustThreshold(true)
+                .weights(new double[] { 1.0, 1.0 }).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).adjustThreshold(true)
+                .weights(new double[] { 1.0, 1.0 }).build();
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
@@ -457,7 +501,8 @@ public class ThresholdedRandomCutForestMapperTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = TransformMethod.class)
+    @EnumSource(value = TransformMethod.class, names = { "WEIGHTED", "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE",
+            "SUBTRACT_MA" })
     public void testRoundTripTimeAugmentedNormalize(TransformMethod method) {
         int sampleSize = 256;
         int baseDimensions = 2;
@@ -474,6 +519,56 @@ public class ThresholdedRandomCutForestMapperTest {
                 .forestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
                 .transformMethod(method).shingleSize(shingleSize).anomalyRate(0.01).weights(new double[] { 1.0, 2.0 })
                 .build();
+
+        Random r = new Random();
+        long count = 0;
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
+                seed, baseDimensions);
+
+        for (double[] point : dataWithKeys.data) {
+            long stamp = 1000 * count + r.nextInt(10) - 5;
+            AnomalyDescriptor firstResult = first.process(point, stamp);
+            AnomalyDescriptor secondResult = second.process(point, stamp);
+            ++count;
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+        }
+
+        // serialize + deserialize
+        ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+        ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+
+        MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(100, 50, 100, 5, seed,
+                baseDimensions);
+
+        // update re-instantiated forest
+        for (double[] point : testData.data) {
+            long stamp = 100 * count + r.nextInt(10) - 5;
+            AnomalyDescriptor firstResult = first.process(point, stamp);
+            AnomalyDescriptor secondResult = second.process(point, stamp);
+            AnomalyDescriptor thirdResult = third.process(point, stamp);
+            assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
+            assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
+            ++count;
+        }
+    }
+
+    @Test
+    public void testRoundTripTimeAugmentedNone() {
+        int sampleSize = 256;
+        int baseDimensions = 2;
+        int shingleSize = 4;
+        int dimensions = baseDimensions * shingleSize;
+        long seed = new Random().nextLong();
+
+        ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.TIME_AUGMENTED)
+                .normalizeTime(true).transformMethod(TransformMethod.NONE).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).weights(new double[] { 1.0, 1.0 }).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
+                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                .forestMode(ForestMode.TIME_AUGMENTED).normalizeTime(true).internalShinglingEnabled(true)
+                .transformMethod(TransformMethod.NONE).shingleSize(shingleSize).anomalyRate(0.01)
+                .weights(new double[] { 1.0, 1.0 }).build();
 
         Random r = new Random();
         long count = 0;

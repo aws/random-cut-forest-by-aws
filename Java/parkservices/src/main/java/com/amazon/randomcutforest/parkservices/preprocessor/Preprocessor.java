@@ -21,6 +21,7 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -38,7 +39,6 @@ import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.DifferenceTransformer;
-import com.amazon.randomcutforest.parkservices.preprocessor.transform.EmptyTransformer;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.ITransformer;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.NormalizedDifferenceTransformer;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.NormalizedTransformer;
@@ -68,7 +68,7 @@ public class Preprocessor implements IPreprocessor {
 
     // in case of normalization the deviations beyond 10 Sigma are likely measure 0
     // events
-    public static int DEFAULT_CLIP_NORMALIZATION = 10;
+    public static int DEFAULT_CLIP_NORMALIZATION = 100;
 
     // normalization is not turned on by default
     public static boolean DEFAULT_NORMALIZATION = false;
@@ -190,7 +190,7 @@ public class Preprocessor implements IPreprocessor {
         this.stopNormalization = builder.stopNormalization;
         this.normalizeTime = builder.normalizeTime;
         double[] weights = new double[inputLength];
-        Arrays.fill(weights, 1);
+        Arrays.fill(weights, 1.0);
         if (builder.weights != null) {
             if (builder.weights.length == inputLength) {
                 System.arraycopy(builder.weights, 0, weights, 0, inputLength);
@@ -211,18 +211,26 @@ public class Preprocessor implements IPreprocessor {
         timeDecay = builder.timeDecay;
         dataQuality = builder.dataQuality.orElse(new Deviation(timeDecay));
 
-        Deviation[] deviationList = null;
+        Deviation[] deviationList = new Deviation[NUMBER_OF_STATS * inputLength];
         if (builder.deviations.isPresent()) {
-            deviationList = builder.deviations.get();
-        } else if (transformMethod != TransformMethod.NONE) {
-            deviationList = new Deviation[2 * inputLength];
-            for (int i = 0; i < 2 * inputLength; i++) {
+            Deviation[] list = builder.deviations.get();
+            for (int i = 0; i < list.length; i++) {
+                deviationList[i] = list[i].copy();
+            }
+            for (int i = list.length; i < NUMBER_OF_STATS * inputLength; i++) {
+                deviationList[i] = new Deviation(timeDecay);
+            }
+        } else {
+            for (int i = 0; i < NUMBER_OF_STATS * inputLength; i++) {
                 deviationList[i] = new Deviation(timeDecay);
             }
         }
 
         if (transformMethod == TransformMethod.NONE) {
-            transformer = new EmptyTransformer();
+            for (int i = 0; i < inputLength; i++) {
+                checkArgument(weights[i] == 1.0, "incorrect weights");
+            }
+            transformer = new WeightedTransformer(weights, deviationList);
         } else if (transformMethod == TransformMethod.WEIGHTED) {
             transformer = new WeightedTransformer(weights, deviationList);
         } else if (transformMethod == TransformMethod.DIFFERENCE) {
@@ -335,6 +343,8 @@ public class Preprocessor implements IPreprocessor {
         }
         description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp); // no impute
+        description.setScale(transformer.getScale());
+        description.setShift(transformer.getShift());
         description.setNumberOfNewImputes(0);
         return description;
     }
@@ -405,11 +415,11 @@ public class Preprocessor implements IPreprocessor {
         int index = result.getRelativeIndex();
 
         if (newPoint != null) {
-            if (index < 0 && result.isStartOfAnomaly()) {
+            if (index < 0) {
                 reference = getShingledInput(shingleSize + index);
-                result.setPastValues(reference);
                 result.setPastTimeStamp(getTimeStamp(shingleSize - 1 + index));
             }
+            result.setPastValues(reference);
             if (mode == ForestMode.TIME_AUGMENTED) {
                 int endPosition = (shingleSize - 1 + index + 1) * dimension / shingleSize;
                 double timeGap = (newPoint[endPosition - 1] - point[endPosition - 1]);
@@ -602,16 +612,17 @@ public class Preprocessor implements IPreprocessor {
     /**
      * given an input produces a scaled transform to be used in the forest
      *
-     * @param input     the actual input seen
-     * @param timestamp timestamp of said input
+     * @param input             the actual input seen
+     * @param timestamp         timestamp of said input
+     * @param defaults          default statistics, potentially used in
+     *                          initialization
+     * @param defaultTimeFactor default time statistic
      * @return a scaled/transformed input which can be used in the forest
      */
-    protected double[] getScaledInput(double[] input, long timestamp, double[] defaultFactors,
-            double defaultTimeFactor) {
+    protected double[] getScaledInput(double[] input, long timestamp, Deviation[] defaults, double defaultTimeFactor) {
         double[] previous = (input.length == lastShingledInput.length) ? lastShingledInput
                 : getShingledInput(shingleSize - 1);
-        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, previous, defaultFactors,
-                clipFactor);
+        double[] scaledInput = transformer.transformValues(internalTimeStamp, input, previous, defaults, clipFactor);
         if (mode == ForestMode.TIME_AUGMENTED) {
             scaledInput = augmentTime(scaledInput, timestamp, defaultTimeFactor);
         }

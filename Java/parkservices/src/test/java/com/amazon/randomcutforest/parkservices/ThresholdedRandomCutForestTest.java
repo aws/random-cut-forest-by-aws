@@ -26,7 +26,6 @@ import static com.amazon.randomcutforest.config.TransformMethod.NORMALIZE_DIFFER
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -152,7 +151,7 @@ public class ThresholdedRandomCutForestTest {
                 .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STANDARD).shingleSize(shingleSize)
                 .anomalyRate(0.01).transformMethod(NORMALIZE).startNormalization(111).stopNormalization(111).build();
 
-        assertFalse(forest.getForest().isInternalShinglingEnabled()); // left to false
+        assertTrue(forest.getForest().isInternalShinglingEnabled()); // left to false
         assertEquals(((Preprocessor) forest.getPreprocessor()).getInitialValues().length, 111);
         assertEquals(((Preprocessor) forest.getPreprocessor()).getInitialTimeStamps().length, 111);
         assertEquals(((Preprocessor) forest.getPreprocessor()).getStopNormalization(), 111);
