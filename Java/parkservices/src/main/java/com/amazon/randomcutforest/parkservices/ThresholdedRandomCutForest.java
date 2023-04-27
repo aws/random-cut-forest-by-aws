@@ -110,7 +110,7 @@ public class ThresholdedRandomCutForest {
         forest = builder.buildForest();
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
-        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(forest.getTimeDecay()));
+        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
 
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder

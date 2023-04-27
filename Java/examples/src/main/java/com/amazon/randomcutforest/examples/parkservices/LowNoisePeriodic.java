@@ -15,14 +15,14 @@
 
 package com.amazon.randomcutforest.examples.parkservices;
 
+import java.util.Arrays;
+import java.util.Random;
+
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
-
-import java.util.Arrays;
-import java.util.Random;
 
 public class LowNoisePeriodic implements Example {
 
@@ -85,7 +85,11 @@ public class LowNoisePeriodic implements Example {
                 // range say [0.1,10]
                 // weights are not recommended for 1D, but retained here for illustration
                 // as well as a mechanism to verify that results do not vary significantly
-                .weights(new double[] { 1.0 }).build();
+                .weights(new double[] { 1.0 })
+                // change to transformDecay( 1.0/(desired interval length)) to perform
+                // a moving average smoothing the default is 1.0/sampleSize
+                // .transformDecay(1.0/sampleSize)
+                .build();
 
         // the following ignore anomalies that are shifted up or down by a fixed amount
         // from the internal prediction of RCF. Default is 0.001
