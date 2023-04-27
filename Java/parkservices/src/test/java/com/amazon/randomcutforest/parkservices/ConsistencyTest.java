@@ -129,7 +129,7 @@ public class ConsistencyTest {
         int baseDimensions = 1;
         int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
-        long seed = 5704503425095422236L;new Random().nextLong();
+        long seed = new Random().nextLong();
         System.out.println(seed);
 
         int numTrials = 1; // test is exact equality, reducing the number of trials
@@ -193,7 +193,7 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
                 AnomalyDescriptor fourthResult = fourth.process(dataWithKeys.data[count], 0L);
                 ++count;
-                
+
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), fourthResult.getRCFScore(), 1e-10);
