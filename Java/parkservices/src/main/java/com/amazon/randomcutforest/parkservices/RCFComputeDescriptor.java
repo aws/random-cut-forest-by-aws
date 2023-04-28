@@ -90,6 +90,10 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
      */
     int relativeIndex;
 
+    double[] scale;
+
+    double[] shift;
+
     // expected RCFPoint for the current point
     double[] expectedRCFPoint;
 

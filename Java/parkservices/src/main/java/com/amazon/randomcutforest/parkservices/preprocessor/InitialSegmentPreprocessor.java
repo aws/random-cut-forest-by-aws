@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+
 import java.util.Arrays;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
@@ -73,31 +74,28 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         ++valuesSeen;
     }
 
-    // computes the normalization factors
-    protected double[] getFactors() {
-        double[] factors = null;
+    // computes the normalization statistics
+    protected Deviation[] getDeviations() {
         if (requireInitialSegment(false, transformMethod)) {
-            Deviation[] tempList = new Deviation[inputLength];
-            for (int j = 0; j < inputLength; j++) {
+            Deviation[] tempList = new Deviation[NUMBER_OF_STATS * inputLength];
+            for (int j = 0; j < NUMBER_OF_STATS * inputLength; j++) {
                 tempList[j] = new Deviation(timeDecay);
             }
             for (int i = 0; i < initialValues.length; i++) {
                 for (int j = 0; j < inputLength; j++) {
-                    double value;
-                    if (transformMethod == TransformMethod.NORMALIZE) {
-                        value = initialValues[i][j];
-                    } else {
-                        value = (i == 0) ? 0 : initialValues[i][j] - initialValues[i - 1][j];
-                    }
-                    tempList[j].update(value);
+                    tempList[j].update(initialValues[i][j]);
+                    double value = (i == 0) ? 0 : initialValues[i][j] - initialValues[i - 1][j];
+                    tempList[j + inputLength].update(value);
                 }
             }
-            factors = new double[inputLength];
-            for (int j = 0; j < inputLength; j++) {
-                factors[j] = tempList[j].getDeviation();
+            for (int i = 0; i < initialValues.length; i++) {
+                for (int j = 0; j < inputLength; j++) {
+                    tempList[j + 2 * inputLength].update(initialValues[i][j] - tempList[j].getMean());
+                }
             }
+            return tempList;
         }
-        return factors;
+        return null;
     }
 
     /**
@@ -110,9 +108,9 @@ public class InitialSegmentPreprocessor extends Preprocessor {
             tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
         }
         double timeFactor = tempTimeDeviation.getDeviation();
-        double[] factors = getFactors();
+        Deviation[] deviations = getDeviations();
         for (int i = 0; i < valuesSeen; i++) {
-            double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], factors, timeFactor);
+            double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], deviations, timeFactor);
             updateState(initialValues[i], scaledInput, initialTimeStamps[i], previousTimeStamps[shingleSize - 1]);
             dataQuality.update(1.0);
             forest.update(scaledInput);

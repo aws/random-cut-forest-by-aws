@@ -66,11 +66,9 @@ public class ThresholdedRandomCutForestMapper
         descriptor
                 .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
 
-        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder);
-        predictorCorrector.setIgnoreSimilar(state.isIgnoreSimilar());
-        predictorCorrector.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
-        predictorCorrector.setTriggerFactor(state.getTriggerFactor());
+        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
+        predictorCorrector.setLastScore(state.getLastScore());
 
         return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
                 descriptor);
@@ -94,9 +92,6 @@ public class ThresholdedRandomCutForestMapper
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
         state.setPreprocessorStates(
                 new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
-        state.setTriggerFactor(model.getPredictorCorrector().getTriggerFactor());
-        state.setIgnoreSimilar(model.getPredictorCorrector().isIgnoreSimilar());
-        state.setIgnoreSimilarFactor(model.getPredictorCorrector().getIgnoreSimilarFactor());
         state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
         state.setForestMode(model.getForestMode().name());
         state.setTransformMethod(model.getTransformMethod().name());
@@ -108,6 +103,7 @@ public class ThresholdedRandomCutForestMapper
         state.setLastAnomalyPoint(descriptor.getRCFPoint());
         state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
         state.setLastRelativeIndex(descriptor.getRelativeIndex());
+        state.setLastScore(model.getLastScore());
 
         return state;
     }

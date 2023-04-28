@@ -28,10 +28,10 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_HORIZON_ONED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_THRESHOLD_PERSISTENCE;
 
 import java.util.Arrays;
 import java.util.List;
@@ -110,7 +110,7 @@ public class ThresholdedRandomCutForest {
         forest = builder.buildForest();
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
-        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(forest.getTimeDecay()));
+        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
 
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder
@@ -120,30 +120,30 @@ public class ThresholdedRandomCutForest {
 
         preprocessor = preprocessorBuilder.build();
         predictorCorrector = new PredictorCorrector(
-                new BasicThresholder(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold));
+                new BasicThresholder(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold),
+                preprocessor.getInputLength());
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
         // multiple (not extremely well correlated) dimensions typically reduce scores
         // normalization reduces scores
+
         if (builder.dimensions == builder.shingleSize
                 || (forestMode == ForestMode.TIME_AUGMENTED) && (builder.dimensions == 2 * builder.shingleSize)) {
             if (builder.transformMethod != TransformMethod.NORMALIZE) {
                 predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
             } else {
-                predictorCorrector.setLowerThreshold(
-                        builder.lowerThreshold.orElse(BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED));
+                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
             }
-            predictorCorrector.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON_ONED));
         } else {
             if (builder.transformMethod != TransformMethod.NORMALIZE) {
                 predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
             } else {
-                predictorCorrector.setLowerThreshold(
-                        builder.lowerThreshold.orElse(BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED));
+                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
             }
-            predictorCorrector.setHorizon(builder.horizon.orElse(DEFAULT_HORIZON));
         }
+
+        predictorCorrector.setThresholdPersistence(builder.thresholdPersistence.orElse(DEFAULT_THRESHOLD_PERSISTENCE));
 
     }
 
@@ -161,12 +161,12 @@ public class ThresholdedRandomCutForest {
     // for conversion from other thresholding models
     public ThresholdedRandomCutForest(RandomCutForest forest, double futureAnomalyRate, List<Double> values) {
         this.forest = forest;
-        this.predictorCorrector = new PredictorCorrector(new BasicThresholder(values, futureAnomalyRate));
         int dimensions = forest.getDimensions();
         int inputLength = (forest.isInternalShinglingEnabled()) ? dimensions / forest.getShingleSize()
                 : forest.getDimensions();
         Preprocessor preprocessor = new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE)
                 .dimensions(dimensions).shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
+        this.predictorCorrector = new PredictorCorrector(new BasicThresholder(values, futureAnomalyRate), inputLength);
         preprocessor.setValuesSeen((int) forest.getTotalUpdates());
         preprocessor.getDataQuality().update(1.0);
         this.preprocessor = preprocessor;
@@ -339,16 +339,42 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setZfactor(factor);
     }
 
+    public double getLastScore() {
+        return predictorCorrector.getLastScore();
+    }
+
     public void setLowerThreshold(double lower) {
         predictorCorrector.setLowerThreshold(lower);
     }
 
+    @Deprecated
     public void setHorizon(double horizon) {
-        predictorCorrector.setHorizon(horizon);
+        predictorCorrector.setThresholdPersistence(horizon);
     }
 
+    public void setThresholdPersistence(double persistence) {
+        predictorCorrector.setThresholdPersistence(persistence);
+    }
+
+    @Deprecated
     public void setInitialThreshold(double initial) {
         predictorCorrector.setInitialThreshold(initial);
+    }
+
+    public void setIgnoreNearExpectedFromAbove(double[] shift) {
+        checkArgument(shift.length == getPreprocessor().getInputLength(), " has to be same length as input");
+        for (double element : shift) {
+            checkArgument(element >= 0, "has to be non-negative");
+        }
+        predictorCorrector.setIgnoreNearExpectedFromAbove(shift);
+    }
+
+    public void setIgnoreNearExpectedFromBelow(double[] shift) {
+        checkArgument(shift.length == getPreprocessor().getInputLength(), " has to be same length as input");
+        for (double element : shift) {
+            checkArgument(element >= 0, "has to be non-negative");
+        }
+        predictorCorrector.setIgnoreNearExpectedFromBelow(shift);
     }
 
     /**
@@ -370,7 +396,7 @@ public class ThresholdedRandomCutForest {
         protected Optional<Integer> stopNormalization = Optional.empty();
         protected int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         protected Optional<Double> timeDecay = Optional.empty();
-        protected Optional<Double> horizon = Optional.empty();
+        protected Optional<Double> thresholdPersistence = Optional.empty();
         protected Optional<Double> lowerThreshold = Optional.empty();
         protected Optional<Double> weightTime = Optional.empty();
         protected Optional<Long> randomSeed = Optional.empty();
@@ -388,7 +414,6 @@ public class ThresholdedRandomCutForest {
         protected ImputationMethod imputationMethod = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
         protected boolean normalizeTime = false;
-        protected boolean normalizeValues = false;
         protected double[] fillValues = null;
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
@@ -414,7 +439,7 @@ public class ThresholdedRandomCutForest {
                         " input cannot be shingled (even if internal representation is different) "));
             } else {
                 if (!internalShinglingEnabled.isPresent()) {
-                    internalShinglingEnabled = Optional.of(false);
+                    internalShinglingEnabled = Optional.of(true);
                 }
                 if (useImputedFraction.isPresent()) {
                     throw new IllegalArgumentException(" imputation infeasible");
@@ -582,6 +607,11 @@ public class ThresholdedRandomCutForest {
 
         public T forestMode(ForestMode forestMode) {
             this.forestMode = forestMode;
+            return (T) this;
+        }
+
+        public T thresholdPersistence(double persistence) {
+            this.thresholdPersistence = Optional.of(persistence);
             return (T) this;
         }
 

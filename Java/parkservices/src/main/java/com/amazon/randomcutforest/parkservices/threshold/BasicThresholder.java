@@ -29,27 +29,18 @@ import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 @Setter
 public class BasicThresholder {
 
-    public static double DEFAULT_ELASTICITY = 0.01;
-    public static double DEFAULT_HORIZON = 0.5;
-    public static double DEFAULT_HORIZON_ONED = 0.75;
+    public static double DEFAULT_THRESHOLD_PERSISTENCE = 0.5;
     public static int DEFAULT_MINIMUM_SCORES = 10;
     public static double DEFAULT_ABSOLUTE_SCORE_FRACTION = 0.5;
     public static double DEFAULT_UPPER_THRESHOLD = 2.0;
     public static double DEFAULT_LOWER_THRESHOLD = 1.0;
-    public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
     public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.9;
+    public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 2.5;
     public static double DEFAULT_UPPER_FACTOR = 5.0;
     public static boolean DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD = false;
     public static double DEFAULT_THRESHOLD_STEP = 0.1;
-
-    // a parameter to make high score regions a contiguous region as opposed to
-    // collection of points in and out of the region for example the scores
-    // can be 1.0, 0.99, 1.0, 0.99 and the thresholds which depend on all scores
-    // seen
-    // before can be 0.99, 1.0, 0.99, 1.0 .. this parameter smooths the comparison
-    protected double elasticity = DEFAULT_ELASTICITY;
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
@@ -59,7 +50,7 @@ public class BasicThresholder {
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
-    protected double horizon = DEFAULT_HORIZON;
+    protected double thresholdPersistence = DEFAULT_THRESHOLD_PERSISTENCE;
 
     // below these many observations, deviation is not useful
     protected int minimumScores = DEFAULT_MINIMUM_SCORES;
@@ -73,6 +64,9 @@ public class BasicThresholder {
     protected boolean autoThreshold = DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD;
 
     protected double absoluteThreshold;
+
+    // no longer in use - to be cleaned up in subsequent PR
+    protected double elasticity = 0;
 
     // fraction of the grade that comes from absolute scores in the long run
     protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
@@ -93,7 +87,7 @@ public class BasicThresholder {
     // is useful in determining grade
     protected double upperZfactor = DEFAULT_UPPER_FACTOR;
 
-    protected boolean inPotentialAnomaly;
+    // protected boolean inPotentialAnomaly;
 
     public BasicThresholder(double primaryDiscount, double secondaryDiscount, boolean adjust) {
         primaryDeviation = new Deviation(primaryDiscount);
@@ -143,9 +137,9 @@ public class BasicThresholder {
             return false;
         }
 
-        if (horizon == 0) {
+        if (thresholdPersistence == 0) {
             return secondaryDeviation.getCount() >= minimumScores;
-        } else if (horizon == 1) {
+        } else if (thresholdPersistence == 1) {
             return primaryDeviation.getCount() >= minimumScores;
         } else {
             return secondaryDeviation.getCount() >= minimumScores && primaryDeviation.getCount() >= minimumScores;
@@ -180,7 +174,7 @@ public class BasicThresholder {
      *                                 short to long term
      * @return an interpolated threshold value
      */
-    protected double notLongTermThreshold(double factor, double intermediateTermFraction) {
+    protected double threshold(double factor, double intermediateTermFraction) {
         if (!isDeviationReady()) { // count < minimumScore is this branch
             return max(initialThreshold, lowerThreshold);
         } else {
@@ -191,7 +185,7 @@ public class BasicThresholder {
     }
 
     public double threshold() {
-        return longTermThreshold(zFactor);
+        return threshold(zFactor, intermediateTermFraction());
     }
 
     protected double longTermThreshold(double factor) {
@@ -202,7 +196,7 @@ public class BasicThresholder {
         double a = primaryDeviation.getDeviation();
         double b = secondaryDeviation.getDeviation();
         // the following is a convex combination that allows control of the behavior
-        return (horizon * a + (1 - horizon) * b);
+        return (thresholdPersistence * a + (1 - thresholdPersistence) * b);
     }
 
     public double getPrimaryThreshold() {
@@ -227,35 +221,35 @@ public class BasicThresholder {
         return max(0, t);
     }
 
-    public double getAnomalyGrade(double score, boolean previous, double factor) {
+    public double getAnomalyGrade(double score, double factor) {
         checkArgument(factor >= zFactor, "incorrect call");
-        // please change here is a first cut
+        double intermediateFraction = intermediateTermFraction();
+        double threshold = threshold(factor, intermediateFraction);
+        if (score < threshold) {
+            return 0;
+        }
 
-        double elasticScore = (previous) ? elasticity : 0;
-        double intermediateTermFraction = intermediateTermFraction();
-        if (intermediateTermFraction == 1) {
-            if (score < longTermThreshold(factor) - elasticScore) {
-                return 0;
-            }
-            double tFactor = upperZfactor;
+        if (intermediateFraction == 1 && threshold > lowerThreshold) {
+            // calculating grade based on factor
             double longTermDeviation = longTermDeviation();
+            double tFactor = upperZfactor;
             if (longTermDeviation > 0) {
                 tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / longTermDeviation);
             }
             return (tFactor - zFactor) / (upperZfactor - zFactor);
         } else {
-            double t = notLongTermThreshold(factor, intermediateTermFraction);
-            if (score < t - elasticScore) {
-                return 0;
-            }
-            double upper = max(upperThreshold, 2 * t);
+            double upper = max(upperThreshold, 2 * threshold);
             double quasiScore = Math.min(score, upper);
-            return (quasiScore - t) / (upper - t);
+            return (quasiScore - threshold) / (upper - threshold);
         }
     }
 
+    public double getAnomalyGrade(double score) {
+        return getAnomalyGrade(score, zFactor);
+    }
+
     public double getAnomalyGrade(double score, boolean previous) {
-        return getAnomalyGrade(score, previous, zFactor);
+        return getAnomalyGrade(score, zFactor);
     }
 
     protected void updateThreshold(double score) {
@@ -302,7 +296,6 @@ public class BasicThresholder {
      */
     public void update(double score, double secondScore, double lastScore, boolean flag) {
         update(score, secondScore - lastScore);
-        inPotentialAnomaly = flag;
     }
 
     public Deviation getPrimaryDeviation() {
@@ -388,9 +381,9 @@ public class BasicThresholder {
         upperThreshold = max(upperThreshold, 2 * lowerThreshold);
     }
 
-    public void setHorizon(double horizon) {
-        checkArgument(horizon >= 0 && horizon <= 1, "incorrect horizon parameter");
-        this.horizon = horizon;
+    public void setThresholdPersistence(double horizon) {
+        checkArgument(horizon >= 0 && horizon <= 1, "incorrect threshold horizon parameter");
+        this.thresholdPersistence = horizon;
     }
 
 }

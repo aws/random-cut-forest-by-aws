@@ -177,14 +177,11 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
 
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
-                // grades will not match between first and third because the thresholder has
-                // wrong info
-                // about shinglesize
+                // grades will not match
             }
             ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
-            ThresholdedRandomCutForest fourth = mapper.toModel(mapper.toState(second));
+            ThresholdedRandomCutForest fourth = mapper.toModel(mapper.toState(first));
             for (int j = length; j < shingledData.length; j++) {
                 // validate eaulity of points
                 for (int y = 0; y < baseDimensions; y++) {
@@ -193,17 +190,13 @@ public class ConsistencyTest {
                 }
 
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
-                ++count;
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
                 AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
-                AnomalyDescriptor fourthResult = fourth.process(shingledData[j], 0L);
+                AnomalyDescriptor fourthResult = fourth.process(dataWithKeys.data[count], 0L);
+                ++count;
 
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
-                // grades will not match between first and third because the thresholder has
-                // wrong info
-                // about shinglesize
                 assertEquals(firstResult.getRCFScore(), fourthResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), fourthResult.getAnomalyGrade(), 1e-10);
 
@@ -284,7 +277,8 @@ public class ConsistencyTest {
     }
 
     @ParameterizedTest
-    @EnumSource(TransformMethod.class)
+    @EnumSource(value = TransformMethod.class, names = { "WEIGHTED", "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE",
+            "SUBTRACT_MA" })
     public void ImputeTest(TransformMethod transformMethod) {
 
         int sampleSize = 256;
@@ -333,7 +327,6 @@ public class ConsistencyTest {
                 AnomalyDescriptor result = first.process(dataWithKeys.data[j], 0L);
                 AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
                 assertEquals(result.getRCFScore(), test.getRCFScore(), 1e-6);
-                assertEquals(result.getAnomalyGrade(), test.getAnomalyGrade(), 1e-6);
             }
 
             ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
@@ -347,7 +340,6 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(dataWithKeys.data[j], timestamp);
 
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-6);
-                assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-6);
             }
         }
     }

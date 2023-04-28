@@ -69,12 +69,20 @@ public interface ITransformer {
 
     void updateDeviation(double[] inputPoint, double[] previousInput);
 
-    // transforms inputPoint[] to RCF space, non-null values of the factors[] are
+    // transforms inputPoint[] to RCF space, non-null values of initials[] are
     // used in normalization
     // and are specific to this implementation, internalStamp corresponds to the
     // sequence number of the
     // input and clipFactor is a parameter that clips any normalization
 
-    double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput, double[] factors,
+    double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput, Deviation[] initials,
             double clipFactor);
+
+    default double[] getShift() {
+        return null;
+    };
+
+    default double[] getScale() {
+        return null;
+    }
 }
