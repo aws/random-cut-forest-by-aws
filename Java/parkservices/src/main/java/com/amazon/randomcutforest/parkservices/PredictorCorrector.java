@@ -152,20 +152,16 @@ public class PredictorCorrector {
      * the "residual contribution" since the last anomaly would have sufficed to
      * trigger anomaly designation on its own.
      * 
-     * @param candidate                  attribution of the current point in
-     *                                   consideration
-     * @param gap                        how long ago did the previous anomaly occur
-     * @param baseDimension              number of input attributes/variables
-     *                                   (before shingling)
-     * @param ideal                      a form of expected attribution; can be null
-     *                                   if there was no previous anomaly in the
-     *                                   shingle
-     * @param previousIsPotentialAnomaly is the previous point a potential anomaly
+     * @param candidate     attribution of the current point in consideration
+     * @param gap           how long ago did the previous anomaly occur
+     * @param baseDimension number of input attributes/variables (before shingling)
+     * @param ideal         a form of expected attribution; can be null if there was
+     *                      no previous anomaly in the shingle
      * @return true/false if the residual (extrapolated) score would trigger anomaly
      *         designation
      */
     protected boolean trigger(DiVector candidate, int gap, int baseDimension, DiVector ideal,
-            boolean previousIsPotentialAnomaly, IRCFComputeDescriptor lastAnomalyDescriptor) {
+            IRCFComputeDescriptor lastAnomalyDescriptor) {
         DiVector lastAnomalyAttribution = lastAnomalyDescriptor.getAttribution();
         double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
         if (lastAnomalyAttribution == null) {
@@ -177,7 +173,7 @@ public class PredictorCorrector {
         int difference = baseDimension * gap;
 
         if (difference < dimensions) {
-            if (!previousIsPotentialAnomaly || ideal == null) {
+            if (ideal == null) {
                 double remainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {
                     remainder += candidate.getHighLowSum(i);
@@ -185,7 +181,7 @@ public class PredictorCorrector {
                 // simplifying the following since remainder * dimensions/difference corresponds
                 // to the
                 // impact of the new data since the last anomaly
-                return thresholder.getAnomalyGrade(remainder * dimensions / difference, previousIsPotentialAnomaly) > 0;
+                return thresholder.getAnomalyGrade(remainder * dimensions / difference) > 0;
             } else {
                 double differentialRemainder = 0;
                 for (int i = dimensions - difference; i < dimensions; i++) {
@@ -336,7 +332,6 @@ public class PredictorCorrector {
         int shingleSize = (result.getDimension() == result.getInputLength()) ? 1 : result.getShingleSize();
         int baseDimensions = result.getDimension() / shingleSize;
         int startPosition = (shingleSize - 1) * baseDimensions;
-        boolean previousIsPotentialAnomaly = (shingleSize > 1) && thresholder.isInPotentialAnomaly();
 
         // we will adjust *both* the grade and the threshold
 
@@ -344,7 +339,7 @@ public class PredictorCorrector {
         double workingThreshold = 0;
         if (result.forestMode != ForestMode.DISTANCE) {
             workingThreshold = thresholder.threshold();
-            workingGrade = thresholder.getAnomalyGrade(score, previousIsPotentialAnomaly);
+            workingGrade = thresholder.getAnomalyGrade(score);
         } else {
             workingThreshold = thresholder.getPrimaryThreshold();
             workingGrade = thresholder.getPrimaryGrade(score);
@@ -467,8 +462,7 @@ public class PredictorCorrector {
          * partial shingle.
          */
 
-        if (significant && trigger(attribution, gap, baseDimensions, newAttribution, previousIsPotentialAnomaly,
-                lastAnomalyDescriptor)) {
+        if (significant && trigger(attribution, gap, baseDimensions, newAttribution, lastAnomalyDescriptor)) {
             result.setExpectedRCFPoint(newPoint);
             result.setAnomalyGrade(workingGrade);
             result.setThreshold(workingThreshold);
