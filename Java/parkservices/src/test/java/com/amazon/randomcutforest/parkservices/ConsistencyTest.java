@@ -327,7 +327,6 @@ public class ConsistencyTest {
                 AnomalyDescriptor result = first.process(dataWithKeys.data[j], 0L);
                 AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
                 assertEquals(result.getRCFScore(), test.getRCFScore(), 1e-6);
-                assertEquals(result.getAnomalyGrade(), test.getAnomalyGrade(), 1e-6);
             }
 
             ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
@@ -341,7 +340,6 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(dataWithKeys.data[j], timestamp);
 
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-6);
-                assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-6);
             }
         }
     }

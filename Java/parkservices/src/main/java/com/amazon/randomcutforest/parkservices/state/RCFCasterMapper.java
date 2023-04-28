@@ -60,9 +60,6 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
         state.setPreprocessorStates(
                 new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
-        state.setTriggerFactor(model.getPredictorCorrector().getTriggerFactor());
-        state.setIgnoreSimilar(model.getPredictorCorrector().isIgnoreSimilar());
-        state.setIgnoreSimilarFactor(model.getPredictorCorrector().getIgnoreSimilarFactor());
         state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
         state.setLastScore(model.getPredictorCorrector().getLastScore());
         state.setForestMode(model.getForestMode().name());
@@ -111,10 +108,7 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
         descriptor
                 .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
 
-        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder);
-        predictorCorrector.setIgnoreSimilar(state.isIgnoreSimilar());
-        predictorCorrector.setIgnoreSimilarFactor(state.getIgnoreSimilarFactor());
-        predictorCorrector.setTriggerFactor(state.getTriggerFactor());
+        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
         predictorCorrector.setLastScore(state.getLastScore());
 

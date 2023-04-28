@@ -57,8 +57,8 @@ public class LowNoisePeriodic implements Example {
         // NOTE that if the noise is smaller than 0.003 times the actual value then
         // it would be difficult to detect the anomalies unless the slope is 0
 
-        double noise = 5.0;
-        // maximum of reference
+        double noise = 2.0;
+
         double slope = 0.2 * sampleSize
                 * (Arrays.stream(reference).max().getAsDouble() - Arrays.stream(reference).min().getAsDouble()) / 50000;
 
@@ -74,8 +74,9 @@ public class LowNoisePeriodic implements Example {
         int correct = 0;
         int late = 0;
 
-        // change the transformation below
+        // change the transformation below to experiment
         TransformMethod method = TransformMethod.NORMALIZE;
+
         int dimensions = shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
@@ -98,24 +99,24 @@ public class LowNoisePeriodic implements Example {
         // missed current value 3.0 (say X), intended 1.0 (equiv., X - noise), because
         // the shift up in the actual was not 2*noise
 
-        // forest.setIgnoreNearExpectedFromAbove(2 * noise);
+        // forest.setIgnoreNearExpectedFromAbove( new double [] {2 * noise});
 
         // or to suppress all anomalies that are shifted up from predicted
-        // for any sequence
-        // forest.setIgnoreNearExpectedFromAbove(Float.MAX_VALUE);
+        // for any sequence; using Double.MAX_VALUE may cause overflow
+        // forest.setIgnoreNearExpectedFromAbove(new double [] {Float.MAX_VALUE});
 
         // the below will show results like
         // missed current value 5.5 (say Y), intended 7.5 (equiv., Y + noise) because
         // the shift down in the actual was not 2*noise, in effect we suppress all
         // anomalies
 
-        // forest.setIgnoreNearExpectedFromBelow(2*noise);
+        // forest.setIgnoreNearExpectedFromBelow(new double [] {2*noise});
 
         // the following suppresses all anomalies that shifted down compared to
         // predicted
         // for any sequence
 
-        // forest.setIgnoreNearExpectedFromBelow(Float.MAX_VALUE);
+        // forest.setIgnoreNearExpectedFromBelow(new double [] {Float.MAX_VALUE});
 
         double[] value = new double[] { 0.0 };
 
@@ -169,6 +170,7 @@ public class LowNoisePeriodic implements Example {
                 lastAnomaly = count;
             }
         }
+
         System.out.println("Anomalies " + numAnomalies + ",  correct " + correct + ", late " + late
                 + ", incorrectly flagged " + incorrectlyFlagged);
 

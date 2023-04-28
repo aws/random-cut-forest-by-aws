@@ -29,27 +29,17 @@ import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 @Setter
 public class BasicThresholder {
 
-    public static double DEFAULT_ELASTICITY = 0.01;
     public static double DEFAULT_THRESHOLD_PERSISTENCE = 0.5;
-    public static double DEFAULT_THRESHOLD_PERSISTENCE_ONED = 0.75;
     public static int DEFAULT_MINIMUM_SCORES = 10;
     public static double DEFAULT_ABSOLUTE_SCORE_FRACTION = 0.5;
     public static double DEFAULT_UPPER_THRESHOLD = 2.0;
     public static double DEFAULT_LOWER_THRESHOLD = 1.0;
     public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
-    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.9;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 2.5;
     public static double DEFAULT_UPPER_FACTOR = 5.0;
     public static boolean DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD = false;
     public static double DEFAULT_THRESHOLD_STEP = 0.1;
-
-    // a parameter to make high score regions a contiguous region as opposed to
-    // collection of points in and out of the region for example the scores
-    // can be 1.0, 0.99, 1.0, 0.99 and the thresholds which depend on all scores
-    // seen
-    // before can be 0.99, 1.0, 0.99, 1.0 .. this parameter smooths the comparison
-    protected double elasticity = DEFAULT_ELASTICITY;
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
@@ -73,6 +63,9 @@ public class BasicThresholder {
     protected boolean autoThreshold = DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD;
 
     protected double absoluteThreshold;
+
+    // no longer in use - to be cleaned up in subsequent PR
+    protected double elasticity = 0;
 
     // fraction of the grade that comes from absolute scores in the long run
     protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
@@ -227,12 +220,11 @@ public class BasicThresholder {
         return max(0, t);
     }
 
-    public double getAnomalyGrade(double score, boolean previous, double factor) {
+    public double getAnomalyGrade(double score, double factor) {
         checkArgument(factor >= zFactor, "incorrect call");
-        double elasticScore = (previous) ? elasticity : 0;
         double intermediateFraction = intermediateTermFraction();
         double threshold = threshold(factor, intermediateFraction);
-        if (score < threshold + elasticScore) {
+        if (score < threshold) {
             return 0;
         }
 
@@ -251,8 +243,12 @@ public class BasicThresholder {
         }
     }
 
+    public double getAnomalyGrade(double score) {
+        return getAnomalyGrade(score, zFactor);
+    }
+
     public double getAnomalyGrade(double score, boolean previous) {
-        return getAnomalyGrade(score, previous, zFactor);
+        return getAnomalyGrade(score, zFactor);
     }
 
     protected void updateThreshold(double score) {

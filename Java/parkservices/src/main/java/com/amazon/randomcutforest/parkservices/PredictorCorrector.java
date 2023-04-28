@@ -36,28 +36,9 @@ public class PredictorCorrector {
 
     public static int DEFAULT_NUMBER_OF_MAX_ATTRIBUTORS = 5;
 
-    public static double DEFAULT_REPEAT_ANOMALY_Z_FACTOR = 3.5;
+    double[] ignoreNearExpectedFromBelow;
 
-    public static double DEFAULT_IGNORE_SIMILAR_FACTOR = 0;
-
-    public static boolean DEFAULT_IGNORE_SIMILAR = false;
-
-    double ignoreNearExpectedFromBelow = DEFAULT_NORMALIZATION_PRECISION;
-
-    double ignoreNearExpectedFromAbove = DEFAULT_NORMALIZATION_PRECISION;
-
-    // a parameter that determines if the current potential anomaly is describing
-    // the same anomaly
-    // within the same shingle or across different time points
-    protected double ignoreSimilarFactor = DEFAULT_IGNORE_SIMILAR_FACTOR;
-
-    // a different test for anomalies in the same shingle
-    protected double triggerFactor = DEFAULT_REPEAT_ANOMALY_Z_FACTOR;
-
-    // flag that determines if we should dedup similar anomalies not in the same
-    // shingle, for example an
-    // anomaly, with the same pattern is repeated across more than a shingle
-    protected boolean ignoreSimilar = DEFAULT_IGNORE_SIMILAR;
+    double[] ignoreNearExpectedFromAbove;
 
     // for anomaly description we would only look at these many top attributors
     // AExpected value is not well-defined when this number is greater than 1
@@ -70,8 +51,10 @@ public class PredictorCorrector {
     protected BasicThresholder thresholder;
 
     // for mappers
-    public PredictorCorrector(BasicThresholder thresholder) {
+    public PredictorCorrector(BasicThresholder thresholder, int baseDimension) {
         this.thresholder = thresholder;
+        ignoreNearExpectedFromAbove = new double[baseDimension];
+        ignoreNearExpectedFromBelow = new double[baseDimension];
     }
 
     public BasicThresholder getThresholder() {
@@ -210,8 +193,7 @@ public class PredictorCorrector {
                             + Math.abs(candidate.high[i] - ideal.high[i]);
                 }
                 return (differentialRemainder > DEFAULT_DIFFERENTIAL_FACTOR * lastAnomalyScore)
-                        && thresholder.getAnomalyGrade(differentialRemainder * dimensions / difference,
-                                previousIsPotentialAnomaly, triggerFactor) > 0;
+                        && thresholder.getAnomalyGrade(differentialRemainder * dimensions / difference) > 0;
             }
         } else {
             return true;
@@ -267,23 +249,25 @@ public class PredictorCorrector {
      * transformation. Independently small variations determined by the dynamically
      * configurable setting of ignoreSimilarFactor may not be interest.
      *
-     * @param score          the current score
-     * @param point          the current point in question (in RCF space)
-     * @param newPoint       the expected point (in RCF space)
-     * @param scale          the scale(s) of the multi-dimensional transformation;
-     *                       these would be mutiplied to any change in point or
-     *                       newPoint
-     * @param shift          the shift(s) of the multi-dimensional transoformation
-     * @param method         the transformation method (currently unusued, can be
-     *                       useful in future)
-     * @param startPosition  the (most likely) location of the anomaly
-     * @param baseDimensions the number of dimensions before shingling
+     * @param significantScore If the score is significant (but it is possible that
+     *                         we ignore anomalies below/above expected and hence
+     *                         this bit can be modified)
+     * @param point            the current point in question (in RCF space)
+     * @param newPoint         the expected point (in RCF space)
+     * @param scale            the scale(s) of the multi-dimensional transformation;
+     *                         these would be mutiplied to any change in point or
+     *                         newPoint
+     * @param shift            the shift(s) of the multi-dimensional transoformation
+     * @param method           the transformation method (currently unusued, can be
+     *                         useful in future)
+     * @param startPosition    the (most likely) location of the anomaly
+     * @param baseDimensions   the number of dimensions before shingling
      * @return true if the changes are significant (hence an anomaly) and false
      *         otherwise
      */
 
-    protected boolean isSignificant(double score, double[] point, double[] newPoint, double[] scale, double[] shift,
-            TransformMethod method, int startPosition, int baseDimensions) {
+    protected boolean isSignificant(boolean significantScore, double[] point, double[] newPoint, double[] scale,
+            double[] shift, TransformMethod method, int startPosition, int baseDimensions) {
         checkArgument(point.length == newPoint.length, "incorrect invocation");
         if (scale == null || shift == null) {
             return true;
@@ -306,9 +290,9 @@ public class PredictorCorrector {
             if (scaleFactor != 1.0 || shiftBase != 0) {
                 shiftAmount += DEFAULT_NORMALIZATION_PRECISION * (scaleFactor + (a + b) / 2);
             }
-            answer = (score > 1.5) || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
+            answer = significantScore || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
             if (answer) {
-                answer = (a < b - ignoreNearExpectedFromBelow) || (a > b + ignoreNearExpectedFromAbove);
+                answer = (a < b - ignoreNearExpectedFromBelow[y]) || (a > b + ignoreNearExpectedFromAbove[y]);
             }
         }
         return answer;
@@ -408,8 +392,7 @@ public class PredictorCorrector {
         boolean reasonableForecast = result.isReasonableForecast();
 
         // note that the following is bypassed for shingleSize = 1 because it would not
-        // make
-        // sense to connect the current evaluation with a previous value
+        // make sense to connect the current evaluation with a previous value
         if (reasonableForecast && lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
                 && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap > 0 && gap <= shingleSize) {
             double[] correctedPoint = applyBasicCorrector(point, gap, shingleSize, baseDimensions,
@@ -425,11 +408,10 @@ public class PredictorCorrector {
             // we know we are looking previous anomalies
             if (workingGrade == 0) {
                 // fixing the past makes this anomaly go away; nothing to do but process the
-                // score
-                // we will not change inHighScoreRegion however, because the score has been
-                // larger
+                // score we will not change inHighScoreRegion however, because the score has
+                // been larger
                 thresholder.update(score, correctedScore, lastScore, false);
-                lastScore = score;
+                lastScore = correctedScore;
                 result.setExpectedRCFPoint(correctedPoint);
                 result.setAnomalyGrade(0);
                 return result;
@@ -469,9 +451,12 @@ public class PredictorCorrector {
                 newScore = forest.getAnomalyScore(newPoint);
                 int base = (result.forestMode == ForestMode.TIME_AUGMENTED) ? baseDimensions - 1 : baseDimensions;
                 // if the score is high then it is significant
-                significant = isSignificant(score, point, newPoint, result.getScale(), result.getShift(),
-                        result.getTransformMethod(), startPosition, base);
-                // System.out.println(workingGrade);
+                boolean significantScore = (score > 1.5)
+                        || (result.getTransformMethod() == TransformMethod.NORMALIZE && score > workingThreshold + 0.2);
+                // process is ignored for the DISTANCE mode
+                significant = result.getForestMode() == ForestMode.DISTANCE
+                        || isSignificant(significantScore, point, newPoint, result.getScale(), result.getShift(),
+                                result.getTransformMethod(), startPosition, base);
             }
         }
 
@@ -491,7 +476,6 @@ public class PredictorCorrector {
         } else {
             // we will force the threshold to rise
             result.setThreshold(score);
-            // previousIsPotentialAnomaly is true now, but not calling it anomaly either
             thresholder.update(score, score, lastScore, true);
             if (shingleSize > 1) {
                 lastScore = score;
@@ -503,6 +487,7 @@ public class PredictorCorrector {
         if (shingleSize > 1) {
             lastScore = score;
         }
+
         result.setAttribution(attribution);
         result.setRelativeIndex(index);
         return result;
@@ -510,7 +495,6 @@ public class PredictorCorrector {
 
     public void setZfactor(double factor) {
         thresholder.setZfactor(factor);
-        triggerFactor = Math.max(factor, triggerFactor);
     }
 
     public void setLowerThreshold(double lower) {
@@ -525,48 +509,20 @@ public class PredictorCorrector {
         thresholder.setInitialThreshold(initial);
     }
 
-    public void setIgnoreSimilar(boolean ignoreSimilar) {
-        this.ignoreSimilar = ignoreSimilar;
+    public void setIgnoreNearExpectedFromAbove(double[] ignoreSimilarShift) {
+        this.ignoreNearExpectedFromAbove = Arrays.copyOf(ignoreSimilarShift, ignoreSimilarShift.length);
     }
 
-    public boolean isIgnoreSimilar() {
-        return ignoreSimilar;
+    public void setIgnoreNearExpectedFromBelow(double[] ignoreSimilarShift) {
+        this.ignoreNearExpectedFromBelow = Arrays.copyOf(ignoreSimilarShift, ignoreSimilarShift.length);
     }
 
-    public void setIgnoreSimilarFactor(double ignoreSimilarFactor) {
-        checkArgument(ignoreSimilarFactor >= 0 && ignoreSimilarFactor <= 1.0, "should be in [0,1]");
-        this.ignoreSimilarFactor = ignoreSimilarFactor;
-    }
-
-    public double getIgnoreSimilarFactor() {
-        return ignoreSimilarFactor;
-    }
-
-    public void setIgnoreNearExpectedFromAbove(double ignoreSimilarShift) {
-        checkArgument(ignoreSimilarShift >= 0, "has to be non-negative");
-        this.ignoreNearExpectedFromAbove = ignoreSimilarShift;
-    }
-
-    public void setIgnoreNearExpectedFromBelow(double ignoreSimilarShift) {
-        checkArgument(ignoreSimilarShift >= 0, "has to be non-negative");
-        this.ignoreNearExpectedFromBelow = ignoreSimilarShift;
-    }
-
-    public double getIgnoreNearExpectedFromAbove() {
+    public double[] getIgnoreNearExpectedFromAbove() {
         return ignoreNearExpectedFromAbove;
     }
 
-    public double getIgnoreNearExpectedFromBelow() {
+    public double[] getIgnoreNearExpectedFromBelow() {
         return ignoreNearExpectedFromBelow;
-    }
-
-    public void setTriggerFactor(double triggerFactor) {
-        checkArgument(triggerFactor >= 3.0, "should be at least 3.0");
-        this.triggerFactor = triggerFactor;
-    }
-
-    public double getTriggerFactor() {
-        return triggerFactor;
     }
 
     public void setNumberOfAttributors(int numberOfAttributors) {

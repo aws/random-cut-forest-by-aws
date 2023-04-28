@@ -33,7 +33,7 @@ public class NormalizedTransformer extends WeightedTransformer {
     }
 
     protected double getScale(int i, Deviation[] devs) {
-        return (devs[i].getDeviation() + devs[i + 2 * weights.length].getDeviation() + 1.0);
+        return (Math.abs(devs[i + 2 * weights.length].getMean()) + 1.0);
     }
 
     protected double getShift(int i, Deviation[] devs) {

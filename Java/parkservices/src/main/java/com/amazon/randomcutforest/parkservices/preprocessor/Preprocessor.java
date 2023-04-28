@@ -212,17 +212,28 @@ public class Preprocessor implements IPreprocessor {
         dataQuality = builder.dataQuality.orElse(new Deviation(timeDecay));
 
         Deviation[] deviationList = new Deviation[NUMBER_OF_STATS * inputLength];
+        // we would use two different smoothing paramters reminiscent of
+        // doubly exponential smoothing
         if (builder.deviations.isPresent()) {
             Deviation[] list = builder.deviations.get();
-            for (int i = 0; i < list.length; i++) {
+            // note the lengths can be different based on a different version of the model
+            // we will convert the model; and rely on RCF's ability to adjust to new data
+            for (int i = 0; i < min(list.length, deviationList.length); i++) {
                 deviationList[i] = list[i].copy();
             }
-            for (int i = list.length; i < NUMBER_OF_STATS * inputLength; i++) {
+            for (int i = list.length; i < (NUMBER_OF_STATS - 1) * inputLength; i++) {
                 deviationList[i] = new Deviation(timeDecay);
             }
+            for (int i = max(list.length, (NUMBER_OF_STATS - 1) * inputLength); i < NUMBER_OF_STATS
+                    * inputLength; i++) {
+                deviationList[i] = new Deviation(0.1 * timeDecay);
+            }
         } else {
-            for (int i = 0; i < NUMBER_OF_STATS * inputLength; i++) {
+            for (int i = 0; i < (NUMBER_OF_STATS - 1) * inputLength; i++) {
                 deviationList[i] = new Deviation(timeDecay);
+            }
+            for (int i = (NUMBER_OF_STATS - 1) * inputLength; i < NUMBER_OF_STATS * inputLength; i++) {
+                deviationList[i] = new Deviation(0.1 * timeDecay);
             }
         }
 

@@ -108,14 +108,13 @@ public class WeightedTransformer implements ITransformer {
     public void updateDeviation(double[] inputPoint, double[] previousInput) {
         checkArgument(inputPoint.length * NUMBER_OF_STATS == deviations.length, "incorrect lengths");
         for (int i = 0; i < inputPoint.length; i++) {
-            double average = deviations[i].getMean();
             deviations[i].update(inputPoint[i]);
             if (deviations[i + inputPoint.length].getCount() == 0) {
                 deviations[i + inputPoint.length].update(0);
             } else {
                 deviations[i + inputPoint.length].update(inputPoint[i] - previousInput[i]);
             }
-            deviations[i + 2 * inputPoint.length].update(inputPoint[i] - average);
+            deviations[i + 2 * inputPoint.length].update(deviations[i].getDeviation());
         }
     }
 
