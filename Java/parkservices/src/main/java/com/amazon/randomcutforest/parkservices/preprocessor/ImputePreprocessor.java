@@ -188,7 +188,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         int savedNumberOfImputed = numberOfImputed;
         int lastActualInternal = internalTimeStamp;
 
-        double[] point = generateShingle(description, timeStampDeviation.getMean(), false, forest);
+        double[] point = generateShingle(description, timeStampDeviations[0].getMean(), false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -246,7 +246,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             // two different points).
             return false;
         }
-        dataQuality.update(1 - fraction);
+        dataQuality[0].update(1 - fraction);
         return (fraction < useImputedFraction && internalTimeStamp >= shingleSize);
     }
 
@@ -304,7 +304,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             addRelevantAttribution(result);
         }
 
-        generateShingle(result, timeStampDeviation.getMean(), true, forest);
+        generateShingle(result, timeStampDeviations[0].getMean(), true, forest);
         ++valuesSeen;
         return result;
     }
@@ -421,7 +421,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
 
         updateForest(changeForest, newInput, timestamp, forest, false);
         if (changeForest) {
-            timeStampDeviation.update(timestamp - lastInputTimeStamp);
+            timeStampDeviations[0].update(timestamp - lastInputTimeStamp);
             transformer.updateDeviation(newInput, savedInput);
         }
         return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);

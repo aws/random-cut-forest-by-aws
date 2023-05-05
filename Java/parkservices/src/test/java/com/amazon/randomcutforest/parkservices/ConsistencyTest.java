@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.generateShingledData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -147,10 +146,6 @@ public class ConsistencyTest {
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
                     .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build();
 
-            ThresholdedRandomCutForest third = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
-                    .internalShinglingEnabled(false).shingleSize(1).anomalyRate(0.01).build();
-
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length + testLength, 50,
                     100, 5, seed + i, baseDimensions);
 
@@ -174,10 +169,7 @@ public class ConsistencyTest {
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
                 ++count;
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
-                AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
-
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
                 // grades will not match
             }
             ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
@@ -191,12 +183,10 @@ public class ConsistencyTest {
 
                 AnomalyDescriptor firstResult = first.process(dataWithKeys.data[count], 0L);
                 AnomalyDescriptor secondResult = second.process(shingledData[j], 0L);
-                AnomalyDescriptor thirdResult = third.process(shingledData[j], 0L);
                 AnomalyDescriptor fourthResult = fourth.process(dataWithKeys.data[count], 0L);
                 ++count;
 
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), fourthResult.getRCFScore(), 1e-10);
                 assertEquals(firstResult.getAnomalyGrade(), fourthResult.getAnomalyGrade(), 1e-10);
 
@@ -253,8 +243,8 @@ public class ConsistencyTest {
                 long timestamp = 100 * count + noise.nextInt(10) - 5;
                 AnomalyDescriptor result = first.process(dataWithKeys.data[j], timestamp);
                 AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
-                checkArgument(Math.abs(result.getRCFScore() - test.getRCFScore()) < 1e-10, " error");
-                checkArgument(Math.abs(result.getAnomalyGrade() - test.getAnomalyGrade()) < 1e-10, " error");
+                assertEquals(result.getRCFScore(), test.getRCFScore(), 1e-10);
+                // grade will not be the same because dimension changes
                 ++count;
             }
 
@@ -269,9 +259,8 @@ public class ConsistencyTest {
                 AnomalyDescriptor thirdResult = third.process(dataWithKeys.data[count], timestamp);
 
                 assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getAnomalyGrade(), secondResult.getAnomalyGrade(), 1e-10);
                 assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
-                assertEquals(firstResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-10);
+                assertEquals(secondResult.getAnomalyGrade(), thirdResult.getAnomalyGrade(), 1e-10);
             }
         }
     }

@@ -16,36 +16,33 @@
 package com.amazon.randomcutforest.parkservices.threshold;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
-
+import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.util.Weighted;
 
-@Getter
-@Setter
 public class BasicThresholder {
 
     public static double DEFAULT_THRESHOLD_PERSISTENCE = 0.5;
     public static int DEFAULT_MINIMUM_SCORES = 10;
-    public static double DEFAULT_ABSOLUTE_SCORE_FRACTION = 0.5;
-    public static double DEFAULT_UPPER_THRESHOLD = 2.0;
-    public static double DEFAULT_LOWER_THRESHOLD = 1.0;
-    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.9;
-    public static double DEFAULT_LOWER_THRESHOLD_ONED = 1.1;
+    public static double DEFAULT_LOWER_THRESHOLD = 0.9;
+    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
+    public static double DEFAULT_ABSOLUTE_THRESHOLD = 0.6;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
-    public static double DEFAULT_Z_FACTOR = 2.5;
-    public static double DEFAULT_UPPER_FACTOR = 5.0;
-    public static boolean DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD = false;
-    public static double DEFAULT_THRESHOLD_STEP = 0.1;
+    public static double DEFAULT_Z_FACTOR = 3.0;
+    public static double MINIMUM_Z_FACTOR = 2.0;
+    public static boolean DEFAULT_AUTO_THRESHOLD = true;
+    public static int DEFAULT_DEVIATION_STATES = 3;
 
     // keeping a count of the values seen because both deviation variables
     // primaryDeviation
-    // and secondaryDeviation may not be used always -- in current code, they are
-    // both used always
+    // and secondaryDeviation may not be used always
     protected int count = 0;
 
     // horizon = 0 is short term, switches to secondary
@@ -61,33 +58,19 @@ public class BasicThresholder {
 
     protected Deviation thresholdDeviation;
 
-    protected boolean autoThreshold = DEFAULT_AUTO_ADJUST_LOWER_THRESHOLD;
+    protected boolean autoThreshold = DEFAULT_AUTO_THRESHOLD;
 
-    protected double absoluteThreshold;
+    // an absoluteThreshold
+    protected double absoluteThreshold = DEFAULT_ABSOLUTE_THRESHOLD;
 
-    // no longer in use - to be cleaned up in subsequent PR
-    protected double elasticity = 0;
-
-    // fraction of the grade that comes from absolute scores in the long run
-    protected double absoluteScoreFraction = DEFAULT_ABSOLUTE_SCORE_FRACTION;
-
-    // the upper threshold of scores above which points are anomalies
-    protected double upperThreshold = DEFAULT_UPPER_THRESHOLD;
     // the upper threshold of scores above which points are likely anomalies
     protected double lowerThreshold = DEFAULT_LOWER_THRESHOLD;
     // initial absolute threshold used to determine anomalies before sufficient
     // values are seen
     protected double initialThreshold = DEFAULT_INITIAL_THRESHOLD;
     // used to determine the surprise coefficient above which we can call a
-    // potential
-    // anomaly
+    // potential anomaly
     protected double zFactor = DEFAULT_Z_FACTOR;
-    // an upper bound of zFactor and triggerFactor beyond which the point is
-    // mathematically anomalous
-    // is useful in determining grade
-    protected double upperZfactor = DEFAULT_UPPER_FACTOR;
-
-    // protected boolean inPotentialAnomaly;
 
     public BasicThresholder(double primaryDiscount, double secondaryDiscount, boolean adjust) {
         primaryDeviation = new Deviation(primaryDiscount);
@@ -101,10 +84,17 @@ public class BasicThresholder {
         this(discount, discount, false);
     }
 
-    public BasicThresholder(Deviation primary, Deviation secondary, Deviation threshold) {
-        this.primaryDeviation = primary;
-        this.secondaryDeviation = secondary;
-        this.thresholdDeviation = threshold;
+    public BasicThresholder(Deviation[] deviations) {
+        if (deviations == null || deviations.length != DEFAULT_DEVIATION_STATES) {
+            double timeDecay = 1.0 / (DEFAULT_SAMPLE_SIZE * DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY);
+            this.primaryDeviation = new Deviation(timeDecay);
+            this.secondaryDeviation = new Deviation(timeDecay);
+            this.thresholdDeviation = new Deviation(0.1 * timeDecay);
+        } else {
+            this.primaryDeviation = deviations[0];
+            this.secondaryDeviation = deviations[1];
+            this.thresholdDeviation = deviations[2];
+        }
     }
 
     /**
@@ -166,37 +156,41 @@ public class BasicThresholder {
         }
     }
 
-    /**
-     * a thresholder that is used for short/itermediate term
-     * 
-     * @param factor                   the factor used in long term evaluation
-     * @param intermediateTermFraction the fraction determining the transition from
-     *                                 short to long term
-     * @return an interpolated threshold value
-     */
-    protected double threshold(double factor, double intermediateTermFraction) {
+    protected double threshold(double factor, double intermediateTermFraction, TransformMethod method, int dimension) {
         if (!isDeviationReady()) { // count < minimumScore is this branch
-            return max(initialThreshold, lowerThreshold);
+            return max(initialThreshold, absoluteThreshold);
         } else {
-            return max(lowerThreshold, intermediateTermFraction * longTermThreshold(factor)
-                    + (1 - intermediateTermFraction) * initialThreshold);
+            return max(absoluteThreshold,
+                    intermediateTermFraction
+                            * (primaryDeviation.getMean()
+                                    + adjustedFactor(factor, method, dimension) * longTermDeviation(method, dimension))
+                            + (1 - intermediateTermFraction) * initialThreshold);
         }
 
     }
 
-    public double threshold() {
-        return threshold(zFactor, intermediateTermFraction());
+    protected double adjustedFactor(double factor, TransformMethod method, int dimension) {
+        double correctedFactor = factor;
+        double base = primaryDeviation.getMean();
+        if (autoThreshold && base < lowerThreshold && method != TransformMethod.NORMALIZE) {
+            correctedFactor = primaryDeviation.getMean() * factor / lowerThreshold;
+        }
+        return max(correctedFactor, MINIMUM_Z_FACTOR);
     }
 
-    protected double longTermThreshold(double factor) {
-        return max(lowerThreshold, primaryDeviation.getMean() + factor * longTermDeviation());
-    }
-
-    protected double longTermDeviation() {
+    protected double longTermDeviation(TransformMethod method, int dimension) {
         double a = primaryDeviation.getDeviation();
         double b = secondaryDeviation.getDeviation();
+        if (dimension > 1 && (method == TransformMethod.NORMALIZE_DIFFERENCE || method == TransformMethod.DIFFERENCE)) {
+            a = (a + thresholdDeviation.getDeviation()) / 2;
+        }
         // the following is a convex combination that allows control of the behavior
         return (thresholdPersistence * a + (1 - thresholdPersistence) * b);
+    }
+
+    @Deprecated
+    public double threshold() {
+        return getPrimaryThreshold();
     }
 
     public double getPrimaryThreshold() {
@@ -212,89 +206,78 @@ public class BasicThresholder {
      *         to be considered anomalous
      */
     public double getPrimaryGrade(double score) {
-        double tFactor = upperZfactor;
+        double tFactor = 2 * zFactor;
         double deviation = primaryDeviation.getDeviation();
         if (deviation > 0) {
-            tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / deviation);
+            tFactor = min(tFactor, (score - primaryDeviation.getMean()) / deviation);
         }
-        double t = (tFactor - zFactor) / (upperZfactor - zFactor);
+        double t = (tFactor - zFactor) / (zFactor);
         return max(0, t);
     }
 
-    public double getAnomalyGrade(double score, double factor) {
-        checkArgument(factor >= zFactor, "incorrect call");
+    @Deprecated
+    public double getAnomalyGrade(double score, boolean flag) {
+        return getPrimaryGrade(score);
+    }
+
+    public Weighted<Double> getThresholdAndGrade(double score, TransformMethod method, int dimension) {
+        return getThresholdAndGrade(score, zFactor, method, dimension);
+    }
+
+    public Weighted<Double> getThresholdAndGrade(double score, double factor, TransformMethod method, int dimension) {
         double intermediateFraction = intermediateTermFraction();
-        double threshold = threshold(factor, intermediateFraction);
+        double threshold = threshold(factor, intermediateFraction, method, dimension);
         if (score < threshold) {
-            return 0;
-        }
-
-        if (intermediateFraction == 1 && threshold > lowerThreshold) {
-            // calculating grade based on factor
-            double longTermDeviation = longTermDeviation();
-            double tFactor = upperZfactor;
-            if (longTermDeviation > 0) {
-                tFactor = Math.min(tFactor, (score - primaryDeviation.getMean()) / longTermDeviation);
-            }
-            return (tFactor - zFactor) / (upperZfactor - zFactor);
+            return new Weighted<>(threshold, 0);
         } else {
-            double upper = max(upperThreshold, 2 * threshold);
-            double quasiScore = Math.min(score, upper);
-            return (quasiScore - threshold) / (upper - threshold);
+            double base = min(threshold, primaryDeviation.getMean());
+            double newFactor = adjustedFactor(factor, method, dimension);
+            double deviation = longTermDeviation(method, dimension);
+            // the value below should not be 0 because of min()
+            return new Weighted<>(threshold, getSurpriseIndex(score, base, newFactor, deviation));
         }
     }
 
-    public double getAnomalyGrade(double score) {
-        return getAnomalyGrade(score, zFactor);
+    /**
+     * how surprised are seeing a value from a series with mean base with deviation,
+     * where factor controls the separation
+     * 
+     * @param score     score
+     * @param base      mean of series
+     * @param factor    control parameter for determining surprise
+     * @param deviation relevant deviation for the series
+     * @return a clipped value of the "surpise" index
+     */
+    protected float getSurpriseIndex(double score, double base, double factor, double deviation) {
+        double tFactor = 2 * factor;
+        if (deviation > 0) {
+            tFactor = min(tFactor, (score - base) / deviation);
+        }
+        return max(0, (float) ((tFactor - factor) / (factor)));
     }
 
-    public double getAnomalyGrade(double score, boolean previous) {
-        return getAnomalyGrade(score, zFactor);
-    }
-
+    // mean or below; uses the asymmetry of the RCF score
     protected void updateThreshold(double score) {
-        double gap = (score > lowerThreshold) ? 1.0 : 0;
-        thresholdDeviation.update(gap);
-        if (autoThreshold && thresholdDeviation.getCount() > minimumScores) {
-            // note the rate is set at half the anomaly rate
-            if (thresholdDeviation.getMean() > thresholdDeviation.getDiscount()) {
-                setLowerThreshold(lowerThreshold + DEFAULT_THRESHOLD_STEP, autoThreshold);
-                thresholdDeviation.setCount(0);
-            } else if (thresholdDeviation.getMean() < thresholdDeviation.getDiscount() / 4) {
-                setLowerThreshold(lowerThreshold - DEFAULT_THRESHOLD_STEP, autoThreshold);
-                thresholdDeviation.setCount(0);
-            }
+        double gap = primaryDeviation.getMean() - score;
+        if (gap > 0) {
+            thresholdDeviation.update(gap);
         }
     }
 
     protected void updatePrimary(double score) {
-        primaryDeviation.update(score);
         updateThreshold(score);
+        primaryDeviation.update(score);
         ++count;
     }
 
     public void update(double primary, double secondary) {
+        updateThreshold(primary);
         primaryDeviation.update(primary);
         secondaryDeviation.update(secondary);
-        updateThreshold(primary);
         ++count;
     }
 
-    /**
-     * The core update mechanism for thresholding, note that the score is used in
-     * the primary statistic in thresholder (which maintains two) and the secondary
-     * statistic is the score difference Since RandomCutForests are stochastic data
-     * structures, scores from individual trees follow a trajectory not unlike
-     * martingales. The differencing eliminates the effect or a run of high/low
-     * scores.
-     *
-     * @param score       typically the score produced by the forest
-     * @param secondScore either the score or a corrected score which simulates
-     *                    "what if the past anomalies were not present"
-     * @param lastScore   a potential additive discount (not used currently)
-     * @param flag        a flag to indicate if the last point was potential anomaly
-     */
-    public void update(double score, double secondScore, double lastScore, boolean flag) {
+    public void update(double score, double secondScore, double lastScore, TransformMethod method) {
         update(score, secondScore - lastScore);
     }
 
@@ -306,79 +289,31 @@ public class BasicThresholder {
         return secondaryDeviation;
     }
 
-    /**
-     * allows the Z-factor to be set subject to not being lower than
-     * DEFAULT_Z_FACTOR it maintains the invariant that the upper_factor is at least
-     * twice the z-factor
-     *
-     * While increasing; increase upper first. While decreasing; decrease the
-     * z-factor first (change default if required)
-     * 
-     * @param factor new z-factor
-     */
+    public Deviation getThresholdDeviation() {
+        return thresholdDeviation;
+    }
+
     public void setZfactor(double factor) {
-        zFactor = max(factor, DEFAULT_Z_FACTOR);
-        upperZfactor = max(upperZfactor, 2 * zFactor);
+        zFactor = factor;
     }
 
     /**
-     * updates the upper Z-factor subject to invariant that it is never lower than
-     * 2*z-factor
-     * 
-     * @param factor new upper-Zfactor
+     * sets the lower threshold -- which is used to scale the factor variable
      */
-    public void setUpperZfactor(double factor) {
-        upperZfactor = max(factor, 2 * zFactor);
+    public void setLowerThreshold(double lower) {
+        lowerThreshold = lower;
     }
 
     /**
-     * sets the lower threshold -- however maintains the invariant that lower
-     * threshold LTE initial threshold LTE upper threshold as well as 2 * lower
-     * threshold LTE upper threshold
-     *
-     * while increasing; increase from the largest to smallest. while decreasing;
-     * decrease from the smallest to largest
      * 
-     * @param lower new lower threshold
-     */
-    public void setLowerThreshold(double lower, boolean adjust) {
-        lowerThreshold = max(lower, absoluteThreshold);
-        autoThreshold = adjust;
-        initialThreshold = max(initialThreshold, lowerThreshold);
-        upperThreshold = max(upperThreshold, 2 * lowerThreshold);
-    }
-
-    /**
-     * the absolute threshhold below which the lower threshold can not go note
-     * setLowerThreshold() in the builder will set this value
-     * 
-     * @param value absolute lower bound of lowerThreshold
+     * @param value absolute lower bound thresholds
      */
     public void setAbsoluteThreshold(double value) {
         absoluteThreshold = value;
-        setLowerThreshold(absoluteThreshold, autoThreshold);
     }
 
-    /**
-     * sets initial threshold subject to lower threshold LTE initial threshold LTE
-     * upper threshold
-     * 
-     * @param initial new initial threshold
-     */
     public void setInitialThreshold(double initial) {
-        initialThreshold = max(initial, lowerThreshold);
-        upperThreshold = max(upperThreshold, initial);
-    }
-
-    /**
-     * sets upper threshold subject to lower threshold LTE initial threshold LTE
-     * upper threshold as well as 2 * lower threshold LTE upper threshold
-     * 
-     * @param upper new upper threshold
-     */
-    public void setUpperThreshold(double upper) {
-        upperThreshold = max(upper, initialThreshold);
-        upperThreshold = max(upperThreshold, 2 * lowerThreshold);
+        initialThreshold = initial;
     }
 
     public void setThresholdPersistence(double horizon) {
@@ -386,4 +321,56 @@ public class BasicThresholder {
         this.thresholdPersistence = horizon;
     }
 
+    // to be updated as more deviations are added
+    public Deviation[] getDeviations() {
+        Deviation[] deviations = new Deviation[DEFAULT_DEVIATION_STATES];
+        deviations[0] = primaryDeviation.copy();
+        deviations[1] = secondaryDeviation.copy();
+        deviations[2] = thresholdDeviation.copy();
+        return deviations;
+    }
+
+    public boolean isAutoThreshold() {
+        return autoThreshold;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public double getAbsoluteThreshold() {
+        return absoluteThreshold;
+    }
+
+    public double getInitialThreshold() {
+        return initialThreshold;
+    }
+
+    public double getLowerThreshold() {
+        return lowerThreshold;
+    }
+
+    public double getThresholdPersistence() {
+        return thresholdPersistence;
+    }
+
+    public double getZFactor() {
+        return zFactor;
+    }
+
+    public int getMinimumScores() {
+        return minimumScores;
+    }
+
+    public void setMinimumScores(int minimumScores) {
+        this.minimumScores = minimumScores;
+    }
+
+    public void setAutoThreshold(boolean autoThreshold) {
+        this.autoThreshold = autoThreshold;
+    }
 }

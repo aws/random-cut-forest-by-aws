@@ -391,17 +391,24 @@ public class ThresholdedRandomCutForestTest {
                 .precision(precision).parallelExecutionEnabled(false).outputAfter(32).internalShinglingEnabled(true)
                 .anomalyRate(0.005).initialAcceptFraction(0.125).timeDecay(0.0001).boundingBoxCacheFraction(0)
                 .forestMode(ForestMode.STANDARD).build();
+
+        double scoreSum = 0;
+
         for (double dataPoint : initialData) {
             AnomalyDescriptor result = forest.process(new double[] { dataPoint }, 0L);
-            System.out.println("result: " + result.getRCFScore());
+            scoreSum += result.getRCFScore();
         }
+
+        // checking average score < 1
+        assert (scoreSum < initialData.length);
 
         ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
         ThresholdedRandomCutForest second = mapper.toModel(mapper.toState(forest));
 
         for (double dataPoint : data) {
             AnomalyDescriptor result = second.process(new double[] { dataPoint }, 0L);
-            System.out.println("result post conversion: " + result.getRCFScore());
+            // average score jumps due to discontinuity, checking > 1
+            assert (result.getRCFScore() > 1.0);
         }
     }
 

@@ -30,32 +30,6 @@ import org.junit.jupiter.api.Test;
 public class BasicThresholderTest {
 
     @Test
-    void lowerThresholdTest() {
-        BasicThresholder basicThresholder = new BasicThresholder(0.01);
-
-        Random random = new Random();
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setLowerThreshold(1 + random.nextDouble(), false);
-        }
-        assert (basicThresholder.getLowerThreshold() * 2 < basicThresholder.getUpperThreshold() + 1e-10);
-    }
-
-    @Test
-    void initialThresholdTest() {
-        BasicThresholder basicThresholder = new BasicThresholder(0.01);
-
-        Random random = new Random();
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setLowerThreshold(1 + random.nextDouble(), false);
-        }
-        assert (basicThresholder.getLowerThreshold() < basicThresholder.getInitialThreshold() + 1e-10);
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setInitialThreshold(2 + random.nextDouble());
-        }
-        assert (basicThresholder.getInitialThreshold() < basicThresholder.getUpperThreshold() + 1e-10);
-    }
-
-    @Test
     void horizonTest() {
         BasicThresholder basicThresholder = new BasicThresholder(0.01);
         assertThrows(IllegalArgumentException.class, () -> {
@@ -65,25 +39,6 @@ public class BasicThresholderTest {
             basicThresholder.setThresholdPersistence(1 + 1e-10 + new Random().nextDouble());
         });
         assertDoesNotThrow(() -> basicThresholder.setThresholdPersistence(new Random().nextDouble()));
-    }
-
-    @Test
-    void zfactorTest() {
-        BasicThresholder basicThresholder = new BasicThresholder(0.01);
-
-        Random random = new Random();
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setZfactor(1 + random.nextDouble());
-        }
-        assertEquals(basicThresholder.getZFactor(), BasicThresholder.DEFAULT_Z_FACTOR, 1e-10);
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setZfactor(2 + random.nextDouble());
-        }
-        assert (basicThresholder.getZFactor() * 2 < basicThresholder.getUpperZfactor() + 1e-10);
-        for (int i = 0; i < 100; i++) {
-            basicThresholder.setUpperZfactor(6 + random.nextDouble());
-        }
-        assert (basicThresholder.getZFactor() * 2 < basicThresholder.getUpperZfactor() + 1e-10);
     }
 
     @Test

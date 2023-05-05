@@ -90,8 +90,15 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
      */
     int relativeIndex;
 
+    // useful for RCFCaster errors while the model is calibrating itself
+    // will be null except for RCFCaster
+    double[] deviations;
+
+    // the multiplication factors to convert RCF representation to actuals/input
     double[] scale;
 
+    // the addition performed (after multiplications) to convert RCF representation
+    // to actuals/input
     double[] shift;
 
     // expected RCFPoint for the current point

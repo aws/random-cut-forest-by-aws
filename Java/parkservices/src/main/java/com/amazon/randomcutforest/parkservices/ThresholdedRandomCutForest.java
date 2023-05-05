@@ -30,7 +30,6 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_ONED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_THRESHOLD_PERSISTENCE;
 
 import java.util.Arrays;
@@ -130,17 +129,15 @@ public class ThresholdedRandomCutForest {
 
         if (builder.dimensions == builder.shingleSize
                 || (forestMode == ForestMode.TIME_AUGMENTED) && (builder.dimensions == 2 * builder.shingleSize)) {
-            if (builder.transformMethod != TransformMethod.NORMALIZE) {
-                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_ONED));
-            } else {
-                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
-            }
+            predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
         } else {
-            if (builder.transformMethod != TransformMethod.NORMALIZE) {
+            if (builder.transformMethod == TransformMethod.NONE
+                    || builder.transformMethod == TransformMethod.SUBTRACT_MA) {
                 predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
             } else {
                 predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
             }
+            predictorCorrector.setZfactor(2.5);
         }
 
         predictorCorrector.setThresholdPersistence(builder.thresholdPersistence.orElse(DEFAULT_THRESHOLD_PERSISTENCE));
@@ -168,7 +165,7 @@ public class ThresholdedRandomCutForest {
                 .dimensions(dimensions).shingleSize(forest.getShingleSize()).inputLength(inputLength).build();
         this.predictorCorrector = new PredictorCorrector(new BasicThresholder(values, futureAnomalyRate), inputLength);
         preprocessor.setValuesSeen((int) forest.getTotalUpdates());
-        preprocessor.getDataQuality().update(1.0);
+        preprocessor.getDataQuality()[0].update(1.0);
         this.preprocessor = preprocessor;
         this.lastAnomalyDescriptor = new RCFComputeDescriptor(null, forest.getTotalUpdates());
     }

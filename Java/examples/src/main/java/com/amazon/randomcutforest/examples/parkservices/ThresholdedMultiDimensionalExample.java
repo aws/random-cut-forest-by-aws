@@ -47,7 +47,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int shingleSize = 4;
+        int shingleSize = 8;
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
@@ -55,7 +55,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 2;
+        int baseDimensions = 3;
 
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
@@ -64,21 +64,21 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .internalShinglingEnabled(true).transformMethod(TransformMethod.NORMALIZE).precision(precision)
                 .anomalyRate(0.01).forestMode(ForestMode.STANDARD).build();
 
-        long seed = new Random().nextLong();
+        long seed = 8720127486940943609L;
+        new Random().nextLong();
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
-                100, 5, seed, baseDimensions);
+                100, 5, seed, baseDimensions, 10.0, false);
         int keyCounter = 0;
         int count = 0;
         for (double[] point : dataWithKeys.data) {
 
             AnomalyDescriptor result = forest.process(point, 0L);
 
-            if (keyCounter < dataWithKeys.changeIndices.length
-                    && count + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (count + shingleSize - 1) + " CHANGE "
-                        + Arrays.toString(dataWithKeys.changes[keyCounter]));
+            if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println(
+                        "timestamp " + (count) + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 

@@ -69,6 +69,8 @@ public class ThresholdedRandomCutForestMapper
         PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
         predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
         predictorCorrector.setLastScore(state.getLastScore());
+        predictorCorrector.setIgnoreNearExpectedFromAbove(state.getIgnoreSimilarFromAbove());
+        predictorCorrector.setIgnoreNearExpectedFromBelow(state.getIgnoreSimilarFromBelow());
 
         return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
                 descriptor);

@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.parkservices.state.threshold;
 
+import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getDeviations;
+import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getStates;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,20 +33,15 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
     @Override
     public BasicThresholder toModel(BasicThresholderState state, long seed) {
         DeviationMapper deviationMapper = new DeviationMapper();
-        Deviation primaryDeviation = deviationMapper.toModel(state.getPrimaryDeviationState());
-        Deviation secondaryDeviation = deviationMapper.toModel(state.getSecondaryDeviationState());
-        Deviation thresholdDeviation = deviationMapper.toModel(state.getThresholdDeviationState());
-        BasicThresholder thresholder = new BasicThresholder(primaryDeviation, secondaryDeviation, thresholdDeviation);
+        Deviation[] deviations = getDeviations(state.getDeviationStates(), deviationMapper);
+        BasicThresholder thresholder = new BasicThresholder(deviations);
         thresholder.setAbsoluteThreshold(state.getAbsoluteThreshold());
-        thresholder.setLowerThreshold(state.getLowerThreshold(), state.isAutoThreshold());
-        thresholder.setUpperThreshold(state.getUpperThreshold());
+        thresholder.setLowerThreshold(state.getLowerThreshold());
         thresholder.setInitialThreshold(state.getInitialThreshold());
-        thresholder.setElasticity(state.getElasticity());
         thresholder.setThresholdPersistence(state.getHorizon());
         thresholder.setCount(state.getCount());
+        thresholder.setAutoThreshold(state.isAutoThreshold());
         thresholder.setMinimumScores(state.getMinimumScores());
-        thresholder.setAbsoluteScoreFraction(state.getAbsoluteScoreFraction());
-        thresholder.setUpperZfactor(state.getUpperZfactor());
         thresholder.setZfactor(state.getZFactor());
         return thresholder;
     }
@@ -54,19 +52,13 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         DeviationMapper deviationMapper = new DeviationMapper();
 
         state.setZFactor(model.getZFactor());
-        state.setUpperZfactor(model.getUpperZfactor());
-        state.setUpperThreshold(model.getUpperThreshold());
         state.setLowerThreshold(model.getLowerThreshold());
         state.setAbsoluteThreshold(model.getAbsoluteThreshold());
         state.setInitialThreshold(model.getInitialThreshold());
-        state.setAbsoluteScoreFraction(model.getAbsoluteScoreFraction());
-        state.setElasticity(model.getElasticity());
         state.setCount(model.getCount());
         state.setAutoThreshold(model.isAutoThreshold());
         state.setMinimumScores(model.getMinimumScores());
-        state.setPrimaryDeviationState(deviationMapper.toState(model.getPrimaryDeviation()));
-        state.setSecondaryDeviationState(deviationMapper.toState(model.getSecondaryDeviation()));
-        state.setThresholdDeviationState(deviationMapper.toState(model.getThresholdDeviation()));
+        state.setDeviationStates(getStates(model.getDeviations(), deviationMapper));
         state.setHorizon(model.getThresholdPersistence());
         return state;
     }

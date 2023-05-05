@@ -27,22 +27,29 @@ public class BasicThresholderState implements Serializable {
 
     private long randomseed;
 
+    @Deprecated
     private boolean inAnomaly;
 
+    @Deprecated
     private double elasticity;
 
+    @Deprecated
     private boolean attributionEnabled;
 
     private int count;
 
     private int minimumScores;
 
+    @Deprecated
     private DeviationState primaryDeviationState;
 
+    @Deprecated
     private DeviationState secondaryDeviationState;
 
+    @Deprecated
     private DeviationState thresholdDeviationState;
 
+    @Deprecated
     private double upperThreshold;
 
     private double lowerThreshold;
@@ -55,10 +62,14 @@ public class BasicThresholderState implements Serializable {
 
     private double zFactor;
 
+    @Deprecated
     private double upperZfactor;
 
+    @Deprecated
     private double absoluteScoreFraction;
 
     private double horizon;
+
+    private DeviationState[] deviationStates;
 
 }

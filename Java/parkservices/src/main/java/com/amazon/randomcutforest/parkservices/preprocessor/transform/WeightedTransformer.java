@@ -202,10 +202,18 @@ public class WeightedTransformer implements ITransformer {
     }
 
     @Override
-    public double[] getShift() {
+    public double[] getShift(double[] previous) {
         double[] answer = new double[weights.length];
         for (int i = 0; i < weights.length; i++) {
             answer[i] = getShift(i, deviations);
+        }
+        return answer;
+    }
+
+    public double[] getErrorDeviations() {
+        double[] answer = new double[weights.length];
+        for (int i = 0; i < weights.length; i++) {
+            answer[i] = Math.abs(deviations[i + 2 * weights.length].getMean());
         }
         return answer;
     }

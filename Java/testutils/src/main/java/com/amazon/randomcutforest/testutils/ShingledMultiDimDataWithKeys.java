@@ -77,6 +77,11 @@ public class ShingledMultiDimDataWithKeys {
 
     public static MultiDimDataWithKey getMultiDimData(int num, int period, double amplitude, double noise, long seed,
             int baseDimension, boolean useSlope) {
+        return getMultiDimData(num, period, amplitude, noise, seed, baseDimension, 5.0, useSlope);
+    }
+
+    public static MultiDimDataWithKey getMultiDimData(int num, int period, double amplitude, double noise, long seed,
+            int baseDimension, double anomalyFactor, boolean useSlope) {
         double[][] data = new double[num][];
         double[][] changes = new double[num][];
         int[] changedIndices = new int[num];
@@ -105,13 +110,15 @@ public class ShingledMultiDimDataWithKeys {
             double[] newChange = new double[baseDimension];
             boolean used = false;
             for (int j = 0; j < baseDimension; j++) {
-                data[i][j] = amp[j] * Math.cos(2 * PI * (i + phase[j]) / period) + slope[j] * i
-                        + noise * noiseprg.nextDouble() + shift[j];
+                data[i][j] = amp[j] * Math.cos(2 * PI * (i + phase[j]) / period) + slope[j] * i + shift[j];
+                // ensures that the noise does not cancel the anomaly or change it's magnitude
                 if (flag && noiseprg.nextDouble() < 0.3) {
-                    double factor = 5 * (1 + noiseprg.nextDouble());
+                    double factor = anomalyFactor * (1 + noiseprg.nextDouble());
                     double change = noiseprg.nextDouble() < 0.5 ? factor * noise : -factor * noise;
                     data[i][j] += newChange[j] = change;
                     used = true;
+                } else {
+                    data[i][j] += noise * noiseprg.nextDouble();
                 }
             }
             if (used) {
