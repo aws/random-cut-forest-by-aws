@@ -64,12 +64,26 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .internalShinglingEnabled(true).transformMethod(TransformMethod.NORMALIZE).precision(precision)
                 .anomalyRate(0.01).forestMode(ForestMode.STANDARD).build();
 
-        long seed = 8720127486940943609L;
-        new Random().nextLong();
+        long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
+
+        // basic amplitude of the waves -- the parameter will be randomly scaled up
+        // betwee 0-20 percent
+        double amplitude = 100.0;
+
+        // the amplitude of random noise it will be +ve/-ve uniformly at random
+        double noise = 5.0;
+
+        // the following controls the ratio of anomaly magnitude to noise
+        // notice amplitude/noise would determine signal-to-noise ratio
+        double anomalyFactor = 5;
+
+        // the following determines if a random linear trend should be added
+        boolean useSlope = false;
+
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
-                100, 5, seed, baseDimensions, 10.0, false);
+                amplitude, noise, seed, baseDimensions, anomalyFactor, useSlope);
         int keyCounter = 0;
         int count = 0;
         for (double[] point : dataWithKeys.data) {

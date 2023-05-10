@@ -330,6 +330,7 @@ public class ErrorHandler {
                     errorRMSE.high[pos] = (positiveCount > 0) ? Math.sqrt(positiveSqSum / positiveCount) : 0;
                     errorRMSE.low[pos] = (positiveCount < len) ? -Math.sqrt(negativeSqSum / (len - positiveCount)) : 0;
                     Arrays.sort(medianError, 0, len);
+                    // medianError array is now sorted
                     errorDistribution.values[pos] = interpolatedMedian(medianError);
                     double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
                     errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile, deviation);
@@ -359,28 +360,30 @@ public class ErrorHandler {
         }
     }
 
-    float interpolatedLowerRank(double[] array, double fracRank, double deviation) {
+    float interpolatedLowerRank(double[] ascendingArray, double fracRank, double deviation) {
         if (fracRank < 1) {
-            return (float) (-1.3 * deviation * (1 - fracRank) + fracRank * array[0]);
+            return (float) (-1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[0]);
         }
         int rank = (int) Math.floor(fracRank);
         if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
             // turn off interpolation
             fracRank = rank;
         }
-        return (float) (array[rank - 1] + (fracRank - rank) * (array[rank] - array[rank - 1]));
+        return (float) (ascendingArray[rank - 1]
+                + (fracRank - rank) * (ascendingArray[rank] - ascendingArray[rank - 1]));
     }
 
-    float interpolatedUpperRank(double[] array, int len, double fracRank, double deviation) {
+    float interpolatedUpperRank(double[] ascendingArray, int len, double fracRank, double deviation) {
         if (fracRank < 1) {
-            return (float) (1.3 * deviation * (1 - fracRank) + fracRank * array[len - 1]);
+            return (float) (1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[len - 1]);
         }
         int rank = (int) Math.floor(fracRank);
         if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
             // turn off interpolation
             fracRank = rank;
         }
-        return (float) (array[len - rank] + (fracRank - rank) * (array[len - rank - 1] - array[len - rank]));
+        return (float) (ascendingArray[len - rank]
+                + (fracRank - rank) * (ascendingArray[len - rank - 1] - ascendingArray[len - rank]));
     }
 
     void adjust(RangeVector rangeVector, RangeVector other) {

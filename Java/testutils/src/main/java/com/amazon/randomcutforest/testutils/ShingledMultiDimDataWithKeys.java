@@ -118,7 +118,7 @@ public class ShingledMultiDimDataWithKeys {
                     data[i][j] += newChange[j] = change;
                     used = true;
                 } else {
-                    data[i][j] += noise * noiseprg.nextDouble();
+                    data[i][j] += noise * (2 * noiseprg.nextDouble() - 1);
                 }
             }
             if (used) {
