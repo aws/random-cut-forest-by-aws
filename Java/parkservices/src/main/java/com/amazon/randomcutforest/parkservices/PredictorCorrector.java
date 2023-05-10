@@ -450,13 +450,19 @@ public class PredictorCorrector {
             if (newPoint != null && result.getForestMode() != ForestMode.DISTANCE) {
                 newAttribution = forest.getAnomalyAttribution(newPoint);
                 newScore = newAttribution.getHighLowSum();
-                boolean significantScore = (score > 1.5 || score > thresholder.getPrimaryThreshold())
-                        || score > newScore + 0.25;
-                // ignore late anomalies for larger shingleSizes unless the score differential
-                // is large
+                // score is large, significantly over the threshold, or the change of a single
+                // entry
+                // causes a significant change in anomaly score
+                // and no anomaly has not yet been reported on this shingle
+                boolean significantScore = score > 1.5 || score > workingThreshold + 0.25
+                        || (score > newScore + 0.25 && gap > shingleSize);
+                // ignore late anomalies for larger shingleSizes unless the score
+                // is considered signficant
                 significant = (shingleSize > 4 && index + shingleSize / 2 > 0) || significantScore;
-                int base = (result.forestMode == ForestMode.TIME_AUGMENTED) ? baseDimensions - 1 : baseDimensions;
                 if (significant) {
+                    // time augmented mode will be improved later -- that would require extra
+                    // information
+                    int base = (result.forestMode == ForestMode.TIME_AUGMENTED) ? baseDimensions - 1 : baseDimensions;
                     significant = isSignificant(significantScore, point, newPoint, startPosition, base, result);
                 }
             }
