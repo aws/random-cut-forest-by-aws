@@ -410,6 +410,7 @@ public class PredictorCorrector {
                 // fixing the past makes this anomaly go away; nothing to do but process the
                 // score we will not change inHighScoreRegion however, because the score has
                 // been larger
+                result.setThreshold(workingThreshold);
                 thresholder.update(score, correctedScore, lastScore, result.transformMethod);
                 lastScore = correctedScore;
                 result.setExpectedRCFPoint(correctedPoint);
@@ -446,13 +447,16 @@ public class PredictorCorrector {
         if (reasonableForecast && shingleSize > 1) {
             startPosition = shingleSize * baseDimensions + (index - 1) * baseDimensions;
             newPoint = getExpectedPoint(attribution, startPosition, baseDimensions, point, forest);
-            if (newPoint != null) {
+            if (newPoint != null && result.getForestMode() != ForestMode.DISTANCE) {
                 newAttribution = forest.getAnomalyAttribution(newPoint);
-                newScore = forest.getAnomalyScore(newPoint);
+                newScore = newAttribution.getHighLowSum();
+                boolean significantScore = (score > 1.5 || score > thresholder.getPrimaryThreshold())
+                        || score > newScore + 0.25;
+                // ignore late anomalies for larger shingleSizes unless the score differential
+                // is large
+                significant = (shingleSize > 4 && index + shingleSize / 2 > 0) || significantScore;
                 int base = (result.forestMode == ForestMode.TIME_AUGMENTED) ? baseDimensions - 1 : baseDimensions;
-                // if the score is high then it is significant
-                if (result.getForestMode() != ForestMode.DISTANCE) {
-                    boolean significantScore = (score > 1.5 || score > thresholder.getPrimaryThreshold());
+                if (significant) {
                     significant = isSignificant(significantScore, point, newPoint, startPosition, base, result);
                 }
             }

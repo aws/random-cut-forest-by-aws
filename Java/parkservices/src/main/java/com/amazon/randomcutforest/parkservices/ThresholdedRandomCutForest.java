@@ -28,6 +28,7 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_THRESHOLD_PERSISTENCE;
@@ -414,7 +415,7 @@ public class ThresholdedRandomCutForest {
         protected double[] fillValues = null;
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
-        protected boolean adjustThreshold = false;
+        protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
         protected Optional<Double> transformDecay = Optional.empty();
 
         void validate() {

@@ -33,7 +33,7 @@ public class BasicThresholder {
     public static int DEFAULT_MINIMUM_SCORES = 10;
     public static double DEFAULT_LOWER_THRESHOLD = 0.9;
     public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
-    public static double DEFAULT_ABSOLUTE_THRESHOLD = 0.6;
+    public static double DEFAULT_ABSOLUTE_THRESHOLD = 0.7;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 3.0;
     public static double MINIMUM_Z_FACTOR = 2.0;
