@@ -20,6 +20,7 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
 
 import java.util.List;
 
@@ -29,7 +30,7 @@ import com.amazon.randomcutforest.util.Weighted;
 
 public class BasicThresholder {
 
-    public static double DEFAULT_THRESHOLD_PERSISTENCE = 0.5;
+    public static double DEFAULT_SCORE_DIFFERENCING = 0.5;
     public static int DEFAULT_MINIMUM_SCORES = 10;
     public static double DEFAULT_LOWER_THRESHOLD = 0.9;
     public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
@@ -47,7 +48,7 @@ public class BasicThresholder {
 
     // horizon = 0 is short term, switches to secondary
     // horizon = 1 long term, switches to primary
-    protected double thresholdPersistence = DEFAULT_THRESHOLD_PERSISTENCE;
+    protected double scoreDifferencing = DEFAULT_SCORE_DIFFERENCING;
 
     // below these many observations, deviation is not useful
     protected int minimumScores = DEFAULT_MINIMUM_SCORES;
@@ -97,23 +98,16 @@ public class BasicThresholder {
         }
     }
 
-    /**
-     * The constructor creates a thresholder from a sample of scores and a future
-     * discount rate
-     * 
-     * @param scores            list of scores
-     * @param futureAnomalyRate discount/decay factor of scores going forward
-     */
-    public BasicThresholder(List<Double> scores, double futureAnomalyRate) {
+    public BasicThresholder(List<Double> scores, double rate) {
         this.primaryDeviation = new Deviation(0);
         this.secondaryDeviation = new Deviation(0);
         this.thresholdDeviation = new Deviation(0);
         if (scores != null) {
             scores.forEach(s -> update(s, s));
         }
-        primaryDeviation.setDiscount(futureAnomalyRate);
-        secondaryDeviation.setDiscount(futureAnomalyRate);
-        thresholdDeviation.setDiscount(futureAnomalyRate / 2);
+        primaryDeviation.setDiscount(rate);
+        secondaryDeviation.setDiscount(rate);
+        thresholdDeviation.setDiscount(0.1 * rate);
     }
 
     /**
@@ -127,9 +121,9 @@ public class BasicThresholder {
             return false;
         }
 
-        if (thresholdPersistence == 0) {
+        if (scoreDifferencing == 0) {
             return secondaryDeviation.getCount() >= minimumScores;
-        } else if (thresholdPersistence == 1) {
+        } else if (scoreDifferencing == 1) {
             return primaryDeviation.getCount() >= minimumScores;
         } else {
             return secondaryDeviation.getCount() >= minimumScores && primaryDeviation.getCount() >= minimumScores;
@@ -156,38 +150,6 @@ public class BasicThresholder {
         }
     }
 
-    protected double threshold(double factor, double intermediateTermFraction, TransformMethod method, int dimension) {
-        if (!isDeviationReady()) { // count < minimumScore is this branch
-            return max(initialThreshold, absoluteThreshold);
-        } else {
-            return max(absoluteThreshold,
-                    intermediateTermFraction
-                            * (primaryDeviation.getMean()
-                                    + adjustedFactor(factor, method, dimension) * longTermDeviation(method, dimension))
-                            + (1 - intermediateTermFraction) * initialThreshold);
-        }
-
-    }
-
-    protected double adjustedFactor(double factor, TransformMethod method, int dimension) {
-        double correctedFactor = factor;
-        double base = primaryDeviation.getMean();
-        if (autoThreshold && base < lowerThreshold && method != TransformMethod.NORMALIZE) {
-            correctedFactor = primaryDeviation.getMean() * factor / lowerThreshold;
-        }
-        return max(correctedFactor, MINIMUM_Z_FACTOR);
-    }
-
-    protected double longTermDeviation(TransformMethod method, int dimension) {
-        double a = primaryDeviation.getDeviation();
-        double b = secondaryDeviation.getDeviation();
-        if (dimension > 1 && (method == TransformMethod.NORMALIZE_DIFFERENCE || method == TransformMethod.DIFFERENCE)) {
-            a = (a + thresholdDeviation.getDeviation()) / 2;
-        }
-        // the following is a convex combination that allows control of the behavior
-        return (thresholdPersistence * a + (1 - thresholdPersistence) * b);
-    }
-
     @Deprecated
     public double threshold() {
         return getPrimaryThreshold();
@@ -200,7 +162,7 @@ public class BasicThresholder {
     /**
      * The simplest thresholder that does not use any auxilliary correction, an can
      * be used for multiple scoring capabilities.
-     * 
+     *
      * @param score the value being thresholded
      * @return a computation of grade between [-1,1], grades in the range (0,1] are
      *         to be considered anomalous
@@ -220,21 +182,84 @@ public class BasicThresholder {
         return getPrimaryGrade(score);
     }
 
-    public Weighted<Double> getThresholdAndGrade(double score, TransformMethod method, int dimension) {
-        return getThresholdAndGrade(score, zFactor, method, dimension);
+    /**
+     * The following adapts the notion of x-sigma (standard deviation) to admit the
+     * case that RCF scores are asymmetric and values lower than 1 (closer to 0.5)
+     * can be more common; whereas anomalies are typically larger the x-factor is
+     * automatically scaled to be calibrated with the average score (bounded below
+     * by an absolute constant like 0.7)
+     * 
+     * @param factor    the factor being scaled
+     * @param method    transformation method
+     * @param dimension the dimension of the problem (currently unused)
+     * @return a scaled value of the factor
+     */
+
+    protected double adjustedFactor(double factor, TransformMethod method, int dimension) {
+        double correctedFactor = factor;
+        double base = primaryDeviation.getMean();
+        if (autoThreshold && base < lowerThreshold && method != TransformMethod.NORMALIZE) {
+            correctedFactor = primaryDeviation.getMean() * factor / lowerThreshold;
+        }
+        return max(correctedFactor, MINIMUM_Z_FACTOR);
     }
 
-    public Weighted<Double> getThresholdAndGrade(double score, double factor, TransformMethod method, int dimension) {
+    /**
+     * The following computes the standard deviation of the scores. But we have
+     * multiple ways of measuring that -- if the scores are typically symmetric then
+     * many of these measures concide. However transformation of the values may
+     * cause the score distribution to be unusual. For example, if NORMALIZATION is
+     * used then the scores (below the average) end up being close to the average
+     * (an example of the asymmetry) and thus only standard deviation is used. But
+     * for other distributions we could directly estimate the deviation of the
+     * scores above the dynamic mean in an online manner. An orthogonal component is
+     * the effect of shingling/differencing which connect up the scores from
+     * consecutive input.
+     * 
+     * @param method      transformation method
+     * @param shingleSize shinglesize used
+     * @return an estimate of long term deviation from mean of a stochastic series
+     */
+    protected double longTermDeviation(TransformMethod method, int shingleSize) {
+
+        if (shingleSize == 1
+                && !(method == TransformMethod.DIFFERENCE || method == TransformMethod.NORMALIZE_DIFFERENCE)) {
+            // control the effect of large values above a threshold from raising the
+            // threshold
+            return min(sqrt(2.0) * thresholdDeviation.getDeviation(), primaryDeviation.getDeviation());
+        } else {
+            double first = primaryDeviation.getDeviation();
+            if (method != TransformMethod.NORMALIZE) {
+                first = min(first, sqrt(2.0) * thresholdDeviation.getDeviation());
+
+            }
+            // there is a role of differenceing; either by shingling or by explicit
+            // transformation
+            return scoreDifferencing * first + (1 - scoreDifferencing) * secondaryDeviation.getDeviation();
+        }
+
+    }
+
+    public Weighted<Double> getThresholdAndGrade(double score, TransformMethod method, int dimension, int shingleSize) {
+        return getThresholdAndGrade(score, zFactor, method, dimension, shingleSize);
+    }
+
+    public Weighted<Double> getThresholdAndGrade(double score, double factor, TransformMethod method, int dimension,
+            int shingleSize) {
         double intermediateFraction = intermediateTermFraction();
-        double threshold = threshold(factor, intermediateFraction, method, dimension);
+        double newFactor = adjustedFactor(factor, method, dimension);
+        double longTerm = longTermDeviation(method, shingleSize);
+        double scaledDeviation = (newFactor - 1) * longTerm + primaryDeviation.getDeviation();
+
+        double threshold = (!isDeviationReady()) ? max(initialThreshold, absoluteThreshold)
+                : max(absoluteThreshold, intermediateFraction * (primaryDeviation.getMean() + scaledDeviation)
+                        + (1 - intermediateFraction) * initialThreshold);
         if (score < threshold) {
             return new Weighted<>(threshold, 0);
         } else {
             double base = min(threshold, primaryDeviation.getMean());
-            double newFactor = adjustedFactor(factor, method, dimension);
-            double deviation = longTermDeviation(method, dimension);
             // the value below should not be 0 because of min()
-            return new Weighted<>(threshold, getSurpriseIndex(score, base, newFactor, deviation));
+            return new Weighted<>(threshold, getSurpriseIndex(score, base, newFactor, scaledDeviation / newFactor));
         }
     }
 
@@ -316,9 +341,9 @@ public class BasicThresholder {
         initialThreshold = initial;
     }
 
-    public void setThresholdPersistence(double horizon) {
+    public void setScoreDifferencing(double horizon) {
         checkArgument(horizon >= 0 && horizon <= 1, "incorrect threshold horizon parameter");
-        this.thresholdPersistence = horizon;
+        this.scoreDifferencing = horizon;
     }
 
     // to be updated as more deviations are added
@@ -354,8 +379,8 @@ public class BasicThresholder {
         return lowerThreshold;
     }
 
-    public double getThresholdPersistence() {
-        return thresholdPersistence;
+    public double getScoreDifferencing() {
+        return scoreDifferencing;
     }
 
     public double getZFactor() {

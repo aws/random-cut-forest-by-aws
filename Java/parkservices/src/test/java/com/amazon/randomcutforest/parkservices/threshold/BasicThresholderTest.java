@@ -33,12 +33,12 @@ public class BasicThresholderTest {
     void horizonTest() {
         BasicThresholder basicThresholder = new BasicThresholder(0.01);
         assertThrows(IllegalArgumentException.class, () -> {
-            basicThresholder.setThresholdPersistence(-new Random().nextDouble());
+            basicThresholder.setScoreDifferencing(-new Random().nextDouble());
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            basicThresholder.setThresholdPersistence(1 + 1e-10 + new Random().nextDouble());
+            basicThresholder.setScoreDifferencing(1 + 1e-10 + new Random().nextDouble());
         });
-        assertDoesNotThrow(() -> basicThresholder.setThresholdPersistence(new Random().nextDouble()));
+        assertDoesNotThrow(() -> basicThresholder.setScoreDifferencing(new Random().nextDouble()));
     }
 
     @Test
@@ -56,11 +56,11 @@ public class BasicThresholderTest {
         basicThresholder.updatePrimary(0.0);
         basicThresholder.updatePrimary(0.0);
         assertFalse(basicThresholder.isDeviationReady());
-        basicThresholder.setThresholdPersistence(0);
+        basicThresholder.setScoreDifferencing(0);
         assertFalse(basicThresholder.isDeviationReady());
         basicThresholder.setMinimumScores(5);
         assertFalse(basicThresholder.isDeviationReady());
-        basicThresholder.setThresholdPersistence(1.0);
+        basicThresholder.setScoreDifferencing(1.0);
         assertTrue(basicThresholder.isDeviationReady());
 
         basicThresholder.updatePrimary(0.0);

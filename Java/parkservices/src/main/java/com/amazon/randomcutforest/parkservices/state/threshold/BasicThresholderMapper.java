@@ -33,12 +33,21 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
     @Override
     public BasicThresholder toModel(BasicThresholderState state, long seed) {
         DeviationMapper deviationMapper = new DeviationMapper();
-        Deviation[] deviations = getDeviations(state.getDeviationStates(), deviationMapper);
+        Deviation[] deviations = null;
+        if (state.getDeviationStates() != null) {
+            deviations = getDeviations(state.getDeviationStates(), deviationMapper);
+        } else if (state.getPrimaryDeviationState() != null) {
+            // backward compatility; will be deprecated in 4.0
+            deviations = new Deviation[3];
+            deviations[0] = deviationMapper.toModel(state.getPrimaryDeviationState());
+            deviations[1] = deviationMapper.toModel(state.getSecondaryDeviationState());
+            deviations[2] = deviationMapper.toModel(state.getThresholdDeviationState());
+        }
         BasicThresholder thresholder = new BasicThresholder(deviations);
         thresholder.setAbsoluteThreshold(state.getAbsoluteThreshold());
         thresholder.setLowerThreshold(state.getLowerThreshold());
         thresholder.setInitialThreshold(state.getInitialThreshold());
-        thresholder.setThresholdPersistence(state.getHorizon());
+        thresholder.setScoreDifferencing(state.getHorizon());
         thresholder.setCount(state.getCount());
         thresholder.setAutoThreshold(state.isAutoThreshold());
         thresholder.setMinimumScores(state.getMinimumScores());
@@ -59,7 +68,7 @@ public class BasicThresholderMapper implements IStateMapper<BasicThresholder, Ba
         state.setAutoThreshold(model.isAutoThreshold());
         state.setMinimumScores(model.getMinimumScores());
         state.setDeviationStates(getStates(model.getDeviations(), deviationMapper));
-        state.setHorizon(model.getThresholdPersistence());
+        state.setHorizon(model.getScoreDifferencing());
         return state;
     }
 

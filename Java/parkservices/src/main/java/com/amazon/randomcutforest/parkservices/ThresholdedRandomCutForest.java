@@ -31,7 +31,7 @@ import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_THRESHOLD_PERSISTENCE;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
 
 import java.util.Arrays;
 import java.util.List;
@@ -141,7 +141,7 @@ public class ThresholdedRandomCutForest {
             predictorCorrector.setZfactor(2.5);
         }
 
-        predictorCorrector.setThresholdPersistence(builder.thresholdPersistence.orElse(DEFAULT_THRESHOLD_PERSISTENCE));
+        predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
 
     }
 
@@ -347,11 +347,11 @@ public class ThresholdedRandomCutForest {
 
     @Deprecated
     public void setHorizon(double horizon) {
-        predictorCorrector.setThresholdPersistence(horizon);
+        predictorCorrector.setScoreDifferencing(horizon);
     }
 
-    public void setThresholdPersistence(double persistence) {
-        predictorCorrector.setThresholdPersistence(persistence);
+    public void setScoreDifferencing(double persistence) {
+        predictorCorrector.setScoreDifferencing(persistence);
     }
 
     @Deprecated
@@ -394,7 +394,7 @@ public class ThresholdedRandomCutForest {
         protected Optional<Integer> stopNormalization = Optional.empty();
         protected int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         protected Optional<Double> timeDecay = Optional.empty();
-        protected Optional<Double> thresholdPersistence = Optional.empty();
+        protected Optional<Double> scoreDifferencing = Optional.empty();
         protected Optional<Double> lowerThreshold = Optional.empty();
         protected Optional<Double> weightTime = Optional.empty();
         protected Optional<Long> randomSeed = Optional.empty();
@@ -608,8 +608,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T thresholdPersistence(double persistence) {
-            this.thresholdPersistence = Optional.of(persistence);
+        public T scoreDifferencing(double persistence) {
+            this.scoreDifferencing = Optional.of(persistence);
             return (T) this;
         }
 
