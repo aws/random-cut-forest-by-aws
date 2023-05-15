@@ -295,7 +295,10 @@ public class PredictorCorrector {
                 double delta = observedGap * scaleFactor;
                 double shiftBase = (shift == null) ? 0 : shift[y];
                 double shiftAmount = 0;
-                if (scaleFactor != 1.0 || shiftBase != 0) {
+
+                // the conditional below is redundant, since abs(shiftBase) is being multiplied
+                // but kept as a placeholder for tuning constants if desired
+                if (shiftBase != 0) {
                     double multiplier = (method == TransformMethod.NORMALIZE) ? 4 : 2;
                     shiftAmount += multiplier * DEFAULT_NORMALIZATION_PRECISION * Math.abs(shiftBase);
                 }
@@ -304,7 +307,9 @@ public class PredictorCorrector {
                 double a = Math.abs(scaleFactor * point[startPosition + y] + shiftBase);
                 double b = Math.abs(scaleFactor * newPoint[startPosition + y] + shiftBase);
 
-                // for non-trivial transformations
+                // for non-trivial transformations -- both transformations are used enable
+                // relative error
+                // the only transformation currently ruled out is TransformMethod.NONE
                 if (scaleFactor != 1.0 || shiftBase != 0) {
                     double multiplier = (method == TransformMethod.NORMALIZE) ? 2 : 1;
                     shiftAmount += multiplier * DEFAULT_NORMALIZATION_PRECISION * (scaleFactor + (a + b) / 2);
@@ -470,7 +475,7 @@ public class PredictorCorrector {
                 // score is large, significantly over the threshold, or the change of a single
                 // entry
                 // causes a significant change in anomaly score
-                // and no anomaly has not yet been reported on this shingle
+                // and no anomaly has yet been reported on this shingle
                 boolean significantScore = score > 1.5 || score > workingThreshold + 0.25
                         || (score > newScore + 0.25 && gap > shingleSize);
                 // significantScore is the signal sent; but can can be overruled by

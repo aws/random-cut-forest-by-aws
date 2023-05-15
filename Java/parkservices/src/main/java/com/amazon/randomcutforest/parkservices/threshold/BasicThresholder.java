@@ -212,9 +212,9 @@ public class BasicThresholder {
      * used then the scores (below the average) end up being close to the average
      * (an example of the asymmetry) and thus only standard deviation is used. But
      * for other distributions we could directly estimate the deviation of the
-     * scores above the dynamic mean in an online manner. An orthogonal component is
-     * the effect of shingling/differencing which connect up the scores from
-     * consecutive input.
+     * scores below the dynamic mean in an online manner, and we do so in
+     * thresholdDeviation. An orthogonal component is the effect of
+     * shingling/differencing which connect up the scores from consecutive input.
      * 
      * @param method      transformation method
      * @param shingleSize shinglesize used
