@@ -91,5 +91,5 @@ public interface ITransformer {
     }
 
     // used for computing errors in RCFcaster before the model is callibrated
-    double[] getErrorDeviations();
+    double[] getSmoothedDeviations();
 }

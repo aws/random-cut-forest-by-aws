@@ -15,22 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -48,6 +32,22 @@ import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+import static java.lang.Math.log;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 @Getter
 @Setter
@@ -364,7 +364,7 @@ public class Preprocessor implements IPreprocessor {
         double[] previous = (inputPoint.length == lastShingledInput.length) ? lastShingledInput
                 : getShingledInput(shingleSize - 1);
         description.setShift(transformer.getShift(previous));
-        description.setDeviations(transformer.getErrorDeviations());
+        description.setDeviations(transformer.getSmoothedDeviations());
         description.setNumberOfNewImputes(0);
         return description;
     }
@@ -694,7 +694,9 @@ public class Preprocessor implements IPreprocessor {
      */
     protected void updateState(double[] inputPoint, double[] scaledInput, long timestamp, long previous) {
         if (timeStampDeviations != null) {
-            timeStampDeviations[0].update(timestamp - previous);
+            double value = timestamp - previous;
+            timeStampDeviations[0].update(value);
+            timeStampDeviations[1].update( log(Math.max(1.0,1.0+value)));
             // smoothing
             timeStampDeviations[2].update(timeStampDeviations[0].getDeviation());
         }
@@ -1009,25 +1011,19 @@ public class Preprocessor implements IPreprocessor {
 
         // mapper
         public T deviations(Deviation[] deviations) {
-            if (deviations != null) {
-                this.deviations = Optional.of(deviations);
-            }
+            this.deviations = Optional.ofNullable(deviations);
             return (T) this;
         }
 
         // mapper
         public T dataQuality(Deviation[] dataQuality) {
-            if (dataQuality != null) {
-                this.dataQuality = Optional.of(dataQuality);
-            }
+            this.dataQuality = Optional.ofNullable(dataQuality);
             return (T) this;
         }
 
         // mapper
         public T timeDeviations(Deviation[] timeDeviations) {
-            if (timeDeviations != null) {
-                this.timeDeviations = Optional.of(timeDeviations);
-            }
+            this.timeDeviations = Optional.ofNullable(timeDeviations);
             return (T) this;
         }
 
