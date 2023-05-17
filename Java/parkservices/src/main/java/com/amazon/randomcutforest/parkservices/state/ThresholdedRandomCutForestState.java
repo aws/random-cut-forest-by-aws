@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
-import static com.amazon.randomcutforest.state.Version.V2_1;
+import static com.amazon.randomcutforest.state.Version.V3_7;
 
 import java.io.Serializable;
 
@@ -30,7 +30,7 @@ import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 public class ThresholdedRandomCutForestState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String version = V2_1;
+    private String version = V3_7;
     RandomCutForestState forestState;
     private BasicThresholderState thresholderState;
     private PreprocessorState[] preprocessorStates;
@@ -53,5 +53,7 @@ public class ThresholdedRandomCutForestState implements Serializable {
     private String transformMethod;
     private int lastRelativeIndex;
     private int lastReset;
+    private double[] ignoreSimilarFromAbove;
+    private double[] ignoreSimilarFromBelow;
 
 }

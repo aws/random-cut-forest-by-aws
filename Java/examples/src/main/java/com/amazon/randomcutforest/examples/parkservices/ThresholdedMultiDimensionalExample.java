@@ -47,7 +47,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int shingleSize = 4;
+        int shingleSize = 8;
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
@@ -55,7 +55,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
         // change this to try different number of attributes,
         // this parameter is not expected to be larger than 5 for this example
-        int baseDimensions = 2;
+        int baseDimensions = 3;
 
         int dimensions = baseDimensions * shingleSize;
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
@@ -66,19 +66,33 @@ public class ThresholdedMultiDimensionalExample implements Example {
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
+
+        // basic amplitude of the waves -- the parameter will be randomly scaled up
+        // betwee 0-20 percent
+        double amplitude = 100.0;
+
+        // the amplitude of random noise it will be +ve/-ve uniformly at random
+        double noise = 5.0;
+
+        // the following controls the ratio of anomaly magnitude to noise
+        // notice amplitude/noise would determine signal-to-noise ratio
+        double anomalyFactor = 5;
+
+        // the following determines if a random linear trend should be added
+        boolean useSlope = false;
+
         // change the last argument seed for a different run
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
-                100, 5, seed, baseDimensions);
+                amplitude, noise, seed, baseDimensions, anomalyFactor, useSlope);
         int keyCounter = 0;
         int count = 0;
         for (double[] point : dataWithKeys.data) {
 
             AnomalyDescriptor result = forest.process(point, 0L);
 
-            if (keyCounter < dataWithKeys.changeIndices.length
-                    && count + shingleSize - 1 == dataWithKeys.changeIndices[keyCounter]) {
-                System.out.println("timestamp " + (count + shingleSize - 1) + " CHANGE "
-                        + Arrays.toString(dataWithKeys.changes[keyCounter]));
+            if (keyCounter < dataWithKeys.changeIndices.length && count == dataWithKeys.changeIndices[keyCounter]) {
+                System.out.println(
+                        "timestamp " + (count) + " CHANGE " + Arrays.toString(dataWithKeys.changes[keyCounter]));
                 ++keyCounter;
             }
 

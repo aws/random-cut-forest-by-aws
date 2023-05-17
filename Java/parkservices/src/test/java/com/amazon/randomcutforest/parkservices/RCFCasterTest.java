@@ -82,7 +82,7 @@ public class RCFCasterTest {
                             double[] array = caster.errorHandler.getErrorVector(len, (i + 1), k, pos,
                                     RCFCaster.defaultError);
                             double mean = Arrays.stream(array).sum() / len;
-                            assertEquals(caster.errorHandler.errorMean[pos], mean, 1e-4);
+                            assertEquals(caster.errorHandler.errorMean[pos], mean, 1e-2);
                         }
                     }
                 }

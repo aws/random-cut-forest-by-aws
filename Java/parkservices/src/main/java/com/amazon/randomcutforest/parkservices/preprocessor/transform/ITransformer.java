@@ -78,11 +78,18 @@ public interface ITransformer {
     double[] transformValues(int internalTimeStamp, double[] inputPoint, double[] previousInput, Deviation[] initials,
             double clipFactor);
 
-    default double[] getShift() {
+    // used for converting RCF representations to actuals, used in
+    // predictor-corrector
+    default double[] getShift(double[] previous) {
         return null;
     };
 
+    // used for converting RCF representations to actuals, used in
+    // predictor-corrector
     default double[] getScale() {
         return null;
     }
+
+    // used for computing errors in RCFcaster before the model is callibrated
+    double[] getSmoothedDeviations();
 }

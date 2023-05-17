@@ -55,11 +55,23 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         if (valuesSeen < startNormalization) {
             storeInitial(description.getCurrentInput(), description.getInputTimestamp());
             return description;
-        } else if (valuesSeen == startNormalization) {
-            dischargeInitial(forest);
         }
 
         return super.preProcess(description, lastAnomalyDescriptor, forest);
+    }
+
+    // same for post process
+    @Override
+    public AnomalyDescriptor postProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+            RandomCutForest forest) {
+
+        AnomalyDescriptor answer = super.postProcess(description, lastAnomalyDescriptor, forest);
+
+        if (valuesSeen == startNormalization) {
+            dischargeInitial(forest);
+        }
+
+        return answer;
     }
 
     /**
@@ -112,7 +124,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         for (int i = 0; i < valuesSeen; i++) {
             double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], deviations, timeFactor);
             updateState(initialValues[i], scaledInput, initialTimeStamps[i], previousTimeStamps[shingleSize - 1]);
-            dataQuality.update(1.0);
+            dataQuality[0].update(1.0);
             forest.update(scaledInput);
         }
 

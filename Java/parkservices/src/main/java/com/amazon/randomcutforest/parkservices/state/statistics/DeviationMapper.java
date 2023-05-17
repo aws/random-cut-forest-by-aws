@@ -42,4 +42,25 @@ public class DeviationMapper implements IStateMapper<Deviation, DeviationState> 
         return state;
     }
 
+    public static DeviationState[] getStates(Deviation[] list, DeviationMapper mapper) {
+        DeviationState[] states = null;
+        if (list != null) {
+            states = new DeviationState[list.length];
+            for (int i = 0; i < list.length; i++) {
+                states[i] = mapper.toState(list[i]);
+            }
+        }
+        return states;
+    }
+
+    public static Deviation[] getDeviations(DeviationState[] states, DeviationMapper mapper) {
+        Deviation[] deviations = null;
+        if (states != null) {
+            deviations = new Deviation[states.length];
+            for (int i = 0; i < states.length; i++) {
+                deviations[i] = mapper.toModel(states[i]);
+            }
+        }
+        return deviations;
+    }
 }

@@ -185,7 +185,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                     lastAnomalyDescriptor, forest);
             answer.setTimedForecast(timedForecast);
 
-            if (answer.internalTimeStamp > forest.getShingleSize() - 1 + forest.getOutputAfter()) {
+            if (answer.internalTimeStamp >= forest.getShingleSize() - 1 + forest.getOutputAfter()) {
                 errorHandler.update(answer, calibrationMethod);
             }
         } finally {

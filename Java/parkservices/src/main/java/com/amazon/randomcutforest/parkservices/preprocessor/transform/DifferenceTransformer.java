@@ -76,4 +76,12 @@ public class DifferenceTransformer extends WeightedTransformer {
         return super.transformValues(internalTimeStamp, input, null, initials, clipFactor);
     }
 
+    @Override
+    public double[] getShift(double[] previous) {
+        double[] answer = new double[weights.length];
+        for (int i = 0; i < weights.length; i++) {
+            answer[i] = getShift(i, deviations) + previous[i];
+        }
+        return answer;
+    }
 }

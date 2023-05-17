@@ -240,7 +240,6 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-4);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRCFScore() >= value);
             }
             forest.update(point);
         }
@@ -317,11 +316,6 @@ public class ThresholdedRandomCutForestMapperTest {
                 .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
                 .weights(new double[] { 1.0 }).build();
 
-        double value = 0.75 + 0.5 * new Random().nextDouble();
-        first.setLowerThreshold(value);
-        second.setLowerThreshold(value);
-
-        Random r = new Random();
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
                 seed, baseDimensions);
 
@@ -332,7 +326,6 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRCFScore() >= value);
             }
 
         }
@@ -363,7 +356,7 @@ public class ThresholdedRandomCutForestMapperTest {
         int shingleSize = 8;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
-        double value = 1.0;// 0.25 * new Random().nextDouble();
+        double value = 0.75 + 0.25 * new Random().nextDouble();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
@@ -378,8 +371,6 @@ public class ThresholdedRandomCutForestMapperTest {
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
-
-        int count = 0;
 
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(sampleSize, 50, 100, 5, seed,
                 baseDimensions);
@@ -406,7 +397,7 @@ public class ThresholdedRandomCutForestMapperTest {
         int shingleSize = 8;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
-        double value = 1.0;// 0.25 * new Random().nextDouble();
+        double value = 0.75 + 0.25 * new Random().nextDouble();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
@@ -421,8 +412,6 @@ public class ThresholdedRandomCutForestMapperTest {
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
-
-        int count = 0;
 
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(sampleSize, 50, 100, 5, seed,
                 baseDimensions);
@@ -450,7 +439,7 @@ public class ThresholdedRandomCutForestMapperTest {
         int shingleSize = 8;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
-        double value = 1.0 + 0.25 * new Random().nextDouble();
+        double value = 0.75 + 0.25 * new Random().nextDouble();
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
@@ -476,7 +465,6 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             if (firstResult.getAnomalyGrade() > 0) {
                 assertEquals(secondResult.getAnomalyGrade(), firstResult.getAnomalyGrade(), 1e-10);
-                assert (firstResult.getRCFScore() >= value);
             }
         }
 

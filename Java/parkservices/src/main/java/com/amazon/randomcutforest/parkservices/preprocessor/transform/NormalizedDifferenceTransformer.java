@@ -93,6 +93,15 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
     }
 
     @Override
+    public double[] getShift(double[] previous) {
+        double[] answer = new double[weights.length];
+        for (int i = 0; i < weights.length; i++) {
+            answer[i] = getShift(i, deviations) + previous[i];
+        }
+        return answer;
+    }
+
+    @Override
     protected double getShift(int i, Deviation[] devs) {
         return devs[i + weights.length].getMean();
     }

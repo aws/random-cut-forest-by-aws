@@ -44,7 +44,7 @@ public class LowNoisePeriodic implements Example {
     public void run() throws Exception {
         // Create and populate a random cut forest
 
-        int shingleSize = 4;
+        int shingleSize = 8;
         int numberOfTrees = 50;
         int sampleSize = 256;
         int dataSize = 100000;
@@ -53,17 +53,21 @@ public class LowNoisePeriodic implements Example {
         double[] reference = new double[] { 1.0f, 3.0f, 5.0f, 7.0f, 9.0f, 11.0f, 9.5f, 8.5f, 7.5f, 6.5f, 6.0f, 6.5f,
                 7.0f, 7.5f, 9.5f, 11.0f, 12.5f, 10.5f, 8.5f, 7.0f, 5.0f, 3.0f, 2.0f, 1.0f };
 
-        // change this to control the percent deviation
-        // NOTE that if the noise is smaller than 0.003 times the actual value then
-        // it would be difficult to detect the anomalies unless the slope is 0
-
-        double noise = 2.0;
+        // the noise should leave suffient gap between the consecutive levels
+        double noise = 0.25;
+        // the noise will be amplified by something within [factorRange, 2*factorRange]
+        // increase should lead to increased precision--recall; likewise decrease must
+        // also
+        // lead to decreased precision recall; if the factor = 1, then the anomalies are
+        // information theoretically almost non-existent
+        double anomalyFactor = 10;
 
         double slope = 0.2 * sampleSize
                 * (Arrays.stream(reference).max().getAsDouble() - Arrays.stream(reference).min().getAsDouble()) / 50000;
 
-        // to analyse without linear shift
-        // slope = 0;
+        // to analyse without linear shift; comment out the line below and change the
+        // slope above as desired
+        slope = 0;
 
         double anomalyRate = 0.005;
         long seed = new Random().nextLong();
@@ -74,12 +78,14 @@ public class LowNoisePeriodic implements Example {
         int correct = 0;
         int late = 0;
 
-        // change the transformation below to experiment
+        // change the transformation below to experiment;
+        // if slope != 0 then NONE will have poor result
+        // both of the difference operations also introduce many errors
         TransformMethod method = TransformMethod.NORMALIZE;
 
         int dimensions = shingleSize;
-        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().dimensions(dimensions).randomSeed(0)
+                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                 .internalShinglingEnabled(true).anomalyRate(0.01).forestMode(ForestMode.STANDARD).startNormalization(32)
                 .transformMethod(method).outputAfter(32).initialAcceptFraction(0.125)
                 // for 1D data weights should not alter results significantly (if in reasonable
@@ -99,7 +105,7 @@ public class LowNoisePeriodic implements Example {
         // missed current value 3.0 (say X), intended 1.0 (equiv., X - noise), because
         // the shift up in the actual was not 2*noise
 
-        // forest.setIgnoreNearExpectedFromAbove( new double [] {2 * noise});
+        // forest.setIgnoreNearExpectedFromAbove( new double [] {2*noise});
 
         // or to suppress all anomalies that are shifted up from predicted
         // for any sequence; using Double.MAX_VALUE may cause overflow
@@ -110,7 +116,7 @@ public class LowNoisePeriodic implements Example {
         // the shift down in the actual was not 2*noise, in effect we suppress all
         // anomalies
 
-        // forest.setIgnoreNearExpectedFromBelow(new double [] {2*noise});
+        // forest.setIgnoreNearExpectedFromBelow(new double [] {noise*2});
 
         // the following suppresses all anomalies that shifted down compared to
         // predicted
@@ -126,12 +132,15 @@ public class LowNoisePeriodic implements Example {
             boolean anomaly = false;
 
             double intendedValue = reference[(count + 4) % reference.length] + slope * count;
-            // extremely periodic signal
+            // extremely periodic signal -- note that there is no periodicity detection
             value[0] = intendedValue;
             if (rng.nextDouble() < anomalyRate && count > initialSegment) {
-                value[0] += (rng.nextDouble() < 0.5) ? -noise : noise;
+                double anomalyValue = noise * anomalyFactor * (1 + rng.nextDouble());
+                value[0] += (rng.nextDouble() < 0.5) ? -anomalyValue : anomalyValue;
                 anomaly = true;
                 ++numAnomalies;
+            } else {
+                value[0] += (2 * rng.nextDouble() - 1) * noise;
             }
 
             AnomalyDescriptor result = forest.process(new double[] { value[0] }, 0);

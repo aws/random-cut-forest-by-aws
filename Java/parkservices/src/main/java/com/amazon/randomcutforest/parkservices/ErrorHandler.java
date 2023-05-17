@@ -148,7 +148,7 @@ public class ErrorHandler {
                 pastForecasts[i] = new RangeVector(values, upper, lower);
                 System.arraycopy(actualsFlattened, i * inputLength, actuals[i], 0, inputLength);
             }
-            calibrate();
+            calibrate(null);
         }
     }
 
@@ -171,7 +171,7 @@ public class ErrorHandler {
             actuals[errorIndex][i] = (float) input[i];
         }
         ++sequenceIndex;
-        calibrate();
+        calibrate(descriptor.deviations);
         if (calibrationMethod != Calibration.NONE) {
             if (calibrationMethod == Calibration.SIMPLE) {
                 adjust(descriptor.timedForecast.rangeVector, errorDistribution);
@@ -260,8 +260,8 @@ public class ErrorHandler {
                         double fracRank = percentile * len;
                         Arrays.sort(copy);
                         values[pos] = interpolatedMedian(copy);
-                        lower[pos] = interpolatedLowerRank(copy, fracRank);
-                        upper[pos] = interpolatedUpperRank(copy, len, fracRank);
+                        lower[pos] = interpolatedLowerRank(copy, fracRank, 0);
+                        upper[pos] = interpolatedUpperRank(copy, len, fracRank, 0);
                     }
                 }
             }
@@ -286,8 +286,11 @@ public class ErrorHandler {
      * this method computes a lot of different quantities, some of which would be
      * useful in the future.In particular it splits the RMSE into positive and
      * negative contribution which is informative about directionality of error.
+     *
+     *
+     * @param errorDeviations the weighted standard deviations seen so far
      */
-    protected void calibrate() {
+    protected void calibrate(double[] errorDeviations) {
         int inputLength = actuals[0].length;
         int arrayLength = pastForecasts.length;
         int errorIndex = (sequenceIndex - 1 + arrayLength) % arrayLength;
@@ -327,16 +330,19 @@ public class ErrorHandler {
                     errorRMSE.high[pos] = (positiveCount > 0) ? Math.sqrt(positiveSqSum / positiveCount) : 0;
                     errorRMSE.low[pos] = (positiveCount < len) ? -Math.sqrt(negativeSqSum / (len - positiveCount)) : 0;
                     Arrays.sort(medianError, 0, len);
+                    // medianError array is now sorted
                     errorDistribution.values[pos] = interpolatedMedian(medianError);
-                    errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile);
-                    errorDistribution.lower[pos] = interpolatedLowerRank(medianError, len * percentile);
+                    double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
+                    errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile, deviation);
+                    errorDistribution.lower[pos] = interpolatedLowerRank(medianError, len * percentile, deviation);
                     intervalPrecision[pos] = intervalPrecision[pos] / len;
                 } else {
                     errorMean[pos] = 0;
                     errorRMSE.high[pos] = errorRMSE.low[pos] = 0;
                     errorDistribution.values[pos] = 0;
-                    errorDistribution.upper[pos] = Float.MAX_VALUE;
-                    errorDistribution.lower[pos] = -Float.MAX_VALUE;
+                    double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
+                    errorDistribution.upper[pos] = (float) (1.3 * deviation);
+                    errorDistribution.lower[pos] = -(float) (1.3 * deviation);
                     adders.upper[pos] = adders.lower[pos] = adders.values[pos] = 0;
                     intervalPrecision[pos] = 0;
                 }
@@ -354,28 +360,30 @@ public class ErrorHandler {
         }
     }
 
-    float interpolatedLowerRank(double[] array, double fracRank) {
+    float interpolatedLowerRank(double[] ascendingArray, double fracRank, double deviation) {
         if (fracRank < 1) {
-            return -Float.MAX_VALUE;
+            return (float) (-1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[0]);
         }
         int rank = (int) Math.floor(fracRank);
         if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
             // turn off interpolation
             fracRank = rank;
         }
-        return (float) (array[rank - 1] + (fracRank - rank) * (array[rank] - array[rank - 1]));
+        return (float) (ascendingArray[rank - 1]
+                + (fracRank - rank) * (ascendingArray[rank] - ascendingArray[rank - 1]));
     }
 
-    float interpolatedUpperRank(double[] array, int len, double fracRank) {
+    float interpolatedUpperRank(double[] ascendingArray, int len, double fracRank, double deviation) {
         if (fracRank < 1) {
-            return Float.MAX_VALUE;
+            return (float) (1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[len - 1]);
         }
         int rank = (int) Math.floor(fracRank);
         if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
             // turn off interpolation
             fracRank = rank;
         }
-        return (float) (array[len - rank] + (fracRank - rank) * (array[len - rank - 1] - array[len - rank]));
+        return (float) (ascendingArray[len - rank]
+                + (fracRank - rank) * (ascendingArray[len - rank - 1] - ascendingArray[len - rank]));
     }
 
     void adjust(RangeVector rangeVector, RangeVector other) {

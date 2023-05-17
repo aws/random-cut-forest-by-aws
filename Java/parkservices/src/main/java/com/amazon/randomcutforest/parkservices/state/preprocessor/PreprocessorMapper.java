@@ -15,6 +15,9 @@
 
 package com.amazon.randomcutforest.parkservices.state.preprocessor;
 
+import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getDeviations;
+import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getStates;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,7 +26,6 @@ import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.state.IStateMapper;
 
@@ -34,15 +36,9 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
     @Override
     public Preprocessor toModel(PreprocessorState state, long seed) {
         DeviationMapper deviationMapper = new DeviationMapper();
-        Deviation timeStampDeviation = deviationMapper.toModel(state.getTimeStampDeviationState());
-        Deviation dataQuality = deviationMapper.toModel(state.getDataQualityState());
-        Deviation[] deviations = null;
-        if (state.getDeviationStates() != null) {
-            deviations = new Deviation[state.getDeviationStates().length];
-            for (int i = 0; i < state.getDeviationStates().length; i++) {
-                deviations[i] = deviationMapper.toModel(state.getDeviationStates()[i]);
-            }
-        }
+        Deviation[] deviations = getDeviations(state.getDeviationStates(), deviationMapper);
+        Deviation[] timeStampDeviations = getDeviations(state.getTimeStampDeviationStates(), deviationMapper);
+        Deviation[] dataQuality = getDeviations(state.getDataQualityStates(), deviationMapper);
         Preprocessor.Builder<?> preprocessorBuilder = new Preprocessor.Builder<>()
                 .forestMode(ForestMode.valueOf(state.getForestMode())).shingleSize(state.getShingleSize())
                 .dimensions(state.getDimensions()).normalizeTime(state.isNormalizeTime())
@@ -50,11 +46,8 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
                 .fillValues(state.getDefaultFill()).inputLength(state.getInputLength()).weights(state.getWeights())
                 .transformMethod(TransformMethod.valueOf(state.getTransformMethod()))
                 .startNormalization(state.getStartNormalization()).useImputedFraction(state.getUseImputedFraction())
-                .timeDeviation(timeStampDeviation).dataQuality(dataQuality).timeDecay(state.getTimeDecay());
-
-        if (deviations != null) {
-            preprocessorBuilder.deviations(deviations);
-        }
+                .timeDeviations(timeStampDeviations).deviations(deviations).dataQuality(dataQuality)
+                .timeDecay(state.getTimeDecay());
 
         Preprocessor preprocessor = preprocessorBuilder.build();
         preprocessor.setInitialValues(state.getInitialValues());
@@ -93,18 +86,10 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         state.setValuesSeen(model.getValuesSeen());
         state.setInternalTimeStamp(model.getInternalTimeStamp());
         DeviationMapper deviationMapper = new DeviationMapper();
-        state.setTimeStampDeviationState(deviationMapper.toState(model.getTimeStampDeviation()));
-        state.setDataQualityState(deviationMapper.toState(model.getDataQuality()));
         state.setTimeDecay(model.getTimeDecay());
-        DeviationState[] deviationStates = null;
-        if (model.getDeviationList() != null) {
-            Deviation[] list = model.getDeviationList();
-            deviationStates = new DeviationState[list.length];
-            for (int i = 0; i < list.length; i++) {
-                deviationStates[i] = deviationMapper.toState(list[i]);
-            }
-        }
-        state.setDeviationStates(deviationStates);
+        state.setDeviationStates(getStates(model.getDeviationList(), deviationMapper));
+        state.setTimeStampDeviationStates(getStates(model.getTimeStampDeviations(), deviationMapper));
+        state.setDataQualityStates(getStates(model.getDataQuality(), deviationMapper));
         return state;
     }
 

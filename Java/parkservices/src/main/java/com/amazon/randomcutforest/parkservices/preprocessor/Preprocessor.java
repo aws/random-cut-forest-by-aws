@@ -15,22 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -48,6 +32,22 @@ import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+import static java.lang.Math.log;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 @Getter
 @Setter
@@ -86,8 +86,12 @@ public class Preprocessor implements IPreprocessor {
     // behavior
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
 
+    public static int DEFAULT_TIME_STATES = 3;
+
+    public static int DEFAULT_DATA_QUALITY_STATES = 1;
+
     // the input corresponds to timestamp data and this statistic helps align input
-    protected Deviation timeStampDeviation;
+    protected Deviation[] timeStampDeviations;
 
     // normalize time difference;
     protected boolean normalizeTime;
@@ -155,7 +159,7 @@ public class Preprocessor implements IPreprocessor {
     protected ForestMode mode;
 
     // measures the data quality in imputed modes
-    protected Deviation dataQuality;
+    protected Deviation[] dataQuality;
 
     protected ITransformer transformer;
 
@@ -209,33 +213,12 @@ public class Preprocessor implements IPreprocessor {
             lastShingledInput = new double[shingleSize * inputLength];
         }
         timeDecay = builder.timeDecay;
-        dataQuality = builder.dataQuality.orElse(new Deviation(timeDecay));
+        dataQuality = builder.dataQuality.orElse(new Deviation[] { new Deviation(timeDecay) });
 
         Deviation[] deviationList = new Deviation[NUMBER_OF_STATS * inputLength];
-        // we would use two different smoothing paramters reminiscent of
-        // doubly exponential smoothing
-        if (builder.deviations.isPresent()) {
-            Deviation[] list = builder.deviations.get();
-            // note the lengths can be different based on a different version of the model
-            // we will convert the model; and rely on RCF's ability to adjust to new data
-            for (int i = 0; i < min(list.length, deviationList.length); i++) {
-                deviationList[i] = list[i].copy();
-            }
-            for (int i = list.length; i < (NUMBER_OF_STATS - 1) * inputLength; i++) {
-                deviationList[i] = new Deviation(timeDecay);
-            }
-            for (int i = max(list.length, (NUMBER_OF_STATS - 1) * inputLength); i < NUMBER_OF_STATS
-                    * inputLength; i++) {
-                deviationList[i] = new Deviation(0.1 * timeDecay);
-            }
-        } else {
-            for (int i = 0; i < (NUMBER_OF_STATS - 1) * inputLength; i++) {
-                deviationList[i] = new Deviation(timeDecay);
-            }
-            for (int i = (NUMBER_OF_STATS - 1) * inputLength; i < NUMBER_OF_STATS * inputLength; i++) {
-                deviationList[i] = new Deviation(0.1 * timeDecay);
-            }
-        }
+        manageDeviations(deviationList, builder.deviations, timeDecay);
+        timeStampDeviations = new Deviation[DEFAULT_TIME_STATES];
+        manageDeviations(timeStampDeviations, builder.timeDeviations, timeDecay);
 
         if (transformMethod == TransformMethod.NONE) {
             for (int i = 0; i < inputLength; i++) {
@@ -254,8 +237,6 @@ public class Preprocessor implements IPreprocessor {
             transformer = new NormalizedDifferenceTransformer(weights, deviationList);
         }
 
-        timeStampDeviation = builder.timeDeviation.orElse(new Deviation(timeDecay));
-
         if (mode == ForestMode.STREAMING_IMPUTE) {
             imputationMethod = builder.imputationMethod;
             normalizeTime = true;
@@ -268,6 +249,31 @@ public class Preprocessor implements IPreprocessor {
                 this.defaultFill = Arrays.copyOf(builder.fillValues, builder.fillValues.length);
             }
             this.useImputedFraction = builder.useImputedFraction.orElse(0.5);
+        }
+    }
+
+    // the following fills the first argument as copies of the original
+    // but if the original is null or otherwise then new deviations are created; the
+    // last third
+    // are filled with 0.1 * timeDecay and are reserved for smoothing
+    void manageDeviations(Deviation[] deviationList, Optional<Deviation[]> original, double timeDecay) {
+        checkArgument(deviationList.length % 3 == 0, " has to be a multiple of three");
+        int usedDeviations = 0;
+        if (original.isPresent()) {
+            Deviation[] list = original.get();
+            usedDeviations = min(list.length, deviationList.length);
+            // note the lengths can be different based on a different version of the model
+            // we will convert the model; and rely on RCF's ability to adjust to new data
+            for (int i = 0; i < usedDeviations; i++) {
+                deviationList[i] = list[i].copy();
+            }
+        }
+        for (int i = usedDeviations; i < deviationList.length - deviationList.length / 3; i++) {
+            deviationList[i] = new Deviation(timeDecay);
+        }
+        usedDeviations = max(usedDeviations, deviationList.length - deviationList.length / 3);
+        for (int i = usedDeviations; i < deviationList.length; i++) {
+            deviationList[i] = new Deviation(0.1 * timeDecay);
         }
     }
 
@@ -300,7 +306,7 @@ public class Preprocessor implements IPreprocessor {
         description.setLastAnomalyInternalTimestamp(lastAnomalyDescriptor.getInternalTimeStamp());
         description.setLastExpectedRCFPoint(lastAnomalyDescriptor.getExpectedRCFPoint());
         description.setDataConfidence(forest.getTimeDecay(), valuesSeen, forest.getOutputAfter(),
-                dataQuality.getMean());
+                dataQuality[0].getMean());
         description.setShingleSize(shingleSize);
         description.setInputLength(inputLength);
         description.setDimension(dimension);
@@ -355,7 +361,10 @@ public class Preprocessor implements IPreprocessor {
         description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp); // no impute
         description.setScale(transformer.getScale());
-        description.setShift(transformer.getShift());
+        double[] previous = (inputPoint.length == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
+        description.setShift(transformer.getShift(previous));
+        description.setDeviations(transformer.getSmoothedDeviations());
         description.setNumberOfNewImputes(0);
         return description;
     }
@@ -383,7 +392,7 @@ public class Preprocessor implements IPreprocessor {
         long timestamp = result.getInputTimestamp();
         updateState(inputPoint, point, timestamp, previousTimeStamps[shingleSize - 1]);
         ++valuesSeen;
-        dataQuality.update(1.0);
+        dataQuality[0].update(1.0);
         if (forest.isInternalShinglingEnabled()) {
             int length = inputLength + ((mode == ForestMode.TIME_AUGMENTED) ? 1 : 0);
             double[] scaledInput = new double[length];
@@ -482,7 +491,7 @@ public class Preprocessor implements IPreprocessor {
         }
         if (normalizeTime) {
             return (long) Math.round(
-                    timestamp + timeStampDeviation.getMean() + 2 * gap * timeStampDeviation.getDeviation() / factor);
+                    timestamp + timeStampDeviations[0].getMean() + 2 * gap * timeStampDeviations[2].getMean() / factor);
         } else {
             return (long) Math.round(gap / factor + timestamp);
         }
@@ -584,8 +593,8 @@ public class Preprocessor implements IPreprocessor {
             // and therefore for STREAMING_INPUTE the timestamps values are not predicted
             // and kept at 0
             if (mode != ForestMode.STREAMING_IMPUTE) {
-                double timeGap = (normalizeTime) ? 0 : timeStampDeviation.getMean();
-                double timeBound = (normalizeTime) ? 2.5 : 2.5 * timeStampDeviation.getDeviation();
+                double timeGap = (normalizeTime) ? 0 : timeStampDeviations[0].getMean();
+                double timeBound = (normalizeTime) ? 2.5 : 2.5 * timeStampDeviations[2].getMean();
 
                 for (int i = 0; i < horizon; i++) {
                     timedRangeVector.timeStamps[i] = inverseMapTimeValue(timeGap, localTimeStamp);
@@ -684,8 +693,12 @@ public class Preprocessor implements IPreprocessor {
      * @param previous    the previous timestamp
      */
     protected void updateState(double[] inputPoint, double[] scaledInput, long timestamp, long previous) {
-        if (timeStampDeviation != null) {
-            timeStampDeviation.update(timestamp - previous);
+        if (timeStampDeviations != null) {
+            double value = timestamp - previous;
+            timeStampDeviations[0].update(value);
+            timeStampDeviations[1].update( log(Math.max(1.0,1.0+value)));
+            // smoothing
+            timeStampDeviations[2].update(timeStampDeviations[0].getDeviation());
         }
         updateTimestamps(timestamp);
         double[] previousInput = (inputLength == lastShingledInput.length) ? lastShingledInput
@@ -722,18 +735,19 @@ public class Preprocessor implements IPreprocessor {
      *
      * @param value     input value of dimension
      * @param deviation statistic
+     * @param factor    a control parameter for deviation
      * @return the normalized value
      */
-    protected double normalize(double value, Deviation deviation, double factor) {
-        double currentFactor = (factor != 0) ? factor : deviation.getDeviation();
-        if (value - deviation.getMean() >= 2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+    protected double normalize(double value, Deviation[] deviation, double factor) {
+        double currentFactor = (factor != 0) ? factor : Math.abs(deviation[2].getMean());
+        if (value - deviation[0].getMean() >= 2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return clipFactor;
         }
-        if (value - deviation.getMean() < -2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+        if (value - deviation[0].getMean() < -2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return -clipFactor;
         } else {
             // deviation cannot be 0
-            return (value - deviation.getMean()) / (2 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
+            return (value - deviation[0].getMean()) / (2 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
         }
     }
 
@@ -754,7 +768,7 @@ public class Preprocessor implements IPreprocessor {
         } else {
             double timeShift = timestamp - previousTimeStamps[shingleSize - 1];
             scaledInput[normalized.length] = weightTime
-                    * ((normalizeTime) ? normalize(timeShift, timeStampDeviation, timeFactor) : timeShift);
+                    * ((normalizeTime) ? normalize(timeShift, timeStampDeviations, timeFactor) : timeShift);
         }
         return scaledInput;
     }
@@ -822,8 +836,8 @@ public class Preprocessor implements IPreprocessor {
     }
 
     // mapper
-    public Deviation getTimeStampDeviation() {
-        return timeStampDeviation;
+    public Deviation[] getTimeStampDeviations() {
+        return timeStampDeviations;
     }
 
     // mapper
@@ -906,8 +920,8 @@ public class Preprocessor implements IPreprocessor {
         protected ThresholdedRandomCutForest thresholdedRandomCutForest = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected Optional<Deviation[]> deviations = Optional.empty();
-        protected Optional<Deviation> timeDeviation = Optional.empty();
-        protected Optional<Deviation> dataQuality = Optional.empty();
+        protected Optional<Deviation[]> timeDeviations = Optional.empty();
+        protected Optional<Deviation[]> dataQuality = Optional.empty();
 
         public Preprocessor build() {
             if (forestMode == ForestMode.STREAMING_IMPUTE) {
@@ -997,19 +1011,19 @@ public class Preprocessor implements IPreprocessor {
 
         // mapper
         public T deviations(Deviation[] deviations) {
-            this.deviations = Optional.of(deviations);
+            this.deviations = Optional.ofNullable(deviations);
             return (T) this;
         }
 
         // mapper
-        public T dataQuality(Deviation dataQuality) {
-            this.dataQuality = Optional.of(dataQuality);
+        public T dataQuality(Deviation[] dataQuality) {
+            this.dataQuality = Optional.ofNullable(dataQuality);
             return (T) this;
         }
 
         // mapper
-        public T timeDeviation(Deviation timeDeviation) {
-            this.timeDeviation = Optional.of(timeDeviation);
+        public T timeDeviations(Deviation[] timeDeviations) {
+            this.timeDeviations = Optional.ofNullable(timeDeviations);
             return (T) this;
         }
 
