@@ -15,13 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
-import static com.amazon.randomcutforest.state.Version.V3_7;
+import static com.amazon.randomcutforest.state.Version.V3_8;
 
 import java.io.Serializable;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.parkservices.state.predictorcorrector.PredictorCorrectorState;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
+import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.state.returntypes.DiVectorState;
@@ -30,10 +32,14 @@ import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 public class ThresholdedRandomCutForestState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String version = V3_7;
+    private String version = V3_8;
     RandomCutForestState forestState;
+    // deprecated but not marked due to 2.1 models
     private BasicThresholderState thresholderState;
     private PreprocessorState[] preprocessorStates;
+
+    // following fields are deprecated, but not removed for compatibility with 2.1
+    // moels
     private double ignoreSimilarFactor;
     private double triggerFactor;
     private long lastAnomalyTimeStamp;
@@ -46,14 +52,17 @@ public class ThresholdedRandomCutForestState implements Serializable {
     private boolean inHighScoreRegion;
     private boolean ignoreSimilar;
     private int numberOfAttributors;
+    // end deprecated segment
 
     private long randomSeed;
 
     private String forestMode;
     private String transformMethod;
+    private String scoringStrategy;
+    @Deprecated
     private int lastRelativeIndex;
     private int lastReset;
-    private double[] ignoreSimilarFromAbove;
-    private double[] ignoreSimilarFromBelow;
+    private PredictorCorrectorState predictorCorrectorState;
+    private ComputeDescriptorState lastDescriptorState;
 
 }

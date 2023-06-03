@@ -292,7 +292,7 @@ public class RandomCutForest {
             ITree<Integer, float[]> tree = new RandomCutTree.Builder().capacity(sampleSize)
                     .randomSeed(random.nextLong()).pointStoreView(tempStore)
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).centerOfMassEnabled(centerOfMassEnabled)
-                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(outputAfter).build();
+                    .storeSequenceIndexesEnabled(storeSequenceIndexesEnabled).outputAfter(1).build();
 
             IStreamSampler<Integer> sampler = CompactSampler.builder().capacity(sampleSize).timeDecay(timeDecay)
                     .randomSeed(random.nextLong()).storeSequenceIndexesEnabled(storeSequenceIndexesEnabled)
@@ -332,7 +332,6 @@ public class RandomCutForest {
         checkArgument(builder.sampleSize > 0, "sampleSize must be greater than 0");
         builder.outputAfter.ifPresent(n -> {
             checkArgument(n > 0, "outputAfter must be greater than 0");
-            checkArgument(n <= builder.sampleSize, "outputAfter must be smaller or equal to sampleSize");
         });
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
         builder.timeDecay.ifPresent(timeDecay -> {
@@ -1267,7 +1266,8 @@ public class RandomCutForest {
      * @return true if all samplers are ready to output results.
      */
     public boolean isOutputReady() {
-        return outputReady || (outputReady = components.stream().allMatch(IComponentModel::isOutputReady));
+        return outputReady || (outputReady = stateCoordinator.getTotalUpdates() >= outputAfter
+                && components.stream().allMatch(IComponentModel::isOutputReady));
     }
 
     /**

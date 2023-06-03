@@ -28,6 +28,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
@@ -126,10 +127,11 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     }
 
     // for mappers
-    public RCFCaster(ForestMode forestMode, TransformMethod transformMethod, RandomCutForest forest,
-            PredictorCorrector predictorCorrector, Preprocessor preprocessor, RCFComputeDescriptor descriptor,
-            int forecastHorizon, ErrorHandler errorHandler, int errorHorizon, Calibration calibrationMethod) {
-        super(forestMode, transformMethod, forest, predictorCorrector, preprocessor, descriptor);
+    public RCFCaster(ForestMode forestMode, TransformMethod transformMethod, ScoringStrategy scoringStrategy,
+            RandomCutForest forest, PredictorCorrector predictorCorrector, Preprocessor preprocessor,
+            RCFComputeDescriptor descriptor, int forecastHorizon, ErrorHandler errorHandler, int errorHorizon,
+            Calibration calibrationMethod) {
+        super(forestMode, transformMethod, scoringStrategy, forest, predictorCorrector, preprocessor, descriptor);
         this.forecastHorizon = forecastHorizon;
         this.errorHandler = errorHandler;
         this.errorHorizon = errorHorizon;

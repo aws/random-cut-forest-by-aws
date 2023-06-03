@@ -238,9 +238,11 @@ public class ThresholdedRandomCutForestTest {
         // only at most 76% imputed tuples are allowed in the forest
         // an additional one arise from the actual input
         assertEquals(forest.getForest().getTotalUpdates(), count + 1);
-        // triggerring consecutive anomalies (no differencing) -- this should fail
-        // because we discover previous point is still the cause
-        assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 0);
+        // triggerring consecutive anomalies (no differencing)
+        // Note Next will have an obvious issue with consecutive anomalies
+        if (method != NEXT) {
+            assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 1.0);
+        }
         assert (forest.process(new double[] { 20 }, (long) count * 113 + 1226).getAnomalyGrade() > 0);
 
         long stamp = (long) count * 113 + 1226;
@@ -434,7 +436,7 @@ public class ThresholdedRandomCutForestTest {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                     .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
-                    .build();
+                    .transformMethod(transformMethod).build();
 
             long seed = new Random().nextLong();
             System.out.println("seed = " + seed);

@@ -37,21 +37,5 @@ public enum ForestMode {
      * have shingleSize greater than 1, typically larger shingle size is better, and
      * so is fewer input dimensions
      */
-    STREAMING_IMPUTE,
-    /**
-     * This is the same as STANDARD mode where the scoring function is switched to
-     * distances between the vectors. Since RCFs build a multiresolution tree, and
-     * in the aggregate, preserves distances to some approximation, this provides an
-     * alternate anomaly detection mechanism which can be useful for shingleSize = 1
-     * and (dynamic) population analysis via RCFs. Specifially it switches the
-     * scoring to be based on the distance computation in the Density Estimation
-     * (interpolation). This allows for a direct comparison of clustering based
-     * outlier detection and RCFs over numeric vectors. All transformations
-     * available to the STANDARD mode in the ThresholdedRCF are available for this
-     * mode as well; this does not affect RandomCutForest core in any way. For
-     * timeseries analysis the STANDARD mode is recommended, but this does provide
-     * another option in combination with the TransformMethods.
-     */
-    DISTANCE;
-
+    STREAMING_IMPUTE;
 }

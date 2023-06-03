@@ -15,6 +15,23 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+import static java.lang.Math.log;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -32,22 +49,6 @@ import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
-import static java.lang.Math.log;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 @Getter
 @Setter
@@ -96,7 +97,7 @@ public class Preprocessor implements IPreprocessor {
     // normalize time difference;
     protected boolean normalizeTime;
 
-    protected boolean augmentTime;
+    // protected boolean augmentTime;
 
     protected double weightTime;
 
@@ -339,7 +340,7 @@ public class Preprocessor implements IPreprocessor {
 
         double[] inputPoint = description.getCurrentInput();
         long timestamp = description.getInputTimestamp();
-        double[] scaledInput = getScaledInput(inputPoint, timestamp, null, 0);
+        double[] scaledInput = getScaledInput(inputPoint, timestamp, null, timeStampDeviations[0].getMean());
 
         if (scaledInput == null) {
             return description;
@@ -360,13 +361,38 @@ public class Preprocessor implements IPreprocessor {
         }
         description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp); // no impute
-        description.setScale(transformer.getScale());
+        description.setScale(getScale());
         double[] previous = (inputPoint.length == lastShingledInput.length) ? lastShingledInput
                 : getShingledInput(shingleSize - 1);
-        description.setShift(transformer.getShift(previous));
+        description.setShift(getShift(previous));
         description.setDeviations(transformer.getSmoothedDeviations());
         description.setNumberOfNewImputes(0);
         return description;
+    }
+
+    double[] getScale() {
+        if (mode != ForestMode.TIME_AUGMENTED) {
+            return transformer.getScale();
+        } else {
+            double[] scale = new double[inputLength + 1];
+            System.arraycopy(transformer.getScale(), 0, scale, 0, inputLength);
+            scale[inputLength] = (weightTime == 0) ? 0 : 1.0 / weightTime;
+            if (normalizeTime) {
+                scale[inputLength] *= 2 * (timeStampDeviations[2].getMean() + DEFAULT_NORMALIZATION_PRECISION);
+            }
+            return scale;
+        }
+    }
+
+    double[] getShift(double[] previous) {
+        if (mode != ForestMode.TIME_AUGMENTED) {
+            return transformer.getShift(previous);
+        } else {
+            double[] shift = new double[inputLength + 1];
+            System.arraycopy(transformer.getScale(), 0, shift, 0, inputLength);
+            shift[inputLength] = timeStampDeviations[0].getMean() + previousTimeStamps[shingleSize - 1];
+            return shift;
+        }
     }
 
     /**
@@ -433,13 +459,12 @@ public class Preprocessor implements IPreprocessor {
         double[] newPoint = result.getExpectedRCFPoint();
 
         int index = result.getRelativeIndex();
-
+        if (index < 0) {
+            reference = getShingledInput(shingleSize + index);
+            result.setPastTimeStamp(getTimeStamp(shingleSize - 1 + index));
+        }
+        result.setPastValues(reference);
         if (newPoint != null) {
-            if (index < 0) {
-                reference = getShingledInput(shingleSize + index);
-                result.setPastTimeStamp(getTimeStamp(shingleSize - 1 + index));
-            }
-            result.setPastValues(reference);
             if (mode == ForestMode.TIME_AUGMENTED) {
                 int endPosition = (shingleSize - 1 + index + 1) * dimension / shingleSize;
                 double timeGap = (newPoint[endPosition - 1] - point[endPosition - 1]);
@@ -696,7 +721,7 @@ public class Preprocessor implements IPreprocessor {
         if (timeStampDeviations != null) {
             double value = timestamp - previous;
             timeStampDeviations[0].update(value);
-            timeStampDeviations[1].update( log(Math.max(1.0,1.0+value)));
+            timeStampDeviations[1].update(log(Math.max(1.0, 1.0 + value)));
             // smoothing
             timeStampDeviations[2].update(timeStampDeviations[0].getDeviation());
         }

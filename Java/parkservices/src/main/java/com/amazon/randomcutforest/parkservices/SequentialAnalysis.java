@@ -31,7 +31,7 @@ import com.amazon.randomcutforest.parkservices.returntypes.AnalysisDescriptor;
 public class SequentialAnalysis {
 
     /**
-     * provides a list of anomnalies given a block of data. While this is a fairly
+     * provides a list of anomalies given a block of data. While this is a fairly
      * simple function, it is provided as a reference such that users do not have
      * depend on interpretations of sequentian analysis
      * 

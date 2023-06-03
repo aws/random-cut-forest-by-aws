@@ -15,31 +15,49 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
-
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.util.Weighted;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
+import static java.lang.Math.min;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
  * a streaming manner and respect the arrow of time.
  */
 public class PredictorCorrector {
-
     private static double DEFAULT_DIFFERENTIAL_FACTOR = 0.3;
 
     public static int DEFAULT_NUMBER_OF_MAX_ATTRIBUTORS = 5;
 
+    public static double DEFAULT_MULTI_MODE_SAMPLING_RATE = 0.1;
+
+    protected static int NUMBER_OF_MODES = 2;
+
+    // the following vectors enable suppression of anomalies
+    // the first pair correspond to additive differences
+    // the second pair correspond to multiplicative differences
+    // multiplicative differences are not meaningful for differenced operations
+
     double[] ignoreNearExpectedFromBelow;
 
     double[] ignoreNearExpectedFromAbove;
+
+    double[] ignoreNearExpectedFromBelowByRatio;
+
+    double[] ignoreNearExpectedFromAboveByRatio;
 
     // for anomaly description we would only look at these many top attributors
     // AExpected value is not well-defined when this number is greater than 1
@@ -47,19 +65,87 @@ public class PredictorCorrector {
     // answers would be error prone as this parameter is raised.
     protected int numberOfAttributors = DEFAULT_NUMBER_OF_MAX_ATTRIBUTORS;
 
-    protected double lastScore = 0;
+    protected double[] lastScore = new double[NUMBER_OF_MODES];
 
-    protected BasicThresholder thresholder;
+    protected ScoringStrategy lastStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
 
-    // for mappers
-    public PredictorCorrector(BasicThresholder thresholder, int baseDimension) {
-        this.thresholder = thresholder;
+    protected BasicThresholder[] thresholders;
+
+    protected int baseDimension;
+
+    protected long randomSeed;
+
+    protected double[] modeInformation;
+
+    protected Deviation[] deviationsAbove;
+
+    protected Deviation[] deviationsBelow;
+
+    protected double samplingRate = DEFAULT_MULTI_MODE_SAMPLING_RATE;
+
+    protected boolean autoAdjust = false;
+
+    public PredictorCorrector(double timeDecay, double anomalyRate, boolean adjustThresholds, boolean adjust, int baseDimension,
+            long randomSeed) {
+        this.thresholders = new BasicThresholder[NUMBER_OF_MODES];
+        thresholders[0] = new BasicThresholder(timeDecay, anomalyRate, adjustThresholds);
+        thresholders[1] = new BasicThresholder(timeDecay);
+        this.baseDimension = baseDimension;
+        this.randomSeed = randomSeed;
+        this.deviationsAbove = new Deviation[baseDimension];
+        this.deviationsBelow = new Deviation[baseDimension];
+        this.autoAdjust = adjust;
+        if (adjust) {
+            for(int i = 0;i < baseDimension;i++){
+                this.deviationsAbove[i] = new Deviation(timeDecay);
+                this.deviationsBelow[i] = new Deviation(timeDecay);
+            }
+        }
         ignoreNearExpectedFromAbove = new double[baseDimension];
         ignoreNearExpectedFromBelow = new double[baseDimension];
+        ignoreNearExpectedFromAboveByRatio = new double[baseDimension];
+        ignoreNearExpectedFromBelowByRatio = new double[baseDimension];
     }
 
-    public BasicThresholder getThresholder() {
-        return thresholder;
+    // for mappers
+    public PredictorCorrector(BasicThresholder[] thresholders, Deviation[] deviations, int baseDimension,
+            long randomSeed) {
+        checkArgument(thresholders.length > 0, " cannot be empty");
+        checkArgument(deviations == null || deviations.length == 2 * baseDimension, "incorrect state");
+        this.thresholders = new BasicThresholder[NUMBER_OF_MODES];
+        int size = min(thresholders.length, NUMBER_OF_MODES);
+        for (int i = 0; i < size; i++) {
+            this.thresholders[i] = thresholders[i];
+        }
+        for (int i = size; i < NUMBER_OF_MODES; i++) {
+            this.thresholders[i] = new BasicThresholder(thresholders[0].getPrimaryDeviation().getDiscount());
+        }
+        this.deviationsAbove = new Deviation[baseDimension];
+        this.deviationsBelow = new Deviation[baseDimension];
+        if (deviations != null) {
+            for (int i = 0; i < baseDimension; i++) {
+                deviationsAbove[i] = deviations[i];
+            }
+            for (int i = 0; i < baseDimension; i++) {
+                deviationsBelow[i] = deviations[i + baseDimension];
+            }
+        }
+        this.baseDimension = baseDimension;
+        this.randomSeed = randomSeed;
+        ignoreNearExpectedFromAbove = new double[baseDimension];
+        ignoreNearExpectedFromBelow = new double[baseDimension];
+        ignoreNearExpectedFromAboveByRatio = new double[baseDimension];
+        ignoreNearExpectedFromBelowByRatio = new double[baseDimension];
+    }
+
+    public PredictorCorrector(BasicThresholder thresholder, int baseDimension) {
+        this(new BasicThresholder[] { thresholder }, null, baseDimension, 0L);
+    }
+
+    protected double nextDouble() {
+        Random random = new Random(randomSeed);
+        randomSeed = random.nextLong();
+        return random.nextDouble();
     }
 
     /**
@@ -68,7 +154,7 @@ public class PredictorCorrector {
      * * basDimension; the startIndex corresponds to the shingle entry beyond which
      * the search is performed. if two anomalies are in a shingle it would focus on
      * later one, the previous one would have been (hopefully) reported earlier.
-     * 
+     *
      * @param diVector      attribution of current shingle
      * @param baseDimension number of attributes/variables in original data
      * @param startIndex    time slice of the farthest in the past we are looking
@@ -94,18 +180,16 @@ public class PredictorCorrector {
         return index;
     }
 
-    /**
-     * produces the expected point (in the shingle space of RCF)
-     * 
-     * @param diVector      the attribution vector
-     * @param position      the position to focus on (corresponding to the time
-     *                      slice)
-     * @param baseDimension the input dimension
-     * @param point         the current point (in RCF shingled space)
-     * @return the expected point -- it can be null if there are too many attibutors
-     *         (thus confusing)
+    /** the following creates the expected poin based on RCF forecasting
+     * @param diVector the attribution vector that is used to choose which elements are to be predicted
+     * @param position the block of (multivariate) elements we are focusing on
+     * @param baseDimension the base dimension of the block
+     * @param point the point near which we wish to predict
+     * @param forest the resident RCF
+     * @return a vector that is most likely, conditioned on changing a few elements in
+     * the block at position
      */
-    protected double[] getExpectedPoint(DiVector diVector, int position, int baseDimension, double[] point,
+    protected float[] getExpectedPoint(DiVector diVector, int position, int baseDimension, float[] point,
             RandomCutForest forest) {
         int[] likelyMissingIndices;
         if (baseDimension == 1) {
@@ -122,7 +206,9 @@ public class PredictorCorrector {
                 // largest contributor is only 10 percent; there are too many to predict
                 return null;
             }
-            while (pick < baseDimension && values[baseDimension - pick - 1] >= 0.1 * sum) {
+
+            double threshold = min(0.1 * sum, 0.1);
+            while (pick < baseDimension && values[baseDimension - pick - 1] >= threshold) {
                 ++pick;
             }
 
@@ -152,71 +238,69 @@ public class PredictorCorrector {
      * in a high score region with a previous anomalies, we use this to determine if
      * the "residual contribution" since the last anomaly would have sufficed to
      * trigger anomaly designation on its own.
-     * 
-     * @param candidate     attribution of the current point in consideration
-     * @param gap           how long ago did the previous anomaly occur
-     * @param baseDimension number of input attributes/variables (before shingling)
-     * @param ideal         a form of expected attribution; can be null if there was
-     *                      no previous anomaly in the shingle
-     * @return true/false if the residual (extrapolated) score would trigger anomaly
-     *         designation
      */
-    protected boolean trigger(DiVector candidate, int gap, int baseDimension, DiVector ideal, TransformMethod method,
-            IRCFComputeDescriptor lastAnomalyDescriptor) {
+    /**
+     * a subroutine that helps eliminates flagging anomalies too close to a previously flagged
+     * anomaly -- this avoids the repetition due to shingling; but still can detect some anomalies
+     * if the deviations are ususual
+     * @param candidate the candidate attribution of the point
+     * @param difference the shift in term of basic elements from the last anomaly
+     * @param baseDimension the size of a block
+     * @param ideal an idealized version of the candidate (can be null) where the most offending
+     *              elements are imputed out
+     * @param lastAnomalyDescriptor the description of the last anomaly
+     * @param workingThreshold the threshold to exceed
+     * @return true if the candidate is sufficiently different and false otherwise
+     */
+
+    protected boolean trigger(DiVector candidate, int difference, int baseDimension, DiVector ideal,
+            IRCFComputeDescriptor lastAnomalyDescriptor, double workingThreshold) {
+        int dimensions = candidate.getDimensions();
         DiVector lastAnomalyAttribution = lastAnomalyDescriptor.getAttribution();
-        double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
-        if (lastAnomalyAttribution == null) {
+        if (lastAnomalyAttribution == null || difference >= dimensions) {
             return true;
         }
-        checkArgument(lastAnomalyAttribution.getDimensions() == candidate.getDimensions(), " error in DiVectors");
-        int dimensions = candidate.getDimensions();
+        checkArgument(lastAnomalyAttribution.getDimensions() == dimensions, " error in DiVectors");
         int shingleSize = dimensions / baseDimension;
 
-        int difference = baseDimension * gap;
-
-        if (difference < dimensions) {
-            if (ideal == null) {
-                double remainder = 0;
-                for (int i = dimensions - difference; i < dimensions; i++) {
-                    remainder += candidate.getHighLowSum(i);
-                }
-                // simplifying the following since remainder * dimensions/difference corresponds
-                // to the
-                // impact of the new data since the last anomaly
-                return thresholder.getThresholdAndGrade(remainder * dimensions / difference, method, baseDimension,
-                        shingleSize).weight > 0;
-            } else {
-                double differentialRemainder = 0;
-                for (int i = dimensions - difference; i < dimensions; i++) {
-                    differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
-                            + Math.abs(candidate.high[i] - ideal.high[i]);
-                }
-                return (differentialRemainder > DEFAULT_DIFFERENTIAL_FACTOR * lastAnomalyScore)
-                        && thresholder.getThresholdAndGrade(differentialRemainder * dimensions / difference, method,
-                                baseDimension, shingleSize).weight > 0;
+        if (ideal == null) {
+            double remainder = 0;
+            for (int i = dimensions - difference; i < dimensions; i++) {
+                remainder += candidate.getHighLowSum(i);
             }
+            // simplifying the following since remainder * dimensions/difference corresponds
+            // to the
+            // impact of the new data since the last anomaly
+            return remainder * dimensions / difference > workingThreshold;
         } else {
-            return true;
+            double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
+            double differentialRemainder = 0;
+            for (int i = dimensions - difference; i < dimensions; i++) {
+                differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
+                        + Math.abs(candidate.high[i] - ideal.high[i]);
+            }
+            return (differentialRemainder > DEFAULT_DIFFERENTIAL_FACTOR * lastAnomalyScore)
+                    && differentialRemainder * dimensions / difference > workingThreshold;
         }
-
     }
 
     /**
      * a first stage corrector that attempts to fix the after effects of a previous
      * anomaly which may be in the shingle, or just preceding the shingle
-     * 
-     * @param point          the current (transformed) point under evaluation
-     * @param gap            the relative position of the previous anomaly being
-     *                       corrected
-     * @param shingleSize    size of the shingle
-     * @param baseDimensions number of dimensions in each shingle
-     * @return the score of the corrected point
+     *
+     * @param point                 the current (transformed) point under evaluation
+     * @param gap                   the relative position of the previous anomaly
+     *                              being corrected
+     * @param shingleSize           size of the shingle
+     * @param baseDimensions        number of dimensions in each shingle
+     * @param lastAnomalyDescriptor description of the last anomaly
+     * @return the corrected point
      */
-    double[] applyBasicCorrector(double[] point, int gap, int shingleSize, int baseDimensions,
+    float[] applyBasicCorrector(float[] point, int gap, int shingleSize, int baseDimensions,
             IRCFComputeDescriptor lastAnomalyDescriptor) {
         checkArgument(gap >= 0 && gap <= shingleSize, "incorrect invocation");
-        double[] correctedPoint = Arrays.copyOf(point, point.length);
-        double[] lastExpectedPoint = lastAnomalyDescriptor.getExpectedRCFPoint();
+        float[] correctedPoint = Arrays.copyOf(point, point.length);
+        float[] lastExpectedPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
         double[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();
         int lastRelativeIndex = lastAnomalyDescriptor.getRelativeIndex();
         if (gap < shingleSize) {
@@ -243,8 +327,16 @@ public class PredictorCorrector {
         return correctedPoint;
     }
 
-    double calculatePathDeviation(double[] point, int startPosition, int index, int baseDimension,
-            boolean differenced) {
+    /** The following is useful for managing late detection of anomalies -- this calculates the
+     * zig-zag over the values in the late detection
+     * @param point the point being scored
+     * @param startPosition the position of the block where we think the anomaly started
+     * @param index the specific index in the block being tracked
+     * @param baseDimension the size of the block
+     * @param differenced has differencing been performed already
+     * @return the L1 deviation
+     */
+    double calculatePathDeviation(float[] point, int startPosition, int index, int baseDimension, boolean differenced) {
         int position = startPosition;
         double variation = 0;
         while (position + index + baseDimension < point.length) {
@@ -272,8 +364,8 @@ public class PredictorCorrector {
      *         otherwise
      */
 
-    protected <P extends AnomalyDescriptor> boolean isSignificant(boolean significantScore, double[] point,
-            double[] newPoint, int startPosition, P result) {
+    protected <P extends AnomalyDescriptor> boolean isSignificant(boolean significantScore, float[] point,
+            float[] newPoint, int startPosition, P result) {
         checkArgument(point.length == newPoint.length, "incorrect invocation");
         int baseDimensions = result.getDimension() / result.getShingleSize();
         TransformMethod method = result.getTransformMethod();
@@ -287,7 +379,7 @@ public class PredictorCorrector {
         }
         boolean answer = false;
         // only for input dimensions, for which scale is defined currently
-        for (int y = 0; y < result.getInputLength() && !answer; y++) {
+        for (int y = 0; y < baseDimension && !answer; y++) {
             double observedGap = Math.abs(point[startPosition + y] - newPoint[startPosition + y]);
             double pathGap = calculatePathDeviation(point, startPosition, y, baseDimensions, differenced);
             if (observedGap > 0.1 * pathGap) {
@@ -324,82 +416,236 @@ public class PredictorCorrector {
     }
 
     /**
+     * populates the scores and sets the score and attribution vectors; note some of
+     * the attributions can remain null (for efficiency reasons)
+     *
+     * @param strategy          the scoring strategy
+     * @param scoreVector       the vector of scores
+     * @param attributionVector the vector of attributions
+     * @return the index of the score/attribution that is relevant
+     */
+
+    protected int populateScores(ScoringStrategy strategy, float[] point, RandomCutForest forest, double[] scoreVector,
+            DiVector[] attributionVector) {
+        if (strategy != ScoringStrategy.DISTANCE) {
+            scoreVector[0] = forest.getAnomalyScore(point);
+            if (strategy == ScoringStrategy.MULTI_MODE || strategy == ScoringStrategy.MULTI_MODE_RECALL) {
+                attributionVector[1] = forest.getSimpleDensity(point).distances;
+                scoreVector[1] = attributionVector[1].getHighLowSum();
+            }
+            return 0;
+        } else {
+            attributionVector[1] = forest.getSimpleDensity(point).distances;
+            scoreVector[1] = attributionVector[1].getHighLowSum();
+            return 1;
+        }
+    }
+
+    /**
+     * returned the attribution vector; it tries to reused cached version to save computation
+     * @param choice the mode of the attribution in question
+     * @param point the point being considered
+     * @param attributionVector the vector (cachee) of attributions
+     * @param forest the resident RCF
+     * @return the attribution correspond to the mode of attribution
+     */
+    DiVector getCachedAttribution(int choice, float[] point, DiVector[] attributionVector, RandomCutForest forest) {
+        if (attributionVector[choice] == null) {
+            if (choice == 0) {
+                attributionVector[0] = forest.getAnomalyAttribution(point);
+            } else {
+                attributionVector[1] = forest.getSimpleDensity(point).distances;
+            }
+        }
+        return attributionVector[choice];
+    }
+
+    /**
+     * computes the attribution of a (candidate) point based on mode, when the results are not
+     * expected to be cached
+     * @param choice the mode
+     * @param point the point in question
+     * @param forest the resident RCF
+     * @return the attribution of that mode
+     */
+    DiVector getNewAttribution(int choice, float[] point, RandomCutForest forest) {
+        if (choice == 0) {
+            return forest.getAnomalyAttribution(point);
+        } else {
+            return forest.getSimpleDensity(point).distances;
+        }
+    }
+
+    /**
+     * same as getNewAttribution, except when just the score suffices
+     * @param choice the mode in question
+     * @param point the point in question
+     * @param forest the resident RCF
+     * @return the score corresponding to the mode
+     */
+    double getNewScore(int choice, float[] point, RandomCutForest forest) {
+        if (choice == 0) {
+            return forest.getAnomalyScore(point);
+        } else {
+            return forest.getSimpleDensity(point).distances.getHighLowSum();
+        }
+    }
+
+    /**
+     * returns the threshold and grade corresponding to a mode choice (based on scoring strategy)
+     * currently the scoring strategy is unusued, but would likely be used in future
+     * @param strategy the scoring strategy
+     * @param choice the chosen mode
+     * @param scoreVector the vector of scores
+     * @param method the transformation method used
+     * @param dimension the number of dimensions in RCF (used in auto adjustment of thresholds)
+     * @param shingleSize the shingle size (used in auto adjustment of thresholds)
+     * @return a weighted object where the index is the threshold and the weight is the grade
+     */
+    protected Weighted<Double> getThresholdAndGrade(ScoringStrategy strategy, int choice, double[] scoreVector,
+            TransformMethod method, int dimension, int shingleSize) {
+        if (choice == 0) {
+            return thresholders[0].getThresholdAndGrade(scoreVector[0], method, dimension, shingleSize);
+        } else {
+            return thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+        }
+    }
+
+    /**
+     * In MULTI_MODE_RECALL, the specific mode can be reassigned and thus we would need to compute
+     * score and thresholds
+     * @param strategy the scoring strategy
+     * @param choice the choice of the mode
+     * @param point the point being rescored
+     * @param forest the resident RCF
+     * @param method the transformation method being used
+     * @param shingleSize the shingle size
+     * @return a weighted object where index corresponds to threshold and weight corresponds to grade
+     */
+
+    protected Weighted<Double> rescoredThresholdAndGrade(ScoringStrategy strategy, int choice, float[] point,
+            RandomCutForest forest, TransformMethod method, int shingleSize) {
+        if (choice == 0) {
+            double score = forest.getAnomalyScore(point);
+            return thresholders[0].getThresholdAndGrade(score, method, point.length, shingleSize);
+        } else {
+            double score = forest.getSimpleDensity(point).distances.getHighLowSum();
+            return thresholders[1].getPrimaryThresholdAndGrade(score);
+        }
+    }
+
+    /**
+     * the strategy to save scores based on the scoring strategy
+     * @param strategy the strategy
+     * @param choice the mode for which corrected score applies
+     * @param scoreVector the vector of scores
+     * @param correctedScore the estimated score with corrections (can be the same as score)
+     * @param method the transformation method used
+     * @param shingleSize the shingle size
+     */
+    protected void saveScores(ScoringStrategy strategy, int choice, double[] scoreVector, double correctedScore,
+            TransformMethod method, int shingleSize) {
+        if (strategy == ScoringStrategy.MULTI_MODE || strategy == ScoringStrategy.MULTI_MODE_RECALL) {
+            for (int i = 0; i < NUMBER_OF_MODES; i++) {
+                double temp = (i == choice) ? correctedScore : scoreVector[i];
+                thresholders[i].update(scoreVector[i], temp, lastScore[i], method);
+                if (shingleSize > 1) {
+                    lastScore[i] = scoreVector[i];
+                }
+            }
+        } else {
+            thresholders[choice].update(scoreVector[choice], correctedScore, lastScore[choice],
+                    method);
+            if (shingleSize > 1) {
+                lastScore[choice] = scoreVector[choice];
+            }
+        }
+    }
+
+    /**
      * the core of the predictor-corrector thresholding for shingled data points. It
      * uses a simple threshold provided by the basic thresholder. It first checks if
      * obvious effects of the present; and absent such, for repeated breaches, how
      * critical is the new current information
-     * 
+     *
      * @param result                returns the augmented description
      * @param lastAnomalyDescriptor state of the computation for the last anomaly
+     * @param forest                the resident RCF
      * @return the anomaly descriptor result (which has plausibly mutated)
      */
     protected <P extends AnomalyDescriptor> P detect(P result, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
-        double[] point = result.getRCFPoint();
-        if (point == null) {
+        if (result.getRCFPoint() == null) {
             return result;
         }
-        double score = 0;
+        float[] point = toFloatArray(result.getRCFPoint());
+        ScoringStrategy strategy = result.getScoringStrategy();
+        double[] scoreVector = new double[NUMBER_OF_MODES];
+        DiVector[] attributionVector = new DiVector[NUMBER_OF_MODES];
+
+        final int originalChoice = populateScores(strategy, point, forest, scoreVector, attributionVector);
+
         DiVector attribution = null;
-        if (result.forestMode != ForestMode.DISTANCE) {
-            score = forest.getAnomalyScore(point);
-        } else {
-            attribution = forest.getSimpleDensity(point).distances;
-            score = attribution.getHighLowSum();
-        }
+        double score = scoreVector[originalChoice];
 
         // we will not alter the basic score from RCF under any circumstance
         result.setRCFScore(score);
-        result.setRCFPoint(point);
 
-        long internalTimeStamp = result.getInternalTimeStamp();
-
+        // we will not have zero scores affect any thresholding
         if (score == 0) {
             return result;
         }
 
-        int shingleSize = (result.getDimension() == result.getInputLength()) ? 1 : result.getShingleSize();
-        int baseDimensions = result.getDimension() / shingleSize;
-        int startPosition = (shingleSize - 1) * baseDimensions;
+        long internalTimeStamp = result.getInternalTimeStamp();
+
+        int shingleSize = result.getShingleSize();
+        int startPosition = (shingleSize - 1) * baseDimension;
 
         // we will adjust *both* the grade and the threshold
 
         double workingGrade = 0;
         double workingThreshold = 0;
-        if (result.forestMode != ForestMode.DISTANCE) {
-            Weighted<Double> thresholdAndGrade = thresholder.getThresholdAndGrade(score, result.transformMethod,
-                    baseDimensions, shingleSize);
-            workingThreshold = thresholdAndGrade.index;
-            workingGrade = thresholdAndGrade.weight;
-        } else {
-            workingThreshold = thresholder.getPrimaryThreshold();
-            workingGrade = thresholder.getPrimaryGrade(score);
+
+        int gap = (int) (internalTimeStamp - lastAnomalyDescriptor.getInternalTimeStamp());
+        int difference = gap * shingleSize;
+
+        float[] correctedPoint = null;
+        double correctedScore = score;
+        boolean inHighScoreRegion = false;
+        int index = 0;
+        int relative = (gap >= shingleSize) ? -shingleSize : -gap;
+
+        Weighted<Double> thresholdAndGrade = getThresholdAndGrade(strategy, originalChoice, scoreVector,
+                result.transformMethod, point.length, shingleSize);
+        workingThreshold = thresholdAndGrade.index;
+        workingGrade = thresholdAndGrade.weight;
+
+        if (strategy == ScoringStrategy.MULTI_MODE) {
+            Weighted<Double> temp = thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+            if (temp.weight == 0) {
+                workingGrade = 0;
+            }
+        }
+
+        int choice = originalChoice;
+        if (strategy == ScoringStrategy.MULTI_MODE_RECALL && workingGrade == 0) {
+            Weighted<Double> temp = thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+            choice = 1;
+            correctedScore = scoreVector[1];
+            workingGrade = temp.weight;
         }
 
         /*
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
-         */
-        if (workingGrade <= 0) {
-            result.setAnomalyGrade(0);
-            result.setThreshold(workingThreshold);
-            result.setInHighScoreRegion(false);
-            thresholder.update(score, score, lastScore, result.transformMethod);
-            if (shingleSize > 1) {
-                // otherwise it will remain 0
-                lastScore = score;
-            }
-            return result;
-        }
-
-        /*
-         * We now check if (1) we have another anomaly in the current shingle (2) have
+         *
+         * We then check if (1) we have another anomaly in the current shingle (2) have
          * predictions about what the values should have been and (3) replacing by those
          * "should have been" makes the anomaly score of the new shingled point low
          * enough to not be an anomaly. In this case we can "explain" the high score is
          * due to the past and do not need to vend anomaly -- because the most recent
          * point, on their own would not produce an anomalous shingle.
-         * 
+         *
          * However, the strategy is only executable if there are (A) sufficiently many
          * observations and (B) enough data in each time point such that the forecast is
          * reasonable. While forecasts can be corrected for very low shingle sizes and
@@ -408,137 +654,131 @@ public class PredictorCorrector {
          * of anomaly detection.
          */
 
-        int gap = (int) (internalTimeStamp - lastAnomalyDescriptor.getInternalTimeStamp());
-        int difference = gap * baseDimensions;
+        if (workingGrade > 0) {
+            inHighScoreRegion = true;
+            // the forecast may not be reasonable with less data
+            if (!result.isReasonableForecast()) {
+                attribution = getCachedAttribution(choice, point, attributionVector, forest);
 
-        // the forecast may not be reasonable with less data
-        boolean reasonableForecast = result.isReasonableForecast();
-
-        // note that the following is bypassed for shingleSize = 1 because it would not
-        // make sense to connect the current evaluation with a previous value
-        if (reasonableForecast && lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
-                && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap > 0 && gap <= shingleSize) {
-            double[] correctedPoint = applyBasicCorrector(point, gap, shingleSize, baseDimensions,
-                    lastAnomalyDescriptor);
-            double correctedScore = 0;
-            if (result.forestMode != ForestMode.DISTANCE) {
-                correctedScore = forest.getAnomalyScore(correctedPoint);
-                workingGrade = thresholder.getThresholdAndGrade(correctedScore, result.transformMethod, baseDimensions,
-                        shingleSize).weight;
-            } else {
-                correctedScore = forest.getSimpleDensity(correctedPoint).distances.getHighLowSum();
-                workingGrade = thresholder.getPrimaryGrade(correctedScore);
-            }
-            // we know we are looking previous anomalies
-            if (workingGrade == 0) {
-                // fixing the past makes this anomaly go away; nothing to do but process the
-                // score we will not change inHighScoreRegion however, because the score has
-                // been larger
-                result.setThreshold(workingThreshold);
-                thresholder.update(score, correctedScore, lastScore, result.transformMethod);
-                lastScore = correctedScore;
-                result.setExpectedRCFPoint(correctedPoint);
-                result.setAnomalyGrade(0);
-                return result;
-            }
-        }
-
-        if (result.forestMode != ForestMode.DISTANCE) {
-            attribution = forest.getAnomalyAttribution(point);
-        }
-
-        double[] newPoint = null;
-        double newScore = score;
-        DiVector newAttribution = null;
-
-        /*
-         * we now find the time slice, relative to the current time, which is indicative
-         * of the high score. relativeIndex = 0 is current time. It is negative if the
-         * most egregious attribution was due to the past values in the shingle
-         */
-
-        int relative = (gap >= shingleSize) ? -shingleSize : -gap;
-        int index = (shingleSize == 1) ? 0 : maxContribution(attribution, baseDimensions, relative) + 1;
-        boolean significant = true;
-
-        if (reasonableForecast && shingleSize > 1) {
-            startPosition = shingleSize * baseDimensions + (index - 1) * baseDimensions;
-            newPoint = getExpectedPoint(attribution, startPosition, baseDimensions, point, forest);
-            if (newPoint != null && result.getForestMode() != ForestMode.DISTANCE) {
-                if (difference < point.length) {
-                    newAttribution = forest.getAnomalyAttribution(newPoint);
-                    newScore = newAttribution.getHighLowSum();
-                } else {
-                    // attribution will not be used
-                    newScore = forest.getAnomalyScore(newPoint);
+                if (!trigger(attribution, difference, point.length / shingleSize, null, lastAnomalyDescriptor,
+                        workingThreshold)) {
+                    workingGrade = 0;
                 }
-                // score is large, significantly over the threshold, or the change of a single
-                // entry
-                // causes a significant change in anomaly score
-                // and no anomaly has yet been reported on this shingle
-                boolean significantScore = score > 1.5 || score > workingThreshold + 0.25
-                        || (score > newScore + 0.25 && gap > shingleSize);
-                // significantScore is the signal sent; but can can be overruled by
-                // ignoreSimilarShift
-                significant = isSignificant(significantScore, point, newPoint, startPosition, result);
+                ;
+                index = (shingleSize == 1 && workingGrade > 0) ? 0
+                        : maxContribution(attribution, point.length / shingleSize, relative) + 1;
+            } else {
+
+                // note that the following is bypassed for shingleSize = 1 because it would not
+                // make sense to connect the current evaluation with a previous value
+                if (lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
+                        && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap > 0 && gap <= shingleSize) {
+                    correctedPoint = applyBasicCorrector(point, gap, shingleSize, point.length / shingleSize,
+                            lastAnomalyDescriptor);
+
+                    Weighted<Double> rescoredThresholdAndGrade = rescoredThresholdAndGrade(strategy, choice,
+                            correctedPoint, forest, result.transformMethod, shingleSize);
+                    correctedScore = rescoredThresholdAndGrade.index;
+                    double tempGrade = rescoredThresholdAndGrade.weight;
+                    if (tempGrade <= 0) {
+                        workingGrade = 0;
+                    }
+                }
+
+                if (workingGrade > 0) {
+                    attribution = getCachedAttribution(choice, point, attributionVector, forest);
+
+                    DiVector newAttribution = null;
+
+                    /*
+                     * we now find the time slice, relative to the current time, which is indicative
+                     * of the high score. relativeIndex = 0 is current time. It is negative if the
+                     * most egregious attribution was due to the past values in the shingle
+                     */
+
+                    index = (shingleSize == 1) ? 0
+                            : maxContribution(attribution, point.length / shingleSize, relative) + 1;
+
+                    startPosition = point.length + (index - 1) * point.length / shingleSize;
+                    correctedPoint = getExpectedPoint(attribution, startPosition, point.length / shingleSize, point,
+                            forest);
+                    if (correctedPoint != null) {
+                        if (difference < point.length) {
+                            newAttribution = getNewAttribution(choice, correctedPoint, forest);
+                            correctedScore = newAttribution.getHighLowSum();
+                        } else {
+                            // attribution will not be used
+                            correctedScore = getNewScore(choice, point, forest);
+                        }
+                    }
+
+                    if (!trigger(attribution, difference, point.length / shingleSize, newAttribution,
+                            lastAnomalyDescriptor, workingThreshold)) {
+                        workingGrade = 0;
+                    }
+                    ;
+
+                    if (workingGrade > 0 && correctedPoint != null) {
+                        boolean significantScore = strategy == ScoringStrategy.DISTANCE || score > 1.5
+                                || score > workingThreshold + 0.25
+                                || (score > correctedScore + 0.25 && gap > shingleSize);
+                        // significantScore is the signal sent; but can can be overruled by
+                        // ignoreSimilarShift
+                        if (!isSignificant(significantScore, point, correctedPoint, startPosition, result)) {
+                            workingGrade = 0;
+                        }
+                        ;
+                    }
+                }
+                if (workingGrade == 0) {
+                    workingThreshold = score;
+                    correctedScore = score;
+                }
             }
         }
 
-        if (significant && (difference > point.length || trigger(attribution, gap, baseDimensions, newAttribution,
-                result.transformMethod, lastAnomalyDescriptor))) {
-            result.setExpectedRCFPoint(newPoint);
-            result.setAnomalyGrade(workingGrade);
-            result.setThreshold(workingThreshold);
-            thresholder.update(score, newScore, lastScore, result.transformMethod);
-        } else {
-            // we will force the threshold to rise
-            result.setThreshold(score);
-            thresholder.update(score, score, lastScore, result.transformMethod);
-            lastScore = score;
-            result.setAnomalyGrade(0);
-            return result;
+        result.setAnomalyGrade(workingGrade);
+        result.setThreshold(workingThreshold);
+        result.setInHighScoreRegion(inHighScoreRegion);
+
+        if (workingGrade > 0) {
+            if (correctedPoint != null) {
+                result.setExpectedRCFPoint(toDoubleArray(correctedPoint));
+            }
+            if (choice != originalChoice) {
+                attribution.renormalize(result.getRCFScore());
+            }
+            result.setAttribution(attribution);
+
+            result.setRelativeIndex(index);
         }
 
-        lastScore = score;
-        result.setAttribution(attribution);
-        result.setRelativeIndex(index);
+        saveScores(strategy, choice, scoreVector, correctedScore, result.transformMethod, shingleSize);
         return result;
     }
 
     public void setZfactor(double factor) {
-        thresholder.setZfactor(factor);
+        for (int i = 0; i < thresholders.length; i++) {
+            thresholders[i].setZfactor(factor);
+        }
     }
 
     public void setLowerThreshold(double lower) {
-        thresholder.setLowerThreshold(lower);
+        for (int i = 0; i < thresholders.length; i++) {
+            thresholders[i].setLowerThreshold(lower);
+        }
     }
 
     public void setScoreDifferencing(double persistence) {
-        thresholder.setScoreDifferencing(persistence);
+        for (int i = 0; i < thresholders.length; i++) {
+            thresholders[i].setScoreDifferencing(persistence);
+        }
     }
 
     public void setInitialThreshold(double initial) {
-        thresholder.setInitialThreshold(initial);
-    }
-
-    public void setIgnoreNearExpectedFromAbove(double[] ignoreSimilarShift) {
-        if (ignoreSimilarShift != null) {
-            this.ignoreNearExpectedFromAbove = Arrays.copyOf(ignoreSimilarShift, ignoreSimilarShift.length);
+        for (int i = 0; i < thresholders.length; i++) {
+            thresholders[i].setInitialThreshold(initial);
         }
-    }
-
-    public void setIgnoreNearExpectedFromBelow(double[] ignoreSimilarShift) {
-        if (ignoreSimilarShift != null) {
-            this.ignoreNearExpectedFromBelow = Arrays.copyOf(ignoreSimilarShift, ignoreSimilarShift.length);
-        }
-    }
-
-    public double[] getIgnoreNearExpectedFromAbove() {
-        return ignoreNearExpectedFromAbove;
-    }
-
-    public double[] getIgnoreNearExpectedFromBelow() {
-        return ignoreNearExpectedFromBelow;
     }
 
     public void setNumberOfAttributors(int numberOfAttributors) {
@@ -549,11 +789,101 @@ public class PredictorCorrector {
         return numberOfAttributors;
     }
 
-    public double getLastScore() {
+    public double[] getLastScore() {
         return lastScore;
     }
 
-    public void setLastScore(double score) {
-        lastScore = score;
+    public void setLastScore(double[] score) {
+        if (score != null) {
+            System.arraycopy(score, 0, lastScore, 0, min(NUMBER_OF_MODES, score.length));
+        }
+    }
+
+    void validateIgnore(double[] shift) {
+        checkArgument(shift.length == 4 * baseDimension, () -> "has to be of length " + 4 * baseDimension);
+        for (double element : shift) {
+            checkArgument(element >= 0, "has to be non-negative");
+        }
+    }
+
+    public void setIgnoreNearExpected(double[] ignoreSimilarShift) {
+        if (ignoreSimilarShift != null) {
+            validateIgnore(ignoreSimilarShift);
+            System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromAbove, 0, baseDimension);
+            System.arraycopy(ignoreSimilarShift, baseDimension, ignoreNearExpectedFromBelow, 0, baseDimension);
+            System.arraycopy(ignoreSimilarShift, 2 * baseDimension, ignoreNearExpectedFromAboveByRatio, 0,
+                    baseDimension);
+            System.arraycopy(ignoreSimilarShift, 3 * baseDimension, ignoreNearExpectedFromBelowByRatio, 0,
+                    baseDimension);
+        }
+    }
+
+    public double[] getIgnoreNearExpected() {
+        double[] answer = new double[4 * baseDimension];
+        System.arraycopy(ignoreNearExpectedFromAbove, 0, answer, 0, baseDimension);
+        System.arraycopy(ignoreNearExpectedFromBelow, 0, answer, baseDimension, baseDimension);
+        System.arraycopy(ignoreNearExpectedFromAboveByRatio, 0, answer, 2 * baseDimension, baseDimension);
+        System.arraycopy(ignoreNearExpectedFromBelowByRatio, 0, answer, 3 * baseDimension, baseDimension);
+        return answer;
+    }
+
+    public long getRandomSeed() {
+        return randomSeed;
+    }
+
+    public BasicThresholder[] getThresholders() {
+        return thresholders;
+    }
+
+    public int getBaseDimension() {
+        return baseDimension;
+    }
+
+    public ScoringStrategy getLastStrategy() {
+        return lastStrategy;
+    }
+
+    public void setLastStrategy(ScoringStrategy strategy) {
+        this.lastStrategy = strategy;
+    }
+
+    public Deviation[] getDeviations() {
+        if (!autoAdjust){
+            return null;
+        }
+        checkArgument(deviationsAbove.length == deviationsBelow.length, "incorrect state");
+        Deviation[] answer = new Deviation[2 * deviationsAbove.length];
+        for (int i = 0; i < deviationsAbove.length; i++) {
+            answer[i] = deviationsAbove[i];
+        }
+        for (int i = 0; i < deviationsBelow.length; i++) {
+            answer[i + deviationsAbove.length] = deviationsBelow[i];
+        }
+        return answer;
+    }
+
+    public double getSamplingRate() {
+        return samplingRate;
+    }
+
+    public void setSamplingRate(double samplingRate) {
+        checkArgument(samplingRate > 0 && samplingRate < 1.0, " hast to be in [0,1)");
+        this.samplingRate = samplingRate;
+    }
+
+    public double[] getModeInformation() {
+        return modeInformation;
+    }
+
+    // to be used in future
+    public void setModeInformation(double[] modeInformation) {
+    }
+
+    public boolean isAutoAdjust() {
+        return autoAdjust;
+    }
+
+    public void setAutoAdjust(boolean autoAdjust){
+        this.autoAdjust = autoAdjust;
     }
 }

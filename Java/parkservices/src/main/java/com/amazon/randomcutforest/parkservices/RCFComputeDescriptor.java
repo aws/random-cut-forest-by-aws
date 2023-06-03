@@ -24,6 +24,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
@@ -40,6 +41,8 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
     TransformMethod transformMethod = TransformMethod.NONE;
 
     ImputationMethod imputationMethod = ImputationMethod.PREVIOUS;
+
+    ScoringStrategy scoringStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
 
     // the most important parameter of the forest
     int shingleSize;
@@ -211,6 +214,9 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
         answer.setNumberOfNewImputes(numberOfNewImputes);
         answer.setLastAnomalyInternalTimestamp(lastAnomalyInternalTimestamp);
         answer.setLastExpecteRCFdPoint(lastExpectedRCFPoint);
+        answer.setScoringStrategy(scoringStrategy);
         return answer;
     }
+
+    double alternateGrade;
 }

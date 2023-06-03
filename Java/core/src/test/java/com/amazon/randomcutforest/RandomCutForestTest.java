@@ -762,6 +762,8 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             doReturn(true).when(components.get(i)).isOutputReady();
         }
+        assertFalse(forest.isOutputReady());
+        when(updateCoordinator.getTotalUpdates()).thenReturn((long) sampleSize);
         assertTrue(forest.isOutputReady());
 
         // After forest.isOutputReady() returns true once, the result should be cached

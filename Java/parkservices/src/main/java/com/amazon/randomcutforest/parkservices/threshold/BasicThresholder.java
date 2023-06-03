@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.util.Weighted;
+
+import java.util.List;
+
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-
-import java.util.List;
-
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import com.amazon.randomcutforest.util.Weighted;
 
 public class BasicThresholder {
 
@@ -156,6 +156,9 @@ public class BasicThresholder {
     }
 
     public double getPrimaryThreshold() {
+        if (!isDeviationReady()) {
+            return 0;
+        }
         return primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation();
     }
 
@@ -168,6 +171,9 @@ public class BasicThresholder {
      *         to be considered anomalous
      */
     public double getPrimaryGrade(double score) {
+        if (!isDeviationReady()) {
+            return 0;
+        }
         double tFactor = 2 * zFactor;
         double deviation = primaryDeviation.getDeviation();
         if (deviation > 0) {
@@ -175,6 +181,15 @@ public class BasicThresholder {
         }
         double t = (tFactor - zFactor) / (zFactor);
         return max(0, t);
+    }
+
+    public Weighted<Double> getPrimaryThresholdAndGrade(double score) {
+        if (!isDeviationReady() || score <= 0) {
+            return new Weighted<Double>(0.0, 0.0f);
+        }
+        double threshold = getPrimaryThreshold();
+        float grade = (threshold > 0) ? (float) getPrimaryGrade(score) : 0f;
+        return new Weighted<>(threshold, grade);
     }
 
     @Deprecated
@@ -254,7 +269,7 @@ public class BasicThresholder {
         double threshold = (!isDeviationReady()) ? max(initialThreshold, absoluteThreshold)
                 : max(absoluteThreshold, intermediateFraction * (primaryDeviation.getMean() + scaledDeviation)
                         + (1 - intermediateFraction) * initialThreshold);
-        if (score < threshold) {
+        if (score < threshold || threshold <= 0) {
             return new Weighted<>(threshold, 0);
         } else {
             double base = min(threshold, primaryDeviation.getMean());
@@ -312,10 +327,6 @@ public class BasicThresholder {
 
     public Deviation getSecondaryDeviation() {
         return secondaryDeviation;
-    }
-
-    public Deviation getThresholdDeviation() {
-        return thresholdDeviation;
     }
 
     public void setZfactor(double factor) {
@@ -398,4 +409,5 @@ public class BasicThresholder {
     public void setAutoThreshold(boolean autoThreshold) {
         this.autoThreshold = autoThreshold;
     }
+
 }

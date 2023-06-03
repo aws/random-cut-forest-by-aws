@@ -15,6 +15,26 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.ScoringStrategy;
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.function.Function;
+
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
@@ -32,26 +52,7 @@ import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.function.Function;
-
-import lombok.Getter;
-import lombok.Setter;
-
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
-import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
-import com.amazon.randomcutforest.returntypes.RangeVector;
+import static java.lang.Math.max;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
@@ -69,6 +70,8 @@ public class ThresholdedRandomCutForest {
 
     protected TransformMethod transformMethod = TransformMethod.NONE;
 
+    protected ScoringStrategy scoringStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
+
     protected RandomCutForest forest;
 
     protected PredictorCorrector predictorCorrector;
@@ -79,18 +82,22 @@ public class ThresholdedRandomCutForest {
 
         forestMode = builder.forestMode;
         transformMethod = builder.transformMethod;
+        scoringStrategy = builder.scoringStrategy;
         Preprocessor.Builder<?> preprocessorBuilder = Preprocessor.builder().shingleSize(builder.shingleSize)
                 .transformMethod(builder.transformMethod).forestMode(builder.forestMode);
 
+        int inputLength;
         if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
-            preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
+            inputLength = builder.dimensions / builder.shingleSize;
+            preprocessorBuilder.inputLength(inputLength);
             builder.dimensions += builder.shingleSize;
             preprocessorBuilder.normalizeTime(builder.normalizeTime);
             // force internal shingling for this option
             builder.internalShinglingEnabled = Optional.of(true);
         } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
             checkArgument(builder.shingleSize > 1, " shingle size 1 is not useful in impute");
-            preprocessorBuilder.inputLength(builder.dimensions / builder.shingleSize);
+            inputLength = builder.dimensions / builder.shingleSize;
+            preprocessorBuilder.inputLength(inputLength);
 
             preprocessorBuilder.imputationMethod(builder.imputationMethod);
             preprocessorBuilder.normalizeTime(true);
@@ -101,10 +108,10 @@ public class ThresholdedRandomCutForest {
             builder.internalShinglingEnabled = Optional.of(false);
             preprocessorBuilder.useImputedFraction(builder.useImputedFraction.orElse(0.5));
         } else {
-            // applies to both STANDARD and DISTANCE
+            // STANDARD
             boolean smallInput = builder.internalShinglingEnabled.orElse(DEFAULT_INTERNAL_SHINGLING_ENABLED);
-            preprocessorBuilder
-                    .inputLength((smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions);
+            inputLength = (smallInput) ? builder.dimensions / builder.shingleSize : builder.dimensions;
+            preprocessorBuilder.inputLength(inputLength);
         }
 
         forest = builder.buildForest();
@@ -119,9 +126,9 @@ public class ThresholdedRandomCutForest {
                 .startNormalization(builder.startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION));
 
         preprocessor = preprocessorBuilder.build();
-        predictorCorrector = new PredictorCorrector(
-                new BasicThresholder(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold),
-                preprocessor.getInputLength());
+        predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
+                builder.learnNearIgnoreExpected,
+                builder.dimensions / builder.shingleSize, builder.randomSeed.orElse(0L));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
@@ -142,14 +149,41 @@ public class ThresholdedRandomCutForest {
         }
 
         predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
+        int base = builder.dimensions / builder.shingleSize;
+        double[] nearExpected = new double[4 * base];
+        builder.ignoreNearExpectedFromAbove.ifPresent(array -> {
+            validateNonNegativeArray(array, base);
+            System.arraycopy(array, 0, nearExpected, 0, base);
+        });
+        builder.ignoreNearExpectedFromBelow.ifPresent(array -> {
+            validateNonNegativeArray(array, base);
+            System.arraycopy(array, 0, nearExpected, base, base);
+        });
+        builder.ignoreNearExpectedFromAboveByRatio.ifPresent(array -> {
+            validateNonNegativeArray(array, base);
+            System.arraycopy(array, base, nearExpected, 2 * base, base);
+        });
+        builder.ignoreNearExpectedFromBelowByRatio.ifPresent(array -> {
+            validateNonNegativeArray(array, base);
+            System.arraycopy(array, base, nearExpected, 3 * base, base);
+        });
+        predictorCorrector.setIgnoreNearExpected(nearExpected);
+    }
 
+    void validateNonNegativeArray(double[] array, int num) {
+        checkArgument(array.length == num, "incorrect length");
+        for (double element : array) {
+            checkArgument(element >= 0, " has to be non-negative");
+        }
     }
 
     // for mappers
-    public ThresholdedRandomCutForest(ForestMode forestMode, TransformMethod transformMethod, RandomCutForest forest,
-            PredictorCorrector predictorCorrector, Preprocessor preprocessor, RCFComputeDescriptor descriptor) {
+    public ThresholdedRandomCutForest(ForestMode forestMode, TransformMethod transformMethod,
+            ScoringStrategy scoringStrategy, RandomCutForest forest, PredictorCorrector predictorCorrector,
+            Preprocessor preprocessor, RCFComputeDescriptor descriptor) {
         this.forestMode = forestMode;
         this.transformMethod = transformMethod;
+        this.scoringStrategy = scoringStrategy;
         this.forest = forest;
         this.predictorCorrector = predictorCorrector;
         this.preprocessor = preprocessor;
@@ -227,6 +261,8 @@ public class ThresholdedRandomCutForest {
                 lastAnomalyDescriptor, forest);
 
         AnomalyDescriptor initial = new AnomalyDescriptor(inputPoint, timestamp);
+        initial.setScoringStrategy(scoringStrategy);
+
         if (missingValues != null) {
             checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
             for (int i = 0; i < missingValues.length; i++) {
@@ -308,8 +344,8 @@ public class ThresholdedRandomCutForest {
                 if (gap == 1) {
                     newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
                 } else {
-                    newPoint = toFloatArray(predictorCorrector.applyBasicCorrector(lastPoint, gap, shingleSize,
-                            blockSize, lastAnomalyDescriptor));
+                    newPoint = predictorCorrector.applyBasicCorrector(newPoint, gap, shingleSize, blockSize,
+                            lastAnomalyDescriptor);
                 }
             }
             answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
@@ -329,16 +365,8 @@ public class ThresholdedRandomCutForest {
         return forest;
     }
 
-    public BasicThresholder getThresholder() {
-        return predictorCorrector.getThresholder();
-    }
-
     public void setZfactor(double factor) {
         predictorCorrector.setZfactor(factor);
-    }
-
-    public double getLastScore() {
-        return predictorCorrector.getLastScore();
     }
 
     public void setLowerThreshold(double lower) {
@@ -359,20 +387,8 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setInitialThreshold(initial);
     }
 
-    public void setIgnoreNearExpectedFromAbove(double[] shift) {
-        checkArgument(shift.length == getPreprocessor().getInputLength(), " has to be same length as input");
-        for (double element : shift) {
-            checkArgument(element >= 0, "has to be non-negative");
-        }
-        predictorCorrector.setIgnoreNearExpectedFromAbove(shift);
-    }
-
-    public void setIgnoreNearExpectedFromBelow(double[] shift) {
-        checkArgument(shift.length == getPreprocessor().getInputLength(), " has to be same length as input");
-        for (double element : shift) {
-            checkArgument(element >= 0, "has to be non-negative");
-        }
-        predictorCorrector.setIgnoreNearExpectedFromBelow(shift);
+    public void setIgnoreNearExpected(double[] shift) {
+        predictorCorrector.setIgnoreNearExpected(shift);
     }
 
     /**
@@ -411,12 +427,18 @@ public class ThresholdedRandomCutForest {
         protected TransformMethod transformMethod = TransformMethod.NONE;
         protected ImputationMethod imputationMethod = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
+        protected ScoringStrategy scoringStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
         protected boolean normalizeTime = false;
         protected double[] fillValues = null;
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
+        protected boolean learnNearIgnoreExpected = false;
         protected Optional<Double> transformDecay = Optional.empty();
+        protected Optional<double[]> ignoreNearExpectedFromAbove = Optional.empty();
+        protected Optional<double[]> ignoreNearExpectedFromBelow = Optional.empty();
+        protected Optional<double[]> ignoreNearExpectedFromAboveByRatio = Optional.empty();
+        protected Optional<double[]> ignoreNearExpectedFromBelowByRatio = Optional.empty();
 
         void validate() {
             if (forestMode == ForestMode.TIME_AUGMENTED) {
@@ -458,7 +480,17 @@ public class ThresholdedRandomCutForest {
                     .boundingBoxCacheFraction(boundingBoxCacheFraction).shingleSize(shingleSize)
                     .internalShinglingEnabled(internalShinglingEnabled.get())
                     .initialAcceptFraction(initialAcceptFraction);
-            outputAfter.ifPresent(builder::outputAfter);
+            if (forestMode != ForestMode.STREAMING_IMPUTE) {
+                outputAfter.ifPresent(builder::outputAfter);
+            } else {
+                // forcing the change between internal and external shingling
+                outputAfter.ifPresent(n -> {
+                    int num = max(startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION), n) - shingleSize
+                            + 1;
+                    checkArgument(num > 0, " max(start normalization, output after) should be at least " + shingleSize);
+                    builder.outputAfter(num);
+                });
+            }
             timeDecay.ifPresent(builder::timeDecay);
             randomSeed.ifPresent(builder::randomSeed);
             threadPoolSize.ifPresent(builder::threadPoolSize);
@@ -618,10 +650,39 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
+        public T learnIgnoreNearExpected(boolean learnNearIgnoreExpected) {
+            this.learnNearIgnoreExpected = learnNearIgnoreExpected;
+            return (T) this;
+        }
+
         public T weightTime(double value) {
             this.weightTime = Optional.of(value);
             return (T) this;
         }
 
+        public T ignoreNearExpectedFromAbove(double[] ignoreSimilarFromAbove) {
+            this.ignoreNearExpectedFromAbove = Optional.ofNullable(ignoreSimilarFromAbove);
+            return (T) this;
+        }
+
+        public T ignoreNearExpectedFromBelow(double[] ignoreSimilarFromBelow) {
+            this.ignoreNearExpectedFromBelow = Optional.ofNullable(ignoreSimilarFromBelow);
+            return (T) this;
+        }
+
+        public T ignoreNearExpectedFromAboveByRatio(double[] ignoreSimilarFromAboveByRatio) {
+            this.ignoreNearExpectedFromAboveByRatio = Optional.ofNullable(ignoreSimilarFromAboveByRatio);
+            return (T) this;
+        }
+
+        public T ignoreNearExpectedFromBelowByRatio(double[] ignoreSimilarFromBelowByRatio) {
+            this.ignoreNearExpectedFromBelowByRatio = Optional.ofNullable(ignoreSimilarFromBelowByRatio);
+            return (T) this;
+        }
+
+        public T scoringStrategy(ScoringStrategy scoringStrategy) {
+            this.scoringStrategy = scoringStrategy;
+            return (T) this;
+        }
     }
 }

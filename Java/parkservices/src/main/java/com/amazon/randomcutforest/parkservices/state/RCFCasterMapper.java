@@ -21,21 +21,21 @@ import lombok.Setter;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.ErrorHandler;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
 import com.amazon.randomcutforest.parkservices.RCFCaster;
 import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.state.errorhandler.ErrorHandlerMapper;
+import com.amazon.randomcutforest.parkservices.state.predictorcorrector.PredictorCorrectorMapper;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
-import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
-import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorMapper;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
-import com.amazon.randomcutforest.state.returntypes.DiVectorMapper;
 
 @Getter
 @Setter
@@ -54,24 +54,15 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
 
         state.setForestState(randomCutForestMapper.toState(model.getForest()));
 
-        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
-        state.setThresholderState(thresholderMapper.toState(model.getThresholder()));
-
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
         state.setPreprocessorStates(
                 new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
-        state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
-        state.setLastScore(model.getPredictorCorrector().getLastScore());
+
+        state.setPredictorCorrectorState(new PredictorCorrectorMapper().toState(model.getPredictorCorrector()));
+        state.setLastDescriptorState(
+                new ComputeDescriptorMapper().toState((RCFComputeDescriptor) model.getLastAnomalyDescriptor()));
         state.setForestMode(model.getForestMode().name());
         state.setTransformMethod(model.getTransformMethod().name());
-
-        IRCFComputeDescriptor descriptor = model.getLastAnomalyDescriptor();
-        state.setLastAnomalyTimeStamp(descriptor.getInternalTimeStamp());
-        state.setLastAnomalyScore(descriptor.getRCFScore());
-        state.setLastAnomalyAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
-        state.setLastAnomalyPoint(descriptor.getRCFPoint());
-        state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
-        state.setLastRelativeIndex(descriptor.getRelativeIndex());
 
         state.setForecastHorizon(model.getForecastHorizon());
 
@@ -80,45 +71,38 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
 
         state.setErrorHorizon(model.getErrorHorizon());
         state.setCalibrationMethod(model.getCalibrationMethod().name());
+        state.setScoringStrategy(model.getScoringStrategy().name());
         return state;
     }
 
     @Override
     public RCFCaster toModel(RCFCasterState state, long seed) {
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
-        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
-        BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
         Preprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorStates()[0]);
 
         ForestMode forestMode = ForestMode.valueOf(state.getForestMode());
         TransformMethod transformMethod = TransformMethod.valueOf(state.getTransformMethod());
 
-        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
-        descriptor.setRCFScore(state.getLastAnomalyScore());
-        descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
-        descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
-        descriptor.setRCFPoint(state.getLastAnomalyPoint());
-        descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
-        descriptor.setRelativeIndex(state.getLastRelativeIndex());
+        RCFComputeDescriptor descriptor = new ComputeDescriptorMapper().toModel(state.getLastDescriptorState());
         descriptor.setForestMode(forestMode);
         descriptor.setTransformMethod(transformMethod);
         descriptor
                 .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
 
-        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
-        predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
-        predictorCorrector.setLastScore(state.getLastScore());
+        PredictorCorrectorMapper mapper = new PredictorCorrectorMapper();
+        PredictorCorrector predictorCorrector = mapper.toModel(state.getPredictorCorrectorState());
 
         ErrorHandlerMapper errorHandlerMapper = new ErrorHandlerMapper();
         ErrorHandler errorHandler = errorHandlerMapper.toModel(state.getErrorHandler());
 
         Calibration calibrationMethod = Calibration.valueOf(state.getCalibrationMethod());
+        ScoringStrategy scoringStrategy = ScoringStrategy.valueOf(state.getScoringStrategy());
 
-        return new RCFCaster(forestMode, transformMethod, forest, predictorCorrector, preprocessor, descriptor,
-                state.getForecastHorizon(), errorHandler, state.getErrorHorizon(), calibrationMethod);
+        return new RCFCaster(forestMode, transformMethod, scoringStrategy, forest, predictorCorrector, preprocessor,
+                descriptor, state.getForecastHorizon(), errorHandler, state.getErrorHorizon(), calibrationMethod);
     }
 
 }

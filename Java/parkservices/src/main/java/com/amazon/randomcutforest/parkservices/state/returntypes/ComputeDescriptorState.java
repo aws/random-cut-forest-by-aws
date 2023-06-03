@@ -13,21 +13,26 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.state;
+package com.amazon.randomcutforest.parkservices.state.returntypes;
 
-import static com.amazon.randomcutforest.state.Version.V3_8;
+import java.io.Serializable;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.parkservices.state.errorhandler.ErrorHandlerState;
+import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
 @Data
-public class RCFCasterState extends ThresholdedRandomCutForestState {
+public class ComputeDescriptorState implements Serializable {
     private static final long serialVersionUID = 1L;
-    private String version = V3_8;
 
-    private int forecastHorizon;
-    private ErrorHandlerState errorHandler;
-    private int errorHorizon;
-    private String calibrationMethod;
+    private long lastAnomalyTimeStamp;
+    private double lastAnomalyScore;
+    private DiVectorState lastAnomalyAttribution;
+    private double lastScore;
+    private double[] lastAnomalyPoint;
+    private double[] lastExpectedPoint;
+    private int lastRelativeIndex;
+    private int lastReset;
+    private String lastStrategy;
+
 }

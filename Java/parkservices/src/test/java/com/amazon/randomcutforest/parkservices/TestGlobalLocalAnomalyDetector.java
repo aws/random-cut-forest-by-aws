@@ -34,7 +34,7 @@ import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
@@ -214,7 +214,7 @@ public class TestGlobalLocalAnomalyDetector {
         reservoir.setZfactor(zFactor);
 
         ThresholdedRandomCutForest test = ThresholdedRandomCutForest.builder().dimensions(2).shingleSize(1)
-                .randomSeed(77).timeDecay(timedecay).forestMode(ForestMode.DISTANCE).build();
+                .randomSeed(77).timeDecay(timedecay).scoringStrategy(ScoringStrategy.DISTANCE).build();
         test.setZfactor(zFactor); // using the same apples to apples comparison
 
         String name = "clustering_example";

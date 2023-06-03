@@ -119,23 +119,27 @@ public class RandomCutForestShingledFunctionalTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         System.out.println(seed);
+        Random rng = new Random(seed);
 
-        int numTrials = 1; // test is exact equality, reducing the number of trials
-        int length = 400 * sampleSize;
+        int numTrials = 5; // test is exact equality, reducing the number of trials
+        int length = 40 * sampleSize;
 
         for (int i = 0; i < numTrials; i++) {
 
+            int outputAfter = 1 + rng.nextInt(10 * sampleSize);
+            long newSeed = rng.nextLong();
             RandomCutForest first = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                    .internalRotationEnabled(rotation).shingleSize(shingleSize).build();
-
-            RandomCutForest second = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(false)
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(true)
+                    .outputAfter(outputAfter + shingleSize - 1).internalRotationEnabled(rotation)
                     .shingleSize(shingleSize).build();
 
+            RandomCutForest second = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(false)
+                    .outputAfter(outputAfter).shingleSize(shingleSize).build();
+
             RandomCutForest third = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(false).shingleSize(1)
-                    .build();
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(false).shingleSize(1)
+                    .outputAfter(outputAfter).build();
 
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length, 50, 100, 5,
                     seed + i, baseDimensions);
