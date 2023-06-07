@@ -15,18 +15,18 @@
 
 package com.amazon.randomcutforest.parkservices.threshold;
 
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import com.amazon.randomcutforest.util.Weighted;
-
-import java.util.List;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
+
+import java.util.List;
+
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class BasicThresholder {
 

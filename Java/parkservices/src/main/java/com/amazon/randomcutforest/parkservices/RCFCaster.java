@@ -33,7 +33,6 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
 @Setter
@@ -203,12 +202,4 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return answer;
     }
 
-    public RangeVector computeErrorPercentile(double percentile, BiFunction<Float, Float, Float> error) {
-        return computeErrorPercentile(percentile, errorHorizon, error);
-    }
-
-    public RangeVector computeErrorPercentile(double percentile, int newHorizon,
-            BiFunction<Float, Float, Float> error) {
-        return errorHandler.computeErrorPercentile(percentile, newHorizon, error);
-    }
 }

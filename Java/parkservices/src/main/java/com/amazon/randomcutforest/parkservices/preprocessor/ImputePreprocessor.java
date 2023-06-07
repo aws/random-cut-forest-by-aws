@@ -185,7 +185,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         int savedNumberOfImputed = numberOfImputed;
         int lastActualInternal = internalTimeStamp;
 
-        double[] point = generateShingle(description, timeStampDeviations[0].getMean(), false, forest);
+        double[] point = generateShingle(description, getTimeFactor(timeStampDeviations[0]), false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -299,10 +299,20 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 // imputations in the shingle)
                 addRelevantAttribution(result);
             }
-            generateShingle(result, timeStampDeviations[0].getMean(), true, forest);
+            generateShingle(result, getTimeFactor(timeStampDeviations[0]), true, forest);
         }
         ++valuesSeen;
         return result;
+    }
+
+    double getTimeFactor(Deviation deviation) {
+        double timeFactor = deviation.getMean();
+        double dev = deviation.getDeviation();
+        if (dev > 0 && dev < timeFactor / 2) {
+            // a correction
+            timeFactor -= dev * dev / (2 * timeFactor);
+        }
+        return timeFactor;
     }
 
     /**
@@ -314,7 +324,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         for (int i = 0; i < initialTimeStamps.length - 1; i++) {
             tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
         }
-        double timeFactor = tempTimeDeviation.getMean();
+        double timeFactor = getTimeFactor(tempTimeDeviation);
 
         prepareInitialInput();
         Deviation[] deviations = getDeviations();

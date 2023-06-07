@@ -15,26 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.config.ScoringStrategy;
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
-import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.function.Function;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
@@ -53,6 +33,27 @@ import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
 import static java.lang.Math.max;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.function.Function;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.ScoringStrategy;
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.parkservices.preprocessor.IPreprocessor;
+import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
@@ -127,8 +128,8 @@ public class ThresholdedRandomCutForest {
 
         preprocessor = preprocessorBuilder.build();
         predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
-                builder.learnNearIgnoreExpected,
-                builder.dimensions / builder.shingleSize, builder.randomSeed.orElse(0L));
+                builder.learnNearIgnoreExpected, builder.dimensions / builder.shingleSize,
+                builder.randomSeed.orElse(0L));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
@@ -161,11 +162,11 @@ public class ThresholdedRandomCutForest {
         });
         builder.ignoreNearExpectedFromAboveByRatio.ifPresent(array -> {
             validateNonNegativeArray(array, base);
-            System.arraycopy(array, base, nearExpected, 2 * base, base);
+            System.arraycopy(array, 0, nearExpected, 2 * base, base);
         });
         builder.ignoreNearExpectedFromBelowByRatio.ifPresent(array -> {
             validateNonNegativeArray(array, base);
-            System.arraycopy(array, base, nearExpected, 3 * base, base);
+            System.arraycopy(array, 0, nearExpected, 3 * base, base);
         });
         predictorCorrector.setIgnoreNearExpected(nearExpected);
     }
