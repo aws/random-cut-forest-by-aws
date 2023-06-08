@@ -45,7 +45,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         state.setAutoAdjust(model.isAutoAdjust());
         if (state.isAutoAdjust()) {
             DeviationState deviationState[] = new DeviationState[deviations.length];
-            for (int y = 0; y < thresholders.length; y++) {
+            for (int y = 0; y < deviations.length; y++) {
                 deviationState[y] = devMapper.toState(deviations[y]);
             }
             state.setDeviationStates(deviationState);

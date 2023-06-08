@@ -144,7 +144,7 @@ public class RandomCutForestBuilderTest {
     }
 
     @Test
-    public void testIllegalExceptionIsThrownWhenOutputAfterIsGreaterThanSample() {
+    public void testIllegalExceptionIsNotThrownWhenOutputAfterIsGreaterThanSample() {
         assertDoesNotThrow(() -> RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .outputAfter(sampleSize + 1).dimensions(dimensions).timeDecay(lambda).build());
     }

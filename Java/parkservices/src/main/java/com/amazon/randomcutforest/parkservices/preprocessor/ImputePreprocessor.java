@@ -295,9 +295,9 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             if (result.getAnomalyGrade() > 0 && (numberOfImputed == 0 || (result.getTransformMethod() != DIFFERENCE)
                     && (result.getTransformMethod() != NORMALIZE_DIFFERENCE))) {
                 // we cannot predict expected value easily if there are gaps in the shingle
-                // this is doubly complicated for differenced transforms (if there are anu
+                // this is doubly complicated for differenced transforms (if there are any
                 // imputations in the shingle)
-                addRelevantAttribution(result);
+                populateAnomalyDescriptorDetails(result);
             }
             generateShingle(result, getTimeFactor(timeStampDeviations[0]), true, forest);
         }

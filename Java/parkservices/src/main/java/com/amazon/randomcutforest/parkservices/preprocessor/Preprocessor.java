@@ -54,6 +54,8 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 @Setter
 public class Preprocessor implements IPreprocessor {
 
+    public static double NORMALIZATION_SCALING_FACTOR = 2.0;
+
     // in case of normalization, uses this constant in denominator to ensure
     // smoothness near 0
     public static double DEFAULT_NORMALIZATION_PRECISION = 1e-3;
@@ -378,7 +380,8 @@ public class Preprocessor implements IPreprocessor {
             System.arraycopy(transformer.getScale(), 0, scale, 0, inputLength);
             scale[inputLength] = (weightTime == 0) ? 0 : 1.0 / weightTime;
             if (normalizeTime) {
-                scale[inputLength] *= 2 * (timeStampDeviations[2].getMean() + DEFAULT_NORMALIZATION_PRECISION);
+                scale[inputLength] *= NORMALIZATION_SCALING_FACTOR
+                        * (timeStampDeviations[2].getMean() + DEFAULT_NORMALIZATION_PRECISION);
             }
             return scale;
         }
@@ -389,7 +392,7 @@ public class Preprocessor implements IPreprocessor {
             return transformer.getShift(previous);
         } else {
             double[] shift = new double[inputLength + 1];
-            System.arraycopy(transformer.getScale(), 0, shift, 0, inputLength);
+            System.arraycopy(transformer.getShift(previous), 0, shift, 0, inputLength);
             shift[inputLength] = timeStampDeviations[0].getMean() + previousTimeStamps[shingleSize - 1];
             return shift;
         }
@@ -411,7 +414,7 @@ public class Preprocessor implements IPreprocessor {
         }
 
         if (result.getAnomalyGrade() > 0) {
-            addRelevantAttribution(result);
+            populateAnomalyDescriptorDetails(result);
         }
 
         double[] inputPoint = result.getCurrentInput();
@@ -452,7 +455,7 @@ public class Preprocessor implements IPreprocessor {
      *
      * @param result the description of the current point
      */
-    protected void addRelevantAttribution(AnomalyDescriptor result) {
+    protected void populateAnomalyDescriptorDetails(AnomalyDescriptor result) {
         int base = dimension / shingleSize;
         double[] reference = result.getCurrentInput();
         double[] point = result.getRCFPoint();
@@ -461,7 +464,7 @@ public class Preprocessor implements IPreprocessor {
         int index = result.getRelativeIndex();
         if (index < 0) {
             reference = getShingledInput(shingleSize + index);
-            result.setPastTimeStamp(getTimeStamp(shingleSize - 1 + index));
+            result.setPastTimeStamp(getTimeStamp(shingleSize + index));
         }
         result.setPastValues(reference);
         if (newPoint != null) {
@@ -515,8 +518,8 @@ public class Preprocessor implements IPreprocessor {
             return 0;
         }
         if (normalizeTime) {
-            return (long) Math.round(
-                    timestamp + timeStampDeviations[0].getMean() + 2 * gap * timeStampDeviations[2].getMean() / factor);
+            return (long) Math.round(timestamp + timeStampDeviations[0].getMean()
+                    + NORMALIZATION_SCALING_FACTOR * gap * timeStampDeviations[2].getMean() / factor);
         } else {
             return (long) Math.round(gap / factor + timestamp);
         }
@@ -765,14 +768,17 @@ public class Preprocessor implements IPreprocessor {
      */
     protected double normalize(double value, Deviation[] deviation, double factor) {
         double currentFactor = (factor != 0) ? factor : Math.abs(deviation[2].getMean());
-        if (value - deviation[0].getMean() >= 2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+        if (value - deviation[0].getMean() >= NORMALIZATION_SCALING_FACTOR * clipFactor
+                * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return clipFactor;
         }
-        if (value - deviation[0].getMean() < -2 * clipFactor * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
+        if (value - deviation[0].getMean() < -NORMALIZATION_SCALING_FACTOR * clipFactor
+                * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return -clipFactor;
         } else {
             // deviation cannot be 0
-            return (value - deviation[0].getMean()) / (2 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
+            return (value - deviation[0].getMean())
+                    / (NORMALIZATION_SCALING_FACTOR * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
         }
     }
 

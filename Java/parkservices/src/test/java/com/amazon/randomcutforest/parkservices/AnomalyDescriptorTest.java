@@ -57,6 +57,9 @@ public class AnomalyDescriptorTest {
 
             int count = 0;
             for (double[] point : dataWithKeys.data) {
+                if (count == 82) {
+                    point[0] += 10000; // introducing an anomaly
+                }
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 assertArrayEquals(firstResult.getCurrentInput(), point, 1e-6);
                 assertEquals(firstResult.scoringStrategy, strategy);
@@ -69,11 +72,21 @@ public class AnomalyDescriptorTest {
                     assertEquals(firstResult.getScale().length, baseDimensions);
                     assertEquals(firstResult.getShift().length, baseDimensions);
                     assert (firstResult.getRelativeIndex() <= 0);
+                    if (count == 82 && strategy != ScoringStrategy.DISTANCE) {
+                        // because distances are 0 till sampleSize; by which time
+                        // forecasts would be reasonable
+                        assert (firstResult.getAnomalyGrade() > 0);
+                        assert (!firstResult.isReasonableForecast());
+                    }
                     if (firstResult.getAnomalyGrade() > 0) {
                         assertNotNull(firstResult.getPastValues());
                         assertEquals(firstResult.getPastValues().length, baseDimensions);
                         if (firstResult.getRelativeIndex() == 0) {
                             assertArrayEquals(firstResult.getPastValues(), firstResult.getCurrentInput(), 1e-10);
+                        }
+                        if (firstResult.isReasonableForecast()) {
+                            assertNotNull(firstResult.getExpectedValuesList());
+                            assertNotNull(firstResult.getExpectedValuesList()[0]); // the expected value
                         }
                         assertNotNull(firstResult.getRelevantAttribution());
                         assertEquals(firstResult.getRelevantAttribution().length, baseDimensions);
@@ -83,6 +96,8 @@ public class AnomalyDescriptorTest {
                         // account for shingling and initial results that populate the thresholder
                         assert (strategy == ScoringStrategy.MULTI_MODE_RECALL
                                 || firstResult.getRCFScore() >= firstResult.getThreshold());
+                    } else {
+                        assert (firstResult.getRelativeIndex() == 0);
                     }
                 }
                 ++count;

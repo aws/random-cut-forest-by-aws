@@ -46,6 +46,10 @@ public class PredictorCorrector {
 
     protected static int NUMBER_OF_MODES = 2;
 
+    protected final static int EXPECTED_INVERSE_DEPTH_INDEX = 0;
+
+    protected final static int DISTANCE_INDEX = 1;
+
     // the following vectors enable suppression of anomalies
     // the first pair correspond to additive differences
     // the second pair correspond to multiplicative differences
@@ -92,10 +96,10 @@ public class PredictorCorrector {
         thresholders[1] = new BasicThresholder(timeDecay);
         this.baseDimension = baseDimension;
         this.randomSeed = new Random(randomSeed).nextLong();
-        this.deviationsAbove = new Deviation[baseDimension];
-        this.deviationsBelow = new Deviation[baseDimension];
         this.autoAdjust = adjust;
         if (adjust) {
+            this.deviationsAbove = new Deviation[baseDimension];
+            this.deviationsBelow = new Deviation[baseDimension];
             for (int i = 0; i < baseDimension; i++) {
                 this.deviationsAbove[i] = new Deviation(timeDecay);
                 this.deviationsBelow[i] = new Deviation(timeDecay);
@@ -267,7 +271,6 @@ public class PredictorCorrector {
             return true;
         }
         checkArgument(lastAnomalyAttribution.getDimensions() == dimensions, " error in DiVectors");
-        int shingleSize = dimensions / baseDimension;
 
         if (ideal == null) {
             double remainder = 0;
@@ -275,8 +278,7 @@ public class PredictorCorrector {
                 remainder += candidate.getHighLowSum(i);
             }
             // simplifying the following since remainder * dimensions/difference corresponds
-            // to the
-            // impact of the new data since the last anomaly
+            // to the impact of the new data since the last anomaly
             return remainder * dimensions / difference > workingThreshold;
         } else {
             double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
@@ -391,7 +393,7 @@ public class PredictorCorrector {
         for (int y = 0; y < baseDimension && !answer; y++) {
             double observedGap = Math.abs(point[startPosition + y] - newPoint[startPosition + y]);
             double pathGap = calculatePathDeviation(point, startPosition, y, baseDimensions, differenced);
-            if (observedGap > 0.1 * pathGap) {
+            if (observedGap > min(2.0 / result.getShingleSize(), 0.1) * pathGap) {
                 double scaleFactor = (scale == null) ? 1.0 : scale[y];
                 double delta = observedGap * scaleFactor;
                 double shiftBase = (shift == null) ? 0 : shift[y];
@@ -417,7 +419,11 @@ public class PredictorCorrector {
                 }
                 answer = significantScore || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
                 if (answer) {
-                    answer = (a < b - ignoreNearExpectedFromBelow[y]) || (a > b + ignoreNearExpectedFromAbove[y]);
+                    boolean lower = (a < b - ignoreNearExpectedFromBelow[y])
+                            && (a < b * (1 - ignoreNearExpectedFromBelowByRatio[y]));
+                    boolean upper = (a > b + ignoreNearExpectedFromAbove[y])
+                            && (a > b * (1 + ignoreNearExpectedFromBelowByRatio[y]));
+                    answer = lower || upper;
                 }
             }
         }
@@ -437,21 +443,21 @@ public class PredictorCorrector {
     protected int populateScores(ScoringStrategy strategy, float[] point, RandomCutForest forest, double[] scoreVector,
             DiVector[] attributionVector) {
         if (strategy != ScoringStrategy.DISTANCE) {
-            scoreVector[0] = forest.getAnomalyScore(point);
+            scoreVector[EXPECTED_INVERSE_DEPTH_INDEX] = forest.getAnomalyScore(point);
             if (strategy == ScoringStrategy.MULTI_MODE || strategy == ScoringStrategy.MULTI_MODE_RECALL) {
-                attributionVector[1] = forest.getSimpleDensity(point).distances;
-                scoreVector[1] = attributionVector[1].getHighLowSum();
+                attributionVector[DISTANCE_INDEX] = forest.getSimpleDensity(point).distances;
+                scoreVector[DISTANCE_INDEX] = attributionVector[DISTANCE_INDEX].getHighLowSum();
             }
             return 0;
         } else {
-            attributionVector[1] = forest.getSimpleDensity(point).distances;
-            scoreVector[1] = attributionVector[1].getHighLowSum();
+            attributionVector[DISTANCE_INDEX] = forest.getSimpleDensity(point).distances;
+            scoreVector[DISTANCE_INDEX] = attributionVector[DISTANCE_INDEX].getHighLowSum();
             return 1;
         }
     }
 
     /**
-     * returned the attribution vector; it tries to reused cached version to save
+     * returned the attribution vector; it tries to reuse cached version to save
      * computation
      * 
      * @param choice            the mode of the attribution in question
@@ -462,8 +468,8 @@ public class PredictorCorrector {
      */
     DiVector getCachedAttribution(int choice, float[] point, DiVector[] attributionVector, RandomCutForest forest) {
         if (attributionVector[choice] == null) {
-            checkArgument(choice == 0, "incorrect cached state of scores");
-            attributionVector[0] = forest.getAnomalyAttribution(point);
+            checkArgument(choice == EXPECTED_INVERSE_DEPTH_INDEX, "incorrect cached state of scores");
+            attributionVector[EXPECTED_INVERSE_DEPTH_INDEX] = forest.getAnomalyAttribution(point);
         }
         return attributionVector[choice];
     }
@@ -478,7 +484,7 @@ public class PredictorCorrector {
      * @return the attribution of that mode
      */
     DiVector getNewAttribution(int choice, float[] point, RandomCutForest forest) {
-        if (choice == 0) {
+        if (choice == EXPECTED_INVERSE_DEPTH_INDEX) {
             return forest.getAnomalyAttribution(point);
         } else {
             return forest.getSimpleDensity(point).distances;
@@ -494,7 +500,7 @@ public class PredictorCorrector {
      * @return the score corresponding to the mode
      */
     double getNewScore(int choice, float[] point, RandomCutForest forest) {
-        if (choice == 0) {
+        if (choice == EXPECTED_INVERSE_DEPTH_INDEX) {
             return forest.getAnomalyScore(point);
         } else {
             return forest.getSimpleDensity(point).distances.getHighLowSum();
@@ -518,10 +524,11 @@ public class PredictorCorrector {
      */
     protected Weighted<Double> getThresholdAndGrade(ScoringStrategy strategy, int choice, double[] scoreVector,
             TransformMethod method, int dimension, int shingleSize) {
-        if (choice == 0) {
-            return thresholders[0].getThresholdAndGrade(scoreVector[0], method, dimension, shingleSize);
+        if (choice == EXPECTED_INVERSE_DEPTH_INDEX) {
+            return thresholders[EXPECTED_INVERSE_DEPTH_INDEX]
+                    .getThresholdAndGrade(scoreVector[EXPECTED_INVERSE_DEPTH_INDEX], method, dimension, shingleSize);
         } else {
-            return thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+            return thresholders[DISTANCE_INDEX].getPrimaryThresholdAndGrade(scoreVector[DISTANCE_INDEX]);
         }
     }
 
@@ -612,7 +619,8 @@ public class PredictorCorrector {
         double workingGrade = thresholdAndGrade.weight;
 
         if (workingGrade > 0 && strategy == ScoringStrategy.MULTI_MODE) {
-            Weighted<Double> temp = thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+            Weighted<Double> temp = thresholders[DISTANCE_INDEX]
+                    .getPrimaryThresholdAndGrade(scoreVector[DISTANCE_INDEX]);
             if (temp.index > 0 && temp.weight == 0) {
                 // there is a valid threshold and the grade is 0
                 workingGrade = 0;
@@ -623,7 +631,8 @@ public class PredictorCorrector {
         if (strategy == ScoringStrategy.MULTI_MODE_RECALL && workingGrade == 0 && gap >= shingleSize) {
             // if overlapping shingles are being ruled out, then reconsidering those may not
             // be useful
-            Weighted<Double> temp = thresholders[1].getPrimaryThresholdAndGrade(scoreVector[1]);
+            Weighted<Double> temp = thresholders[DISTANCE_INDEX]
+                    .getPrimaryThresholdAndGrade(scoreVector[DISTANCE_INDEX]);
             choice = 1;
             correctedScore = scoreVector[1];
             workingGrade = temp.weight;
@@ -775,17 +784,17 @@ public class PredictorCorrector {
 
     public void setLowerThreshold(double lower) {
         // only applies to thresholder 0
-        thresholders[0].setLowerThreshold(lower);
+        thresholders[EXPECTED_INVERSE_DEPTH_INDEX].setLowerThreshold(lower);
     }
 
     public void setScoreDifferencing(double persistence) {
         // only applies to thresholder 0
-        thresholders[0].setScoreDifferencing(persistence);
+        thresholders[EXPECTED_INVERSE_DEPTH_INDEX].setScoreDifferencing(persistence);
     }
 
     public void setInitialThreshold(double initial) {
         // only applies to thresholder 0
-        thresholders[0].setInitialThreshold(initial);
+        thresholders[EXPECTED_INVERSE_DEPTH_INDEX].setInitialThreshold(initial);
     }
 
     public void setNumberOfAttributors(int numberOfAttributors) {
@@ -860,6 +869,8 @@ public class PredictorCorrector {
             return null;
         }
         checkArgument(deviationsAbove.length == deviationsBelow.length, "incorrect state");
+        checkArgument(deviationsAbove.length == baseDimension, "length should be base dimension");
+
         Deviation[] answer = new Deviation[2 * deviationsAbove.length];
         for (int i = 0; i < deviationsAbove.length; i++) {
             answer[i] = deviationsAbove[i];

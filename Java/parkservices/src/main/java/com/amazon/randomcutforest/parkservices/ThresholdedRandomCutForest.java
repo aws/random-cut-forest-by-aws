@@ -128,7 +128,7 @@ public class ThresholdedRandomCutForest {
 
         preprocessor = preprocessorBuilder.build();
         predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
-                builder.learnNearIgnoreExpected, builder.dimensions / builder.shingleSize,
+                builder.learnIgnoreNearExpected, builder.dimensions / builder.shingleSize,
                 builder.randomSeed.orElse(0L));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
@@ -169,6 +169,7 @@ public class ThresholdedRandomCutForest {
             System.arraycopy(array, 0, nearExpected, 3 * base, base);
         });
         predictorCorrector.setIgnoreNearExpected(nearExpected);
+        predictorCorrector.setLastStrategy(builder.scoringStrategy);
     }
 
     void validateNonNegativeArray(double[] array, int num) {
@@ -388,10 +389,6 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setInitialThreshold(initial);
     }
 
-    public void setIgnoreNearExpected(double[] shift) {
-        predictorCorrector.setIgnoreNearExpected(shift);
-    }
-
     /**
      * @return a new builder.
      */
@@ -434,7 +431,7 @@ public class ThresholdedRandomCutForest {
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
-        protected boolean learnNearIgnoreExpected = false;
+        protected boolean learnIgnoreNearExpected = false;
         protected Optional<Double> transformDecay = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromAbove = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromBelow = Optional.empty();
@@ -652,7 +649,7 @@ public class ThresholdedRandomCutForest {
         }
 
         public T learnIgnoreNearExpected(boolean learnNearIgnoreExpected) {
-            this.learnNearIgnoreExpected = learnNearIgnoreExpected;
+            this.learnIgnoreNearExpected = learnNearIgnoreExpected;
             return (T) this;
         }
 
