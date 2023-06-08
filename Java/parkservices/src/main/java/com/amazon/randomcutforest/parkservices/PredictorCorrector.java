@@ -420,9 +420,9 @@ public class PredictorCorrector {
                 answer = significantScore || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
                 if (answer) {
                     boolean lower = (a < b - ignoreNearExpectedFromBelow[y])
-                            && (a < b * (1 - ignoreNearExpectedFromBelowByRatio[y]));
+                            && (a < b - ignoreNearExpectedFromBelowByRatio[y] * Math.abs(b));
                     boolean upper = (a > b + ignoreNearExpectedFromAbove[y])
-                            && (a > b * (1 + ignoreNearExpectedFromBelowByRatio[y]));
+                            && (a > b + ignoreNearExpectedFromAboveByRatio[y] * Math.abs(b));
                     answer = lower || upper;
                 }
             }
@@ -633,8 +633,8 @@ public class PredictorCorrector {
             // be useful
             Weighted<Double> temp = thresholders[DISTANCE_INDEX]
                     .getPrimaryThresholdAndGrade(scoreVector[DISTANCE_INDEX]);
-            choice = 1;
-            correctedScore = scoreVector[1];
+            choice = DISTANCE_INDEX;
+            correctedScore = scoreVector[DISTANCE_INDEX];
             workingGrade = temp.weight;
             workingThreshold = temp.index;
         }
