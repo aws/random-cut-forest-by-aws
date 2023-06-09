@@ -107,6 +107,14 @@ public class PredictorCorrectorTest {
         assertArrayEquals(predictorCorrector.ignoreNearExpectedFromBelowByRatio, new double[2]);
         another[0] = -1;
         assertThrows(IllegalArgumentException.class, () -> predictorCorrector.setIgnoreNearExpected(another));
+        predictorCorrector.setIgnoreNearExpectedFromAbove(testOne);
+        predictorCorrector.setIgnoreNearExpectedFromBelow(testTwo);
+        predictorCorrector.setIgnoreNearExpectedFromAboveByRatio(testThree);
+        predictorCorrector.setIgnoreNearExpectedFromBelowByRatio(testFour);
+        assertArrayEquals(predictorCorrector.ignoreNearExpectedFromAbove, testOne, 1e-10);
+        assertArrayEquals(predictorCorrector.ignoreNearExpectedFromBelow, testTwo, 1e-10);
+        assertArrayEquals(predictorCorrector.ignoreNearExpectedFromAboveByRatio, testThree, 1e-10);
+        assertArrayEquals(predictorCorrector.ignoreNearExpectedFromBelowByRatio, testFour, 1e-10);
 
         long randomSeed = new Random(0L).nextLong();
         Random testRandom = new Random(randomSeed);

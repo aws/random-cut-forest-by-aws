@@ -151,24 +151,10 @@ public class ThresholdedRandomCutForest {
 
         predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
         int base = builder.dimensions / builder.shingleSize;
-        double[] nearExpected = new double[4 * base];
-        builder.ignoreNearExpectedFromAbove.ifPresent(array -> {
-            validateNonNegativeArray(array, base);
-            System.arraycopy(array, 0, nearExpected, 0, base);
-        });
-        builder.ignoreNearExpectedFromBelow.ifPresent(array -> {
-            validateNonNegativeArray(array, base);
-            System.arraycopy(array, 0, nearExpected, base, base);
-        });
-        builder.ignoreNearExpectedFromAboveByRatio.ifPresent(array -> {
-            validateNonNegativeArray(array, base);
-            System.arraycopy(array, 0, nearExpected, 2 * base, base);
-        });
-        builder.ignoreNearExpectedFromBelowByRatio.ifPresent(array -> {
-            validateNonNegativeArray(array, base);
-            System.arraycopy(array, 0, nearExpected, 3 * base, base);
-        });
-        predictorCorrector.setIgnoreNearExpected(nearExpected);
+        builder.ignoreNearExpectedFromAbove.ifPresent(predictorCorrector::setIgnoreNearExpectedFromAbove);
+        builder.ignoreNearExpectedFromBelow.ifPresent(predictorCorrector::setIgnoreNearExpectedFromBelow);
+        builder.ignoreNearExpectedFromAboveByRatio.ifPresent(predictorCorrector::setIgnoreNearExpectedFromAboveByRatio);
+        builder.ignoreNearExpectedFromBelowByRatio.ifPresent(predictorCorrector::setIgnoreNearExpectedFromBelowByRatio);
         predictorCorrector.setLastStrategy(builder.scoringStrategy);
     }
 

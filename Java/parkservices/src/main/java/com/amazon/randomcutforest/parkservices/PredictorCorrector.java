@@ -816,16 +816,45 @@ public class PredictorCorrector {
         }
     }
 
-    void validateIgnore(double[] shift) {
-        checkArgument(shift.length == 4 * baseDimension, () -> "has to be of length " + 4 * baseDimension);
+    void validateIgnore(double[] shift, int length) {
+        checkArgument(shift.length == length, () -> "has to be of length " + 4 * baseDimension);
         for (double element : shift) {
             checkArgument(element >= 0, "has to be non-negative");
         }
     }
 
+    public void setIgnoreNearExpectedFromAbove(double[] ignoreSimilarShift) {
+        if (ignoreSimilarShift != null) {
+            validateIgnore(ignoreSimilarShift, baseDimension);
+            System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromAbove, 0, baseDimension);
+        }
+    }
+
+    public void setIgnoreNearExpectedFromBelow(double[] ignoreSimilarShift) {
+        if (ignoreSimilarShift != null) {
+            validateIgnore(ignoreSimilarShift, baseDimension);
+            System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromBelow, 0, baseDimension);
+        }
+    }
+
+    public void setIgnoreNearExpectedFromAboveByRatio(double[] ignoreSimilarShift) {
+        if (ignoreSimilarShift != null) {
+            validateIgnore(ignoreSimilarShift, baseDimension);
+            System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromAboveByRatio, 0, baseDimension);
+        }
+    }
+
+    public void setIgnoreNearExpectedFromBelowByRatio(double[] ignoreSimilarShift) {
+        if (ignoreSimilarShift != null) {
+            validateIgnore(ignoreSimilarShift, baseDimension);
+            System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromBelowByRatio, 0, baseDimension);
+        }
+    }
+
+    // to be used for the state classes only
     public void setIgnoreNearExpected(double[] ignoreSimilarShift) {
         if (ignoreSimilarShift != null) {
-            validateIgnore(ignoreSimilarShift);
+            validateIgnore(ignoreSimilarShift, 4 * baseDimension);
             System.arraycopy(ignoreSimilarShift, 0, ignoreNearExpectedFromAbove, 0, baseDimension);
             System.arraycopy(ignoreSimilarShift, baseDimension, ignoreNearExpectedFromBelow, 0, baseDimension);
             System.arraycopy(ignoreSimilarShift, 2 * baseDimension, ignoreNearExpectedFromAboveByRatio, 0,
