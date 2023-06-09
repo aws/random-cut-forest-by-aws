@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.parkservices;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
@@ -67,15 +68,15 @@ public class AnomalyDescriptorTest {
                     assertEquals(firstResult.getRCFScore(), 0);
                 } else {
                     // distances can be 0
-                    assert (strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
-                    assert (strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions);
                     assertEquals(firstResult.getShift().length, baseDimensions);
                     assert (firstResult.getRelativeIndex() <= 0);
                     if (count == 82 && strategy != ScoringStrategy.DISTANCE) {
                         // because distances are 0 till sampleSize; by which time
                         // forecasts would be reasonable
-                        assert (firstResult.getAnomalyGrade() > 0);
+                        assertTrue(firstResult.getAnomalyGrade() > 0);
                         assert (!firstResult.isReasonableForecast());
                     }
                     if (firstResult.getAnomalyGrade() > 0) {
@@ -86,7 +87,7 @@ public class AnomalyDescriptorTest {
                         }
                         if (firstResult.getExpectedValuesList() != null
                                 && firstResult.getExpectedValuesList()[0] != null) {
-                            assert (firstResult.isReasonableForecast());
+                            assertTrue(firstResult.isReasonableForecast());
                             // the converse is not true -- the algorithm can get confused by an anomaly
                             // in the multivariate case and choose to not output imprecise answers
                             // an obvious example is a (x,y) distribution where it is (0,0) or (1,1)
@@ -100,10 +101,10 @@ public class AnomalyDescriptorTest {
                         // the reverse of this condition need not be true -- the predictor corrector
                         // often may declare grade 0 even when score is greater than threshold, to
                         // account for shingling and initial results that populate the thresholder
-                        assert (strategy == ScoringStrategy.MULTI_MODE_RECALL
+                        assertTrue(strategy == ScoringStrategy.MULTI_MODE_RECALL
                                 || firstResult.getRCFScore() >= firstResult.getThreshold());
                     } else {
-                        assert (firstResult.getRelativeIndex() == 0);
+                        assertTrue(firstResult.getRelativeIndex() == 0);
                     }
                 }
                 ++count;
@@ -144,8 +145,8 @@ public class AnomalyDescriptorTest {
                     assertEquals(firstResult.getRCFScore(), 0);
                 } else {
                     // distances can be 0
-                    assert (strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
-                    assert (strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions + 1);
                     assertEquals(firstResult.getShift().length, baseDimensions + 1);
                     assert (firstResult.getRelativeIndex() <= 0);
@@ -158,7 +159,7 @@ public class AnomalyDescriptorTest {
                         assertEquals(firstResult.attribution.getHighLowSum(), firstResult.getRCFScore(), 1e-6);
                         assertNotNull(firstResult.getRelevantAttribution());
                         assertEquals(firstResult.getRelevantAttribution().length, baseDimensions);
-                        assert (strategy == ScoringStrategy.MULTI_MODE_RECALL
+                        assertTrue(strategy == ScoringStrategy.MULTI_MODE_RECALL
                                 || firstResult.getRCFScore() >= firstResult.getThreshold());
                     }
                 }
