@@ -72,7 +72,7 @@ public class AnomalyDescriptorTest {
                     assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions);
                     assertEquals(firstResult.getShift().length, baseDimensions);
-                    assert (firstResult.getRelativeIndex() <= 0);
+                    assertTrue(firstResult.getRelativeIndex() <= 0);
                     if (count == 82 && strategy != ScoringStrategy.DISTANCE) {
                         // because distances are 0 till sampleSize; by which time
                         // forecasts would be reasonable
@@ -149,7 +149,7 @@ public class AnomalyDescriptorTest {
                     assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions + 1);
                     assertEquals(firstResult.getShift().length, baseDimensions + 1);
-                    assert (firstResult.getRelativeIndex() <= 0);
+                    assertTrue(firstResult.getRelativeIndex() <= 0);
                     if (firstResult.getAnomalyGrade() > 0) {
                         assertNotNull(firstResult.getPastValues());
                         assertEquals(firstResult.getPastValues().length, baseDimensions);
