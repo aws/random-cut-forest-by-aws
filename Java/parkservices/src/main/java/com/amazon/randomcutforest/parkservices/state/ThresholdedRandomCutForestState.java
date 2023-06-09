@@ -39,7 +39,7 @@ public class ThresholdedRandomCutForestState implements Serializable {
     private PreprocessorState[] preprocessorStates;
 
     // following fields are deprecated, but not removed for compatibility with 2.1
-    // moels
+    // models
     private double ignoreSimilarFactor;
     private double triggerFactor;
     private long lastAnomalyTimeStamp;
@@ -59,7 +59,6 @@ public class ThresholdedRandomCutForestState implements Serializable {
     private String forestMode;
     private String transformMethod;
     private String scoringStrategy;
-    @Deprecated
     private int lastRelativeIndex;
     private int lastReset;
     private PredictorCorrectorState predictorCorrectorState;
