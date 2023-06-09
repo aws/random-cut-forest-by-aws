@@ -772,7 +772,7 @@ public class Preprocessor implements IPreprocessor {
                 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return clipFactor;
         }
-        if (value - deviation[0].getMean() < -NORMALIZATION_SCALING_FACTOR * clipFactor
+        if (value - deviation[0].getMean() <= -NORMALIZATION_SCALING_FACTOR * clipFactor
                 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return -clipFactor;
         } else {

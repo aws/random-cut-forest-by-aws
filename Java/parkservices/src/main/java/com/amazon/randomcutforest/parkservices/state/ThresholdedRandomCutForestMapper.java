@@ -58,7 +58,6 @@ public class ThresholdedRandomCutForestMapper
         if (state.getScoringStrategy() != null && !state.getScoringStrategy().isEmpty()) {
             scoringStrategy = ScoringStrategy.valueOf(state.getScoringStrategy());
         }
-        ;
 
         RCFComputeDescriptor descriptor;
 
