@@ -77,7 +77,7 @@ public class AnomalyDescriptorTest {
                         // because distances are 0 till sampleSize; by which time
                         // forecasts would be reasonable
                         assertTrue(firstResult.getAnomalyGrade() > 0);
-                        assert (!firstResult.isReasonableForecast());
+                        assertTrue(!firstResult.isReasonableForecast());
                     }
                     if (firstResult.getAnomalyGrade() > 0) {
                         assertNotNull(firstResult.getPastValues());
