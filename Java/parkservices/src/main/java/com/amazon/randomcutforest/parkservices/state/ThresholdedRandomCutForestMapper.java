@@ -21,14 +21,16 @@ import lombok.Setter;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
 import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.state.predictorcorrector.PredictorCorrectorMapper;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
 import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
+import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorMapper;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.state.IStateMapper;
@@ -44,36 +46,54 @@ public class ThresholdedRandomCutForestMapper
     public ThresholdedRandomCutForest toModel(ThresholdedRandomCutForestState state, long seed) {
 
         RandomCutForestMapper randomCutForestMapper = new RandomCutForestMapper();
-        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
 
         RandomCutForest forest = randomCutForestMapper.toModel(state.getForestState());
-        BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
         Preprocessor preprocessor = preprocessorMapper.toModel(state.getPreprocessorStates()[0]);
 
         ForestMode forestMode = ForestMode.valueOf(state.getForestMode());
         TransformMethod transformMethod = TransformMethod.valueOf(state.getTransformMethod());
 
-        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
-        descriptor.setRCFScore(state.getLastAnomalyScore());
-        descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
-        descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
-        descriptor.setRCFPoint(state.getLastAnomalyPoint());
-        descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
-        descriptor.setRelativeIndex(state.getLastRelativeIndex());
+        ScoringStrategy scoringStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
+        if (state.getScoringStrategy() != null && !state.getScoringStrategy().isEmpty()) {
+            scoringStrategy = ScoringStrategy.valueOf(state.getScoringStrategy());
+        }
+
+        RCFComputeDescriptor descriptor;
+
+        if (state.getLastDescriptorState() == null) {
+            descriptor = new RCFComputeDescriptor(null, 0L);
+            descriptor.setRCFScore(state.getLastAnomalyScore());
+            descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
+            descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
+            descriptor.setRCFPoint(state.getLastAnomalyPoint());
+            descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
+            descriptor.setRelativeIndex(state.getLastRelativeIndex());
+            descriptor.setScoringStrategy(scoringStrategy);
+        } else {
+            descriptor = new ComputeDescriptorMapper().toModel(state.getLastDescriptorState());
+        }
+
         descriptor.setForestMode(forestMode);
         descriptor.setTransformMethod(transformMethod);
+        descriptor.setScoringStrategy(scoringStrategy);
         descriptor
                 .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
 
-        PredictorCorrector predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
-        predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
-        predictorCorrector.setLastScore(state.getLastScore());
-        predictorCorrector.setIgnoreNearExpectedFromAbove(state.getIgnoreSimilarFromAbove());
-        predictorCorrector.setIgnoreNearExpectedFromBelow(state.getIgnoreSimilarFromBelow());
+        PredictorCorrector predictorCorrector;
+        if (state.getPredictorCorrectorState() == null) {
+            BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
+            BasicThresholder thresholder = thresholderMapper.toModel(state.getThresholderState());
+            predictorCorrector = new PredictorCorrector(thresholder, preprocessor.getInputLength());
+            predictorCorrector.setNumberOfAttributors(state.getNumberOfAttributors());
+            predictorCorrector.setLastScore(new double[] { state.getLastScore() });
+        } else {
+            PredictorCorrectorMapper mapper = new PredictorCorrectorMapper();
+            predictorCorrector = mapper.toModel(state.getPredictorCorrectorState());
+        }
 
-        return new ThresholdedRandomCutForest(forestMode, transformMethod, forest, predictorCorrector, preprocessor,
-                descriptor);
+        return new ThresholdedRandomCutForest(forestMode, transformMethod, scoringStrategy, forest, predictorCorrector,
+                preprocessor, descriptor);
     }
 
     @Override
@@ -88,25 +108,17 @@ public class ThresholdedRandomCutForestMapper
 
         state.setForestState(randomCutForestMapper.toState(model.getForest()));
 
-        BasicThresholderMapper thresholderMapper = new BasicThresholderMapper();
-        state.setThresholderState(thresholderMapper.toState(model.getThresholder()));
-
         PreprocessorMapper preprocessorMapper = new PreprocessorMapper();
         state.setPreprocessorStates(
                 new PreprocessorState[] { preprocessorMapper.toState((Preprocessor) model.getPreprocessor()) });
-        state.setNumberOfAttributors(model.getPredictorCorrector().getNumberOfAttributors());
+
+        state.setPredictorCorrectorState(new PredictorCorrectorMapper().toState(model.getPredictorCorrector()));
         state.setForestMode(model.getForestMode().name());
         state.setTransformMethod(model.getTransformMethod().name());
+        state.setScoringStrategy(model.getScoringStrategy().name());
 
-        IRCFComputeDescriptor descriptor = model.getLastAnomalyDescriptor();
-        state.setLastAnomalyTimeStamp(descriptor.getInternalTimeStamp());
-        state.setLastAnomalyScore(descriptor.getRCFScore());
-        state.setLastAnomalyAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
-        state.setLastAnomalyPoint(descriptor.getRCFPoint());
-        state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
-        state.setLastRelativeIndex(descriptor.getRelativeIndex());
-        state.setLastScore(model.getLastScore());
-
+        state.setLastDescriptorState(
+                new ComputeDescriptorMapper().toState((RCFComputeDescriptor) model.getLastAnomalyDescriptor()));
         return state;
     }
 

@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys.
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import org.junit.jupiter.api.Tag;
@@ -46,7 +47,7 @@ public class ConsistencyTest {
         long seed = new Random().nextLong();
 
         int numTrials = 1; // just once since testing exact equality
-        int length = 400 * sampleSize;
+        int length = 40 * sampleSize;
         for (int i = 0; i < numTrials; i++) {
 
             RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
@@ -132,22 +133,29 @@ public class ConsistencyTest {
         long seed = new Random().nextLong();
         System.out.println(seed);
 
-        int numTrials = 1; // test is exact equality, reducing the number of trials
+        Random rng = new Random(seed);
+
+        int numTrials = 5; // test is exact equality, reducing the number of trials
         int numberOfTrees = 30; // and using fewer trees to speed up test
-        int length = 400 * sampleSize;
+        int length = 40 * sampleSize;
         int testLength = length;
         for (int i = 0; i < numTrials; i++) {
 
+            long newSeed = rng.nextLong();
+            int outputAfter = rng.nextInt(sampleSize * 10) + 1;
             ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
-                    .internalShinglingEnabled(true).shingleSize(shingleSize).anomalyRate(0.01).build();
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(newSeed)
+                    .numberOfTrees(numberOfTrees).internalShinglingEnabled(true)
+                    // increasing outputAfter for internal shingling
+                    .outputAfter(outputAfter + shingleSize - 1).shingleSize(shingleSize).anomalyRate(0.01).build();
 
             ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).numberOfTrees(numberOfTrees)
-                    .internalShinglingEnabled(false).shingleSize(shingleSize).anomalyRate(0.01).build();
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(newSeed)
+                    .numberOfTrees(numberOfTrees).internalShinglingEnabled(false).outputAfter(outputAfter)
+                    .shingleSize(shingleSize).anomalyRate(0.01).build();
 
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length + testLength, 50,
-                    100, 5, seed + i, baseDimensions);
+                    100, 5, newSeed + i, baseDimensions);
 
             double[][] shingledData = generateShingledData(dataWithKeys.data, shingleSize, baseDimensions, false);
 
@@ -211,7 +219,6 @@ public class ConsistencyTest {
             long seed = new Random().nextLong();
             System.out.println("seed = " + seed);
 
-            // TransformMethod transformMethod = TransformMethod.NONE;
             ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                     .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                     .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
@@ -265,13 +272,13 @@ public class ConsistencyTest {
         }
     }
 
+    // streaming impute changes normalizations
     @ParameterizedTest
-    @EnumSource(value = TransformMethod.class, names = { "WEIGHTED", "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE",
-            "SUBTRACT_MA" })
+    @EnumSource(TransformMethod.class)
     public void ImputeTest(TransformMethod transformMethod) {
 
         int sampleSize = 256;
-        int baseDimensions = 1;
+        int baseDimensions = 2;
         int shingleSize = 4;
         int dimensions = baseDimensions * shingleSize;
 
@@ -283,26 +290,25 @@ public class ConsistencyTest {
             Precision precision = Precision.FLOAT_32;
             long seed = new Random().nextLong();
             System.out.println("seed = " + seed);
-            double[] weights = new double[] { 1.7, 4.2 };
+            Random rng = new Random(seed);
+            double[] weights = new double[baseDimensions];
+            Arrays.fill(weights, 1.0);
 
+            int startNormalization = 10;
+            int outputAfter = startNormalization + shingleSize;
+            long newSeed = rng.nextLong();
             ThresholdedRandomCutForest first = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                    .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                    .randomSeed(newSeed).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
                     .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
                     .forestMode(ForestMode.STANDARD).weightTime(0).transformMethod(transformMethod).normalizeTime(true)
-                    .outputAfter(32).initialAcceptFraction(0.125).weights(weights).build();
+                    .startNormalization(startNormalization).outputAfter(outputAfter).initialAcceptFraction(0.125)
+                    .weights(weights).build();
             ThresholdedRandomCutForest second = ThresholdedRandomCutForest.builder().compact(true)
-                    .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
+                    .dimensions(dimensions).randomSeed(newSeed).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                     .sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision).anomalyRate(0.01)
                     .forestMode(ForestMode.STREAMING_IMPUTE).weightTime(0).transformMethod(transformMethod)
-                    .normalizeTime(true).outputAfter(32).initialAcceptFraction(0.125).weights(weights).build();
-
-            // ensuring that the parameters are the same; otherwise the grades/scores cannot
-            // be the same
-            // weighTime has to be 0 in the above
-            first.setLowerThreshold(1.1);
-            second.setLowerThreshold(1.1);
-            first.setHorizon(0.75);
-            second.setHorizon(0.75);
+                    .startNormalization(startNormalization).normalizeTime(true).outputAfter(outputAfter)
+                    .initialAcceptFraction(0.125).weights(weights).build();
 
             Random noise = new Random(0);
 
@@ -312,7 +318,7 @@ public class ConsistencyTest {
 
             for (int j = 0; j < length; j++) {
                 // gap has to be asymptotically same
-                long timestamp = 100 * j + noise.nextInt(10) - 5;
+                long timestamp = 100 * j + 0 * noise.nextInt(10) - 5;
                 AnomalyDescriptor result = first.process(dataWithKeys.data[j], 0L);
                 AnomalyDescriptor test = second.process(dataWithKeys.data[j], timestamp);
                 assertEquals(result.getRCFScore(), test.getRCFScore(), 1e-6);

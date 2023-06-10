@@ -610,6 +610,23 @@ public class RandomCutForestTest {
 
         float[] expectedResult = new float[] { 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f };
         assertArrayEquals(expectedResult, result.values);
+        // test properties of RangeVector as well
+        for (int i = 0; i < 6; i++) {
+            assert (result.upper[i] >= result.values[i]);
+            assert (result.lower[i] <= result.values[i]);
+        }
+        // validate subsequent operations (typically used in parkservices)
+        expectedResult[0] = 0f;
+        RangeVector newVector = new RangeVector(expectedResult);
+        RangeVector another = new RangeVector(result);
+        another.shift(0, -2.0f);
+        another.scale(2, 0.25f);
+        newVector.scale(2, 0.25f);
+        assertArrayEquals(newVector.values, another.values, 1e-6f);
+        for (int i = 0; i < 6; i++) {
+            assert (another.upper[i] >= another.values[i]);
+            assert (another.lower[i] <= another.values[i]);
+        }
     }
 
     @Test
@@ -630,6 +647,11 @@ public class RandomCutForestTest {
 
         float[] expectedResult = new float[] { -3.0f, 2.0f, -5.0f, 4.0f, -7.0f, 6.0f };
         assertArrayEquals(expectedResult, result.values);
+        // test properties of RangeVector as well
+        for (int i = 0; i < 6; i++) {
+            assert (result.upper[i] >= result.values[i]);
+            assert (result.lower[i] <= result.values[i]);
+        }
     }
 
     @Test
@@ -762,6 +784,8 @@ public class RandomCutForestTest {
         for (int i = 0; i < numberOfTrees; i++) {
             doReturn(true).when(components.get(i)).isOutputReady();
         }
+        assertFalse(forest.isOutputReady());
+        when(updateCoordinator.getTotalUpdates()).thenReturn((long) sampleSize);
         assertTrue(forest.isOutputReady());
 
         // After forest.isOutputReady() returns true once, the result should be cached
@@ -809,7 +833,7 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testUpdateAfterRoundTripLargeNodeStore() {
+    public void testUpdateAfterRoundTripMediumNodeStore() {
         int dimensions = 5;
         for (int trials = 0; trials < 10; trials++) {
             RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
@@ -827,6 +851,36 @@ public class RandomCutForestTest {
             RandomCutForestState state = mapper.toState(forest);
             RandomCutForest forest2 = mapper.toModel(state);
 
+            // update re-instantiated forest
+            for (int i = 0; i < 10000; i++) {
+                double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();
+                double score = forest.getAnomalyScore(point);
+                assertEquals(score, forest2.getAnomalyScore(point), 1E-10);
+                forest2.update(point);
+                forest.update(point);
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateAfterRoundTripLargeNodeStore() {
+        int dimensions = 5;
+        for (int trials = 0; trials < 1; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
+                    .sampleSize(200000).centerOfMassEnabled(true).build();
+
+            Random r = new Random();
+            for (int i = 0; i < 300000 + new Random().nextInt(300); i++) {
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+            }
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveTreeStateEnabled(true);
+            mapper.setSaveExecutorContextEnabled(true);
+            RandomCutForestState state = mapper.toState(forest);
+            RandomCutForest forest2 = mapper.toModel(state);
+            assert (forest2.isCenterOfMassEnabled());
             // update re-instantiated forest
             for (int i = 0; i < 10000; i++) {
                 double[] point = r.ints(dimensions, 0, 50).asDoubleStream().toArray();

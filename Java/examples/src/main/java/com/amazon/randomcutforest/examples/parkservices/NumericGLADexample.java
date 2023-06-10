@@ -25,7 +25,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.Random;
 
-import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.GlobalLocalAnomalyDetector;
@@ -131,7 +131,7 @@ public class NumericGLADexample implements Example {
         reservoir.setZfactor(zFactor);
 
         ThresholdedRandomCutForest test = ThresholdedRandomCutForest.builder().dimensions(2).shingleSize(1)
-                .randomSeed(77).timeDecay(timedecay).forestMode(ForestMode.DISTANCE).build();
+                .randomSeed(77).timeDecay(timedecay).scoringStrategy(ScoringStrategy.DISTANCE).build();
         test.setZfactor(zFactor); // using the zFactor for same apples to apples comparison
 
         String name = "clustering_example";

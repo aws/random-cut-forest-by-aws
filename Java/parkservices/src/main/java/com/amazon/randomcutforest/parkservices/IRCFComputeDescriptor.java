@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices;
 
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.returntypes.DiVector;
 
@@ -56,6 +57,9 @@ public interface IRCFComputeDescriptor {
 
     // transformation method (if used)
     TransformMethod getTransformMethod();
+
+    // scoring strategy
+    ScoringStrategy getScoringStrategy();
 
     // an explicit copy operator
     RCFComputeDescriptor copyOf();

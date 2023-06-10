@@ -15,7 +15,11 @@
 
 package com.amazon.randomcutforest;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,9 +144,9 @@ public class RandomCutForestBuilderTest {
     }
 
     @Test
-    public void testIllegalExceptionIsThrownWhenOutputAfterIsGreaterThanSample() {
-        assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
-                .sampleSize(sampleSize).outputAfter(sampleSize + 1).dimensions(dimensions).timeDecay(lambda).build());
+    public void testIllegalExceptionIsNotThrownWhenOutputAfterIsGreaterThanSample() {
+        assertDoesNotThrow(() -> RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
+                .outputAfter(sampleSize + 1).dimensions(dimensions).timeDecay(lambda).build());
     }
 
     @Test

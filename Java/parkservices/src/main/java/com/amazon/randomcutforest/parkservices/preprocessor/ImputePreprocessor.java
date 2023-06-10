@@ -77,7 +77,6 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             }
         }
         initialValues[valuesSeen] = temp;
-        ++valuesSeen;
     }
 
     /**
@@ -172,8 +171,6 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             storeInitial(description.getCurrentInput(), description.getInputTimestamp(),
                     description.getMissingValues());
             return description;
-        } else if (valuesSeen == startNormalization) {
-            dischargeInitial(forest);
         }
 
         checkArgument(description.getInputTimestamp() > previousTimeStamps[shingleSize - 1],
@@ -188,7 +185,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         int savedNumberOfImputed = numberOfImputed;
         int lastActualInternal = internalTimeStamp;
 
-        double[] point = generateShingle(description, timeStampDeviations[0].getMean(), false, forest);
+        double[] point = generateShingle(description, getTimeFactor(timeStampDeviations[0]), false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -197,11 +194,9 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         lastShingledInput = Arrays.copyOf(savedShingledInput, savedShingledInput.length);
         lastShingledPoint = Arrays.copyOf(savedShingle, savedShingle.length);
 
-        if (point == null) {
-            return description;
+        if (point != null) {
+            description.setRCFPoint(point);
         }
-
-        description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp + description.getNumberOfNewImputes());
         return description;
     }
@@ -291,22 +286,33 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
     public AnomalyDescriptor postProcess(AnomalyDescriptor result, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
+        if (valuesSeen == startNormalization - 1) {
+            dischargeInitial(forest);
+        }
+
         double[] point = result.getRCFPoint();
-        if (point == null) {
-            return result;
+        if (point != null) {
+            if (result.getAnomalyGrade() > 0 && (numberOfImputed == 0 || (result.getTransformMethod() != DIFFERENCE)
+                    && (result.getTransformMethod() != NORMALIZE_DIFFERENCE))) {
+                // we cannot predict expected value easily if there are gaps in the shingle
+                // this is doubly complicated for differenced transforms (if there are any
+                // imputations in the shingle)
+                populateAnomalyDescriptorDetails(result);
+            }
+            generateShingle(result, getTimeFactor(timeStampDeviations[0]), true, forest);
         }
-
-        if (result.getAnomalyGrade() > 0 && (numberOfImputed == 0 || (result.getTransformMethod() != DIFFERENCE)
-                && (result.getTransformMethod() != NORMALIZE_DIFFERENCE))) {
-            // we cannot predict expected value easily if there are gaps in the shingle
-            // this is doubly complicated for differenced transforms (if there are anu
-            // imputations in the shingle)
-            addRelevantAttribution(result);
-        }
-
-        generateShingle(result, timeStampDeviations[0].getMean(), true, forest);
         ++valuesSeen;
         return result;
+    }
+
+    double getTimeFactor(Deviation deviation) {
+        double timeFactor = deviation.getMean();
+        double dev = deviation.getDeviation();
+        if (dev > 0 && dev < timeFactor / 2) {
+            // a correction
+            timeFactor -= dev * dev / (2 * timeFactor);
+        }
+        return timeFactor;
     }
 
     /**
@@ -318,13 +324,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         for (int i = 0; i < initialTimeStamps.length - 1; i++) {
             tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
         }
-        double timeFactor = tempTimeDeviation.getMean();
+        double timeFactor = getTimeFactor(tempTimeDeviation);
 
         prepareInitialInput();
         Deviation[] deviations = getDeviations();
         Arrays.fill(previousTimeStamps, initialTimeStamps[0]);
         numberOfImputed = shingleSize;
-        for (int i = 0; i < valuesSeen; i++) {
+        for (int i = 0; i < valuesSeen + 1; i++) {
             // initial imputation; not using the global dependency
             long lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
             if (internalTimeStamp > 0) {

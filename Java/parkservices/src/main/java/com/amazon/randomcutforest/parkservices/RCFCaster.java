@@ -28,11 +28,11 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
 @Setter
@@ -126,10 +126,11 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     }
 
     // for mappers
-    public RCFCaster(ForestMode forestMode, TransformMethod transformMethod, RandomCutForest forest,
-            PredictorCorrector predictorCorrector, Preprocessor preprocessor, RCFComputeDescriptor descriptor,
-            int forecastHorizon, ErrorHandler errorHandler, int errorHorizon, Calibration calibrationMethod) {
-        super(forestMode, transformMethod, forest, predictorCorrector, preprocessor, descriptor);
+    public RCFCaster(ForestMode forestMode, TransformMethod transformMethod, ScoringStrategy scoringStrategy,
+            RandomCutForest forest, PredictorCorrector predictorCorrector, Preprocessor preprocessor,
+            RCFComputeDescriptor descriptor, int forecastHorizon, ErrorHandler errorHandler, int errorHorizon,
+            Calibration calibrationMethod) {
+        super(forestMode, transformMethod, scoringStrategy, forest, predictorCorrector, preprocessor, descriptor);
         this.forecastHorizon = forecastHorizon;
         this.errorHandler = errorHandler;
         this.errorHorizon = errorHorizon;
@@ -201,12 +202,4 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return answer;
     }
 
-    public RangeVector computeErrorPercentile(double percentile, BiFunction<Float, Float, Float> error) {
-        return computeErrorPercentile(percentile, errorHorizon, error);
-    }
-
-    public RangeVector computeErrorPercentile(double percentile, int newHorizon,
-            BiFunction<Float, Float, Float> error) {
-        return errorHandler.computeErrorPercentile(percentile, newHorizon, error);
-    }
 }

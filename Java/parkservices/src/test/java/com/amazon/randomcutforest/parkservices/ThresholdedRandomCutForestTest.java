@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.LINEAR;
 import static com.amazon.randomcutforest.config.ImputationMethod.NEXT;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.config.ImputationMethod.RCF;
@@ -26,7 +27,9 @@ import static com.amazon.randomcutforest.config.TransformMethod.NORMALIZE_DIFFER
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -147,6 +150,59 @@ public class ThresholdedRandomCutForestTest {
                     .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
                     .transformMethod(NORMALIZE).startNormalization(111).stopNormalization(100).build();
         });
+        // change if baseDimension != 2
+        double[] testOne = new double[] { 0 };
+        double[] testTwo = new double[] { 0, -1 };
+        double[] testThree = new double[] { new Random().nextDouble(), new Random().nextDouble() };
+        double[] testFour = new double[] { new Random().nextDouble(), new Random().nextDouble() };
+        double[] testFive = new double[] { new Random().nextDouble(), new Random().nextDouble() };
+        double[] testSix = new double[] { new Random().nextDouble(), new Random().nextDouble() };
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
+                    .transformMethod(NORMALIZE).ignoreNearExpectedFromAbove(testOne).build();
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
+                    .transformMethod(NORMALIZE).ignoreNearExpectedFromAbove(testTwo).build();
+        });
+        assertDoesNotThrow(() -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
+                    .transformMethod(NORMALIZE).ignoreNearExpectedFromAbove(testThree)
+                    .ignoreNearExpectedFromBelow(testFour).ignoreNearExpectedFromAboveByRatio(testFive)
+                    .ignoreNearExpectedFromBelowByRatio(testSix).build();
+            double[] array = forest.getPredictorCorrector().getIgnoreNearExpected();
+            assert (array.length == 4 * baseDimensions);
+            assert (array[0] == testThree[0]);
+            assert (array[1] == testThree[1]);
+            assert (array[2] == testFour[0]);
+            assert (array[3] == testFour[1]);
+            assert (array[4] == testFive[0]);
+            assert (array[5] == testFive[1]);
+            assert (array[6] == testSix[0]);
+            assert (array[7] == testSix[1]);
+            double random = new Random().nextDouble();
+            assertThrows(IllegalArgumentException.class, () -> forest.predictorCorrector.setSamplingRate(-1));
+            assertDoesNotThrow(() -> forest.predictorCorrector.setSamplingRate(random));
+            assertEquals(forest.predictorCorrector.getSamplingRate(), random, 1e-10);
+            long newSeed = forest.predictorCorrector.getRandomSeed();
+            assertEquals(new Random(seed).nextLong(), newSeed);
+            assertFalse(forest.predictorCorrector.autoAdjust);
+            assertNull(forest.predictorCorrector.getDeviations());
+        });
+        assertDoesNotThrow(() -> {
+            ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
+                    .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
+                    .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
+                    .transformMethod(NORMALIZE).learnIgnoreNearExpected(true).build();
+            assertTrue(forest.predictorCorrector.autoAdjust);
+            assert (forest.predictorCorrector.getDeviations().length == 2 * baseDimensions);
+        });
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).forestMode(ForestMode.STANDARD).shingleSize(shingleSize)
                 .anomalyRate(0.01).transformMethod(NORMALIZE).startNormalization(111).stopNormalization(111).build();
@@ -238,9 +294,11 @@ public class ThresholdedRandomCutForestTest {
         // only at most 76% imputed tuples are allowed in the forest
         // an additional one arise from the actual input
         assertEquals(forest.getForest().getTotalUpdates(), count + 1);
-        // triggerring consecutive anomalies (no differencing) -- this should fail
-        // because we discover previous point is still the cause
-        assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 0);
+        // triggerring consecutive anomalies (no differencing)
+        // Note NEXT and LINEAR will have an obvious issue with consecutive anomalies
+        if (method != NEXT && method != LINEAR) {
+            assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 1.0);
+        }
         assert (forest.process(new double[] { 20 }, (long) count * 113 + 1226).getAnomalyGrade() > 0);
 
         long stamp = (long) count * 113 + 1226;
@@ -434,7 +492,7 @@ public class ThresholdedRandomCutForestTest {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                     .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
-                    .build();
+                    .transformMethod(transformMethod).build();
 
             long seed = new Random().nextLong();
             System.out.println("seed = " + seed);

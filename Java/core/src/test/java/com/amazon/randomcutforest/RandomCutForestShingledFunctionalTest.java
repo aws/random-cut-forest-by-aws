@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -36,6 +37,8 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
@@ -71,7 +74,7 @@ public class RandomCutForestShingledFunctionalTest {
 
         forest = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(shingleBuilder.getShingledPointSize()).randomSeed(randomSeed).centerOfMassEnabled(true)
-                .storeSequenceIndexesEnabled(true).build();
+                .initialAcceptFraction(0.5).storeSequenceIndexesEnabled(true).build();
 
         dataSize = 10_000;
 
@@ -119,23 +122,27 @@ public class RandomCutForestShingledFunctionalTest {
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
         System.out.println(seed);
+        Random rng = new Random(seed);
 
-        int numTrials = 1; // test is exact equality, reducing the number of trials
-        int length = 400 * sampleSize;
+        int numTrials = 3; // test is exact equality, reducing the number of trials
+        int length = 40 * sampleSize;
 
         for (int i = 0; i < numTrials; i++) {
 
+            int outputAfter = 1 + rng.nextInt(10 * sampleSize);
+            long newSeed = rng.nextLong();
             RandomCutForest first = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                    .internalRotationEnabled(rotation).shingleSize(shingleSize).build();
-
-            RandomCutForest second = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(false)
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(true)
+                    .outputAfter(outputAfter + shingleSize - 1).internalRotationEnabled(rotation)
                     .shingleSize(shingleSize).build();
 
+            RandomCutForest second = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(false)
+                    .outputAfter(outputAfter).shingleSize(shingleSize).build();
+
             RandomCutForest third = new RandomCutForest.Builder<>().compact(true).dimensions(dimensions)
-                    .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(false).shingleSize(1)
-                    .build();
+                    .precision(Precision.FLOAT_32).randomSeed(newSeed).internalShinglingEnabled(false).shingleSize(1)
+                    .outputAfter(outputAfter).build();
 
             MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length, 50, 100, 5,
                     seed + i, baseDimensions);
@@ -170,10 +177,25 @@ public class RandomCutForestShingledFunctionalTest {
             }
             PointStore store = (PointStore) first.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
+            List<ICluster<float[]>> firstSummary = store.summarize(5, 0.5, 3, 0.8, Summarizer::L2distance, null);
+
             store = (PointStore) second.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
+            List<ICluster<float[]>> secondSummary = store.summarize(5, 0.5, 3, 0.8, Summarizer::L2distance, null);
+            assert (secondSummary.size() == firstSummary.size());
+            for (int j = 0; j < firstSummary.size(); j++) {
+                assertEquals(firstSummary.get(j).getWeight(), secondSummary.get(j).getWeight(), 1e-3);
+                assertEquals(firstSummary.get(j).averageRadius(), secondSummary.get(j).averageRadius(), 1e-3);
+            }
+
             store = (PointStore) third.getUpdateCoordinator().getStore();
             assertEquals(store.getCurrentStoreCapacity() * dimensions, store.getStore().length);
+            List<ICluster<float[]>> thirdSummary = store.summarize(5, 0.5, 3, 0.8, Summarizer::L2distance, null);
+            assert (thirdSummary.size() == firstSummary.size());
+            for (int j = 0; j < firstSummary.size(); j++) {
+                assertEquals(firstSummary.get(j).getWeight(), thirdSummary.get(j).getWeight(), 1e-3);
+                assertEquals(firstSummary.get(j).averageRadius(), thirdSummary.get(j).averageRadius(), 1e-3);
+            }
         }
     }
 

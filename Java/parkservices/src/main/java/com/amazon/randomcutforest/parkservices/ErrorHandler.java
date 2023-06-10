@@ -214,61 +214,6 @@ public class ErrorHandler {
         return new RangeVector(adders);
     }
 
-    public RangeVector computeErrorPercentile(double percentile, BiFunction<Float, Float, Float> error) {
-        return computeErrorPercentile(percentile, pastForecasts.length, error);
-    }
-
-    /**
-     * the following function is provided such that the calibration of errors can be
-     * performed using a different function. e.g., SMAPE type evaluation using
-     * RCFCaster.alternateError
-     *
-     * @param percentile the desired percentile (we recomment leaving this at 0.1 --
-     *                   the algorithm likely will never have sufficiently many
-     *                   observations to have a very fine grain distribution;
-     *                   moreover any forecasting should concentrate the measure (no
-     *                   pun intended) towards 0.5 and for a successful forecaster
-     *                   these error percentiles will be less meaningful
-     * @param newHorizon a horizon which could be smaller than the errorHorizon (for
-     *                   auditing)
-     * @param error      the function that defines error
-     * @return a RangeVector where the value field corresponds to the p50 and the
-     *         upper and lower arrays correspond to percentile and 1-percentile
-     *         quantiles. We reiterate that do be cautious in use of percentiles.
-     *         These are observational quantiles and the act of interpreting them as
-     *         probabilities is riddled with assumptions
-     */
-    public RangeVector computeErrorPercentile(double percentile, int newHorizon,
-            BiFunction<Float, Float, Float> error) {
-        checkArgument(newHorizon <= errorHorizon && newHorizon > 0, "incorrect horizon parameter");
-        int length = pastForecasts[0].values.length;
-        float[] lower = new float[length];
-        float[] upper = new float[length];
-        float[] values = new float[length];
-        Arrays.fill(lower, -Float.MAX_VALUE);
-        Arrays.fill(upper, Float.MAX_VALUE);
-        if (actuals != null) {
-            int inputLength = actuals[0].length;
-            for (int i = 0; i < forecastHorizon; i++) {
-                // this is the only place where the newer (possibly shorter) horizon matters
-                int len = (sequenceIndex > newHorizon + i + 1) ? newHorizon : sequenceIndex - i - 1;
-
-                for (int j = 0; j < inputLength; j++) {
-                    int pos = i * inputLength + j;
-                    if (len > 0) {
-                        double[] copy = getErrorVector(len, (i + 1), j, pos, error);
-                        double fracRank = percentile * len;
-                        Arrays.sort(copy);
-                        values[pos] = interpolatedMedian(copy);
-                        lower[pos] = interpolatedLowerRank(copy, fracRank, 0);
-                        upper[pos] = interpolatedUpperRank(copy, len, fracRank, 0);
-                    }
-                }
-            }
-        }
-        return new RangeVector(values, upper, lower);
-    }
-
     protected double[] getErrorVector(int len, int leadtime, int inputCoordinate, int position,
             BiFunction<Float, Float, Float> error) {
         int arrayLength = pastForecasts.length;

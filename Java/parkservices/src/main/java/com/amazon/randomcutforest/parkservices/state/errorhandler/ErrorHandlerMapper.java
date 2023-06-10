@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.state;
+package com.amazon.randomcutforest.parkservices.state.errorhandler;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 

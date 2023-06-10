@@ -15,14 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 /**
  * A weighted transformer maintains several data structures ( currently 3X) that
@@ -210,7 +211,7 @@ public class WeightedTransformer implements ITransformer {
     }
 
     public double[] getSmoothedDeviations() {
-        checkArgument(deviations.length >= 3* weights.length, "incorrect call");
+        checkArgument(deviations.length >= 3 * weights.length, "incorrect call");
         double[] answer = new double[weights.length];
         for (int i = 0; i < weights.length; i++) {
             answer[i] = Math.abs(deviations[i + 2 * weights.length].getMean());

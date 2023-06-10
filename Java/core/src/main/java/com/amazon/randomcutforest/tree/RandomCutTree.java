@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
 import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
+import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,7 +82,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         numberOfLeaves = builder.capacity;
         randomSeed = builder.randomSeed;
         testRandom = builder.random;
-        outputAfter = builder.outputAfter.orElse(numberOfLeaves / 4);
+        outputAfter = builder.outputAfter.orElse(max(1, numberOfLeaves / 4));
         dimension = (builder.dimension != 0) ? builder.dimension : pointStoreView.getDimensions();
         nodeStore = (builder.nodeStore != null) ? builder.nodeStore
                 : AbstractNodeStore.builder().capacity(numberOfLeaves - 1).dimension(dimension).build();
@@ -580,7 +581,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                 boundingBoxData[base + i] = Math.min(boundingBoxData[base + i], point[i]);
             }
             for (int i = 0; i < dimension; i++) {
-                boundingBoxData[mid + i] = Math.max(boundingBoxData[mid + i], point[i]);
+                boundingBoxData[mid + i] = max(boundingBoxData[mid + i], point[i]);
             }
             for (int i = 0; i < dimension; i++) {
                 rangeSum += boundingBoxData[mid + i] - boundingBoxData[base + i];
@@ -701,10 +702,10 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             double minsum = 0;
             double maxsum = 0;
             for (int i = 0; i < dimension; i++) {
-                minsum += Math.max(boundingBoxData[base + i] - point[i], 0);
+                minsum += max(boundingBoxData[base + i] - point[i], 0);
             }
             for (int i = 0; i < dimension; i++) {
-                maxsum += Math.max(point[i] - boundingBoxData[mid + i], 0);
+                maxsum += max(point[i] - boundingBoxData[mid + i], 0);
             }
             double sum = maxsum + minsum;
 

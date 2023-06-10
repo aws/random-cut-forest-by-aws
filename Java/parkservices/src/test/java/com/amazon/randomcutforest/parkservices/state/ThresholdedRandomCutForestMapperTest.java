@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
@@ -33,9 +34,12 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ThresholdedRandomCutForestMapperTest {
 
@@ -151,7 +155,7 @@ public class ThresholdedRandomCutForestMapperTest {
     }
 
     @Test
-    public void testRoundTripStandardShingled() {
+    public void testRoundTripStandardShingled() throws JsonProcessingException {
         int sampleSize = 256;
         int baseDimensions = 2;
         int shingleSize = 4;
@@ -186,9 +190,11 @@ public class ThresholdedRandomCutForestMapperTest {
             forest.update(point);
         }
 
-        // serialize + deserialize
+        ObjectMapper jsonMapper = new ObjectMapper();
         ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
-        ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+        String json = jsonMapper.writeValueAsString(mapper.toState(second));
+        ThresholdedRandomCutForest third = mapper
+                .toModel(jsonMapper.readValue(json, ThresholdedRandomCutForestState.class));
 
         MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.generateShingledDataWithKey(100, 50, shingleSize,
                 baseDimensions, seed);
@@ -207,22 +213,22 @@ public class ThresholdedRandomCutForestMapperTest {
     }
 
     @Test
-    public void testRoundTripStandardShingledInternal() {
+    public void testRoundTripStandardShingledInternal() throws JsonProcessingException {
         int sampleSize = 256;
         int baseDimensions = 2;
         int shingleSize = 8;
         int dimensions = baseDimensions * shingleSize;
         long seed = new Random().nextLong();
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .precision(Precision.FLOAT_32).internalShinglingEnabled(true).shingleSize(shingleSize).randomSeed(seed)
-                .build();
+        System.out.println(" seed " + seed);
+        RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).randomSeed(seed).build();
 
-        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).adjustThreshold(true).boundingBoxCacheFraction(0).build();
-        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
-                .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).adjustThreshold(true).build();
+        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .anomalyRate(0.01).adjustThreshold(true).boundingBoxCacheFraction(0).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true).shingleSize(shingleSize)
+                .anomalyRate(0.01).adjustThreshold(true).build();
 
         double value = 0.75 + 0.5 * new Random().nextDouble();
         first.setLowerThreshold(value);
@@ -232,10 +238,12 @@ public class ThresholdedRandomCutForestMapperTest {
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
                 seed, baseDimensions);
 
-        for (double[] point : dataWithKeys.data) {
-            AnomalyDescriptor firstResult = first.process(point, 0L);
-            AnomalyDescriptor secondResult = second.process(point, 0L);
+        long count = 0;
 
+        for (double[] point : dataWithKeys.data) {
+            AnomalyDescriptor firstResult = first.process(point, count);
+            AnomalyDescriptor secondResult = second.process(point, count);
+            ++count;
             assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getRCFScore(), forest.getAnomalyScore(point), 1e-4);
             if (firstResult.getAnomalyGrade() > 0) {
@@ -244,24 +252,40 @@ public class ThresholdedRandomCutForestMapperTest {
             forest.update(point);
         }
 
-        // serialize + deserialize
+        ObjectMapper jsonMapper = new ObjectMapper();
         ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
-        ThresholdedRandomCutForest third = mapper.toModel(mapper.toState(second));
+        String json = jsonMapper.writeValueAsString(mapper.toState(second));
+        ThresholdedRandomCutForest third = mapper
+                .toModel(jsonMapper.readValue(json, ThresholdedRandomCutForestState.class));
 
         MultiDimDataWithKey testData = ShingledMultiDimDataWithKeys.getMultiDimData(100, 50, 100, 5, seed,
                 baseDimensions);
 
         // update re-instantiated forest
         for (double[] point : testData.data) {
-            AnomalyDescriptor firstResult = first.process(point, 0L);
-            AnomalyDescriptor secondResult = second.process(point, 0L);
-            AnomalyDescriptor thirdResult = third.process(point, 0L);
+            AnomalyDescriptor firstResult = first.process(point, count);
+            AnomalyDescriptor secondResult = second.process(point, count);
+            AnomalyDescriptor thirdResult = third.process(point, count);
+            ++count;
             double score = forest.getAnomalyScore(point);
             assertEquals(score, firstResult.getRCFScore(), 1e-4);
             assertEquals(firstResult.getRCFScore(), secondResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             assertEquals(firstResult.getDataConfidence(), thirdResult.getDataConfidence(), 1e-10);
             forest.update(point);
+        }
+        TimedRangeVector one = first.extrapolate(10);
+        TimedRangeVector two = second.extrapolate(10);
+        assertArrayEquals(one.upperTimeStamps, two.upperTimeStamps);
+        assertArrayEquals(one.lowerTimeStamps, two.lowerTimeStamps);
+        assertArrayEquals(one.timeStamps, two.timeStamps);
+        assertArrayEquals(one.rangeVector.values, two.rangeVector.values, 1e-6f);
+        assertArrayEquals(one.rangeVector.upper, two.rangeVector.upper, 1e-6f);
+        assertArrayEquals(one.rangeVector.lower, two.rangeVector.lower, 1e-6f);
+        for (int j = 0; j < 10; j++) {
+            assert (one.lowerTimeStamps[j] <= one.timeStamps[j]);
+            assert (one.upperTimeStamps[j] >= one.timeStamps[j]);
+            assert (one.timeStamps[j] == count + j);
         }
     }
 
