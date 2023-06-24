@@ -15,6 +15,7 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toCharArray;
 import static com.amazon.randomcutforest.CommonUtils.toIntArray;
 
@@ -134,6 +135,11 @@ public class NodeStoreMedium extends AbstractNodeStore {
 
     public int getRightIndex(int index) {
         return rightIndex[index];
+    }
+
+    public int getParentIndex(int index) {
+        checkArgument(parentIndex != null, "incorrect call");
+        return parentIndex[index];
     }
 
     public void setRoot(int index) {

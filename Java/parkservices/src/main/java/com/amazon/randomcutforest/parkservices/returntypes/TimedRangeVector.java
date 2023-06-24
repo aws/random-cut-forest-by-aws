@@ -61,6 +61,10 @@ public class TimedRangeVector {
         checkArgument(timestamps.length == upperTimeStamps.length && upperTimeStamps.length == lowerTimeStamps.length,
                 "horizon must be equal");
         this.rangeVector = new RangeVector(rangeVector);
+        for (int i = 0; i < timestamps.length; i++) {
+            checkArgument(upperTimeStamps[i] >= timestamps[i] && timestamps[i] >= lowerTimeStamps[i],
+                    "incorrect semantics");
+        }
         this.timeStamps = Arrays.copyOf(timestamps, timestamps.length);
         this.lowerTimeStamps = Arrays.copyOf(lowerTimeStamps, lowerTimeStamps.length);
         this.upperTimeStamps = Arrays.copyOf(upperTimeStamps, upperTimeStamps.length);

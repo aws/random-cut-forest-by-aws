@@ -32,9 +32,8 @@ public class BasicThresholder {
 
     public static double DEFAULT_SCORE_DIFFERENCING = 0.5;
     public static int DEFAULT_MINIMUM_SCORES = 10;
-    public static double DEFAULT_LOWER_THRESHOLD = 0.9;
-    public static double DEFAULT_LOWER_THRESHOLD_NORMALIZED = 0.8;
-    public static double DEFAULT_ABSOLUTE_THRESHOLD = 0.7;
+    public static double DEFAULT_FACTOR_ADJUSTMENT_THRESHOLD = 0.9;
+    public static double DEFAULT_ABSOLUTE_THRESHOLD = 0.8;
     public static double DEFAULT_INITIAL_THRESHOLD = 1.5;
     public static double DEFAULT_Z_FACTOR = 3.0;
     public static double MINIMUM_Z_FACTOR = 2.0;
@@ -65,7 +64,7 @@ public class BasicThresholder {
     protected double absoluteThreshold = DEFAULT_ABSOLUTE_THRESHOLD;
 
     // the upper threshold of scores above which points are likely anomalies
-    protected double lowerThreshold = DEFAULT_LOWER_THRESHOLD;
+    protected double factorAdjustmentThreshold = DEFAULT_FACTOR_ADJUSTMENT_THRESHOLD;
     // initial absolute threshold used to determine anomalies before sufficient
     // values are seen
     protected double initialThreshold = DEFAULT_INITIAL_THRESHOLD;
@@ -213,8 +212,8 @@ public class BasicThresholder {
     protected double adjustedFactor(double factor, TransformMethod method, int dimension) {
         double correctedFactor = factor;
         double base = primaryDeviation.getMean();
-        if (autoThreshold && base < lowerThreshold && method != TransformMethod.NORMALIZE) {
-            correctedFactor = primaryDeviation.getMean() * factor / lowerThreshold;
+        if (autoThreshold && base < factorAdjustmentThreshold && method != TransformMethod.NONE) {
+            correctedFactor = primaryDeviation.getMean() * factor / factorAdjustmentThreshold;
         }
         return max(correctedFactor, MINIMUM_Z_FACTOR);
     }
@@ -272,7 +271,7 @@ public class BasicThresholder {
         if (score < threshold || threshold <= 0) {
             return new Weighted<>(threshold, 0);
         } else {
-            double base = min(threshold, primaryDeviation.getMean());
+            double base = min(threshold, max(absoluteThreshold, primaryDeviation.getMean()));
             // the value below should not be 0 because of min()
             return new Weighted<>(threshold, getSurpriseIndex(score, base, newFactor, scaledDeviation / newFactor));
         }
@@ -291,9 +290,9 @@ public class BasicThresholder {
     protected float getSurpriseIndex(double score, double base, double factor, double deviation) {
         double tFactor = 2 * factor;
         if (deviation > 0) {
-            tFactor = min(tFactor, (score - base) / deviation);
+            tFactor = min(factor, (score - base) / deviation);
         }
-        return max(0, (float) ((tFactor - factor) / (factor)));
+        return max(0, (float) (tFactor / factor));
     }
 
     // mean or below; uses the asymmetry of the RCF score
@@ -337,7 +336,7 @@ public class BasicThresholder {
      * sets the lower threshold -- which is used to scale the factor variable
      */
     public void setLowerThreshold(double lower) {
-        lowerThreshold = lower;
+        factorAdjustmentThreshold = lower;
     }
 
     /**
@@ -382,12 +381,12 @@ public class BasicThresholder {
         return absoluteThreshold;
     }
 
-    public double getInitialThreshold() {
-        return initialThreshold;
+    public double getLowerThreshold() {
+        return factorAdjustmentThreshold;
     }
 
-    public double getLowerThreshold() {
-        return lowerThreshold;
+    public double getInitialThreshold() {
+        return initialThreshold;
     }
 
     public double getScoreDifferencing() {

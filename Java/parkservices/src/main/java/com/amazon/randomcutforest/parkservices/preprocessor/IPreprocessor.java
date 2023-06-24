@@ -29,6 +29,10 @@ public interface IPreprocessor {
 
     double[] getLastShingledPoint();
 
+    double[] getShift();
+
+    double[] getScale();
+
     int getInternalTimeStamp();
 
     TimedRangeVector invertForecastRange(RangeVector ranges, IRCFComputeDescriptor lastRelevant);

@@ -124,11 +124,11 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
 
     // as in BasicThresholder class, useful in tuning
     public void setLowerThreshold(double lowerThreshold) {
-        thresholder.setLowerThreshold(lowerThreshold);
+        thresholder.setAbsoluteThreshold(lowerThreshold);
     }
 
     public double getLowerThreshold() {
-        return thresholder.getLowerThreshold();
+        return thresholder.getAbsoluteThreshold();
     }
 
     public int getDoNotreclusterWithin() {

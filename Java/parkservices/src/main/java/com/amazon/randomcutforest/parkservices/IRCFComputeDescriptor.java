@@ -64,4 +64,8 @@ public interface IRCFComputeDescriptor {
     // an explicit copy operator
     RCFComputeDescriptor copyOf();
 
+    double[] getDeltaShift();
+
+    double getTransformDecay();
+
 }

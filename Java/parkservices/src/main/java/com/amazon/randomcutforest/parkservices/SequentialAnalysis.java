@@ -21,7 +21,6 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
@@ -71,15 +70,15 @@ public class SequentialAnalysis {
     }
 
     public static List<AnomalyDescriptor> detectAnomalies(double[][] data, int shingleSize, int sampleSize,
-            double timeDecay, TransformMethod transformMethod) {
+            double timeDecay, TransformMethod transformMethod, long seed) {
         return detectAnomalies(data, shingleSize, sampleSize, DEFAULT_NUMBER_OF_TREES, timeDecay, sampleSize / 4,
-                transformMethod, timeDecay, new Random().nextLong());
+                transformMethod, timeDecay, seed);
     }
 
     public static List<AnomalyDescriptor> detectAnomalies(double[][] data, int shingleSize, double timeDecay,
-            TransformMethod transformMethod, double transformDecay) {
+            TransformMethod transformMethod, double transformDecay, long seed) {
         return detectAnomalies(data, shingleSize, DEFAULT_SAMPLE_SIZE, DEFAULT_NUMBER_OF_TREES, timeDecay,
-                DEFAULT_SAMPLE_SIZE / 4, transformMethod, transformDecay, new Random().nextLong());
+                DEFAULT_SAMPLE_SIZE / 4, transformMethod, transformDecay, seed);
     }
 
     /**

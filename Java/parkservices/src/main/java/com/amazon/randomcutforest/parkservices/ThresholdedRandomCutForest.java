@@ -28,10 +28,10 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_ABSOLUTE_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_LOWER_THRESHOLD_NORMALIZED;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_Z_FACTOR;
 import static java.lang.Math.max;
 
 import java.util.Arrays;
@@ -133,21 +133,8 @@ public class ThresholdedRandomCutForest {
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
-        // multiple (not extremely well correlated) dimensions typically reduce scores
-        // normalization reduces scores
-
-        if (builder.dimensions == builder.shingleSize
-                || (forestMode == ForestMode.TIME_AUGMENTED) && (builder.dimensions == 2 * builder.shingleSize)) {
-            predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
-        } else {
-            if (builder.transformMethod == TransformMethod.NONE
-                    || builder.transformMethod == TransformMethod.SUBTRACT_MA) {
-                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD));
-            } else {
-                predictorCorrector.setLowerThreshold(builder.lowerThreshold.orElse(DEFAULT_LOWER_THRESHOLD_NORMALIZED));
-            }
-            predictorCorrector.setZfactor(2.5);
-        }
+        predictorCorrector.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_ABSOLUTE_THRESHOLD));
+        predictorCorrector.setZfactor(builder.zFactor);
 
         predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
         int base = builder.dimensions / builder.shingleSize;
@@ -332,8 +319,8 @@ public class ThresholdedRandomCutForest {
                 if (gap == 1) {
                     newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
                 } else {
-                    newPoint = predictorCorrector.applyBasicCorrector(newPoint, gap, shingleSize, blockSize,
-                            lastAnomalyDescriptor);
+                    newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
+                            preprocessor.getShift(), preprocessor.getScale(), lastAnomalyDescriptor);
                 }
             }
             answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
@@ -358,7 +345,7 @@ public class ThresholdedRandomCutForest {
     }
 
     public void setLowerThreshold(double lower) {
-        predictorCorrector.setLowerThreshold(lower);
+        predictorCorrector.setAbsoluteThreshold(lower);
     }
 
     @Deprecated
@@ -418,6 +405,7 @@ public class ThresholdedRandomCutForest {
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
         protected boolean learnIgnoreNearExpected = false;
+        protected double zFactor = DEFAULT_Z_FACTOR;
         protected Optional<Double> transformDecay = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromAbove = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromBelow = Optional.empty();
@@ -523,6 +511,11 @@ public class ThresholdedRandomCutForest {
 
         public T transformDecay(double transformDecay) {
             this.transformDecay = Optional.of(transformDecay);
+            return (T) this;
+        }
+
+        public T zFactor(double zFactor) {
+            this.zFactor = zFactor;
             return (T) this;
         }
 

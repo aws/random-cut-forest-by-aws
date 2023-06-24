@@ -64,7 +64,7 @@ public class SequentialAnomalyExample implements Example {
         double timeDecay = 1.0 / (10 * sampleSize);
 
         List<AnomalyDescriptor> anomalies = SequentialAnalysis.detectAnomalies(dataWithKeys.data, shingleSize,
-                sampleSize, timeDecay, TransformMethod.NONE);
+                sampleSize, timeDecay, TransformMethod.NONE, seed);
         int keyCounter = 0;
 
         for (AnomalyDescriptor result : anomalies) {

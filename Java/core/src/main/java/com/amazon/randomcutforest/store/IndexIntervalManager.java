@@ -179,12 +179,4 @@ public class IndexIntervalManager {
         lastInUse += 1;
     }
 
-    public int[] getFreeIndices() {
-        int[] answer = new int[2 * lastInUse];
-        for (int i = 0; i < 2 * lastInUse; i += 2) {
-            answer[i] = freeIndexesStart[i / 2];
-            answer[i + 1] = freeIndexesEnd[i / 2];
-        }
-        return answer;
-    }
 }

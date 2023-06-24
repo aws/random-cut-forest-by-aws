@@ -55,6 +55,9 @@ public class RangeVector {
     public RangeVector(float[] values, float[] upper, float[] lower) {
         checkArgument(values.length > 0, " dimensions must be > 0");
         checkArgument(values.length == upper.length && upper.length == lower.length, "dimensions must be equal");
+        for (int i = 0; i < values.length; i++) {
+            checkArgument(upper[i] >= values[i] && values[i] >= lower[i], "incorrect semantics");
+        }
         this.values = Arrays.copyOf(values, values.length);
         this.upper = Arrays.copyOf(upper, upper.length);
         this.lower = Arrays.copyOf(lower, lower.length);

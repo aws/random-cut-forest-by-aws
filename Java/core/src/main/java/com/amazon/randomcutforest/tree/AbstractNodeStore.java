@@ -77,6 +77,8 @@ public abstract class AbstractNodeStore {
 
     public abstract int getRightIndex(int index);
 
+    public abstract int getParentIndex(int index);
+
     public abstract void setRoot(int index);
 
     protected abstract void decreaseMassOfInternalNode(int node);

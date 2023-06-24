@@ -104,6 +104,12 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
     // to actuals/input
     double[] shift;
 
+    // effects of a specific anomaly
+    double[] postShift;
+
+    // how long the effects last
+    double transformDecay;
+
     // expected RCFPoint for the current point
     double[] expectedRCFPoint;
 
@@ -124,13 +130,6 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
     }
 
     public RCFComputeDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
-            TransformMethod transformMethod) {
-        super(input, inputTimeStamp);
-        this.forestMode = forestMode;
-        this.transformMethod = transformMethod;
-    }
-
-    public RCFComputeDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
             TransformMethod transformMethod, ImputationMethod imputationMethod) {
         super(input, inputTimeStamp);
         this.forestMode = forestMode;
@@ -138,8 +137,35 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
         this.imputationMethod = imputationMethod;
     }
 
-    public void setCurrentInput(double[] currentValues) {
-        this.currentInput = copyIfNotnull(currentValues);
+    public void setShift(double[] shift) {
+        this.shift = copyIfNotnull(shift);
+    }
+
+    public void setPostShift(double[] shift) {
+        this.postShift = copyIfNotnull(shift);
+    }
+
+    public double[] getShift() {
+        return copyIfNotnull(shift);
+    }
+
+    public void setScale(double[] scale) {
+        this.scale = copyIfNotnull(scale);
+    }
+
+    public double[] getScale() {
+        return copyIfNotnull(scale);
+    }
+
+    public double[] getDeltaShift() {
+        if (shift == null || postShift == null) {
+            return null;
+        }
+        double[] answer = new double[shift.length];
+        for (int i = 0; i < shift.length; i++) {
+            answer[i] = postShift[i] - shift[i];
+        }
+        return answer;
     }
 
     public double[] getCurrentInput() {
@@ -215,8 +241,10 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
         answer.setLastAnomalyInternalTimestamp(lastAnomalyInternalTimestamp);
         answer.setLastExpecteRCFdPoint(lastExpectedRCFPoint);
         answer.setScoringStrategy(scoringStrategy);
+        answer.setShift(shift);
+        answer.setScale(scale);
+        answer.setPostShift(postShift);
+        answer.setTransformDecay(transformDecay);
         return answer;
     }
-
-    double alternateGrade;
 }

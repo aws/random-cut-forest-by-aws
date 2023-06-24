@@ -68,6 +68,12 @@ public class PreprocessorTest {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
                     .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
         });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(-2)
+                    .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
+        });
+
         assertDoesNotThrow(() -> {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2).normalizeTime(true)
                     .forestMode(ForestMode.TIME_AUGMENTED).inputLength(6).dimensions(14).build();
@@ -84,6 +90,22 @@ public class PreprocessorTest {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
                     .forestMode(ForestMode.STANDARD).inputLength(6).dimensions(12).build();
         });
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.STANDARD).weights(new double[1]).inputLength(6).dimensions(12).build();
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.STANDARD).weights(new double[2]).inputLength(6).dimensions(12).build();
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).shingleSize(2)
+                    .forestMode(ForestMode.STANDARD).weights(new double[] { 1.0, 1.0 }).inputLength(6).dimensions(12)
+                    .build();
+        });
+
         assertThrows(IllegalArgumentException.class, () -> {
             new Preprocessor.Builder<>().transformMethod(TransformMethod.NONE).forestMode(ForestMode.STANDARD)
                     .inputLength(6).dimensions(12).build();

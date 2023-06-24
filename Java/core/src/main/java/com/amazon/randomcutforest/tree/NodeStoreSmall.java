@@ -141,6 +141,11 @@ public class NodeStoreSmall extends AbstractNodeStore {
         return rightIndex[index];
     }
 
+    public int getParentIndex(int index) {
+        checkArgument(parentIndex != null, "incorrect call");
+        return parentIndex[index];
+    }
+
     public void setRoot(int index) {
         if (!isLeaf(index) && parentIndex != null) {
             parentIndex[index] = (byte) capacity;

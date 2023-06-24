@@ -53,6 +53,7 @@ public class WeightedTransformer implements ITransformer {
         this.weights = Arrays.copyOf(weights, weights.length);
         this.deviations = new Deviation[deviations.length];
         for (int i = 0; i < deviations.length; i++) {
+            checkArgument(deviations[i] != null, "cannot be null");
             this.deviations[i] = deviations[i].copy();
         }
     }
@@ -107,6 +108,7 @@ public class WeightedTransformer implements ITransformer {
      */
     public void updateDeviation(double[] inputPoint, double[] previousInput) {
         checkArgument(inputPoint.length * NUMBER_OF_STATS == deviations.length, "incorrect lengths");
+        checkArgument(inputPoint.length == previousInput.length, " lengths must match");
         for (int i = 0; i < inputPoint.length; i++) {
             deviations[i].update(inputPoint[i]);
             if (deviations[i + inputPoint.length].getCount() == 0) {
@@ -128,7 +130,7 @@ public class WeightedTransformer implements ITransformer {
      * @return the normalized value
      */
     protected double normalize(double value, double shift, double scale, double clipFactor) {
-        checkArgument(scale >= 1.0, " should be at least 1.0");
+        checkArgument(scale > 0, " should be non-negative");
         double t = (value - shift) / (scale);
         if (t >= clipFactor) {
             return clipFactor;
