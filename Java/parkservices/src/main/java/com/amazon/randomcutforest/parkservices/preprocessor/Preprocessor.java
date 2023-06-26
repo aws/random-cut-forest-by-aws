@@ -103,7 +103,7 @@ public class Preprocessor implements IPreprocessor {
 
     protected double weightTime;
 
-    protected double timeDecay;
+    protected double transformDecay;
 
     // recording the last seen timestamp
     protected long[] previousTimeStamps;
@@ -215,13 +215,13 @@ public class Preprocessor implements IPreprocessor {
         } else {
             lastShingledInput = new double[shingleSize * inputLength];
         }
-        timeDecay = builder.timeDecay;
-        dataQuality = builder.dataQuality.orElse(new Deviation[] { new Deviation(timeDecay) });
+        transformDecay = builder.timeDecay;
+        dataQuality = builder.dataQuality.orElse(new Deviation[] { new Deviation(transformDecay) });
 
         Deviation[] deviationList = new Deviation[NUMBER_OF_STATS * inputLength];
-        manageDeviations(deviationList, builder.deviations, timeDecay);
+        manageDeviations(deviationList, builder.deviations, transformDecay);
         timeStampDeviations = new Deviation[DEFAULT_TIME_STATES];
-        manageDeviations(timeStampDeviations, builder.timeDeviations, timeDecay);
+        manageDeviations(timeStampDeviations, builder.timeDeviations, transformDecay);
 
         if (transformMethod == TransformMethod.NONE) {
             for (int i = 0; i < inputLength; i++) {
@@ -258,7 +258,7 @@ public class Preprocessor implements IPreprocessor {
     // the following fills the first argument as copies of the original
     // but if the original is null or otherwise then new deviations are created; the
     // last third
-    // are filled with 0.1 * timeDecay and are reserved for smoothing
+    // are filled with 0.1 * transformDecay and are reserved for smoothing
     void manageDeviations(Deviation[] deviationList, Optional<Deviation[]> original, double timeDecay) {
         checkArgument(deviationList.length % 3 == 0, " has to be a multiple of three");
         int usedDeviations = 0;
@@ -322,7 +322,9 @@ public class Preprocessor implements IPreprocessor {
                 : inputLength;
         description
                 .setReasonableForecast((adjustedInternal > MINIMUM_OBSERVATIONS_FOR_EXPECTED) && (dataDimension >= 4));
-
+        description.setScale(getScale());
+        description.setShift(getShift());
+        description.setDeviations(transformer.getSmoothedDeviations());
         return description;
     }
 
@@ -363,16 +365,11 @@ public class Preprocessor implements IPreprocessor {
         }
         description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp); // no impute
-        description.setScale(getScale());
-        double[] previous = (inputPoint.length == lastShingledInput.length) ? lastShingledInput
-                : getShingledInput(shingleSize - 1);
-        description.setShift(getShift(previous));
-        description.setDeviations(transformer.getSmoothedDeviations());
         description.setNumberOfNewImputes(0);
         return description;
     }
 
-    double[] getScale() {
+    public double[] getScale() {
         if (mode != ForestMode.TIME_AUGMENTED) {
             return transformer.getScale();
         } else {
@@ -387,7 +384,9 @@ public class Preprocessor implements IPreprocessor {
         }
     }
 
-    double[] getShift(double[] previous) {
+    public double[] getShift() {
+        double[] previous = (inputLength == lastShingledInput.length) ? lastShingledInput
+                : getShingledInput(shingleSize - 1);
         if (mode != ForestMode.TIME_AUGMENTED) {
             return transformer.getShift(previous);
         } else {
@@ -429,6 +428,11 @@ public class Preprocessor implements IPreprocessor {
             forest.update(scaledInput);
         } else {
             forest.update(point);
+        }
+        if (result.getAnomalyGrade() > 0) {
+            double[] postShift = getShift();
+            result.setPostShift(postShift);
+            result.setTransformDecay(transformDecay);
         }
         return result;
     }
@@ -880,6 +884,10 @@ public class Preprocessor implements IPreprocessor {
         return transformer.getDeviations();
     }
 
+    public double getTimeDecay() {
+        return transformDecay;
+    }
+
     /**
      * used in mapper; augments weightTime to the weights array to produce a single
      * array of length inputLength + 1
@@ -894,16 +902,6 @@ public class Preprocessor implements IPreprocessor {
         }
         answer[inputLength] = weightTime;
         return answer;
-    }
-
-    // mapper/semi-supervision
-    public void setWeights(double[] values) {
-        checkArgument(values.length == inputLength, "incorrect length");
-        transformer.setWeights(values);
-    }
-
-    public void setWeightTime(double weightTime) {
-        this.weightTime = weightTime;
     }
 
     // mapper

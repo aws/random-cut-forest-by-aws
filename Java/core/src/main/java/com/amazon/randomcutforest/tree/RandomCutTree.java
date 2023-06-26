@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.tree;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.checkState;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.DEFAULT_STORE_PARENT;
 import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 import static java.lang.Math.max;
 
@@ -85,7 +86,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         outputAfter = builder.outputAfter.orElse(max(1, numberOfLeaves / 4));
         dimension = (builder.dimension != 0) ? builder.dimension : pointStoreView.getDimensions();
         nodeStore = (builder.nodeStore != null) ? builder.nodeStore
-                : AbstractNodeStore.builder().capacity(numberOfLeaves - 1).dimension(dimension).build();
+                : AbstractNodeStore.builder().capacity(numberOfLeaves - 1).storeParent(builder.storeParent)
+                        .dimension(dimension).build();
         this.boundingBoxCacheFraction = builder.boundingBoxCacheFraction;
         this.storeSequenceIndexesEnabled = builder.storeSequenceIndexesEnabled;
         this.centerOfMassEnabled = builder.centerOfMassEnabled;
@@ -201,7 +203,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         // debugging
         // this should be an anomaly - no pun intended.
 
-        Random rng = new Random((long) factor);
+        Random rng = new Random((long) (factor * Long.MAX_VALUE / 2));
         if (rng.nextDouble() < 0.5) {
             for (int i = 0; i < box.getDimensions(); i++) {
                 float minValue = (float) box.getMinValue(i);
@@ -357,7 +359,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             }
             if (boundingBoxCacheFraction > 0.0) {
                 checkContainsAndRebuildBox(index, point, pointStoreView);
-                checkContainsAndAddPoint(index, point);
+                addPointInPlace(index, point);
             }
         }
     }
@@ -471,7 +473,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     public boolean isInternal(int index) {
         // note that numberOfLeaves - 1 corresponds to an unspefied leaf in partial tree
         // 0 .. numberOfLeaves - 2 corresponds to internal nodes
-        return index < numberOfLeaves - 1;
+        return index < numberOfLeaves - 1 && index >= 0;
     }
 
     public int convertToLeaf(int pointIndex) {
@@ -571,9 +573,9 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         rangeSumData[idx] = box.getRangeSum();
     }
 
-    boolean checkContainsAndAddPoint(int index, float[] point) {
+    void addPointInPlace(int index, float[] point) {
         int idx = translate(index);
-        if (idx != Integer.MAX_VALUE && rangeSumData[idx] != 0) {
+        if (idx != Integer.MAX_VALUE) {
             int base = 2 * idx * dimension;
             int mid = base + dimension;
             double rangeSum = 0;
@@ -586,11 +588,8 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             for (int i = 0; i < dimension; i++) {
                 rangeSum += boundingBoxData[mid + i] - boundingBoxData[base + i];
             }
-            boolean answer = (rangeSumData[idx] == rangeSum);
             rangeSumData[idx] = rangeSum;
-            return answer;
         }
-        return false;
     }
 
     public BoundingBox getBox(int index) {
@@ -639,7 +638,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     boolean checkContainsAndRebuildBox(int index, float[] point, IPointStoreView<float[]> pointStoreView) {
         int idx = translate(index);
-        if (idx != Integer.MAX_VALUE && rangeSumData[idx] != 0) {
+        if (idx != Integer.MAX_VALUE) {
             if (!checkStrictlyContains(index, point)) {
                 BoundingBox mutatedBoundingBox = reconstructBox(index, pointStoreView);
                 copyBoxToData(idx, mutatedBoundingBox);
@@ -663,7 +662,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             int idx = translate(index);
             if (idx != Integer.MAX_VALUE) { // always add irrespective of rangesum
                 copyBoxToData(idx, box);
-                checkContainsAndAddPoint(index, point);
+                addPointInPlace(index, point);
             }
         }
     }
@@ -1007,6 +1006,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         protected IPointStoreView<float[]> pointStoreView;
         protected AbstractNodeStore nodeStore;
         protected int root = Null;
+        protected boolean storeParent = DEFAULT_STORE_PARENT;
 
         public T capacity(int capacity) {
             this.capacity = capacity;
@@ -1050,6 +1050,11 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
         public T setRoot(int root) {
             this.root = root;
+            return (T) this;
+        }
+
+        public T storeParent(boolean storeParent) {
+            this.storeParent = storeParent;
             return (T) this;
         }
 

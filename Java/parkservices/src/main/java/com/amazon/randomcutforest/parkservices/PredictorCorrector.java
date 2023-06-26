@@ -19,6 +19,7 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
+import static java.lang.Math.exp;
 import static java.lang.Math.min;
 
 import java.util.Arrays;
@@ -274,7 +275,8 @@ public class PredictorCorrector {
 
         if (ideal == null) {
             double remainder = 0;
-            for (int i = dimensions - difference; i < dimensions; i++) {
+            int limit = min(difference, dimensions);
+            for (int i = dimensions - limit; i < dimensions; i++) {
                 remainder += candidate.getHighLowSum(i);
             }
             // simplifying the following since remainder * dimensions/difference corresponds
@@ -301,38 +303,72 @@ public class PredictorCorrector {
      *                              being corrected
      * @param shingleSize           size of the shingle
      * @param baseDimensions        number of dimensions in each shingle
+     * @param currentShift          shift introduced for current point
+     * @param currentScale          scale for current point
      * @param lastAnomalyDescriptor description of the last anomaly
      * @return the corrected point
      */
-    float[] applyBasicCorrector(float[] point, int gap, int shingleSize, int baseDimensions,
+    protected <P extends AnomalyDescriptor> float[] applyPastCorrector(float[] point, int gap, int shingleSize,
+            int baseDimensions, double[] currentShift, double[] currentScale,
             IRCFComputeDescriptor lastAnomalyDescriptor) {
-        checkArgument(gap >= 0 && gap <= shingleSize, "incorrect invocation");
         float[] correctedPoint = Arrays.copyOf(point, point.length);
-        float[] lastExpectedPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
-        double[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();
-        int lastRelativeIndex = lastAnomalyDescriptor.getRelativeIndex();
-        if (gap < shingleSize) {
-            System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
-                    point.length - gap * baseDimensions);
-        }
-        if (lastRelativeIndex == 0) { // it is possible to fix other cases, but is more complicated
-            TransformMethod transformMethod = lastAnomalyDescriptor.getTransformMethod();
-            if (transformMethod == TransformMethod.DIFFERENCE
-                    || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
-                for (int y = 0; y < baseDimensions; y++) {
-                    correctedPoint[point.length - gap * baseDimensions
-                            + y] += lastAnomalyPoint[point.length - baseDimensions + y]
-                                    - lastExpectedPoint[point.length - baseDimensions + y];
-                }
-            } else if (lastAnomalyDescriptor.getForestMode() == ForestMode.TIME_AUGMENTED) {
-                // definitely correct the time dimension which is always differenced
-                // this applies to the non-differenced cases
-                correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
-                        - lastExpectedPoint[point.length - 1];
+        TransformMethod transformMethod = lastAnomalyDescriptor.getTransformMethod();
 
+        // following will fail for first 100ish points and if dimension < 3
+        if (lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
+            float[] lastExpectedPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
+            double[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();
+            int lastRelativeIndex = lastAnomalyDescriptor.getRelativeIndex();
+            // the following will fail for shingleSize 1
+            if (gap < shingleSize) {
+                System.arraycopy(lastExpectedPoint, gap * baseDimensions, correctedPoint, 0,
+                        point.length - gap * baseDimensions);
+            }
+            if (gap <= shingleSize && lastRelativeIndex == 0) {
+                if (transformMethod == TransformMethod.DIFFERENCE
+                        || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE) {
+                    for (int y = 0; y < baseDimensions; y++) {
+                        correctedPoint[point.length - gap * baseDimensions
+                                + y] += lastAnomalyPoint[point.length - baseDimensions + y]
+                                        - lastExpectedPoint[point.length - baseDimensions + y];
+                    }
+                }
+                if (lastAnomalyDescriptor.getForestMode() == ForestMode.TIME_AUGMENTED) {
+                    // definitely correct the time dimension which is always differenced
+                    // this applies to the non-differenced cases
+                    correctedPoint[point.length - (gap - 1) * baseDimensions - 1] += lastAnomalyPoint[point.length - 1]
+                            - lastExpectedPoint[point.length - 1];
+
+                }
+            }
+        }
+
+        double[] deltaShift = lastAnomalyDescriptor.getDeltaShift();
+        double factor = exp(-gap * lastAnomalyDescriptor.getTransformDecay());
+        // correct the effect of shifts in last observed anomaly because the anomaly may
+        // have skewed the shift and scale
+        if (deltaShift != null
+                && (transformMethod == TransformMethod.NORMALIZE || transformMethod == TransformMethod.SUBTRACT_MA)) {
+            int number = min(gap, shingleSize);
+            for (int y = 0; y < baseDimensions; y++) {
+                if (Math.abs(deltaShift[y]) > DEFAULT_NORMALIZATION_PRECISION * Math.abs(currentShift[y])) {
+                    for (int j = 0; j < number; j++) {
+                        correctedPoint[point.length - (number - j) * baseDimensions + y] += (currentScale[y] == 0) ? 0
+                                : deltaShift[y] * factor / currentScale[y];
+                    }
+                }
             }
         }
         return correctedPoint;
+    }
+
+    protected <P extends AnomalyDescriptor> boolean centeredTransformPass(P result, float[] point) {
+        boolean answer = false;
+        for (int i = 0; i < point.length && !answer; i++) {
+            answer = (Math.abs(point[i]) > DEFAULT_NORMALIZATION_PRECISION
+                    + DEFAULT_NORMALIZATION_PRECISION * Math.abs(result.getShift()[i % baseDimension]));
+        }
+        return answer;
     }
 
     /**
@@ -407,17 +443,18 @@ public class PredictorCorrector {
                 }
 
                 // note that values cannot be reconstructed well if differencing was invoked
-                double a = Math.abs(scaleFactor * point[startPosition + y] + shiftBase);
-                double b = Math.abs(scaleFactor * newPoint[startPosition + y] + shiftBase);
+                double a = scaleFactor * point[startPosition + y] + shiftBase;
+                double b = scaleFactor * newPoint[startPosition + y] + shiftBase;
 
                 // for non-trivial transformations -- both transformations are used enable
                 // relative error
                 // the only transformation currently ruled out is TransformMethod.NONE
                 if (scaleFactor != 1.0 || shiftBase != 0) {
                     double multiplier = (method == TransformMethod.NORMALIZE) ? 2 : 1;
-                    shiftAmount += multiplier * DEFAULT_NORMALIZATION_PRECISION * (scaleFactor + (a + b) / 2);
+                    shiftAmount += multiplier * DEFAULT_NORMALIZATION_PRECISION
+                            * (scaleFactor + (Math.abs(a) + Math.abs(b)) / 2);
                 }
-                answer = significantScore || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
+                answer = significantScore && delta > 1e-6 || (delta > shiftAmount + DEFAULT_NORMALIZATION_PRECISION);
                 if (answer) {
                     boolean lower = (a < b - ignoreNearExpectedFromBelow[y])
                             && (a < b - ignoreNearExpectedFromBelowByRatio[y] * Math.abs(b));
@@ -639,6 +676,17 @@ public class PredictorCorrector {
             workingThreshold = temp.index;
         }
 
+        // we perform basic correction
+        correctedPoint = applyPastCorrector(point, gap, shingleSize, point.length / shingleSize, result.getShift(),
+                result.getScale(), lastAnomalyDescriptor);
+
+        /**
+         * we check if the point is too close to 0 for centered transforms
+         */
+        if (!centeredTransformPass(result, correctedPoint)) {
+            workingGrade = 0;
+        }
+
         /*
          * We first check if the score is high enough to be considered as a candidate
          * anomaly. If not, which is hopefully 99% of the data, the computation is short
@@ -673,16 +721,10 @@ public class PredictorCorrector {
                         : maxContribution(attribution, point.length / shingleSize, relative) + 1;
             } else {
 
-                // note that the following is bypassed for shingleSize = 1 because it would not
-                // make sense to connect the current evaluation with a previous value
-                if (lastAnomalyDescriptor.getRCFPoint() != null && shingleSize > 1
-                        && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap > 0 && gap <= shingleSize) {
-                    correctedPoint = applyBasicCorrector(point, gap, shingleSize, point.length / shingleSize,
-                            lastAnomalyDescriptor);
-
+                if (!Arrays.equals(correctedPoint, point)) {
                     attribution = getNewAttribution(choice, correctedPoint, forest);
                     correctedScore = attribution.getHighLowSum();
-                    if (correctedScore > workingThreshold) {
+                    if (workingGrade > 0 && correctedScore > workingThreshold) {
                         // past explanations do not suffice
                         if (relative + shingleSize > 0) {
                             int tempIndex = maxContribution(attribution, point.length / shingleSize, relative - 1) + 1;
@@ -705,11 +747,10 @@ public class PredictorCorrector {
                         workingGrade = 0;
                     }
                 } else {
-                    correctedPoint = point;
                     attribution = getCachedAttribution(choice, point, attributionVector, forest);
                 }
 
-                assert (attribution != null);
+                assert (workingGrade == 0 || attribution != null);
 
                 if (workingGrade > 0) {
                     DiVector newAttribution = null;
@@ -733,7 +774,6 @@ public class PredictorCorrector {
                             lastAnomalyDescriptor, workingThreshold)) {
                         workingGrade = 0;
                     }
-                    ;
 
                     if (workingGrade > 0 && expectedPoint != null) {
                         boolean significantScore = strategy == ScoringStrategy.DISTANCE || score > 1.5
@@ -782,9 +822,9 @@ public class PredictorCorrector {
         }
     }
 
-    public void setLowerThreshold(double lower) {
+    public void setAbsoluteThreshold(double lower) {
         // only applies to thresholder 0
-        thresholders[EXPECTED_INVERSE_DEPTH_INDEX].setLowerThreshold(lower);
+        thresholders[EXPECTED_INVERSE_DEPTH_INDEX].setAbsoluteThreshold(lower);
     }
 
     public void setScoreDifferencing(double persistence) {

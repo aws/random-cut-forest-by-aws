@@ -40,13 +40,13 @@ public class BasicThresholderState implements Serializable {
 
     private int minimumScores;
 
-    @Deprecated
+    // do not use
     private DeviationState primaryDeviationState;
 
-    @Deprecated
+    // do not use
     private DeviationState secondaryDeviationState;
 
-    @Deprecated
+    // do not use
     private DeviationState thresholdDeviationState;
 
     @Deprecated

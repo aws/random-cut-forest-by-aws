@@ -99,12 +99,10 @@ public class ErrorHandler {
         intervalPrecision = new float[length];
         errorDistribution = new RangeVector(length);
         Arrays.fill(errorDistribution.upper, Float.MAX_VALUE);
-        Arrays.fill(errorDistribution.lower, Float.MIN_VALUE);
+        Arrays.fill(errorDistribution.lower, -Float.MAX_VALUE);
     }
 
-    /**
-     * the folloqing would be useful when states and mappers get written
-     */
+    // for mappers
     public ErrorHandler(int errorHorizon, int forecastHorizon, int sequenceIndex, double percentile, int inputLength,
             float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
         checkArgument(forecastHorizon > 0, " incorrect forecast horizon");
@@ -170,6 +168,7 @@ public class ErrorHandler {
         for (int i = 0; i < inputLength; i++) {
             actuals[errorIndex][i] = (float) input[i];
         }
+
         ++sequenceIndex;
         calibrate(descriptor.deviations);
         if (calibrationMethod != Calibration.NONE) {
@@ -184,6 +183,7 @@ public class ErrorHandler {
         descriptor.setErrorRMSE(errorRMSE);
         descriptor.setObservedErrorDistribution(errorDistribution);
         descriptor.setCalibration(intervalPrecision);
+
         System.arraycopy(descriptor.timedForecast.rangeVector.values, 0, pastForecasts[errorIndex].values, 0, length);
         System.arraycopy(descriptor.timedForecast.rangeVector.upper, 0, pastForecasts[errorIndex].upper, 0, length);
         System.arraycopy(descriptor.timedForecast.rangeVector.lower, 0, pastForecasts[errorIndex].lower, 0, length);

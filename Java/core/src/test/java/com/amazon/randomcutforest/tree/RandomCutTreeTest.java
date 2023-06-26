@@ -17,13 +17,17 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +37,8 @@ import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.Weighted;
@@ -44,6 +50,7 @@ public class RandomCutTreeTest {
 
     private Random rng;
     private RandomCutTree tree;
+    private NodeStoreSmall nodeStoreSmall;
 
     @BeforeEach
     public void setUp() {
@@ -51,7 +58,7 @@ public class RandomCutTreeTest {
         PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
                 .dimensions(2).build();
         tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStoreFloat)
-                .storeSequenceIndexesEnabled(true).dimension(2).build();
+                .storeSequenceIndexesEnabled(true).storeParent(true).dimension(2).build();
 
         // Create the following tree structure (in the second diagram., backticks denote
         // cuts)
@@ -81,12 +88,6 @@ public class RandomCutTreeTest {
         // divides its parent in half.
         // The random values are used to set the cut dimensions and values.
 
-        assertThrows(IllegalArgumentException.class, () -> tree.setBoundingBoxCacheFraction(-0.5));
-        assertThrows(IllegalArgumentException.class, () -> tree.setConfig("foo", 0));
-        assertThrows(IllegalArgumentException.class, () -> tree.getConfig("bar"));
-        assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
-        tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, 0.2);
-
         assertEquals(pointStoreFloat.add(new float[] { -1, -1 }, 1), 0);
         assertEquals(pointStoreFloat.add(new float[] { 1, 1 }, 2), 1);
         assertEquals(pointStoreFloat.add(new float[] { -1, 0 }, 3), 2);
@@ -96,7 +97,10 @@ public class RandomCutTreeTest {
 
         assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
         tree.addPoint(0, 1);
+        tree.deletePoint(0, 1);
+        assertTrue(tree.root == Null);
 
+        tree.addPoint(0, 1);
         when(rng.nextDouble()).thenReturn(0.625);
         tree.addPoint(1, 2);
 
@@ -108,6 +112,98 @@ public class RandomCutTreeTest {
 
         // add mass to 0,1
         tree.addPoint(4, 5);
+    }
+
+    @Test
+    public void testConfig() {
+        assertThrows(IllegalArgumentException.class, () -> tree.setBoundingBoxCacheFraction(-0.5));
+        assertThrows(IllegalArgumentException.class, () -> tree.setBoundingBoxCacheFraction(2.0));
+        assertThrows(IllegalArgumentException.class, () -> tree.setConfig("foo", 0));
+        assertThrows(IllegalArgumentException.class, () -> tree.getConfig("bar"));
+        assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
+        assertThrows(IllegalArgumentException.class, () -> tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, true));
+        tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, 0.2);
+    }
+
+    @Test
+    public void testConfigDelete() {
+        PointStore pointStore = mock(PointStore.class);
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore)
+                .storeSequenceIndexesEnabled(true).storeParent(true).dimension(3).build();
+
+        when(pointStore.getNumericVector(any(Integer.class))).thenReturn(new float[] { 0 }).thenReturn(new float[3])
+                .thenReturn(new float[3]);
+        tree.addPoint(0, 1);
+        // fails vor dimension
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(2, 1));
+        // wrong sequence index
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 2));
+        // state is corrupted
+        assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
+    }
+
+    @Test
+    public void testConfigAdd() {
+        PointStore pointStore = mock(PointStore.class);
+        float[] test = new float[] { 1.119f, 0f, -3.11f, 100f };
+        float[] copies = new float[] { 0, 17, 0, 0 };
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore)
+                .centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).storeParent(true).dimension(4).build();
+        when(pointStore.getNumericVector(any(Integer.class))).thenReturn(new float[0]).thenReturn(test)
+                .thenReturn(new float[0]).thenReturn(new float[4]).thenReturn(new float[4]).thenReturn(new float[5])
+                .thenReturn(copies).thenReturn(test).thenReturn(copies).thenReturn(copies).thenReturn(test);
+
+        // cannot have partial addition to empty tree
+        assertThrows(IllegalArgumentException.class, () -> tree.addPointToPartialTree(0, 1));
+        // the following does not consume any points
+        tree.addPoint(0, 1);
+        // consumes from pointstore but gets 0 length vector
+        assertThrows(IllegalArgumentException.class, () -> tree.getPointSum(tree.getRoot()));
+        // passes, consumes pointstore
+        assertArrayEquals(tree.getPointSum(tree.getRoot()), test);
+        // in the sequel point is [0,0,0,0] fails because old point appears to have 5
+        // dimensions
+        assertThrows(IllegalArgumentException.class, () -> tree.addPoint(1, 1));
+        // this invocation succeeds, but points are same
+        tree.addPoint(1, 1);
+        assertTrue(tree.isLeaf(tree.getRoot()));
+        // dimension = 5
+        assertThrows(IllegalArgumentException.class, () -> tree.addPoint(2, 1));
+        // switch the vector
+        assertArrayEquals(tree.getPointSum(tree.getRoot()), new float[] { 0, 34, 0, 0 });
+        // adding test, consumes the copy
+        tree.addPoint(2, 1);
+        assertEquals(tree.getMass(), 3);
+        assertArrayEquals(tree.getPointSum(tree.getRoot()), new float[] { 1.119f, 34, -3.11f, 100 }, 1e-3f);
+    }
+
+    @Test
+    public void testCut() {
+        PointStore pointStore = mock(PointStore.class);
+        Random random = mock(Random.class);
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore).random(random)
+                .storeSequenceIndexesEnabled(true).storeParent(true).dimension(1).build();
+        when(pointStore.getNumericVector(any(Integer.class))).thenReturn(new float[1]).thenReturn(new float[] { 1 })
+                .thenReturn(new float[] { 0 }).thenReturn(new float[] { 0 }).thenReturn(new float[] { 2 })
+                .thenReturn(new float[] { 1 }).thenReturn(new float[0]).thenReturn(new float[] { 2 })
+                .thenReturn(new float[] { 1 }).thenReturn(new float[1]);
+        // testing the cut assumptions -- the values should not be 1 or larger, but is
+        // useful for testing
+        when(random.nextDouble()).thenReturn(1.2).thenReturn(1.5).thenReturn(1.5).thenReturn(0.0);
+        // following does not query pointstore
+        tree.addPoint(0, 1);
+        // following tries to add [0.0], and discovers point index 0 is [1.0]
+        tree.addPoint(1, 1);
+        assertTrue(tree.getCutValue(tree.getRoot()) == (double) Math.nextAfter(1.0f, 0.0));
+
+        assertThrows(IllegalArgumentException.class, () -> tree.addPoint(1, 2)); // copy
+        tree.addPoint(1, 2); // passes
+        assertTrue(tree.getRoot() == 0);
+        assertTrue(tree.getCutValue(0) == (double) Math.nextAfter(1.0f, 0.0));
+        assertTrue(tree.getCutValue(1) == (double) Math.nextAfter(2.0f, 1.0));
+        assertFalse(tree.checkStrictlyContains(1, new float[] { 2 }));
+        assertTrue(tree.checkStrictlyContains(1, new float[] { 1.001f }));
     }
 
     /**
@@ -128,7 +224,16 @@ public class RandomCutTreeTest {
                 is(new float[] { -1, -1 }));
         assertThat(tree.getMass(tree.getLeftChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
+        // testing inappropriate
+        assertThrows(IllegalArgumentException.class, () -> tree.getLeftChild(Integer.MAX_VALUE));
+        assertThrows(IllegalArgumentException.class, () -> tree.getRightChild(500));
+        assertThrows(IllegalArgumentException.class, () -> tree.getCutValue(-1));
+        assertThrows(IllegalArgumentException.class, () -> tree.getCutDimension(-1));
+        // pointIndex should have a value at least as large as number of leaves
+        assertThrows(IllegalArgumentException.class, () -> tree.getPointIndex(0));
 
+        NodeStoreSmall nodeStoreSmall = (NodeStoreSmall) tree.nodeStore;
+        assert (nodeStoreSmall.getParentIndex(tree.getRightChild(node)) == node);
         node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new BoundingBox(new float[] { 1, 1 }));
         assertThat(tree.getBox(node), is(expectedBox));
@@ -143,6 +248,7 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
+        assert (nodeStoreSmall.getParentIndex(tree.getLeftChild(node)) == node);
         node = tree.getLeftChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
         assertThat(tree.getBox(node), is(expectedBox));
@@ -189,6 +295,8 @@ public class RandomCutTreeTest {
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
         // sibling node moves up and bounding box recomputed
 
+        NodeStoreSmall nodeStoreSmall = (NodeStoreSmall) tree.nodeStore;
+        assert (nodeStoreSmall.getParentIndex(tree.getRightChild(node)) == node);
         node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { 0, 1 }).getMergedBox(new float[] { 1, 1 });
         assertThat(tree.getBox(node), is(expectedBox));
@@ -231,7 +339,8 @@ public class RandomCutTreeTest {
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getLeftChild(node))).get(1L), 1);
 
         // sibling node moves up and bounding box stays the same
-
+        NodeStoreSmall nodeStoreSmall = (NodeStoreSmall) tree.nodeStore;
+        assert (nodeStoreSmall.getParentIndex(tree.getRightChild(node)) == node);
         node = tree.getRightChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
         assertThat(tree.getBox(node), is(expectedBox));
@@ -293,6 +402,8 @@ public class RandomCutTreeTest {
         assertThat(tree.getMass(tree.getRightChild(node)), is(1));
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(2L), 1);
 
+        NodeStoreSmall nodeStoreSmall = (NodeStoreSmall) tree.nodeStore;
+        assert (nodeStoreSmall.getParentIndex(tree.getLeftChild(node)) == node);
         node = tree.getLeftChild(node);
         expectedBox = new BoundingBox(new float[] { -1, 0 }).getMergedBox(new float[] { 0, 1 });
         assertThat(tree.getBox(node), is(expectedBox));
@@ -375,6 +486,47 @@ public class RandomCutTreeTest {
         double factor = 1.0 - 1e-16;
         System.out.println(factor);
         RandomCutTree tree = RandomCutTree.builder().dimension(trials).build();
-        Cut cut = tree.randomCut(factor, possible, box);
+        // tries both path
+        tree.randomCut(factor, possible, box);
+        tree.randomCut(1.0 - 1e-17, possible, box);
+
     }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 100, 10000, 100000 })
+    void testNodeStore(int size) {
+        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
+                .dimensions(2).build();
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStoreFloat)
+                .capacity(size).storeSequenceIndexesEnabled(true).storeParent(true).dimension(2).build();
+        long seed = new Random().nextLong();
+        System.out.println("seed :" + seed);
+        Random rng = new Random(seed);
+        for (int i = 0; i < 100; i++) {
+            pointStoreFloat.add(new double[] { rng.nextDouble(), rng.nextDouble() }, 0L);
+        }
+        ArrayList<Weighted<Integer>> list = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            tree.addPoint(i, 0L);
+            list.add(new Weighted<>(i, rng.nextFloat(), 0));
+        }
+        list.sort((o1, o2) -> Float.compare(o1.getWeight(), o2.getWeight()));
+        for (int i = 0; i < 50; i++) {
+            tree.deletePoint(list.remove(0).getValue(), 0L);
+        }
+
+        AbstractNodeStore nodeStore = tree.getNodeStore();
+        for (int i = 0; i < 25; i++) {
+            if (!tree.isLeaf(tree.getLeftChild(tree.getRoot()))) {
+                assert (nodeStore.getParentIndex(tree.getLeftChild(tree.getRoot())) == tree.root);
+            }
+            ;
+            if (!tree.isLeaf(tree.getRightChild(tree.getRoot()))) {
+                assert (nodeStore.getParentIndex(tree.getRightChild(tree.getRoot())) == tree.root);
+            }
+            ;
+            tree.deletePoint(list.remove(0).getValue(), 0L);
+        }
+    }
+
 }

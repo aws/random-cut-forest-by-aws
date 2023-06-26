@@ -17,14 +17,9 @@ package com.amazon.randomcutforest.parkservices;
 
 import java.util.Arrays;
 
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * a basic class that defines a proto-point
  */
-@Getter
-@Setter
 public class Point {
 
     // current values
@@ -38,12 +33,12 @@ public class Point {
         this.inputTimestamp = inputTimestamp;
     }
 
-    public void setCurrentInput(double[] currentValues) {
-        this.currentInput = copyIfNotnull(currentValues);
-    }
-
     public double[] getCurrentInput() {
         return copyIfNotnull(currentInput);
+    }
+
+    public long getInputTimestamp() {
+        return inputTimestamp;
     }
 
     protected double[] copyIfNotnull(double[] array) {

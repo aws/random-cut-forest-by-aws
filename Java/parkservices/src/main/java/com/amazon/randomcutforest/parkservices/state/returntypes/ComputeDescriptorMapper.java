@@ -38,6 +38,9 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
         descriptor.setRelativeIndex(state.getLastRelativeIndex());
         descriptor.setScoringStrategy(ScoringStrategy.valueOf(state.getLastStrategy()));
+        descriptor.setShift(state.getLastShift());
+        descriptor.setPostShift(state.getLastPostShift());
+        descriptor.setTransformDecay(state.getTransformDecay());
         return descriptor;
     }
 
@@ -52,6 +55,9 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
         state.setLastRelativeIndex(descriptor.getRelativeIndex());
         state.setLastStrategy(descriptor.getScoringStrategy().name());
+        state.setLastShift(descriptor.getShift());
+        state.setLastPostShift(descriptor.getPostShift());
+        state.setTransformDecay(descriptor.getTransformDecay());
         return state;
     }
 

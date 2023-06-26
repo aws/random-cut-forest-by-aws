@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Stack;
@@ -200,6 +202,11 @@ public class NodeStoreLarge extends AbstractNodeStore {
 
     public int[] getRightIndex() {
         return Arrays.copyOf(rightIndex, rightIndex.length);
+    }
+
+    public int getParentIndex(int index) {
+        checkArgument(parentIndex != null, "incorrect call");
+        return parentIndex[index];
     }
 
 }
