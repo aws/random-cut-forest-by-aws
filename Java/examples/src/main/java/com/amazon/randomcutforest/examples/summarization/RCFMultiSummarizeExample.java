@@ -69,7 +69,8 @@ public class RCFMultiSummarizeExample implements Example {
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
         double epsilon = 0.01;
-        List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.1, 5);
+        List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.1, 5,
+                random.nextLong());
         System.out.println(summary.size() + " clusters for " + newDimensions + " dimensions, seed : " + seed);
         double weight = summary.stream().map(e -> e.getWeight()).reduce(Double::sum).get();
         System.out.println(

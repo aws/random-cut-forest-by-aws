@@ -15,14 +15,13 @@
 
 package com.amazon.randomcutforest.parkservices.state.predictorcorrector;
 
-import static com.amazon.randomcutforest.state.Version.V3_8;
+import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
+import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
+import lombok.Data;
 
 import java.io.Serializable;
 
-import lombok.Data;
-
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
-import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
+import static com.amazon.randomcutforest.state.Version.V3_8;
 
 @Data
 public class PredictorCorrectorState implements Serializable {
@@ -35,6 +34,7 @@ public class PredictorCorrectorState implements Serializable {
     private int numberOfAttributors;
     private int baseDimension;
     private long randomSeed;
+    private double noiseFactor;
     private boolean autoAdjust;
     private double[] modeInformation; // multiple modes -- to be used in future
     private DeviationState[] deviationStates; // in future to be used for learning deviations

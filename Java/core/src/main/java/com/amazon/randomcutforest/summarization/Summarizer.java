@@ -458,12 +458,12 @@ public class Summarizer {
      * @param maxAllowed      maximum number of groups/clusters
      * @param initial         a parameter controlling the initialization
      * @param reassignPerStep if reassignment is to be performed each step
+     * @param seed            random seed
      * @return a summarization
      */
-    public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
-            boolean reassignPerStep) {
-        return summarize(points, maxAllowed, initial, reassignPerStep, Summarizer::L2distance, new Random().nextLong(),
-                false);
+    public static SampleSummary l2summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
+            boolean reassignPerStep, long seed) {
+        return summarize(points, maxAllowed, initial, reassignPerStep, Summarizer::L2distance, seed, false);
     }
 
     /**
@@ -471,11 +471,11 @@ public class Summarizer {
      *
      * @param points     points in float[][], each of weight 1.0
      * @param maxAllowed maximum number of clusters one is interested in
+     * @param seed       random seed
      * @return a summarization
      */
-    public static SampleSummary summarize(float[][] points, int maxAllowed) {
-        return summarize(points, maxAllowed, 4 * maxAllowed, false, Summarizer::L2distance, new Random().nextLong(),
-                false);
+    public static SampleSummary l2summarize(float[][] points, int maxAllowed, long seed) {
+        return summarize(points, maxAllowed, 4 * maxAllowed, false, Summarizer::L2distance, seed, false);
     }
 
     /**
@@ -529,9 +529,9 @@ public class Summarizer {
                 clusterInitializer, seed, parallelEnabled, null);
     }
 
-    // same as above, with defaults
+    // same as above, with multicenter instead of generic
     public static List<ICluster<float[]>> multiSummarize(float[][] points, int maxAllowed, double shrinkage,
-            int numberOfRepresentatives) {
+            int numberOfRepresentatives, long seed) {
 
         ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
         for (float[] point : points) {
@@ -540,7 +540,7 @@ public class Summarizer {
         BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
                 shrinkage, numberOfRepresentatives);
         return summarize(weighted, maxAllowed, 4 * maxAllowed, 1, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,
-                Summarizer::L2distance, clusterInitializer, new Random().nextLong(), true, null);
+                Summarizer::L2distance, clusterInitializer, seed, true, null);
     }
 
 }

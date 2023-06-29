@@ -22,17 +22,20 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_CENTER_OF_MASS_
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INITIAL_ACCEPT_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_INTERNAL_SHINGLING_ENABLED;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_NUMBER_OF_TREES;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_OUTPUT_AFTER_FRACTION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_PARALLEL_EXECUTION_ENABLED;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_PRECISION;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_START_NORMALIZATION;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_ABSOLUTE_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_Z_FACTOR;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 import java.util.Arrays;
 import java.util.List;
@@ -116,6 +119,8 @@ public class ThresholdedRandomCutForest {
         }
 
         forest = builder.buildForest();
+        validateNonNegativeArray(builder.weights);
+
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
         preprocessorBuilder.timeDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
@@ -123,8 +128,7 @@ public class ThresholdedRandomCutForest {
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder
                 .stopNormalization(builder.stopNormalization.orElse(Preprocessor.DEFAULT_STOP_NORMALIZATION));
-        preprocessorBuilder
-                .startNormalization(builder.startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION));
+        preprocessorBuilder.startNormalization(builder.startNormalization.orElse(DEFAULT_START_NORMALIZATION));
 
         preprocessor = preprocessorBuilder.build();
         predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
@@ -145,10 +149,11 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setLastStrategy(builder.scoringStrategy);
     }
 
-    void validateNonNegativeArray(double[] array, int num) {
-        checkArgument(array.length == num, "incorrect length");
-        for (double element : array) {
-            checkArgument(element >= 0, " has to be non-negative");
+    void validateNonNegativeArray(double[] array) {
+        if (array != null) {
+            for (double element : array) {
+                checkArgument(element >= 0, " has to be non-negative");
+            }
         }
     }
 
@@ -292,8 +297,6 @@ public class ThresholdedRandomCutForest {
      */
 
     public TimedRangeVector extrapolate(int horizon, boolean correct, double centrality) {
-        // checkArgument(forestMode != ForestMode.STREAMING_IMPUTE, "not yet
-        // supported");
         checkArgument(
                 (transformMethod != TransformMethod.DIFFERENCE
                         && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE)
@@ -305,30 +308,21 @@ public class ThresholdedRandomCutForest {
         int dimensions = forest.getDimensions();
         int blockSize = dimensions / shingleSize;
         double[] lastPoint = preprocessor.getLastShingledPoint();
-        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
         RangeVector answer = new RangeVector(horizon * blockSize);
         int gap = (int) (preprocessor.getInternalTimeStamp() - lastAnomalyDescriptor.getInternalTimeStamp());
-        try {
-            if (cacheDisabled) { // turn caching on temporarily
-                forest.setBoundingBoxCacheFraction(1.0);
-            }
-            float[] newPoint = toFloatArray(lastPoint);
 
-            // gap will be at least 1
-            if (gap <= shingleSize && correct && lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
-                if (gap == 1) {
-                    newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
-                } else {
-                    newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
-                            preprocessor.getShift(), preprocessor.getScale(), lastAnomalyDescriptor);
-                }
-            }
-            answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
-        } finally {
-            if (cacheDisabled) { // turn caching off
-                forest.setBoundingBoxCacheFraction(0);
+        float[] newPoint = toFloatArray(lastPoint);
+
+        // gap will be at least 1
+        if (gap <= shingleSize && correct && lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
+            if (gap == 1) {
+                newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
+            } else {
+                newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
+                        preprocessor.getScale(), lastAnomalyDescriptor);
             }
         }
+        answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
         return preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
     }
 
@@ -350,11 +344,15 @@ public class ThresholdedRandomCutForest {
 
     @Deprecated
     public void setHorizon(double horizon) {
-        predictorCorrector.setScoreDifferencing(horizon);
+        predictorCorrector.setScoreDifferencing(1 - horizon);
     }
 
-    public void setScoreDifferencing(double persistence) {
-        predictorCorrector.setScoreDifferencing(persistence);
+    public void setScoreDifferencing(double scoreDifferencing) {
+        predictorCorrector.setScoreDifferencing(scoreDifferencing);
+    }
+
+    public void setScoringStrategy(ScoringStrategy strategy) {
+        this.scoringStrategy = strategy;
     }
 
     @Deprecated
@@ -437,6 +435,27 @@ public class ThresholdedRandomCutForest {
                     throw new IllegalArgumentException(" imputation infeasible");
                 }
             }
+            if (startNormalization.isPresent()) {
+                // we should not be setting normalizations unless we are careful
+                if (outputAfter.isPresent()) {
+                    // can be overspecified
+                    checkArgument(outputAfter.get() + shingleSize - 1 > startNormalization.get(),
+                            "output after has to wait till normalization, reduce normalization");
+                } else {
+                    int n = startNormalization.get();
+                    checkArgument(n > 0, " startNormalization has to be positive");
+                    // if start normalization is low then first few output can be 0
+                    outputAfter = Optional
+                            .of(max(max(1, (int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION)), n - shingleSize + 1));
+                }
+            } else {
+                if (outputAfter.isPresent()) {
+                    startNormalization = Optional.of(min(DEFAULT_START_NORMALIZATION, outputAfter.get()));
+                } else {
+                    // startNormalization = Optional.of(max(1, (int) (sampleSize *
+                    // DEFAULT_OUTPUT_AFTER_FRACTION)));
+                }
+            }
         }
 
         public ThresholdedRandomCutForest build() {
@@ -457,8 +476,7 @@ public class ThresholdedRandomCutForest {
             } else {
                 // forcing the change between internal and external shingling
                 outputAfter.ifPresent(n -> {
-                    int num = max(startNormalization.orElse(Preprocessor.DEFAULT_START_NORMALIZATION), n) - shingleSize
-                            + 1;
+                    int num = max(startNormalization.orElse(DEFAULT_START_NORMALIZATION), n) - shingleSize + 1;
                     checkArgument(num > 0, " max(start normalization, output after) should be at least " + shingleSize);
                     builder.outputAfter(num);
                 });

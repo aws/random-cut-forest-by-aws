@@ -50,9 +50,8 @@ public class InitialSegmentPreprocessor extends Preprocessor {
     public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
-        initialSetup(description, lastAnomalyDescriptor, forest);
-
         if (valuesSeen < startNormalization) {
+            initialSetup(description, lastAnomalyDescriptor, forest);
             storeInitial(description.getCurrentInput(), description.getInputTimestamp());
             return description;
         }
@@ -69,6 +68,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
 
         if (valuesSeen == startNormalization) {
             dischargeInitial(forest);
+            answer.setPostDeviations(getSmoothedDeviations());
         }
 
         return answer;
@@ -88,7 +88,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
 
     // computes the normalization statistics
     protected Deviation[] getDeviations() {
-        if (requireInitialSegment(false, transformMethod)) {
+        if (requireInitialSegment(normalizeTime, transformMethod, mode)) {
             Deviation[] tempList = new Deviation[NUMBER_OF_STATS * inputLength];
             for (int j = 0; j < NUMBER_OF_STATS * inputLength; j++) {
                 tempList[j] = new Deviation(transformDecay);
@@ -102,7 +102,9 @@ public class InitialSegmentPreprocessor extends Preprocessor {
             }
             for (int i = 0; i < initialValues.length; i++) {
                 for (int j = 0; j < inputLength; j++) {
-                    tempList[j + 2 * inputLength].update(tempList[j].getMean());
+                    tempList[j + 2 * inputLength].update(tempList[j].getDeviation());
+                    tempList[j + 3 * inputLength].update(tempList[j + inputLength].getMean());
+                    tempList[j + 4 * inputLength].update(tempList[j + inputLength].getDeviation());
                 }
             }
             return tempList;
@@ -119,7 +121,8 @@ public class InitialSegmentPreprocessor extends Preprocessor {
         for (int i = 0; i < initialTimeStamps.length - 1; i++) {
             tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
         }
-        double timeFactor = tempTimeDeviation.getDeviation();
+        // should agree with getTimeScale()
+        double timeFactor = 1.0 + tempTimeDeviation.getDeviation();
         Deviation[] deviations = getDeviations();
         for (int i = 0; i < valuesSeen; i++) {
             double[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], deviations, timeFactor);

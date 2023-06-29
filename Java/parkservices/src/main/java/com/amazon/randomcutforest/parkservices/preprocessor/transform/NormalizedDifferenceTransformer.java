@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
-import java.util.Arrays;
-
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import com.amazon.randomcutforest.returntypes.RangeVector;
+import java.util.Arrays;
+
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 @Getter
 @Setter
@@ -52,12 +53,13 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
      * @param previousInput the last input of length baseDimension
      */
     @Override
-    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
+    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput,
+            double[] correction) {
 
         int inputLength = weights.length;
         int horizon = ranges.values.length / baseDimension;
         double[] last = Arrays.copyOf(previousInput, previousInput.length);
-
+        checkArgument(correction.length >= inputLength, " incorrect length ");
         for (int i = 0; i < horizon; i++) {
             for (int j = 0; j < inputLength; j++) {
                 double weight = (weights[j] == 0) ? 0 : getScale(j, deviations) / weights[j];

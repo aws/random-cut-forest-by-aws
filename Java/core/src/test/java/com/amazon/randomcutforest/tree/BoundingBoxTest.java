@@ -19,7 +19,9 @@ import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -59,10 +61,19 @@ public class BoundingBoxTest {
         assertThat((float) box2.getMaxValue(1), is(point2[1]));
         assertThat(box2.getRange(1), is(0.0));
         assertThat(box2.getRangeSum(), is(0.0));
+
+        assertTrue(box1.probabilityOfCut(point2) == 1.0);
+        assertTrue(box1.probabilityOfCut(point1) == 0.0);
     }
 
     @Test
     public void testGetMergedBoxWithOtherBox() {
+
+        assertThrows(IllegalStateException.class, () -> box1.addBox(box2));
+        assertThrows(IllegalArgumentException.class, () -> box1.addPoint(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.addPoint(new float[2]));
+        assertDoesNotThrow(() -> box1.copy().addPoint(new float[2]));
+
         BoundingBox mergedBox = box1.getMergedBox(box2);
 
         assertThat(mergedBox.getDimensions(), is(2));

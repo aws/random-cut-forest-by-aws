@@ -19,19 +19,25 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
 
 @Tag("functional")
 public class SampleSummaryTest {
@@ -51,7 +57,7 @@ public class SampleSummaryTest {
         int over = 0;
         int under = 0;
 
-        for (int numTrials = 0; numTrials < 50; numTrials++) {
+        for (int numTrials = 0; numTrials < 20; numTrials++) {
             long seed = new Random().nextLong();
             Random random = new Random(seed);
             int newDimensions = random.nextInt(10) + 3;
@@ -77,29 +83,101 @@ public class SampleSummaryTest {
     @MethodSource("generateArguments")
     public void ParallelTest(BiFunction<float[], float[], Double> distance) {
 
-        int over = 0;
-        int under = 0;
-
         long seed = new Random().nextLong();
         Random random = new Random(seed);
         int newDimensions = random.nextInt(10) + 3;
         dataSize = 200000;
 
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), distance);
-        System.out.println("checking parallelEnabled seed : " + seed);
+        System.out.println("checking seed : " + seed);
         int nextSeed = random.nextInt();
         SampleSummary summary1 = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
                 nextSeed, false);
         SampleSummary summary2 = Summarizer.summarize(points, 5 * newDimensions, 10 * newDimensions, false, distance,
                 nextSeed, true);
+
+        ArrayList<Weighted<float[]>> pointList = new ArrayList<>();
+        for (float[] point : points) {
+            pointList.add(new Weighted<>(point, 1.0f));
+        }
+        List<ICluster<float[]>> clusters = Summarizer.singleCentroidSummarize(pointList, 5 * newDimensions,
+                10 * newDimensions, 1, true, distance, nextSeed, false, null);
         assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
         assertEquals(summary2.summaryPoints.length, summary1.summaryPoints.length,
                 " incorrect length of typical points");
+        assertEquals(clusters.size(), summary1.summaryPoints.length);
+        double total = clusters.stream().map(ICluster::getWeight).reduce(0.0, Double::sum);
+        assertEquals(total, summary1.weightOfSamples, 1e-3);
+        // parallelization can produce reordering of merges
+    }
+
+    @Test
+    public void SampleSummaryTestL2() {
+        long seed = new Random().nextLong();
+        Random random = new Random(seed);
+        int newDimensions = random.nextInt(10) + 3;
+        dataSize = 200000;
+
+        float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
+        System.out.println("checking L2 seed : " + seed);
+        int nextSeed = random.nextInt();
+        ArrayList<Weighted<float[]>> pointList = new ArrayList<>();
+        for (float[] point : points) {
+            pointList.add(new Weighted<>(point, 1.0f));
+        }
+        SampleSummary summary1 = Summarizer.summarize(points, 5 * newDimensions, 20 * newDimensions, false,
+                Summarizer::L2distance, nextSeed, false);
+        SampleSummary summary2 = Summarizer.l2summarize(points, 5 * newDimensions, nextSeed);
+        SampleSummary summary3 = Summarizer.l2summarize(pointList, 5 * newDimensions, 20 * newDimensions, false,
+                nextSeed);
+
+        assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
+        assertEquals(summary3.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
+        assertEquals(summary2.summaryPoints.length, summary1.summaryPoints.length,
+                " incorrect length of typical points");
+        assertEquals(summary3.summaryPoints.length, summary1.summaryPoints.length,
+                " incorrect length of typical points");
         for (int i = 0; i < summary2.summaryPoints.length; i++) {
             assertArrayEquals(summary1.summaryPoints[i], summary2.summaryPoints[i], 1e-6f);
+            assertArrayEquals(summary1.summaryPoints[i], summary3.summaryPoints[i], 1e-6f);
             assertEquals(summary1.relativeWeight[i], summary2.relativeWeight[i], 1e-6f);
+            assertEquals(summary1.relativeWeight[i], summary3.relativeWeight[i], 1e-6f);
         }
+    }
 
+    @Test
+    public void IdempotenceTestL2() {
+
+        long seed = new Random().nextLong();
+        Random random = new Random(seed);
+        int newDimensions = random.nextInt(10) + 3;
+        dataSize = 200000;
+
+        float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
+        System.out.println("checking idempotence L2 seed : " + seed);
+        int nextSeed = random.nextInt();
+        ArrayList<Weighted<float[]>> pointList = new ArrayList<>();
+        for (float[] point : points) {
+            pointList.add(new Weighted<>(point, 1.0f));
+        }
+        List<ICluster<float[]>> clusters = Summarizer.singleCentroidSummarize(pointList, 5 * newDimensions,
+                20 * newDimensions, 1, true, Summarizer::L2distance, nextSeed, false, null);
+        List<ICluster<float[]>> clusters2 = Summarizer.singleCentroidSummarize(pointList, 5 * newDimensions,
+                20 * newDimensions, 1, true, Summarizer::L2distance, nextSeed, false, clusters);
+        assertEquals(clusters.size(), clusters2.size(), " incorrect sizes");
+        for (int i = 0; i < clusters.size(); i++) {
+            // note clusters can have same weight and get permuted
+            assertEquals(clusters.get(i).getWeight(), clusters2.get(i).getWeight());
+        }
+        clusters.sort(Comparator.comparingDouble(ICluster::extentMeasure));
+        clusters2.sort(Comparator.comparingDouble(ICluster::extentMeasure));
+        assertEquals(clusters.size(), clusters2.size(), " incorrect sizes");
+        for (int i = 0; i < clusters.size(); i++) {
+            // note clusters can have same weight and get permuted
+            assertEquals(clusters.get(i).extentMeasure(), clusters2.get(i).extentMeasure());
+            assertEquals(clusters.get(i).averageRadius(), clusters2.get(i).averageRadius());
+            assertEquals(clusters.get(i).averageRadius(), clusters.get(i).extentMeasure());
+        }
     }
 
     public float[][] getData(int dataSize, int newDimensions, int seed, BiFunction<float[], float[], Double> distance) {

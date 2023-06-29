@@ -15,11 +15,10 @@
 
 package com.amazon.randomcutforest.parkservices.state.returntypes;
 
-import java.io.Serializable;
-
+import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 import lombok.Data;
 
-import com.amazon.randomcutforest.state.returntypes.DiVectorState;
+import java.io.Serializable;
 
 @Data
 public class ComputeDescriptorState implements Serializable {
@@ -35,7 +34,8 @@ public class ComputeDescriptorState implements Serializable {
     private int lastReset;
     private String lastStrategy;
     private double[] lastShift;
+    private double[] lastScale;
     private double[] lastPostShift;
     private double transformDecay;
-
+    private double[] postDeviations;
 }

@@ -15,18 +15,19 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.Arrays;
-import java.util.Random;
-
-import org.junit.jupiter.api.Test;
-
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RCFCasterTest {
 
@@ -59,21 +60,30 @@ public class RCFCasterTest {
                 .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
                 .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
                 .errorHorizon(errorHorizon).initialAcceptFraction(0.125).build();
+        RCFCaster shadow = RCFCaster.builder().compact(true).dimensions(dimensions).randomSeed(seed + 1)
+                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
+                .errorHorizon(errorHorizon).initialAcceptFraction(0.125).boundingBoxCacheFraction(0).build();
 
         // ensuring that the parameters are the same; otherwise the grades/scores cannot
         // be the same
         // weighTime has to be 0
         caster.setLowerThreshold(1.1);
-        caster.setHorizon(0.75);
+        shadow.setLowerThreshold(1.1);
 
         assert (caster.errorHandler.errorHorizon == errorHorizon);
         assert (caster.errorHorizon == errorHorizon);
         double score = 0;
         for (int j = 0; j < dataWithKeys.data.length; j++) {
             ForecastDescriptor result = caster.process(dataWithKeys.data[j], 0L);
+            ForecastDescriptor shadowResult = shadow.process(dataWithKeys.data[j], 0L);
+            assertArrayEquals(shadowResult.getTimedForecast().rangeVector.values,
+                    result.getTimedForecast().rangeVector.values, 1e-6f);
             score += result.getRCFScore();
             int sequenceIndex = caster.errorHandler.sequenceIndex;
-            if (result.internalTimeStamp > shingleSize - 1 + outputAfter) {
+            if (caster.forest.isOutputReady()) {
+                float[] meanArray = caster.errorHandler.getErrorMean();
                 for (int i = 0; i < forecastHorizon; i++) {
                     int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
                     if (len > 0) {
@@ -82,10 +92,15 @@ public class RCFCasterTest {
                             double[] array = caster.errorHandler.getErrorVector(len, (i + 1), k, pos,
                                     RCFCaster.defaultError);
                             double mean = Arrays.stream(array).sum() / len;
-                            assertEquals(caster.errorHandler.errorMean[pos], mean, 1e-2);
+                            assertEquals(meanArray[pos], mean, (1 + Math.abs(mean)) * 1e-4);
                         }
                     }
                 }
+                float[] intervalPrecision = shadow.errorHandler.getIntervalPrecision();
+                for (float y : intervalPrecision) {
+                    assertTrue(0 <= y && y <= 1.0);
+                }
+                assertArrayEquals(intervalPrecision, result.getIntervalPrecision());
             }
 
         }

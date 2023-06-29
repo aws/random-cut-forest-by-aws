@@ -120,9 +120,9 @@ public class BasicThresholder {
             return false;
         }
 
-        if (scoreDifferencing == 0) {
+        if (scoreDifferencing == 1) {
             return secondaryDeviation.getCount() >= minimumScores;
-        } else if (scoreDifferencing == 1) {
+        } else if (scoreDifferencing == 0) {
             return primaryDeviation.getCount() >= minimumScores;
         } else {
             return secondaryDeviation.getCount() >= minimumScores && primaryDeviation.getCount() >= minimumScores;
@@ -158,7 +158,7 @@ public class BasicThresholder {
         if (!isDeviationReady()) {
             return 0;
         }
-        return primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation();
+        return max(absoluteThreshold, primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation());
     }
 
     /**
@@ -187,7 +187,7 @@ public class BasicThresholder {
             return new Weighted<Double>(0.0, 0.0f);
         }
         double threshold = getPrimaryThreshold();
-        float grade = (threshold > 0) ? (float) getPrimaryGrade(score) : 0f;
+        float grade = (threshold > 0 && score > threshold) ? (float) getPrimaryGrade(score) : 0f;
         return new Weighted<>(threshold, grade);
     }
 
@@ -288,11 +288,15 @@ public class BasicThresholder {
      * @return a clipped value of the "surpise" index
      */
     protected float getSurpriseIndex(double score, double base, double factor, double deviation) {
-        double tFactor = 2 * factor;
-        if (deviation > 0) {
-            tFactor = min(factor, (score - base) / deviation);
+        if (isDeviationReady()) {
+            double tFactor = 2 * factor;
+            if (deviation > 0) {
+                tFactor = min(factor, (score - base) / deviation);
+            }
+            return max(0, (float) (tFactor / factor));
+        } else {
+            return (float) min(1, max(0, (score - absoluteThreshold) / absoluteThreshold));
         }
-        return max(0, (float) (tFactor / factor));
     }
 
     // mean or below; uses the asymmetry of the RCF score
@@ -351,9 +355,9 @@ public class BasicThresholder {
         initialThreshold = initial;
     }
 
-    public void setScoreDifferencing(double horizon) {
-        checkArgument(horizon >= 0 && horizon <= 1, "incorrect threshold horizon parameter");
-        this.scoreDifferencing = horizon;
+    public void setScoreDifferencing(double scoreDifferencing) {
+        checkArgument(scoreDifferencing >= 0 && scoreDifferencing <= 1, "incorrect score differencing parameter");
+        this.scoreDifferencing = scoreDifferencing;
     }
 
     // to be updated as more deviations are added

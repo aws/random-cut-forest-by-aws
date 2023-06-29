@@ -83,10 +83,6 @@ public class Center implements ICluster<float[]> {
         return weight;
     }
 
-    public boolean captureBeforeReset(float[] point, BiFunction<float[], float[], Double> distance) {
-        return previousWeight * distance.apply(point, representative) < 3 * previousSumOFRadius;
-    }
-
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence

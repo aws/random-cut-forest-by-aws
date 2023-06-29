@@ -179,7 +179,7 @@ public class ConditionalSampleSummarizer {
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
         maxAllowed = min(maxAllowed, num);
-        SampleSummary projectedSummary = Summarizer.summarize(typicalPoints, maxAllowed, num, false);
+        SampleSummary projectedSummary = Summarizer.l2summarize(typicalPoints, maxAllowed, num, false, 72);
 
         float[][] pointList = new float[projectedSummary.summaryPoints.length][];
         float[] likelihood = new float[projectedSummary.summaryPoints.length];

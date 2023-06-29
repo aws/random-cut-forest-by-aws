@@ -15,16 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Random;
-
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TransformTest {
 
@@ -72,8 +71,11 @@ public class TransformTest {
                     ++count;
                 }
             }
-            // normalized difference has scale correction
-            assertTrue(count < 2 * shingleSize || method == TransformMethod.NORMALIZE_DIFFERENCE);
+            // differencing introduces cascades
+            assertTrue(count < 2 * shingleSize
+                    || method == TransformMethod.NORMALIZE_DIFFERENCE
+                    || method == TransformMethod.SUBTRACT_MA
+                    || method == TransformMethod.DIFFERENCE);
         }
     }
 

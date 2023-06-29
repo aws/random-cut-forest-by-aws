@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.parkservices.statistics;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,9 +41,13 @@ public class StatisticsTest {
         Deviation deviation = new Deviation();
         assertEquals(deviation.getMean(), 0);
         assertTrue(deviation.isEmpty());
+        deviation.setCount(100);
+        assertTrue(deviation.isEmpty());
+        assertTrue(deviation.count == 100);
         deviation.update(-0);
-        assertEquals(1, deviation.count);
+        assertEquals(101, deviation.count);
         assertEquals(deviation.getMean(), 0);
+        assertFalse(deviation.isEmpty());
     }
 
 }

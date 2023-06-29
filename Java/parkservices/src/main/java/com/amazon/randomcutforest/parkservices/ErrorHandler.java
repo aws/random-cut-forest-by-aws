@@ -110,7 +110,8 @@ public class ErrorHandler {
         checkArgument(actualsFlattened != null || pastForecastsFlattened == null,
                 " actuals and forecasts are a mismatch");
         checkArgument(inputLength > 0, "incorrect parameters");
-        this.sequenceIndex = sequenceIndex;
+        // calibration would have been performed at previous value
+        this.sequenceIndex = sequenceIndex - 1;
         this.errorHorizon = errorHorizon;
         this.percentile = percentile;
         this.forecastHorizon = forecastHorizon;
@@ -146,7 +147,8 @@ public class ErrorHandler {
                 pastForecasts[i] = new RangeVector(values, upper, lower);
                 System.arraycopy(actualsFlattened, i * inputLength, actuals[i], 0, inputLength);
             }
-            calibrate(null);
+            recomputeErrorsAndCalibrate(Calibration.NONE, null, null);
+            ++this.sequenceIndex;
         }
     }
 
@@ -161,36 +163,37 @@ public class ErrorHandler {
     public void update(ForecastDescriptor descriptor, Calibration calibrationMethod) {
         int arrayLength = pastForecasts.length;
         int length = pastForecasts[0].values.length;
-        int errorIndex = sequenceIndex % (arrayLength);
+        int storedForecastIndex = sequenceIndex % (arrayLength);
         int inputLength = descriptor.getInputLength();
         double[] input = descriptor.getCurrentInput();
 
-        for (int i = 0; i < inputLength; i++) {
-            actuals[errorIndex][i] = (float) input[i];
+        if (sequenceIndex > 0) {
+            // sequenceIndex indicates the first empty place for input
+            // note the predictions have already been stored
+            int inputIndex = (sequenceIndex + arrayLength - 1) % arrayLength;
+            for (int i = 0; i < inputLength; i++) {
+                actuals[inputIndex][i] = (float) input[i];
+            }
         }
 
-        ++sequenceIndex;
-        calibrate(descriptor.deviations);
-        if (calibrationMethod != Calibration.NONE) {
-            if (calibrationMethod == Calibration.SIMPLE) {
-                adjust(descriptor.timedForecast.rangeVector, errorDistribution);
-            }
-            if (calibrationMethod == Calibration.MINIMAL) {
-                adjustMinimal(descriptor.timedForecast.rangeVector, errorDistribution);
-            }
-        }
+        recomputeErrorsAndCalibrate(calibrationMethod, descriptor.getPostDeviations(),
+                descriptor.timedForecast.rangeVector);
+
         descriptor.setErrorMean(errorMean);
         descriptor.setErrorRMSE(errorRMSE);
         descriptor.setObservedErrorDistribution(errorDistribution);
-        descriptor.setCalibration(intervalPrecision);
+        descriptor.setIntervalPrecision(intervalPrecision);
 
-        System.arraycopy(descriptor.timedForecast.rangeVector.values, 0, pastForecasts[errorIndex].values, 0, length);
-        System.arraycopy(descriptor.timedForecast.rangeVector.upper, 0, pastForecasts[errorIndex].upper, 0, length);
-        System.arraycopy(descriptor.timedForecast.rangeVector.lower, 0, pastForecasts[errorIndex].lower, 0, length);
-
+        System.arraycopy(descriptor.timedForecast.rangeVector.values, 0, pastForecasts[storedForecastIndex].values, 0,
+                length);
+        System.arraycopy(descriptor.timedForecast.rangeVector.upper, 0, pastForecasts[storedForecastIndex].upper, 0,
+                length);
+        System.arraycopy(descriptor.timedForecast.rangeVector.lower, 0, pastForecasts[storedForecastIndex].lower, 0,
+                length);
+        ++sequenceIndex;
     }
 
-    public RangeVector getErrors() {
+    public RangeVector getErrorDistribution() {
         return new RangeVector(errorDistribution);
     }
 
@@ -202,7 +205,7 @@ public class ErrorHandler {
         return new DiVector(errorRMSE);
     }
 
-    public float[] getCalibration() {
+    public float[] getIntervalPrecision() {
         return Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 
@@ -221,30 +224,28 @@ public class ErrorHandler {
         double[] copy = new double[len];
         for (int k = 0; k < len; k++) {
             int pastIndex = (errorIndex - leadtime - k + arrayLength) % arrayLength;
-            int index = (errorIndex - k + arrayLength) % arrayLength;
+            int index = (errorIndex - k - 1 + arrayLength) % arrayLength;
             copy[k] = error.apply(actuals[index][inputCoordinate], pastForecasts[pastIndex].values[position]);
         }
         return copy;
     }
 
     /*
-     * this method computes a lot of different quantities, some of which would be
-     * useful in the future.In particular it splits the RMSE into positive and
-     * negative contribution which is informative about directionality of error.
-     *
-     *
-     * @param errorDeviations the weighted standard deviations seen so far
+     * this method computes the errors and performs calibration. It is done together
+     * to avoid recreating the error arrays In particular it splits the RMSE into
+     * positive and negative contribution which is informative about directionality
+     * of error.
      */
-    protected void calibrate(double[] errorDeviations) {
+    protected void recomputeErrorsAndCalibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
         int inputLength = actuals[0].length;
         int arrayLength = pastForecasts.length;
-        int errorIndex = (sequenceIndex - 1 + arrayLength) % arrayLength;
+        int inputIndex = (sequenceIndex - 1 + arrayLength) % arrayLength;
         double[] medianError = new double[errorHorizon];
 
         Arrays.fill(intervalPrecision, 0);
         for (int i = 0; i < forecastHorizon; i++) {
             // this is the only place where the newer (possibly shorter) horizon matters
-            int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
+            int len = (sequenceIndex > errorHorizon + i) ? errorHorizon : sequenceIndex - i;
 
             for (int j = 0; j < inputLength; j++) {
                 int pos = i * inputLength + j;
@@ -255,8 +256,9 @@ public class ErrorHandler {
                     double positiveSqSum = 0;
                     double negativeSqSum = 0;
                     for (int k = 0; k < len; k++) {
-                        int pastIndex = (errorIndex - (i + 1) - k + arrayLength) % arrayLength;
-                        int index = (errorIndex - k + arrayLength) % arrayLength;
+                        int pastIndex = (inputIndex - i - k + arrayLength) % arrayLength;
+                        // one more forecast
+                        int index = (inputIndex - k + arrayLength) % arrayLength;
                         double error = actuals[index][j] - pastForecasts[pastIndex].values[pos];
                         medianError[k] = error;
                         intervalPrecision[pos] += (pastForecasts[pastIndex].upper[pos] >= actuals[index][j]
@@ -274,59 +276,63 @@ public class ErrorHandler {
                     errorMean[pos] = (float) (positiveSum + negativeSum) / len;
                     errorRMSE.high[pos] = (positiveCount > 0) ? Math.sqrt(positiveSqSum / positiveCount) : 0;
                     errorRMSE.low[pos] = (positiveCount < len) ? -Math.sqrt(negativeSqSum / (len - positiveCount)) : 0;
-                    Arrays.sort(medianError, 0, len);
-                    // medianError array is now sorted
-                    errorDistribution.values[pos] = interpolatedMedian(medianError);
-                    double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
-                    errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile, deviation);
-                    errorDistribution.lower[pos] = interpolatedLowerRank(medianError, len * percentile, deviation);
+
+                    if (len * percentile >= 1.0) {
+                        Arrays.sort(medianError, 0, len);
+                        // medianError array is now sorted
+                        errorDistribution.values[pos] = interpolatedMedian(medianError, len);
+                        errorDistribution.upper[pos] = interpolatedUpperRank(medianError, len, len * percentile);
+                        errorDistribution.lower[pos] = interpolatedLowerRank(medianError, len * percentile);
+                    }
                     intervalPrecision[pos] = intervalPrecision[pos] / len;
                 } else {
                     errorMean[pos] = 0;
                     errorRMSE.high[pos] = errorRMSE.low[pos] = 0;
-                    errorDistribution.values[pos] = 0;
-                    double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
-                    errorDistribution.upper[pos] = (float) (1.3 * deviation);
-                    errorDistribution.lower[pos] = -(float) (1.3 * deviation);
+                    errorDistribution.values[pos] = errorDistribution.upper[pos] = errorDistribution.lower[pos] = 0;
                     adders.upper[pos] = adders.lower[pos] = adders.values[pos] = 0;
                     intervalPrecision[pos] = 0;
+                }
+                if (ranges != null && calibration != Calibration.NONE) {
+                    if (len * percentile < 1.0) {
+                        double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
+                        ranges.upper[pos] = max(ranges.upper[pos], ranges.values[pos] + (float) (1.3 * deviation));
+                        ranges.lower[pos] = min(ranges.lower[pos], ranges.values[pos] - (float) (1.3 * deviation));
+                    } else {
+                        if (calibration == Calibration.SIMPLE) {
+                            adjust(ranges, errorDistribution);
+                        }
+                        if (calibration == Calibration.MINIMAL) {
+                            adjustMinimal(ranges, errorDistribution);
+                        }
+                    }
                 }
             }
         }
     }
 
-    float interpolatedMedian(double[] array) {
-        checkArgument(array != null, " cannot be null");
-        int len = array.length;
-        if (len % 2 != 0) {
-            return (float) array[len / 2];
+    protected float interpolatedMedian(double[] ascendingArray, int len) {
+        checkArgument(ascendingArray != null, " cannot be null");
+        checkArgument(ascendingArray.length >= len, "incorrect length parameter");
+        float lower = (float) ((len % 2 == 0) ? ascendingArray[len / 2 - 1]
+                : (ascendingArray[len / 2] + ascendingArray[len / 2 - 1]) / 2);
+        float upper = (float) ((len % 2 == 0) ? ascendingArray[len / 2]
+                : (ascendingArray[len / 2] + ascendingArray[len / 2 + 1]) / 2);
+        if (lower <= 0 && 0 <= upper) {
+            // 0 is plausible, and introduces minimal externality
+            return 0;
         } else {
-            return (float) ((array[len / 2 - 1] + array[len / 2]) / 2);
+            return (upper + lower) / 2;
         }
     }
 
-    float interpolatedLowerRank(double[] ascendingArray, double fracRank, double deviation) {
-        if (fracRank < 1) {
-            return (float) (-1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[0]);
-        }
+    float interpolatedLowerRank(double[] ascendingArray, double fracRank) {
         int rank = (int) Math.floor(fracRank);
-        if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
-            // turn off interpolation
-            fracRank = rank;
-        }
         return (float) (ascendingArray[rank - 1]
                 + (fracRank - rank) * (ascendingArray[rank] - ascendingArray[rank - 1]));
     }
 
-    float interpolatedUpperRank(double[] ascendingArray, int len, double fracRank, double deviation) {
-        if (fracRank < 1) {
-            return (float) (1.3 * deviation * (1 - fracRank) + fracRank * ascendingArray[len - 1]);
-        }
+    float interpolatedUpperRank(double[] ascendingArray, int len, double fracRank) {
         int rank = (int) Math.floor(fracRank);
-        if (!RCFCaster.USE_INTERPOLATION_IN_DISTRIBUTION) {
-            // turn off interpolation
-            fracRank = rank;
-        }
         return (float) (ascendingArray[len - rank]
                 + (fracRank - rank) * (ascendingArray[len - rank - 1] - ascendingArray[len - rank]));
     }
