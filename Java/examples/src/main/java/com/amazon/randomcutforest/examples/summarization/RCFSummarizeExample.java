@@ -15,17 +15,17 @@
 
 package com.amazon.randomcutforest.examples.summarization;
 
-import com.amazon.randomcutforest.examples.Example;
-import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static java.lang.Math.abs;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
 
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static java.lang.Math.abs;
+import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
 /**
  * The following example is based off a test of summarization and provides an
@@ -67,7 +67,7 @@ public class RCFSummarizeExample implements Example {
 
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
-        SampleSummary summary = Summarizer.l2summarize(points, 5 * newDimensions,42);
+        SampleSummary summary = Summarizer.l2summarize(points, 5 * newDimensions, 42);
         System.out.println(
                 summary.summaryPoints.length + " clusters for " + newDimensions + " dimensions, seed : " + seed);
         double epsilon = 0.01;

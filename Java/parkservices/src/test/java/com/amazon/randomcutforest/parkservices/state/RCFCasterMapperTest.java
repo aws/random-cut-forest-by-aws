@@ -20,9 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
@@ -33,9 +32,10 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
 public class RCFCasterMapperTest {
+
     @ParameterizedTest
-    @ValueSource(ints = { 1, 2 })
-    public void testRoundTripStandardShingleSizeEight(int inputLength) {
+    @CsvSource({ "SIMPLE,1", "MINIMAL,1", "NONE,1", "SIMPLE,2", "MINIMAL,2", "NONE,2" })
+    public void testRoundTripStandardShingleSizeEight(String calibrationString, int inputLength) {
         int shingleSize = 8;
         int dimensions = inputLength * shingleSize;
         int forecastHorizon = shingleSize * 3;
@@ -47,7 +47,8 @@ public class RCFCasterMapperTest {
             RCFCaster first = RCFCaster.builder().compact(true).dimensions(dimensions).precision(Precision.FLOAT_32)
                     .randomSeed(seed).internalShinglingEnabled(true).anomalyRate(0.01).shingleSize(shingleSize)
                     .calibration(Calibration.MINIMAL).forecastHorizon(forecastHorizon)
-                    .transformMethod(TransformMethod.NORMALIZE).build();
+                    .calibration(Calibration.valueOf(calibrationString)).transformMethod(TransformMethod.NORMALIZE)
+                    .build();
 
             Random r = new Random(seed);
             for (int i = 0; i < 2000 + r.nextInt(1000); i++) {
@@ -109,23 +110,22 @@ public class RCFCasterMapperTest {
         assertArrayEquals(firstResult.getIntervalPrecision(), secondResult.getIntervalPrecision(), 1e-6f);
     }
 
-    @Test
-    public void testNotFullyInitialized() {
-        int inputLength = 1;
+    @ParameterizedTest
+    @CsvSource({ "SIMPLE,1", "MINIMAL,1", "NONE,1", "SIMPLE,2", "MINIMAL,2", "NONE,2" })
+    public void testNotFullyInitialized(String calibrationString, int inputLength) {
         int shingleSize = 8;
         int dimensions = inputLength * shingleSize;
         int forecastHorizon = shingleSize * 3;
         int outputAfter = 32;
-        for (int trials = 0; trials < 1; trials++) {
+        for (int trials = 0; trials < 10; trials++) {
 
-            long seed = 5866003456555396674L;
-            new Random().nextLong();
+            long seed = new Random().nextLong();
             System.out.println(" seed " + seed);
 
             // note shingleSize == 8
             RCFCaster first = RCFCaster.builder().compact(true).dimensions(dimensions).precision(Precision.FLOAT_32)
                     .randomSeed(seed).internalShinglingEnabled(true).anomalyRate(0.01).shingleSize(shingleSize)
-                    .calibration(Calibration.MINIMAL).forecastHorizon(forecastHorizon)
+                    .calibration(Calibration.valueOf(calibrationString)).forecastHorizon(forecastHorizon)
                     .transformMethod(TransformMethod.NORMALIZE).outputAfter(outputAfter).build();
 
             Random r = new Random();

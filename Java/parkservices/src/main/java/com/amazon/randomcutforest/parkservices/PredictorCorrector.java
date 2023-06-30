@@ -15,6 +15,17 @@
 
 package com.amazon.randomcutforest.parkservices;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
+import static java.lang.Math.exp;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ScoringStrategy;
@@ -23,17 +34,6 @@ import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.util.Weighted;
-
-import java.util.Arrays;
-import java.util.Random;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
-import static java.lang.Math.exp;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 /**
  * This class provides a combined RCF and thresholder, both of which operate in
@@ -789,12 +789,11 @@ public class PredictorCorrector {
 
             if (workingGrade > 0) {
                 DiVector newAttribution = null;
-                index = (shingleSize == 1) ? 0
-                        : maxContribution(attribution, point.length / shingleSize, relative) + 1;
+                index = (shingleSize == 1) ? 0 : maxContribution(attribution, point.length / shingleSize, relative) + 1;
 
                 int startPosition = point.length + (index - 1) * point.length / shingleSize;
-                expectedPoint = getExpectedPoint(attribution, startPosition, point.length / shingleSize,
-                        correctedPoint, forest);
+                expectedPoint = getExpectedPoint(attribution, startPosition, point.length / shingleSize, correctedPoint,
+                        forest);
                 if (expectedPoint != null) {
                     if (difference < point.length) {
                         newAttribution = getNewAttribution(choice, expectedPoint, forest);
@@ -805,15 +804,14 @@ public class PredictorCorrector {
                     }
                 }
 
-                if (!trigger(attribution, difference, point.length / shingleSize, newAttribution,
-                        lastAnomalyDescriptor, workingThreshold)) {
+                if (!trigger(attribution, difference, point.length / shingleSize, newAttribution, lastAnomalyDescriptor,
+                        workingThreshold)) {
                     workingGrade = 0;
                 }
 
                 if (workingGrade > 0 && expectedPoint != null) {
                     boolean significantScore = strategy == ScoringStrategy.DISTANCE || score > 1.5
-                            || score > workingThreshold + 0.25
-                            || (score > correctedScore + 0.25 && gap > shingleSize);
+                            || score > workingThreshold + 0.25 || (score > correctedScore + 0.25 && gap > shingleSize);
                     // significantScore is the signal sent; but can can be overruled by
                     // ignoreSimilarShift
                     if (!isSignificant(significantScore, point, expectedPoint, startPosition, result)) {
@@ -828,7 +826,6 @@ public class PredictorCorrector {
                 correctedScore = score;
             }
         }
-
 
         result.setAnomalyGrade(workingGrade);
         result.setInHighScoreRegion(inHighScoreRegion);

@@ -31,6 +31,7 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
 @Setter
@@ -197,6 +198,10 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         }
 
         return answer;
+    }
+
+    public void calibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
+        errorHandler.calibrate(calibration, errorDeviations, ranges);
     }
 
 }

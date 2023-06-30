@@ -76,6 +76,7 @@ public class ErrorHandler {
     RangeVector adders;
 
     public ErrorHandler(RCFCaster.Builder builder) {
+        checkArgument(builder.forecastHorizon > 0, "has to be positive");
         checkArgument(builder.errorHorizon >= builder.forecastHorizon,
                 "intervalPrecision horizon should be at least as large as forecast horizon");
         checkArgument(builder.errorHorizon <= MAX_ERROR_HORIZON, "reduce error horizon of change MAX");
@@ -94,6 +95,7 @@ public class ErrorHandler {
         errorRMSE = new DiVector(length);
         multipliers = new RangeVector(length);
         Arrays.fill(multipliers.upper, 1);
+        Arrays.fill(multipliers.values, 1);
         Arrays.fill(multipliers.lower, 1);
         adders = new RangeVector(length);
         intervalPrecision = new float[length];
@@ -110,8 +112,11 @@ public class ErrorHandler {
         checkArgument(actualsFlattened != null || pastForecastsFlattened == null,
                 " actuals and forecasts are a mismatch");
         checkArgument(inputLength > 0, "incorrect parameters");
+        checkArgument(sequenceIndex >= 0, "cannot be negative");
+        checkArgument(percentile > 0 && percentile < 0.5, "has to be between (0,0.5) ");
+
         // calibration would have been performed at previous value
-        this.sequenceIndex = sequenceIndex - 1;
+        this.sequenceIndex = sequenceIndex;
         this.errorHorizon = errorHorizon;
         this.percentile = percentile;
         this.forecastHorizon = forecastHorizon;
@@ -147,8 +152,7 @@ public class ErrorHandler {
                 pastForecasts[i] = new RangeVector(values, upper, lower);
                 System.arraycopy(actualsFlattened, i * inputLength, actuals[i], 0, inputLength);
             }
-            recomputeErrorsAndCalibrate(Calibration.NONE, null, null);
-            ++this.sequenceIndex;
+            recomputeErrors();
         }
     }
 
@@ -176,8 +180,11 @@ public class ErrorHandler {
             }
         }
 
-        recomputeErrorsAndCalibrate(calibrationMethod, descriptor.getPostDeviations(),
-                descriptor.timedForecast.rangeVector);
+        // sequence index is increased first so that recomputeErrors is idempotent; that
+        // is they are only state dependent and not event dependent
+        ++sequenceIndex;
+        recomputeErrors();
+        calibrate(calibrationMethod, descriptor.getPostDeviations(), descriptor.timedForecast.rangeVector);
 
         descriptor.setErrorMean(errorMean);
         descriptor.setErrorRMSE(errorRMSE);
@@ -190,7 +197,7 @@ public class ErrorHandler {
                 length);
         System.arraycopy(descriptor.timedForecast.rangeVector.lower, 0, pastForecasts[storedForecastIndex].lower, 0,
                 length);
-        ++sequenceIndex;
+
     }
 
     public RangeVector getErrorDistribution() {
@@ -230,22 +237,16 @@ public class ErrorHandler {
         return copy;
     }
 
-    /*
-     * this method computes the errors and performs calibration. It is done together
-     * to avoid recreating the error arrays In particular it splits the RMSE into
-     * positive and negative contribution which is informative about directionality
-     * of error.
-     */
-    protected void recomputeErrorsAndCalibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
+    protected void recomputeErrors() {
         int inputLength = actuals[0].length;
         int arrayLength = pastForecasts.length;
-        int inputIndex = (sequenceIndex - 1 + arrayLength) % arrayLength;
+        int inputIndex = (sequenceIndex - 2 + arrayLength) % arrayLength;
         double[] medianError = new double[errorHorizon];
 
         Arrays.fill(intervalPrecision, 0);
         for (int i = 0; i < forecastHorizon; i++) {
             // this is the only place where the newer (possibly shorter) horizon matters
-            int len = (sequenceIndex > errorHorizon + i) ? errorHorizon : sequenceIndex - i;
+            int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
 
             for (int j = 0; j < inputLength; j++) {
                 int pos = i * inputLength + j;
@@ -292,17 +293,33 @@ public class ErrorHandler {
                     adders.upper[pos] = adders.lower[pos] = adders.values[pos] = 0;
                     intervalPrecision[pos] = 0;
                 }
-                if (ranges != null && calibration != Calibration.NONE) {
-                    if (len * percentile < 1.0) {
-                        double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
-                        ranges.upper[pos] = max(ranges.upper[pos], ranges.values[pos] + (float) (1.3 * deviation));
-                        ranges.lower[pos] = min(ranges.lower[pos], ranges.values[pos] - (float) (1.3 * deviation));
-                    } else {
-                        if (calibration == Calibration.SIMPLE) {
-                            adjust(ranges, errorDistribution);
-                        }
-                        if (calibration == Calibration.MINIMAL) {
-                            adjustMinimal(ranges, errorDistribution);
+            }
+        }
+    }
+
+    protected void calibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
+        int inputLength = actuals[0].length;
+        checkArgument(inputLength * forecastHorizon == ranges.values.length, "mismatched lengths");
+        checkArgument(errorDeviations != null && inputLength <= errorDeviations.length,
+                "deviations should be at least as long as input lengths");
+        for (int i = 0; i < forecastHorizon; i++) {
+            // this is the only place where the newer (possibly shorter) horizon matters
+            int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
+            for (int j = 0; j < inputLength; j++) {
+                int pos = i * inputLength + j;
+                if (len > 0) {
+                    if (ranges != null && calibration != Calibration.NONE) {
+                        if (len * percentile < 1.0) {
+                            double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
+                            ranges.upper[pos] = max(ranges.upper[pos], ranges.values[pos] + (float) (1.3 * deviation));
+                            ranges.lower[pos] = min(ranges.lower[pos], ranges.values[pos] - (float) (1.3 * deviation));
+                        } else {
+                            if (calibration == Calibration.SIMPLE) {
+                                adjust(ranges, errorDistribution);
+                            }
+                            if (calibration == Calibration.MINIMAL) {
+                                adjustMinimal(ranges, errorDistribution);
+                            }
                         }
                     }
                 }

@@ -15,10 +15,11 @@
 
 package com.amazon.randomcutforest.parkservices.state.returntypes;
 
-import com.amazon.randomcutforest.state.returntypes.DiVectorState;
+import java.io.Serializable;
+
 import lombok.Data;
 
-import java.io.Serializable;
+import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
 @Data
 public class ComputeDescriptorState implements Serializable {

@@ -15,13 +15,14 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import org.junit.jupiter.api.Test;
-
 import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 
 public class WeightedTransformerTest {
 
@@ -31,7 +32,7 @@ public class WeightedTransformerTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new WeightedTransformer(new double[2], new Deviation[2 * NUMBER_OF_STATS]));
         Deviation[] deviations = new Deviation[NUMBER_OF_STATS];
-        for(int i=0;i<NUMBER_OF_STATS;i++) {
+        for (int i = 0; i < NUMBER_OF_STATS; i++) {
             deviations[i] = new Deviation(0);
         }
         assertDoesNotThrow(() -> new WeightedTransformer(new double[1], deviations));

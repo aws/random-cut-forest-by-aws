@@ -15,14 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
 @Setter

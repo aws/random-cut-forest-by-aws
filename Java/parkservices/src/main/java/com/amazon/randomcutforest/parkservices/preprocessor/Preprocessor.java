@@ -15,6 +15,23 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
+import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
+import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
+import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+import static java.lang.Math.exp;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -32,22 +49,6 @@ import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Arrays;
-import java.util.Optional;
-
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
-import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
-import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
-import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
-import static java.lang.Math.exp;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 @Getter
 @Setter
@@ -632,7 +633,7 @@ public class Preprocessor implements IPreprocessor {
         int gap = (int) (internalTimeStamp - lastAnomalyDescriptor.getInternalTimeStamp());
         double[] correction = lastAnomalyDescriptor.getDeltaShift();
         if (correction != null) {
-            double decay = max(lastAnomalyDescriptor.getTransformDecay(),1.0/(3*shingleSize));
+            double decay = max(lastAnomalyDescriptor.getTransformDecay(), 1.0 / (3 * shingleSize));
             double factor = exp(-gap * decay);
             for (int i = 0; i < correction.length; i++) {
                 correction[i] *= factor;

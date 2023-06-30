@@ -42,7 +42,7 @@ public class ForecastTest {
 
     @ParameterizedTest
     @EnumSource(TransformMethod.class)
-    public void basic(TransformMethod method) {
+    public void basicAndIdempotence(TransformMethod method) {
         int sampleSize = 256;
         int baseDimensions = 1;
         int shingleSize = 8;
