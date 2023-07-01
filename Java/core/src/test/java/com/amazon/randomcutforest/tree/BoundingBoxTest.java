@@ -43,6 +43,22 @@ public class BoundingBoxTest {
     }
 
     @Test
+    public void dimensionTest() {
+        assertThrows(IllegalArgumentException.class, () -> new BoundingBox(point1, new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.getMergedBox(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.contains(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.contains(new BoundingBox(new float[1])));
+    }
+
+    @Test
+    public void equalsTest() {
+        assertFalse(box1.equals(point1));
+        assertFalse(box1.equals(box2));
+        assertFalse(box1.equals(new BoundingBox(point1, new float[] { 3.0f, 2.7f })));
+        assertTrue(box1.equals(box1.copy()));
+    }
+
+    @Test
     public void testNewFromSinglePoint() {
         assertThat(box1.getDimensions(), is(2));
         assertThat((float) box1.getMinValue(0), is(point1[0]));
@@ -119,7 +135,7 @@ public class BoundingBoxTest {
         BoundingBox box3 = new BoundingBox(new float[] { -4.0f, -4.0f })
                 .getMergedBox(new BoundingBox(new float[] { -1.0f, -1.0f }));
 
-        BoundingBox box4 = new BoundingBox(new float[] { 1.0f, -1.0f })
+        BoundingBox box4 = new BoundingBox(new float[] { -1.0f, -1.0f })
                 .getMergedBox(new BoundingBox(new float[] { 5.0f, 5.0f }));
 
         // completely contains
@@ -144,6 +160,7 @@ public class BoundingBoxTest {
         assertTrue(box1.contains(new float[] { 5.5f, 6.5f }));
         assertFalse(box1.contains(new float[] { -0.7f, -4.5f }));
         assertFalse(box1.contains(new float[] { 5.0f, 11.0f }));
+        assertFalse(box1.contains(new float[] { -5.0f, 10.0f }));
     }
 
 }

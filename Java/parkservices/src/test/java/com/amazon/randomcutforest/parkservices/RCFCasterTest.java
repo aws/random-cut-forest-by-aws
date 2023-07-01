@@ -202,8 +202,7 @@ public class RCFCasterTest {
         int outputAfter = 32;
         int errorHorizon = 256;
 
-        long seed = -1908593580679997334L;
-        new Random().nextLong();
+        long seed = new Random().nextLong();
 
         System.out.println("seed = " + seed);
         // change the last argument seed for a different run

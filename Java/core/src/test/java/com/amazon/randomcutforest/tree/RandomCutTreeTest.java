@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -96,7 +97,9 @@ public class RandomCutTreeTest {
         assertEquals(pointStoreFloat.add(new float[] { 0, 0 }, 6), 5);
 
         assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(0, 1));
+
         tree.addPoint(0, 1);
+
         tree.deletePoint(0, 1);
         assertTrue(tree.root == Null);
 
@@ -112,6 +115,7 @@ public class RandomCutTreeTest {
 
         // add mass to 0,1
         tree.addPoint(4, 5);
+        assertArrayEquals(tree.liftFromTree(new float[] { 17, 18 }), new float[] { 17, 18 });
     }
 
     @Test
@@ -128,11 +132,28 @@ public class RandomCutTreeTest {
     }
 
     @Test
+    public void testConfigStore() {
+        assertEquals(tree.nodeStore.isLeaf(-1), tree.isLeaf(-1));
+        assertEquals(tree.nodeStore.isLeaf(256), tree.isLeaf(256));
+        assertEquals(tree.nodeStore.isInternal(-1), tree.isInternal(-1));
+        assertEquals(tree.nodeStore.isInternal(0), tree.isInternal(0));
+        assertEquals(tree.nodeStore.isInternal(255), tree.isInternal(255));
+        assertEquals(tree.nodeStore.isInternal(256), tree.isInternal(256));
+    }
+
+    @Test
+    public void testParent() {
+        PointStore pointStore = mock(PointStore.class);
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore)
+                .storeSequenceIndexesEnabled(true).storeParent(false).dimension(3).build();
+        assertThrows(IllegalArgumentException.class, () -> tree.nodeStore.getParentIndex(tree.root));
+    }
+
+    @Test
     public void testConfigDelete() {
         PointStore pointStore = mock(PointStore.class);
         tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore)
                 .storeSequenceIndexesEnabled(true).storeParent(true).dimension(3).build();
-
         when(pointStore.getNumericVector(any(Integer.class))).thenReturn(new float[] { 0 }).thenReturn(new float[3])
                 .thenReturn(new float[3]);
         tree.addPoint(0, 1);
@@ -153,8 +174,9 @@ public class RandomCutTreeTest {
         tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStore)
                 .centerOfMassEnabled(true).storeSequenceIndexesEnabled(true).storeParent(true).dimension(4).build();
         when(pointStore.getNumericVector(any(Integer.class))).thenReturn(new float[0]).thenReturn(test)
-                .thenReturn(new float[0]).thenReturn(new float[4]).thenReturn(new float[4]).thenReturn(new float[5])
-                .thenReturn(copies).thenReturn(test).thenReturn(copies).thenReturn(copies).thenReturn(test);
+                .thenReturn(new float[62]).thenReturn(new float[4]).thenReturn(new float[17]).thenReturn(new float[4])
+                .thenReturn(new float[4]).thenReturn(new float[5]).thenReturn(copies).thenReturn(test)
+                .thenReturn(copies).thenReturn(copies).thenReturn(test);
 
         // cannot have partial addition to empty tree
         assertThrows(IllegalArgumentException.class, () -> tree.addPointToPartialTree(0, 1));
@@ -164,7 +186,9 @@ public class RandomCutTreeTest {
         assertThrows(IllegalArgumentException.class, () -> tree.getPointSum(tree.getRoot()));
         // passes, consumes pointstore
         assertArrayEquals(tree.getPointSum(tree.getRoot()), test);
-        // in the sequel point is [0,0,0,0] fails because old point appears to have 5
+        // sequel fails because dimension is 62
+        assertThrows(IllegalArgumentException.class, () -> tree.getBox(tree.root));
+        // in the sequel point is [0,0,0,0] fails because old point appears to have 17
         // dimensions
         assertThrows(IllegalArgumentException.class, () -> tree.addPoint(1, 1));
         // this invocation succeeds, but points are same
@@ -179,8 +203,13 @@ public class RandomCutTreeTest {
         assertEquals(tree.getMass(), 3);
         assertArrayEquals(tree.getPointSum(tree.getRoot()), new float[] { 1.119f, 34, -3.11f, 100 }, 1e-3f);
 
-        // bounding boxes are incorrect
+        // bounding boxes are incorrect they are minvalues = test, maxvalues = test
         assertThrows(IllegalStateException.class, () -> tree.validateAndReconstruct(tree.root));
+        assertTrue(tree.getCutDimension(tree.root) == 3);
+        // cut cannot be the same as right minvalue
+        tree.nodeStore.cutValue[tree.root] = 100;
+        assertThrows(IllegalStateException.class, () -> tree.validateAndReconstruct(tree.root));
+
     }
 
     @Test
@@ -562,6 +591,7 @@ public class RandomCutTreeTest {
         }
 
         AbstractNodeStore nodeStore = tree.getNodeStore();
+
         for (int i = 0; i < 25; i++) {
             if (!tree.isLeaf(tree.getLeftChild(tree.getRoot()))) {
                 assert (nodeStore.getParentIndex(tree.getLeftChild(tree.getRoot())) == tree.root);
@@ -571,6 +601,22 @@ public class RandomCutTreeTest {
             }
             tree.deletePoint(list.remove(0).getValue(), 0L);
         }
+    }
+
+    // spoofs the cut (using a changing box) to hit illegal state
+    @Test
+    public void cutTest1() {
+        BoundingBox box1 = mock(BoundingBox.class);
+        when(box1.getMinValue(anyInt())).thenReturn(0.0).thenReturn(0.0).thenReturn(1.0);
+        assertThrows(IllegalStateException.class, () -> tree.randomCut(1.2, new float[] { 1.0f }, box1));
+    }
+
+    // spoofs the cut (usina a changing box) to hit illegal state
+    @Test
+    public void cutTest2() {
+        BoundingBox box1 = mock(BoundingBox.class);
+        when(box1.getMinValue(anyInt())).thenReturn(0.0).thenReturn(0.0).thenReturn(1.0);
+        assertThrows(IllegalStateException.class, () -> tree.randomCut(1.5, new float[] { 1.0f }, box1));
     }
 
     @Test
@@ -585,6 +631,11 @@ public class RandomCutTreeTest {
         assertThrows(IllegalArgumentException.class, () -> tree.randomCut(new Random().nextDouble(), point, box1));
         assertDoesNotThrow(() -> tree.randomCut(new Random().nextDouble(), point, box2));
         assertDoesNotThrow(() -> tree.randomCut(new Random().nextDouble(), newPoint, box1));
+
+        Cut cut1 = tree.randomCut(0, new float[] { 0, 1.0f }, box1);
+        // first dimension is identical
+        assertTrue(cut1.getDimension() == 1);
+        assertTrue(cut1.getValue() == 0f);
 
         Cut cut2 = tree.randomCut(1.2, point, box2);
         assertTrue(cut2.getDimension() == 0);
@@ -612,6 +663,33 @@ public class RandomCutTreeTest {
         assertTrue(testCut2.getDimension() == 1);
         assertTrue(testCut2.getValue() == Math.nextAfter(newPoint[1], point[1]));
 
+    }
+
+    // the following are tested directly since they are unreachable
+    @Test
+    public void traverseTest() {
+        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
+                .dimensions(2).build();
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStoreFloat)
+                .capacity(188).storeSequenceIndexesEnabled(true).storeParent(true).dimension(2).build();
+        assertDoesNotThrow(() -> tree.validateAndReconstruct());
+        assertThrows(IllegalArgumentException.class, () -> tree.traverse(null, null));
+        assertThrows(IllegalArgumentException.class, () -> tree.traverseMulti(null, null));
+    }
+
+    @Test
+    public void invalidNodeTest() {
+        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
+                .dimensions(2).build();
+        tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStoreFloat)
+                .capacity(188).storeSequenceIndexesEnabled(true).storeParent(true).dimension(2).build();
+        tree.root = 187;
+        assertThrows(IllegalStateException.class, () -> tree.validateAndReconstruct());
+        assertThrows(IllegalStateException.class,
+                () -> tree.traversePathToLeafAndVisitNodes(null, null, null, tree.root, 0));
+        assertThrows(IllegalStateException.class, () -> tree.traverseTreeMulti(null, null, null, tree.root, 0));
+        assertThrows(IllegalStateException.class, () -> tree.growNodeBox(null, pointStoreFloat, 0, 187));
+        assertThrows(IllegalStateException.class, () -> tree.getBox(187));
     }
 
 }

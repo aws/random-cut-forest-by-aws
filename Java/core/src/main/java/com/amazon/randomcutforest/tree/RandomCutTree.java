@@ -178,13 +178,13 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                 maxValue = point[i];
             }
             double gap = maxValue - minValue;
-            if (breakPoint <= gap) {
+            if (breakPoint <= gap && gap > 0) {
                 float cutValue = (float) (minValue + breakPoint);
 
                 // Random cuts have to take a value in the half-open interval [minValue,
                 // maxValue) to ensure that a
                 // Node has a valid left child and right child.
-                if ((cutValue >= maxValue) && (minValue < maxValue)) {
+                if (cutValue >= maxValue) {
                     cutValue = Math.nextAfter((float) maxValue, minValue);
                 }
 
@@ -272,7 +272,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
             if (Arrays.equals(point, oldPoint)) {
                 increaseLeafMass(leafNode);
-                checkArgument(!nodeStore.freeNodeManager.isEmpty(), "incorrect/impossible state");
                 manageAncestorsAdd(pathToRoot, point);
                 addLeaf(leafPointIndex, sequenceIndex);
                 return leafPointIndex;
@@ -311,7 +310,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                         parentPath.push(new int[] { node, sibling });
                     }
 
-                    checkArgument(savedDim != Integer.MAX_VALUE, () -> " cut failed at index " + pointIndex);
                     if (currentBox.contains(point) || parent == Null) {
                         break;
                     } else {
@@ -330,7 +328,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                     while (!parentPath.isEmpty()) {
                         pathToRoot.push(parentPath.pop());
                     }
-                    assert (pathToRoot.lastElement()[0] == savedParent);
                 }
 
                 int childMassIfLeaf = isLeaf(savedNode) ? getLeafMass(savedNode) : 0;
@@ -382,7 +379,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         int[] first = pathToRoot.pop();
         int leafNode = first[0];
         int savedParent = (pathToRoot.size() == 0) ? Null : pathToRoot.lastElement()[0];
-        if (!nodeStore.isLeaf(leafNode)) {
+        if (!isLeaf(leafNode)) {
             if (savedParent == Null) {
                 root = convertToLeaf(pointIndex);
             } else {
@@ -398,7 +395,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         checkArgument(oldPoint.length == dimension && Arrays.equals(point, oldPoint),
                 () -> "incorrect state on adding " + pointIndex);
         increaseLeafMass(leafNode);
-        checkArgument(!nodeStore.freeNodeManager.isEmpty(), "incorrect/impossible state");
         nodeStore.manageInternalNodesPartial(pathToRoot);
         addLeaf(leafPointIndex, sequenceIndex);
         return;
@@ -427,7 +423,6 @@ public class RandomCutTree implements ITree<Integer, float[]> {
                 int parent = pathToRoot.pop()[0];
                 if (pathToRoot.size() == 0) {
                     root = leafSavedSibling;
-                    nodeStore.setRoot(root);
                 } else {
                     int grandParent = pathToRoot.lastElement()[0];
                     nodeStore.replaceParentBySibling(grandParent, parent, leafNode);
@@ -598,7 +593,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             checkArgument(point.length == dimension, () -> "failure in projection at index " + index);
             return new BoundingBox(point, point);
         } else {
-            checkArgument(isInternal(index), " incomplete state");
+            checkState(isInternal(index), " incomplete state");
             int idx = translate(index);
             if (idx != Integer.MAX_VALUE) {
                 if (rangeSumData[idx] != 0) {
@@ -658,12 +653,10 @@ public class RandomCutTree implements ITree<Integer, float[]> {
     }
 
     void addBox(int index, float[] point, BoundingBox box) {
-        if (isInternal(index)) {
-            int idx = translate(index);
-            if (idx != Integer.MAX_VALUE) { // always add irrespective of rangesum
-                copyBoxToData(idx, box);
-                addPointInPlace(index, point);
-            }
+        int idx = translate(index);
+        if (idx != Integer.MAX_VALUE) { // always add irrespective of rangesum
+            copyBoxToData(idx, box);
+            addPointInPlace(index, point);
         }
     }
 
@@ -806,6 +799,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
         if (isLeaf(index)) {
             return getBox(index);
         } else {
+            checkState(isInternal(index), "illegal state");
             BoundingBox leftBox = validateAndReconstruct(getLeftChild(index));
             BoundingBox rightBox = validateAndReconstruct(getRightChild(index));
             if (leftBox.maxValues[getCutDimension(index)] > getCutValue(index)
@@ -849,7 +843,9 @@ public class RandomCutTree implements ITree<Integer, float[]> {
      */
     @Override
     public <R> R traverse(float[] point, IVisitorFactory<R> visitorFactory) {
-        checkState(root != Null, "this tree doesn't contain any nodes");
+        checkArgument(root != Null, "this tree doesn't contain any nodes");
+        checkNotNull(point, "point must not be null");
+        checkNotNull(visitorFactory, "visitor must not be null");
         Visitor<R> visitor = visitorFactory.newVisitor(this, point);
         NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, root, 0);
@@ -862,7 +858,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             currentNodeView.setCurrentNode(node, getPointIndex(node), true);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
-            checkArgument(isInternal(node), () -> " incomplete state " + node + " " + depthOfNode);
+            checkState(isInternal(node), " incomplete state ");
             if (nodeStore.toLeft(point, node)) {
                 traversePathToLeafAndVisitNodes(point, visitor, currentNodeView, nodeStore.getLeftIndex(node),
                         depthOfNode + 1);
@@ -893,9 +889,9 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     @Override
     public <R> R traverseMulti(float[] point, IMultiVisitorFactory<R> visitorFactory) {
+        checkArgument(root != Null, "this tree doesn't contain any nodes");
         checkNotNull(point, "point must not be null");
         checkNotNull(visitorFactory, "visitor must not be null");
-        checkState(root != Null, "this tree doesn't contain any nodes");
         MultiVisitor<R> visitor = visitorFactory.newVisitor(this, point);
         NodeView currentNodeView = new NodeView(this, pointStoreView, root);
         traverseTreeMulti(point, visitor, currentNodeView, root, 0);
@@ -904,11 +900,11 @@ public class RandomCutTree implements ITree<Integer, float[]> {
 
     protected <R> void traverseTreeMulti(float[] point, MultiVisitor<R> visitor, NodeView currentNodeView, int node,
             int depthOfNode) {
-        if (nodeStore.isLeaf(node)) {
+        if (isLeaf(node)) {
             currentNodeView.setCurrentNode(node, getPointIndex(node), false);
             visitor.acceptLeaf(currentNodeView, depthOfNode);
         } else {
-            checkArgument(nodeStore.isInternal(node), " incomplete state");
+            checkState(isInternal(node), " incomplete state");
             currentNodeView.setCurrentNodeOnly(node);
             if (visitor.trigger(currentNodeView)) {
                 traverseTreeMulti(point, visitor, currentNodeView, nodeStore.getLeftIndex(node), depthOfNode + 1);
