@@ -468,6 +468,9 @@ public class RandomCutTreeTest {
         assertThat(tree.getCutDimension(node), is(0));
         assertThat(tree.getCutValue(node), closeTo(0.5, EPSILON));
         assertThat(tree.getMass(node), is(3));
+        NodeView nodeView = new NodeView(tree, tree.pointStoreView, node);
+        assertTrue(nodeView.getCutDimension() == 0);
+        assertTrue(nodeView.getCutValue() == 0.5);
 
         assertArrayEquals(new double[] { 0.0, 2.0 }, toDoubleArray(tree.getPointSum(node)), EPSILON);
 
@@ -636,6 +639,7 @@ public class RandomCutTreeTest {
         // first dimension is identical
         assertTrue(cut1.getDimension() == 1);
         assertTrue(cut1.getValue() == 0f);
+        assertEquals(cut1.toString(), "Cut(1, 0.000000)");
 
         Cut cut2 = tree.randomCut(1.2, point, box2);
         assertTrue(cut2.getDimension() == 0);
@@ -688,6 +692,7 @@ public class RandomCutTreeTest {
         assertThrows(IllegalStateException.class,
                 () -> tree.traversePathToLeafAndVisitNodes(null, null, null, tree.root, 0));
         assertThrows(IllegalStateException.class, () -> tree.traverseTreeMulti(null, null, null, tree.root, 0));
+
         assertThrows(IllegalStateException.class, () -> tree.growNodeBox(null, pointStoreFloat, 0, 187));
         assertThrows(IllegalStateException.class, () -> tree.getBox(187));
     }

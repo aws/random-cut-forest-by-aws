@@ -124,7 +124,8 @@ public class ThresholdedRandomCutForest {
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
         preprocessorBuilder.timeDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
-
+        // to be used later
+        preprocessorBuilder.randomSeed(builder.randomSeed.orElse(0L) + 1);
         preprocessorBuilder.dimensions(builder.dimensions);
         preprocessorBuilder
                 .stopNormalization(builder.stopNormalization.orElse(Preprocessor.DEFAULT_STOP_NORMALIZATION));
@@ -141,7 +142,6 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setZfactor(builder.zFactor);
 
         predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
-        int base = builder.dimensions / builder.shingleSize;
         builder.ignoreNearExpectedFromAbove.ifPresent(predictorCorrector::setIgnoreNearExpectedFromAbove);
         builder.ignoreNearExpectedFromBelow.ifPresent(predictorCorrector::setIgnoreNearExpectedFromBelow);
         builder.ignoreNearExpectedFromAboveByRatio.ifPresent(predictorCorrector::setIgnoreNearExpectedFromAboveByRatio);

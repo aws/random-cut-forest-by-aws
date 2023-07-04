@@ -183,7 +183,7 @@ public class GenericMultiCenter<R> implements ICluster<R> {
             savedRepresentatives.remove(farthestIndex);
         }
 
-        // absorb the remainder into existing represen tatives
+        // absorb the remainder into existing representatives
         for (Weighted<R> representative : savedRepresentatives) {
             double dist = distance.apply(representative.index, this.representatives.get(0).index);
             checkArgument(dist >= 0, "distance cannot be negative");

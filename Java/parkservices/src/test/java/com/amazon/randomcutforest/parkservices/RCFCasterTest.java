@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
+import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.calibration.Calibration;
 import com.amazon.randomcutforest.returntypes.RangeVector;
@@ -82,13 +83,20 @@ public class RCFCasterTest {
         assertThrows(IllegalArgumentException.class, () -> new ErrorHandler(1, 1, 1, 0.1, 1, new float[2], null, null));
         assertThrows(IllegalArgumentException.class, () -> new ErrorHandler(1, 1, 1, 0.1, 1, null, new float[6], null));
         assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 0, 1, 0.1, 2, new float[2], new float[6], null));
+
+        assertThrows(IllegalArgumentException.class,
                 () -> new ErrorHandler(1, 2, 1, 0.1, 1, new float[2], new float[6], null));
         assertThrows(IllegalArgumentException.class,
                 () -> new ErrorHandler(1, 1, -1, 0.1, 1, new float[2], new float[6], null));
         assertThrows(IllegalArgumentException.class,
-                () -> new ErrorHandler(1, 1, -1, -0.1, 1, new float[2], new float[6], null));
+                () -> new ErrorHandler(1, 1, 0, 0.1, 0, new float[2], new float[6], null));
         assertThrows(IllegalArgumentException.class,
-                () -> new ErrorHandler(1, 1, -1, 0.5, 1, new float[2], new float[6], null));
+                () -> new ErrorHandler(1, 1, -1, 0.1, 1, new float[2], new float[6], null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0.1, 3, new float[2], new float[6], null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0.6, 1, new float[2], new float[6], null));
         assertThrows(IllegalArgumentException.class,
                 () -> new ErrorHandler(1, 1, -1, 0.1, 2, new float[2], new float[6], null));
     }
@@ -100,7 +108,43 @@ public class RCFCasterTest {
                 () -> e.calibrate(Calibration.SIMPLE, new double[1], new RangeVector(4)));
         assertThrows(IllegalArgumentException.class,
                 () -> e.calibrate(Calibration.SIMPLE, new double[2], new RangeVector(5)));
-        assertThrows(IllegalArgumentException.class, () -> e.calibrate(Calibration.SIMPLE, null, new RangeVector(5)));
+        assertThrows(IllegalArgumentException.class, () -> e.calibrate(Calibration.SIMPLE, null, new RangeVector(4)));
+        assertThrows(IllegalArgumentException.class,
+                () -> e.calibrate(Calibration.SIMPLE, new double[1], new RangeVector(4)));
+        RangeVector r = new RangeVector(4);
+        e.sequenceIndex = 5;
+        float v = new Random().nextFloat();
+        r.shift(0, v);
+        e.calibrate(Calibration.SIMPLE, new double[] { 1.0, 1.3 }, new RangeVector(r));
+        assertEquals(r.values[0], v);
+        e.calibrate(Calibration.NONE, new double[] { 1.0, 1.3 }, r);
+        assertEquals(r.values[0], v);
+        assertEquals(r.upper[0], v);
+        assertEquals(r.values[1], 0);
+        e.calibrate(Calibration.MINIMAL, new double[] { v + 1.0, 1.3 }, r);
+        assertEquals(r.values[0], v);
+        assertEquals(r.values[1], 0);
+        assertEquals(r.upper[0], v + 1.3 * (v + 1), 1e-6f);
+        assertEquals(r.lower[0], v - 1.3 * (v + 1), 1e-6f);
+        e.sequenceIndex = 10000;
+        e.errorHorizon = 1000;
+        RangeVector newR = new RangeVector(4);
+        newR.shift(0, v);
+        e.errorDistribution.shift(0, 2 * v);
+        e.calibrate(Calibration.SIMPLE, new double[] { v + 1.0, 1.3 }, newR);
+        assertEquals(newR.values[0], 3 * v, 1e-6f);
+        assertEquals(newR.values[1], 0);
+        assertThrows(IllegalArgumentException.class, () -> e.adjustMinimal(0, new RangeVector(10), new RangeVector(9)));
+        assertThrows(IllegalArgumentException.class,
+                () -> e.adjustMinimal(10, new RangeVector(10), new RangeVector(10)));
+        assertThrows(IllegalArgumentException.class,
+                () -> e.adjustMinimal(-1, new RangeVector(10), new RangeVector(10)));
+        assertThrows(IllegalArgumentException.class, () -> e.interpolatedMedian(new double[6], 25));
+        assertThrows(IllegalArgumentException.class, () -> e.interpolatedMedian(null, 25));
+        assertDoesNotThrow(() -> e.interpolatedMedian(new double[25], 25));
+        assertThrows(IllegalArgumentException.class, () -> e.adjust(0, new RangeVector(9), new RangeVector(10)));
+        assertThrows(IllegalArgumentException.class, () -> e.adjust(9, new RangeVector(9), new RangeVector(9)));
+        assertThrows(IllegalArgumentException.class, () -> e.adjust(-1, new RangeVector(9), new RangeVector(9)));
     }
 
     @ParameterizedTest
@@ -140,10 +184,18 @@ public class RCFCasterTest {
                 .calibration(calibration).errorHorizon(errorHorizon).initialAcceptFraction(0.125)
                 .boundingBoxCacheFraction(0).build();
 
-        // ensuring that the parameters are the same; otherwise the grades/scores cannot
+        // testing scoring strategies
+        caster.setScoringStrategy(ScoringStrategy.MULTI_MODE);
+        shadow.setScoringStrategy(ScoringStrategy.MULTI_MODE);
+        // ensuring/testing that the parameters are the same; otherwise the
+        // grades/scores cannot
         // be the same
         caster.setLowerThreshold(1.1);
         shadow.setLowerThreshold(1.1);
+        caster.setInitialThreshold(2.0);
+        shadow.setInitialThreshold(2.0);
+        caster.setScoreDifferencing(0.4);
+        shadow.setScoreDifferencing(0.4);
 
         assert (caster.errorHandler.errorHorizon == errorHorizon);
         assert (caster.errorHorizon == errorHorizon);

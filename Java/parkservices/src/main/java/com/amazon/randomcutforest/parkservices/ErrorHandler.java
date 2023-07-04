@@ -100,8 +100,6 @@ public class ErrorHandler {
         adders = new RangeVector(length);
         intervalPrecision = new float[length];
         errorDistribution = new RangeVector(length);
-        Arrays.fill(errorDistribution.upper, Float.MAX_VALUE);
-        Arrays.fill(errorDistribution.lower, -Float.MAX_VALUE);
     }
 
     // for mappers
@@ -113,7 +111,7 @@ public class ErrorHandler {
                 " actuals and forecasts are a mismatch");
         checkArgument(inputLength > 0, "incorrect parameters");
         checkArgument(sequenceIndex >= 0, "cannot be negative");
-        checkArgument(percentile > 0 && percentile < 0.5, "has to be between (0,0.5) ");
+        checkArgument(Math.abs(percentile - 0.25) < 0.24, "has to be between (0,0.5) ");
 
         // calibration would have been performed at previous value
         this.sequenceIndex = sequenceIndex;
@@ -300,25 +298,25 @@ public class ErrorHandler {
     protected void calibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
         int inputLength = actuals[0].length;
         checkArgument(inputLength * forecastHorizon == ranges.values.length, "mismatched lengths");
-        checkArgument(errorDeviations != null && inputLength <= errorDeviations.length,
-                "deviations should be at least as long as input lengths");
+        checkArgument(errorDeviations != null, " cannot be null");
+        checkArgument(inputLength <= errorDeviations.length, "deviations should be at least as long as input lengths");
         for (int i = 0; i < forecastHorizon; i++) {
             // this is the only place where the newer (possibly shorter) horizon matters
             int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
             for (int j = 0; j < inputLength; j++) {
                 int pos = i * inputLength + j;
                 if (len > 0) {
-                    if (ranges != null && calibration != Calibration.NONE) {
+                    if (calibration != Calibration.NONE) {
                         if (len * percentile < 1.0) {
-                            double deviation = (errorDeviations == null) ? 0 : errorDeviations[j];
+                            double deviation = errorDeviations[j];
                             ranges.upper[pos] = max(ranges.upper[pos], ranges.values[pos] + (float) (1.3 * deviation));
                             ranges.lower[pos] = min(ranges.lower[pos], ranges.values[pos] - (float) (1.3 * deviation));
                         } else {
                             if (calibration == Calibration.SIMPLE) {
-                                adjust(ranges, errorDistribution);
+                                adjust(pos, ranges, errorDistribution);
                             }
                             if (calibration == Calibration.MINIMAL) {
-                                adjustMinimal(ranges, errorDistribution);
+                                adjustMinimal(pos, ranges, errorDistribution);
                             }
                         }
                     }
@@ -354,22 +352,23 @@ public class ErrorHandler {
                 + (fracRank - rank) * (ascendingArray[len - rank - 1] - ascendingArray[len - rank]));
     }
 
-    void adjust(RangeVector rangeVector, RangeVector other) {
+    void adjust(int pos, RangeVector rangeVector, RangeVector other) {
         checkArgument(other.values.length == rangeVector.values.length, " mismatch in lengths");
-        for (int i = 0; i < rangeVector.values.length; i++) {
-            rangeVector.values[i] += other.values[i];
-            rangeVector.upper[i] = max(rangeVector.values[i], rangeVector.upper[i] + other.upper[i]);
-            rangeVector.lower[i] = min(rangeVector.values[i], rangeVector.lower[i] + other.lower[i]);
-        }
+        checkArgument(pos >= 0, " cannot be negative");
+        checkArgument(pos < other.values.length, " cannot be this large");
+        rangeVector.values[pos] += other.values[pos];
+        rangeVector.upper[pos] = max(rangeVector.values[pos], rangeVector.upper[pos] + other.upper[pos]);
+        rangeVector.lower[pos] = min(rangeVector.values[pos], rangeVector.lower[pos] + other.lower[pos]);
+
     }
 
-    void adjustMinimal(RangeVector rangeVector, RangeVector other) {
+    void adjustMinimal(int pos, RangeVector rangeVector, RangeVector other) {
         checkArgument(other.values.length == rangeVector.values.length, " mismatch in lengths");
-        for (int i = 0; i < rangeVector.values.length; i++) {
-            float oldVal = rangeVector.values[i];
-            rangeVector.values[i] += other.values[i];
-            rangeVector.upper[i] = max(rangeVector.values[i], oldVal + other.upper[i]);
-            rangeVector.lower[i] = min(rangeVector.values[i], oldVal + other.lower[i]);
-        }
+        checkArgument(pos >= 0, " cannot be negative");
+        checkArgument(pos < other.values.length, " cannot be this large");
+        float oldVal = rangeVector.values[pos];
+        rangeVector.values[pos] += other.values[pos];
+        rangeVector.upper[pos] = max(rangeVector.values[pos], oldVal + other.upper[pos]);
+        rangeVector.lower[pos] = min(rangeVector.values[pos], oldVal + other.lower[pos]);
     }
 }

@@ -81,15 +81,11 @@ public interface ITransformer {
 
     // used for converting RCF representations to actuals, used in
     // predictor-corrector
-    default double[] getShift(double[] previous) {
-        return null;
-    }
+    double[] getShift(double[] previous);
 
     // used for converting RCF representations to actuals, used in
     // predictor-corrector
-    default double[] getScale() {
-        return null;
-    }
+    double[] getScale();
 
     // used for computing errors in RCFcaster before the model is calibrated
     double[] getSmoothedDeviations();

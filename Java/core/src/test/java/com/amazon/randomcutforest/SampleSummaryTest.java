@@ -17,14 +17,21 @@ package com.amazon.randomcutforest;
 
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Tag;
@@ -35,6 +42,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.returntypes.SampleSummary;
 import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.MultiCenter;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.util.Weighted;
@@ -49,6 +57,135 @@ public class SampleSummaryTest {
     private static double transitionToAnomalyProbability;
     private static double transitionToBaseProbability;
     private static int dataSize;
+
+    @Test
+    public void configAndAbsorbTest() {
+
+        long seed = new Random().nextLong();
+        Random random = new Random(seed);
+        int newDimensions = random.nextInt(10) + 3;
+        dataSize = 2000;
+
+        float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
+        ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
+        ArrayList<Weighted<Integer>> refs = new ArrayList<>();
+
+        int count = 0;
+        for (float[] point : points) {
+            // testing 0 weight
+            weighted.add(new Weighted<>(point, 0.0f));
+            refs.add(new Weighted<Integer>(count, 0.0f));
+            ++count;
+        }
+
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 500, 10 * newDimensions,
+                false, Summarizer::L2distance, random.nextInt(), false));
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b, 0.8,
+                3);
+        Function<Integer, float[]> getPoint = (i) -> weighted.get(i).index;
+
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 500, 10 * newDimensions, 1,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> Summarizer.summarize(weighted, 50, 10, false, Summarizer::L2distance, random.nextInt(), false));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 50, 10, 1, false, 0.1,
+                Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 50, 10 * newDimensions, 0,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 50, 10 * newDimensions, 100,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 0,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 7,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1, Collections.emptyList(), getPoint,
+                        Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, false,
+                Summarizer::L2distance, random.nextInt(), false));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, 1,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        Weighted<float[]> a = weighted.get(0);
+        a.weight = -1;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, 1,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, false,
+                Summarizer::L2distance, random.nextInt(), false));
+        a.weight = Float.NaN;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, 1,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, false,
+                Summarizer::L2distance, random.nextInt(), false));
+        a.weight = Float.POSITIVE_INFINITY;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, 1,
+                false, 0.1, Summarizer::L2distance, clusterInitializer, 0, false, null));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.summarize(weighted, 5, 10 * newDimensions, false,
+                Summarizer::L2distance, random.nextInt(), false));
+        a.weight = 1;
+        assertDoesNotThrow(() -> Summarizer.summarize(weighted, 5, 10 * newDimensions, false, Summarizer::L2distance,
+                random.nextInt(), false));
+        assertDoesNotThrow(() -> Summarizer.summarize(weighted, 5, 10 * newDimensions, 1, false, 0.1,
+                Summarizer::L2distance, clusterInitializer, 0, false, null));
+
+        refs.get(0).weight = -1;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        refs.get(0).weight = Float.POSITIVE_INFINITY;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        refs.get(0).weight = 0;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        refs.get(0).weight = 1;
+        assertDoesNotThrow(() -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1, refs, getPoint,
+                Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.assignAndRecompute(refs, getPoint,
+                Collections.emptyList(), Summarizer::L2distance, false));
+        List<ICluster<float[]>> list = new ArrayList<>();
+        list.add(clusterInitializer.apply(new float[newDimensions], 1f));
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.assignAndRecompute(Collections.emptyList(),
+                getPoint, list, Summarizer::L2distance, false));
+        assertDoesNotThrow(() -> Summarizer.assignAndRecompute(refs, getPoint, list, Summarizer::L2distance, false));
+        assertArrayEquals(list.get(0).primaryRepresentative(Summarizer::L2distance), new float[newDimensions], 1e-6f);
+
+        float[] newPoint = new float[newDimensions];
+        Arrays.fill(newPoint, 1.01f);
+        list.get(0).absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
+        BiFunction<float[], float[], Double> badDistance = mock();
+        when(badDistance.apply(any(), any())).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class,
+                () -> Summarizer.assignAndRecompute(refs, getPoint, list, badDistance, false));
+        ICluster<float[]> another = clusterInitializer.apply(new float[newDimensions], 1.0f);
+        assertThrows(IllegalArgumentException.class, () -> list.get(0).absorb(another, badDistance));
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> list.get(0).distance(new float[newDimensions], badDistance));
+        assertThrows(IllegalArgumentException.class, () -> list.get(0).absorb(another, badDistance));
+
+        ICluster<float[]> newCluster = clusterInitializer.apply(new float[newDimensions], 1f);
+        newCluster.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
+        when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster.absorb(another, badDistance));
+
+        ICluster<float[]> newCluster2 = clusterInitializer.apply(new float[newDimensions], 1f);
+        newCluster2.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
+        when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0)
+                .thenReturn(1.0);
+        newCluster2.absorb(clusterInitializer.apply(newPoint, 1f), badDistance);
+        when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(new float[newDimensions], badDistance));
+        another.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(another, badDistance));
+        // error at a different location
+        assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(another, badDistance));
+        when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0)
+                .thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0)
+                .thenReturn(1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster2.absorb(another, badDistance));
+    }
 
     @ParameterizedTest
     @MethodSource("generateArguments")

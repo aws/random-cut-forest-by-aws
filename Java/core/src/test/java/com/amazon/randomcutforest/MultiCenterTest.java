@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.amazon.randomcutforest.summarization.GenericMultiCenter;
 import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.MultiCenter;
 import com.amazon.randomcutforest.summarization.Summarizer;
@@ -55,8 +57,23 @@ public class MultiCenterTest {
     public void constructorTest() {
         assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, -1.0, 1));
         assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 2.0, 1));
-        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 1.0, -1));
+        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 1.0, 0));
         assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 1.0, 1000));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, -1.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 2.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 1.0, 0));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 1.0, 1000));
+    }
+
+    @Test
+    public void initializationTest() {
+        GenericMultiCenter genericMultiCenter = GenericMultiCenter.initialize(new float[4], 0, 0.5, 1);
+        MultiCenter multiCenter = MultiCenter.initialize(new float[4], 0, 0.5, 1);
+        List<Weighted<Integer>> a = new ArrayList<>();
+        assertEquals(multiCenter.getAssignedPoints().getClass(), a.getClass());
+        assertEquals(genericMultiCenter.getAssignedPoints(), Collections.emptyList());
+        assertEquals(genericMultiCenter.averageRadius(), 0);
+        assertEquals(genericMultiCenter.extentMeasure(), 0);
     }
 
     @ParameterizedTest

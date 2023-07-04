@@ -70,7 +70,7 @@ public class PredictorCorrectorTest {
         double[] testFour = new double[] { new Random().nextDouble(), new Random().nextDouble() };
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(0L).forestMode(ForestMode.STANDARD).shingleSize(shingleSize)
-                .anomalyRate(0.01).scoringStrategy(ScoringStrategy.DISTANCE).transformMethod(NORMALIZE)
+                .anomalyRate(0.01).scoringStrategy(ScoringStrategy.DISTANCE).transformMethod(NORMALIZE).randomSeed(1110)
                 .learnIgnoreNearExpected(true).ignoreNearExpectedFromAbove(testOne).ignoreNearExpectedFromBelow(testTwo)
                 .ignoreNearExpectedFromAboveByRatio(testThree).ignoreNearExpectedFromBelowByRatio(testFour).build();
         PredictorCorrector predictorCorrector = forest.getPredictorCorrector();
@@ -116,9 +116,8 @@ public class PredictorCorrectorTest {
         assertArrayEquals(predictorCorrector.ignoreNearExpectedFromAboveByRatio, testThree, 1e-10);
         assertArrayEquals(predictorCorrector.ignoreNearExpectedFromBelowByRatio, testFour, 1e-10);
 
-        long randomSeed = new Random(0L).nextLong();
-        Random testRandom = new Random(randomSeed);
-        assertEquals(predictorCorrector.getRandomSeed(), randomSeed);
+        Random testRandom = new Random(1110L);
+        assertEquals(predictorCorrector.getRandomSeed(), 1110L);
         double nextDouble = predictorCorrector.nextDouble();
         assertEquals(predictorCorrector.getRandomSeed(), testRandom.nextLong());
         assertEquals(nextDouble, testRandom.nextDouble(), 1e-10);

@@ -101,7 +101,7 @@ public class PredictorCorrector {
         thresholders[0] = new BasicThresholder(timeDecay, anomalyRate, adjustThresholds);
         thresholders[1] = new BasicThresholder(timeDecay);
         this.baseDimension = baseDimension;
-        this.randomSeed = new Random(randomSeed).nextLong();
+        this.randomSeed = randomSeed;
         this.autoAdjust = adjust;
         if (adjust) {
             this.deviationsAbove = new Deviation[baseDimension];
@@ -270,27 +270,15 @@ public class PredictorCorrector {
         if (lastAnomalyAttribution == null || difference >= dimensions) {
             return true;
         }
-        checkArgument(lastAnomalyAttribution.getDimensions() == dimensions, " error in DiVectors");
-
-        if (ideal == null) {
-            double remainder = 0;
-            int limit = min(difference, dimensions);
-            for (int i = dimensions - limit; i < dimensions; i++) {
-                remainder += candidate.getHighLowSum(i);
-            }
-            // simplifying the following since remainder * dimensions/difference corresponds
-            // to the impact of the new data since the last anomaly
-            return remainder * dimensions / difference > workingThreshold;
-        } else {
-            double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
-            double differentialRemainder = 0;
-            for (int i = dimensions - difference; i < dimensions; i++) {
-                differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
-                        + Math.abs(candidate.high[i] - ideal.high[i]);
-            }
-            return (differentialRemainder > DEFAULT_DIFFERENTIAL_FACTOR * lastAnomalyScore)
-                    && differentialRemainder * dimensions / difference > workingThreshold;
+        double lastAnomalyScore = lastAnomalyDescriptor.getRCFScore();
+        double differentialRemainder = 0;
+        for (int i = dimensions - difference; i < dimensions; i++) {
+            differentialRemainder += Math.abs(candidate.low[i] - ideal.low[i])
+                    + Math.abs(candidate.high[i] - ideal.high[i]);
         }
+        return (differentialRemainder > DEFAULT_DIFFERENTIAL_FACTOR * lastAnomalyScore)
+                && differentialRemainder * dimensions / difference > workingThreshold;
+
     }
 
     /**
@@ -476,9 +464,9 @@ public class PredictorCorrector {
             double observedGap = Math.abs(point[startPosition + y] - newPoint[startPosition + y]);
             double pathGap = calculatePathDeviation(point, startPosition, y, baseDimensions, differenced);
             if (observedGap > min(2.0 / result.getShingleSize(), 0.1) * pathGap) {
-                double scaleFactor = (scale == null) ? 1.0 : scale[y];
+                double scaleFactor = scale[y];
                 double delta = observedGap * scaleFactor;
-                double shiftBase = (shift == null) ? 0 : shift[y];
+                double shiftBase = shift[y];
                 double shiftAmount = 0;
 
                 // the conditional below is redundant, since abs(shiftBase) is being multiplied

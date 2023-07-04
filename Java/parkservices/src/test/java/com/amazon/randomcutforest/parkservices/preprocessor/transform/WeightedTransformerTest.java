@@ -17,14 +17,33 @@ package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
 import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.returntypes.RangeVector;
 
 public class WeightedTransformerTest {
+
+    public void checkTransformer(WeightedTransformer w, double value, double another) {
+        w.setWeights(new double[1]);
+        assertEquals(w.invert(new double[] { 1.0 }, new double[] { 2.0 })[0], value, 1e-6);
+        assertEquals(w.getScale()[0], 0, 1e-6);
+        RangeVector r = new RangeVector(1);
+        r.shift(0, 10);
+        assertEquals(r.values[0], 10, 1e-6);
+        assertEquals(r.upper[0], 10, 1e-6);
+        assertEquals(r.lower[0], 10, 1e-6);
+        assertThrows(IllegalArgumentException.class,
+                () -> w.invertForecastRange(r, 1, new double[] { 1.0 }, new double[0]));
+        w.invertForecastRange(r, 1, new double[] { 1.0 }, new double[1]);
+        assertEquals(r.values[0], another, 1e-6);
+        assertEquals(r.upper[0], another, 1e-6);
+        assertEquals(r.lower[0], another, 1e-6);
+    }
 
     @Test
     void constructorTest() {
@@ -35,7 +54,11 @@ public class WeightedTransformerTest {
         for (int i = 0; i < NUMBER_OF_STATS; i++) {
             deviations[i] = new Deviation(0);
         }
-        assertDoesNotThrow(() -> new WeightedTransformer(new double[1], deviations));
+        WeightedTransformer w = new WeightedTransformer(new double[1], deviations);
+        assertThrows(IllegalArgumentException.class, () -> w.setWeights(new double[2]));
+        checkTransformer(w, 0, 0);
+        checkTransformer(new NormalizedDifferenceTransformer(new double[1], deviations), 2.0, 1.0);
+        checkTransformer(new DifferenceTransformer(new double[1], deviations), 2.0, 1.0);
     }
 
     @Test
@@ -59,6 +82,7 @@ public class WeightedTransformerTest {
         WeightedTransformer transformer = new WeightedTransformer(new double[2], deviations);
         assertThrows(IllegalArgumentException.class, () -> transformer.normalize(10, 5, 0, 10));
         assertTrue(transformer.normalize(10, 5, 0.5, 9) == 9);
+        assertTrue(transformer.normalize(-10, -5, 0.5, 9) == -9);
     }
 
 }
