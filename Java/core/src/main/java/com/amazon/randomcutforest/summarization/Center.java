@@ -110,6 +110,9 @@ public class Center implements ICluster<float[]> {
                     break;
                 }
             }
+            if (position == assignedPoints.size()) {
+                position--;
+            }
             representative[index] = getPoint.apply(assignedPoints.get(position).index)[index];
         }
         for (int j = 0; j < assignedPoints.size(); j++) {
@@ -159,7 +162,9 @@ public class Center implements ICluster<float[]> {
     }
 
     public double distance(float[] point, BiFunction<float[], float[], Double> distance) {
-        return distance.apply(point, representative);
+        double t = distance.apply(point, representative);
+        checkArgument(t >= 0, "distance cannot be negative");
+        return t;
     }
 
     @Override

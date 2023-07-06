@@ -302,6 +302,8 @@ public class Summarizer {
                 }
                 centers.sort(Comparator.comparingDouble(ICluster::getWeight));
                 while (centers.get(0).getWeight() == 0.0) {
+                    // this line is reachable via zeroTest() in
+                    // SampleSummaryTest
                     centers.remove(0);
                 }
                 if (inital < 1.2 * maxAllowed + 1) {
@@ -353,8 +355,6 @@ public class Summarizer {
             List<ICluster<R>> previousClustering) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
-        checkArgument(stopAt > 0, "has to stop at 1 cluster");
-        checkArgument(stopAt <= maxAllowed, "cannot stop before achieving the limit");
 
         double totalWeight = points.stream().map(e -> {
             checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");

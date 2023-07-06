@@ -41,6 +41,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.summarization.Center;
 import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.MultiCenter;
 import com.amazon.randomcutforest.summarization.Summarizer;
@@ -56,6 +57,7 @@ public class SampleSummaryTest {
     private static double anomalySigma;
     private static double transitionToAnomalyProbability;
     private static double transitionToBaseProbability;
+
     private static int dataSize;
 
     @Test
@@ -65,6 +67,7 @@ public class SampleSummaryTest {
         Random random = new Random(seed);
         int newDimensions = random.nextInt(10) + 3;
         dataSize = 2000;
+        Summarizer summarizer = new Summarizer();
 
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
         ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
@@ -135,6 +138,9 @@ public class SampleSummaryTest {
         refs.get(0).weight = Float.POSITIVE_INFINITY;
         assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
                 refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
+        refs.get(0).weight = Float.NaN;
+        assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
+                refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
         refs.get(0).weight = 0;
         assertThrows(IllegalArgumentException.class, () -> Summarizer.iterativeClustering(5, 10 * newDimensions, 1,
                 refs, getPoint, Summarizer::L2distance, clusterInitializer, 0, false, false, 0.1, null));
@@ -158,24 +164,37 @@ public class SampleSummaryTest {
         when(badDistance.apply(any(), any())).thenReturn(-1.0);
         assertThrows(IllegalArgumentException.class,
                 () -> Summarizer.assignAndRecompute(refs, getPoint, list, badDistance, false));
-        ICluster<float[]> another = clusterInitializer.apply(new float[newDimensions], 1.0f);
-        assertThrows(IllegalArgumentException.class, () -> list.get(0).absorb(another, badDistance));
-        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
-        assertThrows(IllegalArgumentException.class, () -> list.get(0).distance(new float[newDimensions], badDistance));
-        assertThrows(IllegalArgumentException.class, () -> list.get(0).absorb(another, badDistance));
+    }
 
-        ICluster<float[]> newCluster = clusterInitializer.apply(new float[newDimensions], 1f);
+    @Test
+    public void TestMultiCenter() {
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b, 0.8,
+                3);
+        Function<Integer, float[]> getPoint = (i) -> {
+            return new float[1];
+        };
+        ICluster<float[]> newCluster = clusterInitializer.apply(new float[1], 1f);
+        float[] newPoint = new float[] { 1 };
+        BiFunction<float[], float[], Double> badDistance = mock();
+        when(badDistance.apply(any(), any())).thenReturn(-1.0);
+        ICluster<float[]> cluster = clusterInitializer.apply(new float[1], 1.0f);
+        ICluster<float[]> another = clusterInitializer.apply(new float[1], 1.0f);
+        assertThrows(IllegalArgumentException.class, () -> cluster.absorb(another, badDistance));
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> cluster.distance(new float[1], badDistance));
+        assertThrows(IllegalArgumentException.class, () -> cluster.absorb(another, badDistance));
+
         newCluster.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
         when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(-1.0);
         assertThrows(IllegalArgumentException.class, () -> newCluster.absorb(another, badDistance));
 
-        ICluster<float[]> newCluster2 = clusterInitializer.apply(new float[newDimensions], 1f);
+        ICluster<float[]> newCluster2 = clusterInitializer.apply(new float[1], 1f);
         newCluster2.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
         when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0)
                 .thenReturn(1.0);
         newCluster2.absorb(clusterInitializer.apply(newPoint, 1f), badDistance);
         when(badDistance.apply(any(), any())).thenReturn(1.0).thenReturn(-1.0);
-        assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(new float[newDimensions], badDistance));
+        assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(new float[1], badDistance));
         another.absorb(clusterInitializer.apply(newPoint, 1f), Summarizer::L2distance);
         when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(1.0).thenReturn(-1.0);
         assertThrows(IllegalArgumentException.class, () -> newCluster2.distance(another, badDistance));
@@ -185,6 +204,88 @@ public class SampleSummaryTest {
                 .thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0).thenReturn(1.0)
                 .thenReturn(1.0).thenReturn(-1.0);
         assertThrows(IllegalArgumentException.class, () -> newCluster2.absorb(another, badDistance));
+
+        ICluster<float[]> newCluster3 = MultiCenter.initialize(new float[1], 0f, 0, 1);
+        assertEquals(newCluster3.recompute(getPoint, false, Summarizer::L2distance), 0);
+        assertEquals(newCluster3.recompute(getPoint, true, Summarizer::L2distance), 0);
+        newCluster3.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        assertEquals(newCluster3.recompute(getPoint, true, Summarizer::L2distance), 0);
+
+        ICluster<float[]> newCluster4 = MultiCenter.initialize(new float[1], 1f, 0, 1);
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
+        newCluster4.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        assertThrows(IllegalArgumentException.class, () -> newCluster4.recompute(getPoint, true, badDistance));
+        assertThrows(IllegalArgumentException.class, () -> newCluster4.absorb(newCluster3, badDistance));
+
+    }
+
+    @Test
+    public void testCenter() {
+        int newDimensions = 1;
+        Function<Integer, float[]> getPoint = (i) -> {
+            return new float[1];
+        };
+        BiFunction<float[], float[], Double> badDistance = mock();
+        ICluster<float[]> newCluster5 = Center.initialize(new float[newDimensions], 0f);
+        assertEquals(newCluster5.extentMeasure(), newCluster5.averageRadius());
+        assertEquals(newCluster5.recompute(getPoint, true, Summarizer::L2distance), 0);
+        newCluster5.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        assertEquals(newCluster5.recompute(getPoint, true, Summarizer::L2distance), 0);
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster5.distance(new float[1], badDistance));
+
+        ICluster<float[]> newCluster6 = Center.initialize(new float[newDimensions], 10f);
+        newCluster6.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        newCluster6.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        when(badDistance.apply(any(), any())).thenReturn(-1.0).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster6.absorb(newCluster5, badDistance));
+        assertThrows(IllegalArgumentException.class, () -> newCluster6.recompute(getPoint, true, badDistance));
+        ICluster<float[]> multiCenter1 = MultiCenter.initialize(new float[] { 1 }, 5.0f, 0.8, 2);
+        ICluster<float[]> multiCenter2 = MultiCenter.initialize(new float[] { 2 }, 5.0f, 0.8, 2);
+        multiCenter1.absorb(multiCenter2, Summarizer::L2distance); // weight 10
+        newCluster6.absorb(multiCenter1, Summarizer::L2distance);
+        assertEquals(newCluster6.primaryRepresentative(Summarizer::L2distance)[0], 0.5, 1e-6f);
+
+        ICluster<float[]> newCluster7 = Center.initialize(new float[newDimensions], -10f);
+        newCluster7.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        newCluster7.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        when(badDistance.apply(any(), any())).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster7.recompute(getPoint, true, badDistance));
+
+        ICluster<float[]> newCluster8 = Center.initialize(new float[newDimensions], 1.9f);
+        newCluster8.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        newCluster8.getAssignedPoints().add(new Weighted<>(1, 1.0f));
+        when(badDistance.apply(any(), any())).thenReturn(-1.0);
+        assertThrows(IllegalArgumentException.class, () -> newCluster8.recompute(getPoint, true, badDistance));
+    }
+
+    @Test
+    public void zeroTest() {
+        Random random = new Random(0);
+        dataSize = 2000;
+
+        float[][] points = new float[dataSize][];
+        for (int y = 0; y < dataSize; y++) {
+            points[y] = new float[] { (float) (random.nextInt(100) + 0.5 * random.nextDouble()) };
+        }
+
+        ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
+        ArrayList<Weighted<Integer>> refs = new ArrayList<>();
+        Function<Integer, float[]> getPoint = (x) -> weighted.get(x).index;
+        int count = 0;
+        for (float[] point : points) {
+            // testing 0 weight
+            weighted.add(new Weighted<>(point, 1.0f));
+            refs.add(new Weighted<Integer>(count, 1.0f));
+            ++count;
+        }
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> Center.initialize(a, b);
+        List<ICluster<float[]>> list = new ArrayList<>();
+        for (int y = 0; y < 200; y++) {
+            list.add(clusterInitializer.apply(new float[] { -1.0f }, 1.0f));
+        }
+        assertDoesNotThrow(() -> Summarizer.iterativeClustering(100, 0, 1, refs, getPoint, Summarizer::L2distance,
+                clusterInitializer, 0, false, true, 0.1, list));
     }
 
     @ParameterizedTest

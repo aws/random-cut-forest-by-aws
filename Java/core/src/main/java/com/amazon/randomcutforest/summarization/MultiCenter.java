@@ -66,9 +66,9 @@ public class MultiCenter extends GenericMultiCenter<float[]> {
         previousSumOFRadius = sumOfRadius;
         sumOfRadius = 0;
         for (int j = 0; j < assignedPoints.size(); j++) {
+            // distance will check for -negative internally
             double addTerm = distance(getPoint.apply(assignedPoints.get(j).index), distanceFunction)
                     * assignedPoints.get(j).weight;
-            checkArgument(addTerm >= 0, "distances or weights cannot be negative");
             sumOfRadius += addTerm;
         }
         return (previousSumOFRadius - sumOfRadius);

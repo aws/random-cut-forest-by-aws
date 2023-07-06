@@ -15,11 +15,6 @@
 
 package com.amazon.randomcutforest.examples.parkservices;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Arrays;
-
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
@@ -30,6 +25,11 @@ import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * The following example demonstrates the self calibration of RCFCast. Change
@@ -154,7 +154,7 @@ public class RCFCasterExample implements Example {
         float[] lowerError = result.getObservedErrorDistribution().lower;
         DiVector rmse = result.getErrorRMSE();
         float[] mean = result.getErrorMean();
-        float[] calibration = result.getIntervalPrecision();
+        float[] intervalPrecision = result.getIntervalPrecision();
 
         file.append(current + " " + 1000 + "\n");
         file.append("\n");
@@ -166,7 +166,7 @@ public class RCFCasterExample implements Example {
             for (int j = 0; j < inputLength; j++) {
                 int k = i * inputLength + j;
                 file.append(mean[k] + " " + rmse.high[k] + " " + rmse.low[k] + " " + errorP50[k] + " " + upperError[k]
-                        + " " + lowerError[k] + " " + calibration[k] + " ");
+                        + " " + lowerError[k] + " " + intervalPrecision[k] + " ");
             }
             file.append("\n");
         }
