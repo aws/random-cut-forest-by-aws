@@ -37,6 +37,7 @@ import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -185,6 +186,10 @@ public class ThresholdedRandomCutForest {
         this.lastAnomalyDescriptor = new RCFComputeDescriptor(null, forest.getTotalUpdates());
     }
 
+    protected <T extends AnomalyDescriptor> boolean saveDescriptor(T lastDescriptor) {
+        return (lastDescriptor.getAnomalyGrade() > 0);
+    }
+
     /**
      * an extensible function call that applies a preprocess, a core function and
      * the postprocessing corresponding to the preprocess step. It manages the
@@ -197,20 +202,8 @@ public class ThresholdedRandomCutForest {
      * @return the final result (switching caching off if needed)
      */
     public <T extends AnomalyDescriptor> T singleStepProcess(T input, IPreprocessor preprocessor, Function<T, T> core) {
-        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
-        T answer;
-        try {
-            if (cacheDisabled) { // turn caching on temporarily
-                forest.setBoundingBoxCacheFraction(1.0);
-            }
-            answer = preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
-                    lastAnomalyDescriptor, forest);
-        } finally {
-            if (cacheDisabled) { // turn caching off
-                forest.setBoundingBoxCacheFraction(0);
-            }
-        }
-        return answer;
+        return preprocessor.postProcess(core.apply(preprocessor.preProcess(input, lastAnomalyDescriptor, forest)),
+                lastAnomalyDescriptor, forest);
     }
 
     /**
@@ -240,22 +233,87 @@ public class ThresholdedRandomCutForest {
         Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
                 lastAnomalyDescriptor, forest);
 
-        AnomalyDescriptor initial = new AnomalyDescriptor(inputPoint, timestamp);
-        initial.setScoringStrategy(scoringStrategy);
-
-        if (missingValues != null) {
-            checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
-            for (int i = 0; i < missingValues.length; i++) {
-                checkArgument(missingValues[i] >= 0 && missingValues[i] < inputPoint.length, " incorrect positions ");
+        AnomalyDescriptor description = new AnomalyDescriptor(inputPoint, timestamp);
+        description.setScoringStrategy(scoringStrategy);
+        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
+        try {
+            if (cacheDisabled) { // turn caching on temporarily
+                forest.setBoundingBoxCacheFraction(1.0);
             }
-            initial.setMissingValues(missingValues);
+            if (missingValues != null) {
+                checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
+                for (int i = 0; i < missingValues.length; i++) {
+                    checkArgument(missingValues[i] >= 0 && missingValues[i] < inputPoint.length,
+                            " incorrect positions ");
+                }
+                description.setMissingValues(missingValues);
+            }
+            description = singleStepProcess(description, preprocessor, function);
+        } finally {
+            if (cacheDisabled) { // turn caching off
+                forest.setBoundingBoxCacheFraction(0);
+            }
         }
-        AnomalyDescriptor description = singleStepProcess(initial, preprocessor, function);
-
-        if (description.getAnomalyGrade() > 0) {
+        if (saveDescriptor(description)) {
             lastAnomalyDescriptor = description.copyOf();
         }
         return description;
+    }
+
+    /**
+     * the following function processes a list of vectors sequentially; the main
+     * benefit of this invocation is the caching is persisted from one data point to
+     * another and thus the execution is efficient. Moreover in many scenarios where
+     * serialization deserialization is expensive then it may be of benefit of
+     * invoking sequential process on a contiguous chunk of input (we avoid the use
+     * of the word batch -- the entire goal of this procedure is to provide
+     * sequential processing and not standard batch processing). The procedure
+     * avoids transfer of ephemeral transient objects for non-anomalies and thereby
+     * can have additional benefits. At the moment the operation does not support
+     * external timestamps.
+     *
+     * @param data   a vectors of vectors (each of which has to have the same
+     *               inputLength)
+     * @param filter a condition to drop desriptor (recommended filter: anomalyGrade
+     *               positive)
+     * @return collection of descriptors of the anomalies filtered by the condition
+     */
+    public List<AnomalyDescriptor> processSequentially(double[][] data, Function<AnomalyDescriptor, Boolean> filter) {
+        ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
+        Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
+                lastAnomalyDescriptor, forest);
+        if (data != null && data.length > 0) {
+            boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
+            try {
+                if (cacheDisabled) { // turn caching on temporarily
+                    forest.setBoundingBoxCacheFraction(1.0);
+                }
+                long timestamp = preprocessor.getInternalTimeStamp();
+                int length = preprocessor.getInputLength();
+                for (double[] point : data) {
+                    checkArgument(point.length == length, " nonuniform lengths ");
+                    AnomalyDescriptor description = new AnomalyDescriptor(point, timestamp++);
+                    description.setScoringStrategy(scoringStrategy);
+                    description = singleStepProcess(description, preprocessor, function);
+                    if (saveDescriptor(description)) {
+                        lastAnomalyDescriptor = description.copyOf();
+                    }
+                    if (filter.apply(description)) {
+                        answer.add(description);
+                    }
+                }
+            } finally {
+                if (cacheDisabled) { // turn caching off
+                    forest.setBoundingBoxCacheFraction(0);
+                }
+            }
+        }
+        return answer;
+    }
+
+    // recommended filter
+    public List<AnomalyDescriptor> processSequentially(double[][] data) {
+        return processSequentially(data, x -> x.anomalyGrade > 0);
     }
 
     /**
@@ -297,33 +355,32 @@ public class ThresholdedRandomCutForest {
      */
 
     public TimedRangeVector extrapolate(int horizon, boolean correct, double centrality) {
-        checkArgument(
-                (transformMethod != TransformMethod.DIFFERENCE
-                        && transformMethod != TransformMethod.NORMALIZE_DIFFERENCE)
-                        || horizon <= preprocessor.getShingleSize() / 2 + 1,
-                "reduce horizon or use a different transformation, single step differencing will be noisy");
+
         int shingleSize = preprocessor.getShingleSize();
         checkArgument(shingleSize > 1, "extrapolation is not meaningful for shingle size = 1");
         // note the forest may have external shingling ...
         int dimensions = forest.getDimensions();
         int blockSize = dimensions / shingleSize;
         double[] lastPoint = preprocessor.getLastShingledPoint();
-        RangeVector answer = new RangeVector(horizon * blockSize);
-        int gap = (int) (preprocessor.getInternalTimeStamp() - lastAnomalyDescriptor.getInternalTimeStamp());
+        if (forest.isOutputReady()) {
+            int gap = (int) (preprocessor.getInternalTimeStamp() - lastAnomalyDescriptor.getInternalTimeStamp());
 
-        float[] newPoint = toFloatArray(lastPoint);
+            float[] newPoint = toFloatArray(lastPoint);
 
-        // gap will be at least 1
-        if (gap <= shingleSize && correct && lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
-            if (gap == 1) {
-                newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
-            } else {
-                newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
-                        preprocessor.getScale(), lastAnomalyDescriptor);
+            // gap will be at least 1
+            if (gap <= shingleSize && correct && lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
+                if (gap == 1) {
+                    newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
+                } else {
+                    newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
+                            preprocessor.getScale(), lastAnomalyDescriptor);
+                }
             }
+            RangeVector answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
+            return preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
+        } else {
+            return new TimedRangeVector(new TimedRangeVector(horizon * blockSize, horizon));
         }
-        answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
-        return preprocessor.invertForecastRange(answer, lastAnomalyDescriptor);
     }
 
     public TimedRangeVector extrapolate(int horizon) {
@@ -451,9 +508,6 @@ public class ThresholdedRandomCutForest {
             } else {
                 if (outputAfter.isPresent()) {
                     startNormalization = Optional.of(min(DEFAULT_START_NORMALIZATION, outputAfter.get()));
-                } else {
-                    // startNormalization = Optional.of(max(1, (int) (sampleSize *
-                    // DEFAULT_OUTPUT_AFTER_FRACTION)));
                 }
             }
         }

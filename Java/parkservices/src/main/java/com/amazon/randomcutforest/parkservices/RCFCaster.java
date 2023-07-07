@@ -19,7 +19,10 @@ import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -173,21 +176,30 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                             lastAnomalyDescriptor, forest),
                     lastAnomalyDescriptor, forest);
 
-            if (answer.getAnomalyGrade() > 0) {
+            if (saveDescriptor(answer)) {
                 lastAnomalyDescriptor = answer.copyOf();
             }
 
-            // if the last point was an anomaly then it would be corrected
-            // note that forecast would show up for a point even when the anomaly score is 0
-            // because anomaly designation needs X previous points and forecast needs X
-            // points
-            TimedRangeVector timedForecast = extrapolate(forecastHorizon);
-            answer.setTimedForecast(timedForecast);
+            TimedRangeVector timedForecast = new TimedRangeVector(
+                    forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
 
             // note that internal timestamp of answer is 1 step in the past
             // outputReady corresponds to first (and subsequent) forecast
             if (forest.isOutputReady()) {
-                errorHandler.update(answer, calibrationMethod);
+                errorHandler.updateActuals(answer.getCurrentInput(), answer.getPostDeviations());
+                errorHandler.augmentDescriptor(answer);
+
+                // if the last point was an anomaly then it would be corrected
+                // note that forecast would show up for a point even when the anomaly score is 0
+                // because anomaly designation needs X previous points and forecast needs X
+                // points; note that calibration would have been performed already
+                timedForecast = extrapolate(forecastHorizon);
+
+                // note that internal timestamp of answer is 1 step in the past
+                // outputReady corresponds to first (and subsequent) forecast
+
+                errorHandler.updateForecasts(timedForecast.rangeVector);
+                answer.setTimedForecast(timedForecast);
             }
 
         } finally {
@@ -200,8 +212,66 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return answer;
     }
 
-    public void calibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
-        errorHandler.calibrate(calibration, errorDeviations, ranges);
+    public void calibrate(Calibration calibration, RangeVector ranges) {
+        errorHandler.calibrate(calibration, ranges);
     }
 
+    @Override
+    public TimedRangeVector extrapolate(int horizon, boolean correct, double centrality) {
+        return this.extrapolate(calibrationMethod, horizon, correct, centrality);
+    }
+
+    public TimedRangeVector extrapolate(Calibration calibration, int horizon, boolean correct, double centrality) {
+        TimedRangeVector answer = super.extrapolate(horizon, correct, centrality);
+        calibrate(calibration, answer.rangeVector);
+        return answer;
+    }
+
+    @Override
+    public List<AnomalyDescriptor> processSequentially(double[][] data, Function<AnomalyDescriptor, Boolean> filter) {
+        ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
+        Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
+                lastAnomalyDescriptor, forest);
+        if (data != null && data.length > 0) {
+            boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
+            try {
+                if (cacheDisabled) { // turn caching on temporarily
+                    forest.setBoundingBoxCacheFraction(1.0);
+                }
+                long timestamp = preprocessor.getInternalTimeStamp();
+                int length = preprocessor.getInputLength();
+                for (double[] point : data) {
+                    checkArgument(point.length == length, " nonuniform lengths ");
+                    ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
+                    description.setScoringStrategy(scoringStrategy);
+                    description = preprocessor.postProcess(predictorCorrector.detect(
+                            preprocessor.preProcess(description, lastAnomalyDescriptor, forest), lastAnomalyDescriptor,
+                            forest), lastAnomalyDescriptor, forest);
+                    if (saveDescriptor(description)) {
+                        lastAnomalyDescriptor = description.copyOf();
+                    }
+
+                    TimedRangeVector timedForecast = new TimedRangeVector(
+                            forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
+
+                    if (forest.isOutputReady()) {
+                        errorHandler.updateActuals(description.getCurrentInput(), description.getPostDeviations());
+                        errorHandler.augmentDescriptor(description);
+                        timedForecast = extrapolate(forecastHorizon);
+                        errorHandler.updateForecasts(timedForecast.rangeVector);
+                        description.setTimedForecast(timedForecast);
+                    }
+
+                    if (filter.apply(description)) {
+                        answer.add(description);
+                    }
+                }
+            } finally {
+                if (cacheDisabled) { // turn caching off
+                    forest.setBoundingBoxCacheFraction(0);
+                }
+            }
+        }
+        return answer;
+    }
 }

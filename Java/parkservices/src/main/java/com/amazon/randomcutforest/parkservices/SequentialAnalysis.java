@@ -59,14 +59,7 @@ public class SequentialAnalysis {
                 .internalShinglingEnabled(true).anomalyRate(0.01).forestMode(ForestMode.STANDARD).timeDecay(timeDecay)
                 .transformMethod(transformMethod).outputAfter(outputAfter).transformDecay(transformDecay)
                 .initialAcceptFraction(fraction).build();
-        ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
-        for (double[] point : data) {
-            AnomalyDescriptor result = forest.process(point, 0L);
-            if (result.getAnomalyGrade() > 0) {
-                answer.add(result);
-            }
-        }
-        return answer;
+        return forest.processSequentially(data);
     }
 
     public static List<AnomalyDescriptor> detectAnomalies(double[][] data, int shingleSize, int sampleSize,

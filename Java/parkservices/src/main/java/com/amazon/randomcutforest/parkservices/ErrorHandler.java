@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -69,6 +70,8 @@ public class ErrorHandler {
     float[] errorMean;
     float[] intervalPrecision;
 
+    float[] lastDeviations;
+
     // We keep the multiplers defined for potential
     // future use.
 
@@ -93,6 +96,7 @@ public class ErrorHandler {
         sequenceIndex = 0;
         errorMean = new float[length];
         errorRMSE = new DiVector(length);
+        lastDeviations = new float[inputLength];
         multipliers = new RangeVector(length);
         Arrays.fill(multipliers.upper, 1);
         Arrays.fill(multipliers.values, 1);
@@ -104,7 +108,7 @@ public class ErrorHandler {
 
     // for mappers
     public ErrorHandler(int errorHorizon, int forecastHorizon, int sequenceIndex, double percentile, int inputLength,
-            float[] actualsFlattened, float[] pastForecastsFlattened, float[] auxilliary) {
+            float[] actualsFlattened, float[] pastForecastsFlattened, float[] lastDeviations, float[] auxilliary) {
         checkArgument(forecastHorizon > 0, " incorrect forecast horizon");
         checkArgument(errorHorizon >= forecastHorizon, "incorrect error horizon");
         checkArgument(actualsFlattened != null || pastForecastsFlattened == null,
@@ -135,6 +139,8 @@ public class ErrorHandler {
         // = currentLength x forecastHorizon x 3
         checkArgument(forecastLength == currentLength * 3 * forecastHorizon, "misaligned forecasts");
 
+        checkArgument(lastDeviations.length >= inputLength, "incorrect length");
+        this.lastDeviations = Arrays.copyOf(lastDeviations, lastDeviations.length);
         this.errorMean = new float[length];
         this.errorRMSE = new DiVector(length);
         this.intervalPrecision = new float[length];
@@ -155,19 +161,15 @@ public class ErrorHandler {
     }
 
     /**
-     * the following the core subroutine, which calibrates; but the application of
-     * the calibration is controlled
-     *
-     * @param descriptor        the current forecast
-     * @param calibrationMethod the choice of the callibration
+     * updates the stored information (actuals) and recomputes the calibrations
+     * 
+     * @param input      the actual input
+     * @param deviations the deviations (post the current input)
      */
 
-    public void update(ForecastDescriptor descriptor, Calibration calibrationMethod) {
+    public void updateActuals(double[] input, double[] deviations) {
         int arrayLength = pastForecasts.length;
-        int length = pastForecasts[0].values.length;
-        int storedForecastIndex = sequenceIndex % (arrayLength);
-        int inputLength = descriptor.getInputLength();
-        double[] input = descriptor.getCurrentInput();
+        int inputLength = input.length;
 
         if (sequenceIndex > 0) {
             // sequenceIndex indicates the first empty place for input
@@ -182,20 +184,29 @@ public class ErrorHandler {
         // is they are only state dependent and not event dependent
         ++sequenceIndex;
         recomputeErrors();
-        calibrate(calibrationMethod, descriptor.getPostDeviations(), descriptor.timedForecast.rangeVector);
+        lastDeviations = toFloatArray(deviations);
+    }
 
+    public void augmentDescriptor(ForecastDescriptor descriptor) {
         descriptor.setErrorMean(errorMean);
         descriptor.setErrorRMSE(errorRMSE);
         descriptor.setObservedErrorDistribution(errorDistribution);
         descriptor.setIntervalPrecision(intervalPrecision);
+    }
 
-        System.arraycopy(descriptor.timedForecast.rangeVector.values, 0, pastForecasts[storedForecastIndex].values, 0,
-                length);
-        System.arraycopy(descriptor.timedForecast.rangeVector.upper, 0, pastForecasts[storedForecastIndex].upper, 0,
-                length);
-        System.arraycopy(descriptor.timedForecast.rangeVector.lower, 0, pastForecasts[storedForecastIndex].lower, 0,
-                length);
-
+    /**
+     * saves the forecast -- note that this section assumes that updateActuals() has
+     * been invoked prior (to recompute the deviations)
+     * 
+     * @param vector the forecast
+     */
+    public void updateForecasts(RangeVector vector) {
+        int arrayLength = pastForecasts.length;
+        int storedForecastIndex = (sequenceIndex + arrayLength - 1) % (arrayLength);
+        int length = pastForecasts[0].values.length;
+        System.arraycopy(vector.values, 0, pastForecasts[storedForecastIndex].values, 0, length);
+        System.arraycopy(vector.upper, 0, pastForecasts[storedForecastIndex].upper, 0, length);
+        System.arraycopy(vector.lower, 0, pastForecasts[storedForecastIndex].lower, 0, length);
     }
 
     public RangeVector getErrorDistribution() {
@@ -235,16 +246,20 @@ public class ErrorHandler {
         return copy;
     }
 
+    int length(int sequenceIndex, int errorHorizon, int index) {
+        return (sequenceIndex > errorHorizon + index + 1) ? errorHorizon : sequenceIndex - index - 1;
+    }
+
     protected void recomputeErrors() {
         int inputLength = actuals[0].length;
         int arrayLength = pastForecasts.length;
+        // shows the last filled entry with -2
         int inputIndex = (sequenceIndex - 2 + arrayLength) % arrayLength;
         double[] medianError = new double[errorHorizon];
 
         Arrays.fill(intervalPrecision, 0);
         for (int i = 0; i < forecastHorizon; i++) {
-            // this is the only place where the newer (possibly shorter) horizon matters
-            int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
+            int len = length(sequenceIndex, errorHorizon, i);
 
             for (int j = 0; j < inputLength; j++) {
                 int pos = i * inputLength + j;
@@ -295,20 +310,18 @@ public class ErrorHandler {
         }
     }
 
-    protected void calibrate(Calibration calibration, double[] errorDeviations, RangeVector ranges) {
+    protected void calibrate(Calibration calibration, RangeVector ranges) {
         int inputLength = actuals[0].length;
         checkArgument(inputLength * forecastHorizon == ranges.values.length, "mismatched lengths");
-        checkArgument(errorDeviations != null, " cannot be null");
-        checkArgument(inputLength <= errorDeviations.length, "deviations should be at least as long as input lengths");
         for (int i = 0; i < forecastHorizon; i++) {
             // this is the only place where the newer (possibly shorter) horizon matters
-            int len = (sequenceIndex > errorHorizon + i + 1) ? errorHorizon : sequenceIndex - i - 1;
+            int len = length(sequenceIndex, errorHorizon, i);
             for (int j = 0; j < inputLength; j++) {
                 int pos = i * inputLength + j;
                 if (len > 0) {
                     if (calibration != Calibration.NONE) {
                         if (len * percentile < 1.0) {
-                            double deviation = errorDeviations[j];
+                            double deviation = lastDeviations[j];
                             ranges.upper[pos] = max(ranges.upper[pos], ranges.values[pos] + (float) (1.3 * deviation));
                             ranges.lower[pos] = min(ranges.lower[pos], ranges.values[pos] - (float) (1.3 * deviation));
                         } else {
