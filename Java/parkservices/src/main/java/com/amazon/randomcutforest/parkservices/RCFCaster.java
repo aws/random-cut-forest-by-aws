@@ -146,6 +146,37 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return process(inputPoint, timestamp, null);
     }
 
+    void augmentForecast(ForecastDescriptor answer) {
+        answer.setScoringStrategy(scoringStrategy);
+        answer = preprocessor.postProcess(predictorCorrector
+                .detect(preprocessor.preProcess(answer, lastAnomalyDescriptor, forest), lastAnomalyDescriptor, forest),
+                lastAnomalyDescriptor, forest);
+        if (saveDescriptor(answer)) {
+            lastAnomalyDescriptor = answer.copyOf();
+        }
+        TimedRangeVector timedForecast = new TimedRangeVector(
+                forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
+
+        // note that internal timestamp of answer is 1 step in the past
+        // outputReady corresponds to first (and subsequent) forecast
+        if (forest.isOutputReady()) {
+            errorHandler.updateActuals(answer.getCurrentInput(), answer.getPostDeviations());
+            errorHandler.augmentDescriptor(answer);
+
+            // if the last point was an anomaly then it would be corrected
+            // note that forecast would show up for a point even when the anomaly score is 0
+            // because anomaly designation needs X previous points and forecast needs X
+            // points; note that calibration would have been performed already
+            timedForecast = extrapolate(forecastHorizon);
+
+            // note that internal timestamp of answer is 1 step in the past
+            // outputReady corresponds to first (and subsequent) forecast
+
+            errorHandler.updateForecasts(timedForecast.rangeVector);
+        }
+        answer.setTimedForecast(timedForecast);
+    }
+
     /**
      * a single call that preprocesses data, compute score/grade and updates state
      * when the current input has potentially missing values
@@ -161,47 +192,15 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     @Override
     public ForecastDescriptor process(double[] inputPoint, long timestamp, int[] missingValues) {
         checkArgument(missingValues == null, "on the fly imputation and error estimation should not mix");
-        ForecastDescriptor initial = new ForecastDescriptor(inputPoint, timestamp, forecastHorizon);
-        initial.setScoringStrategy(scoringStrategy);
-        ForecastDescriptor answer;
+        ForecastDescriptor answer = new ForecastDescriptor(inputPoint, timestamp, forecastHorizon);
+        answer.setScoringStrategy(scoringStrategy);
         boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
         try {
             if (cacheDisabled) {
                 // turn caching on temporarily
                 forest.setBoundingBoxCacheFraction(1.0);
             }
-            // anomaly computation next; and subsequent update
-            answer = preprocessor.postProcess(
-                    predictorCorrector.detect(preprocessor.preProcess(initial, lastAnomalyDescriptor, forest),
-                            lastAnomalyDescriptor, forest),
-                    lastAnomalyDescriptor, forest);
-
-            if (saveDescriptor(answer)) {
-                lastAnomalyDescriptor = answer.copyOf();
-            }
-
-            TimedRangeVector timedForecast = new TimedRangeVector(
-                    forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
-
-            // note that internal timestamp of answer is 1 step in the past
-            // outputReady corresponds to first (and subsequent) forecast
-            if (forest.isOutputReady()) {
-                errorHandler.updateActuals(answer.getCurrentInput(), answer.getPostDeviations());
-                errorHandler.augmentDescriptor(answer);
-
-                // if the last point was an anomaly then it would be corrected
-                // note that forecast would show up for a point even when the anomaly score is 0
-                // because anomaly designation needs X previous points and forecast needs X
-                // points; note that calibration would have been performed already
-                timedForecast = extrapolate(forecastHorizon);
-
-                // note that internal timestamp of answer is 1 step in the past
-                // outputReady corresponds to first (and subsequent) forecast
-
-                errorHandler.updateForecasts(timedForecast.rangeVector);
-                answer.setTimedForecast(timedForecast);
-            }
-
+            augmentForecast(answer);
         } finally {
             if (cacheDisabled) {
                 // turn caching off
@@ -243,25 +242,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                 for (double[] point : data) {
                     checkArgument(point.length == length, " nonuniform lengths ");
                     ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
-                    description.setScoringStrategy(scoringStrategy);
-                    description = preprocessor.postProcess(predictorCorrector.detect(
-                            preprocessor.preProcess(description, lastAnomalyDescriptor, forest), lastAnomalyDescriptor,
-                            forest), lastAnomalyDescriptor, forest);
-                    if (saveDescriptor(description)) {
-                        lastAnomalyDescriptor = description.copyOf();
-                    }
-
-                    TimedRangeVector timedForecast = new TimedRangeVector(
-                            forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
-
-                    if (forest.isOutputReady()) {
-                        errorHandler.updateActuals(description.getCurrentInput(), description.getPostDeviations());
-                        errorHandler.augmentDescriptor(description);
-                        timedForecast = extrapolate(forecastHorizon);
-                        errorHandler.updateForecasts(timedForecast.rangeVector);
-                        description.setTimedForecast(timedForecast);
-                    }
-
+                    augmentForecast(description);
                     if (filter.apply(description)) {
                         answer.add(description);
                     }
