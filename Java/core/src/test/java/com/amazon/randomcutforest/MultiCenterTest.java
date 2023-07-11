@@ -19,8 +19,11 @@ import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
@@ -32,7 +35,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.amazon.randomcutforest.summarization.GenericMultiCenter;
 import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.MultiCenter;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 import com.amazon.randomcutforest.util.Weighted;
@@ -47,6 +52,29 @@ public class MultiCenterTest {
     private static double transitionToAnomalyProbability;
     private static double transitionToBaseProbability;
     private static int dataSize;
+
+    @Test
+    public void constructorTest() {
+        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, -1.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 2.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 1.0, 0));
+        assertThrows(IllegalArgumentException.class, () -> MultiCenter.initialize(new float[4], 0, 1.0, 1000));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, -1.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 2.0, 1));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 1.0, 0));
+        assertThrows(IllegalArgumentException.class, () -> GenericMultiCenter.initialize(new float[4], 0, 1.0, 1000));
+    }
+
+    @Test
+    public void initializationTest() {
+        GenericMultiCenter genericMultiCenter = GenericMultiCenter.initialize(new float[4], 0, 0.5, 1);
+        MultiCenter multiCenter = MultiCenter.initialize(new float[4], 0, 0.5, 1);
+        List<Weighted<Integer>> a = new ArrayList<>();
+        assertEquals(multiCenter.getAssignedPoints().getClass(), a.getClass());
+        assertEquals(genericMultiCenter.getAssignedPoints(), Collections.emptyList());
+        assertEquals(genericMultiCenter.averageRadius(), 0);
+        assertEquals(genericMultiCenter.extentMeasure(), 0);
+    }
 
     @ParameterizedTest
     @MethodSource("generateArguments")
@@ -78,7 +106,7 @@ public class MultiCenterTest {
 
     @ParameterizedTest
     @MethodSource("generateArguments")
-    public void MultiSummaryTest(BiFunction<float[], float[], Double> distance) {
+    public void MultiSummaryTestGeneric(BiFunction<float[], float[], Double> distance) {
 
         int over = 0;
         int under = 0;
@@ -93,6 +121,32 @@ public class MultiCenterTest {
 
             List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions,
                     1, false, 0.8, distance, random.nextInt(), false, random.nextDouble(), 5);
+            System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
+                    + " dimensions, seed : " + seed);
+            if (summary.size() < 2 * newDimensions) {
+                ++under;
+            } else if (summary.size() > 2 * newDimensions) {
+                ++over;
+            }
+        }
+        assert (under <= 1);
+    }
+
+    @Test
+    public void MultiSummaryTest() {
+
+        int over = 0;
+        int under = 0;
+
+        for (int numTrials = 0; numTrials < 10; numTrials++) {
+            long seed = new Random().nextLong();
+            Random random = new Random(seed);
+            int newDimensions = random.nextInt(10) + 3;
+            dataSize = 200000;
+
+            float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
+
+            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.9, 1, seed);
             System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
                     + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {
@@ -119,10 +173,13 @@ public class MultiCenterTest {
         // these can differ for shinkage != 0 due to floating point issues
         List<ICluster<float[]>> summary1 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, 1,
                 false, 0.8, distance, nextSeed, false, 0, 5);
-        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(points, 5 * newDimensions, 10 * newDimensions, 1,
+        ArrayList<float[]> list = new ArrayList<>();
+        for (float[] point : points) {
+            list.add(point);
+        }
+        List<ICluster<float[]>> summary2 = Summarizer.multiSummarize(list, 5 * newDimensions, 10 * newDimensions, 1,
                 false, 0.8, distance, nextSeed, true, 0, 5);
-        // assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling
-        // inconsistent");
+
         assertEquals(summary2.size(), summary1.size(), " incorrect number of clusters");
         for (int i = 0; i < summary2.size(); i++) {
             assertEquals(summary1.get(i).getWeight(), summary2.get(i).getWeight(), 1e-6);

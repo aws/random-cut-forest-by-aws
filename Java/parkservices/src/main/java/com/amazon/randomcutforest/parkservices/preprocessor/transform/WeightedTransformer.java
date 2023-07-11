@@ -42,7 +42,7 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 @Setter
 public class WeightedTransformer implements ITransformer {
 
-    public static int NUMBER_OF_STATS = 3;
+    public static int NUMBER_OF_STATS = 5;
 
     double[] weights;
 
@@ -84,16 +84,20 @@ public class WeightedTransformer implements ITransformer {
      * @param ranges        provides p50 values with upper and lower estimates
      * @param baseDimension the number of variables being forecast (often 1)
      * @param previousInput the last input of length baseDimension
+     * @param correction    correction due to last anomaly updates the RangeVector
+     *                      to the inverse transform and applies correction
      */
-    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
+    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput,
+            double[] correction) {
         int horizon = ranges.values.length / baseDimension;
         int inputLength = weights.length;
+        checkArgument(correction.length >= inputLength, " incorrect length ");
         for (int i = 0; i < horizon; i++) {
             for (int j = 0; j < inputLength; j++) {
                 double weight = (weights[j] == 0) ? 0 : getScale(j, deviations) / weights[j];
                 ranges.scale(i * baseDimension + j, (float) weight);
                 ranges.shift(i * baseDimension + j,
-                        (float) (getShift(j, deviations) + (i + 1) * deviations[j + inputLength].getMean()));
+                        (float) (getShift(j, deviations) + (i + 1) * getDrift(j, deviations)));
             }
         }
     }
@@ -117,6 +121,8 @@ public class WeightedTransformer implements ITransformer {
                 deviations[i + inputPoint.length].update(inputPoint[i] - previousInput[i]);
             }
             deviations[i + 2 * inputPoint.length].update(deviations[i].getDeviation());
+            deviations[i + 3 * inputPoint.length].update(deviations[i + inputPoint.length].getMean());
+            deviations[i + 4 * inputPoint.length].update(deviations[i + inputPoint.length].getDeviation());
         }
     }
 
@@ -194,6 +200,10 @@ public class WeightedTransformer implements ITransformer {
         return 0;
     }
 
+    protected double getDrift(int i, Deviation[] devs) {
+        return devs[i + 3 * weights.length].getMean();
+    }
+
     @Override
     public double[] getScale() {
         double[] answer = new double[weights.length];
@@ -213,11 +223,19 @@ public class WeightedTransformer implements ITransformer {
     }
 
     public double[] getSmoothedDeviations() {
-        checkArgument(deviations.length >= 3 * weights.length, "incorrect call");
         double[] answer = new double[weights.length];
         for (int i = 0; i < weights.length; i++) {
             answer[i] = Math.abs(deviations[i + 2 * weights.length].getMean());
         }
         return answer;
     }
+
+    public double[] getSmoothedDifferenceDeviations() {
+        double[] answer = new double[weights.length];
+        for (int i = 0; i < weights.length; i++) {
+            answer[i] = Math.abs(deviations[i + 4 * weights.length].getMean());
+        }
+        return answer;
+    }
+
 }

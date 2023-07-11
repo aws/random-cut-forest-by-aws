@@ -83,10 +83,6 @@ public class Center implements ICluster<float[]> {
         return weight;
     }
 
-    public boolean captureBeforeReset(float[] point, BiFunction<float[], float[], Double> distance) {
-        return previousWeight * distance.apply(point, representative) < 3 * previousSumOFRadius;
-    }
-
     // a standard reassignment using the median values and NOT the mean; the mean is
     // unlikely to
     // provide robust convergence
@@ -113,6 +109,9 @@ public class Center implements ICluster<float[]> {
                 } else {
                     break;
                 }
+            }
+            if (position == assignedPoints.size()) {
+                position--;
             }
             representative[index] = getPoint.apply(assignedPoints.get(position).index)[index];
         }
@@ -163,7 +162,9 @@ public class Center implements ICluster<float[]> {
     }
 
     public double distance(float[] point, BiFunction<float[], float[], Double> distance) {
-        return distance.apply(point, representative);
+        double t = distance.apply(point, representative);
+        checkArgument(t >= 0, "distance cannot be negative");
+        return t;
     }
 
     @Override

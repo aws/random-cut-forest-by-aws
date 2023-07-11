@@ -22,7 +22,7 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SHINGLE_SIZE;
 import static com.amazon.randomcutforest.config.ImputationMethod.FIXED_VALUES;
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.parkservices.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
-import static java.lang.Math.log;
+import static java.lang.Math.exp;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -86,10 +86,8 @@ public class Preprocessor implements IPreprocessor {
     public static double DEFAULT_USE_IMPUTED_FRACTION = 0.5;
 
     // minimum number of observations before using a model to predict any expected
-    // behavior
+    // behavior -- if we can score, we should predict
     public static int MINIMUM_OBSERVATIONS_FOR_EXPECTED = 100;
-
-    public static int DEFAULT_TIME_STATES = 3;
 
     public static int DEFAULT_DATA_QUALITY_STATES = 1;
 
@@ -98,8 +96,6 @@ public class Preprocessor implements IPreprocessor {
 
     // normalize time difference;
     protected boolean normalizeTime;
-
-    // protected boolean augmentTime;
 
     protected double weightTime;
 
@@ -220,7 +216,7 @@ public class Preprocessor implements IPreprocessor {
 
         Deviation[] deviationList = new Deviation[NUMBER_OF_STATS * inputLength];
         manageDeviations(deviationList, builder.deviations, transformDecay);
-        timeStampDeviations = new Deviation[DEFAULT_TIME_STATES];
+        timeStampDeviations = new Deviation[NUMBER_OF_STATS];
         manageDeviations(timeStampDeviations, builder.timeDeviations, transformDecay);
 
         if (transformMethod == TransformMethod.NONE) {
@@ -260,7 +256,7 @@ public class Preprocessor implements IPreprocessor {
     // last third
     // are filled with 0.1 * transformDecay and are reserved for smoothing
     void manageDeviations(Deviation[] deviationList, Optional<Deviation[]> original, double timeDecay) {
-        checkArgument(deviationList.length % 3 == 0, " has to be a multiple of three");
+        checkArgument(deviationList.length % NUMBER_OF_STATS == 0, " has to be a multiple of five");
         int usedDeviations = 0;
         if (original.isPresent()) {
             Deviation[] list = original.get();
@@ -271,10 +267,10 @@ public class Preprocessor implements IPreprocessor {
                 deviationList[i] = list[i].copy();
             }
         }
-        for (int i = usedDeviations; i < deviationList.length - deviationList.length / 3; i++) {
+        for (int i = usedDeviations; i < deviationList.length - 2 * deviationList.length / 5; i++) {
             deviationList[i] = new Deviation(timeDecay);
         }
-        usedDeviations = max(usedDeviations, deviationList.length - deviationList.length / 3);
+        usedDeviations = max(usedDeviations, deviationList.length - 2 * deviationList.length / 5);
         for (int i = usedDeviations; i < deviationList.length; i++) {
             deviationList[i] = new Deviation(0.1 * timeDecay);
         }
@@ -286,9 +282,11 @@ public class Preprocessor implements IPreprocessor {
      *
      * @return a boolean indicating th need to store initial values
      */
-    public static boolean requireInitialSegment(boolean normalizeTime, TransformMethod transformMethod) {
+    public static boolean requireInitialSegment(boolean normalizeTime, TransformMethod transformMethod,
+            ForestMode mode) {
         return (normalizeTime || transformMethod == TransformMethod.NORMALIZE
-                || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE);
+                || transformMethod == TransformMethod.NORMALIZE_DIFFERENCE)
+                || transformMethod == TransformMethod.SUBTRACT_MA;
     }
 
     /**
@@ -324,7 +322,7 @@ public class Preprocessor implements IPreprocessor {
                 .setReasonableForecast((adjustedInternal > MINIMUM_OBSERVATIONS_FOR_EXPECTED) && (dataDimension >= 4));
         description.setScale(getScale());
         description.setShift(getShift());
-        description.setDeviations(transformer.getSmoothedDeviations());
+        description.setDeviations(getSmoothedDeviations());
         return description;
     }
 
@@ -344,7 +342,7 @@ public class Preprocessor implements IPreprocessor {
 
         double[] inputPoint = description.getCurrentInput();
         long timestamp = description.getInputTimestamp();
-        double[] scaledInput = getScaledInput(inputPoint, timestamp, null, timeStampDeviations[0].getMean());
+        double[] scaledInput = getScaledInput(inputPoint, timestamp, null, getTimeShift());
 
         if (scaledInput == null) {
             return description;
@@ -378,7 +376,7 @@ public class Preprocessor implements IPreprocessor {
             scale[inputLength] = (weightTime == 0) ? 0 : 1.0 / weightTime;
             if (normalizeTime) {
                 scale[inputLength] *= NORMALIZATION_SCALING_FACTOR
-                        * (timeStampDeviations[2].getMean() + DEFAULT_NORMALIZATION_PRECISION);
+                        * (timeStampDeviations[4].getMean() + DEFAULT_NORMALIZATION_PRECISION);
             }
             return scale;
         }
@@ -392,8 +390,27 @@ public class Preprocessor implements IPreprocessor {
         } else {
             double[] shift = new double[inputLength + 1];
             System.arraycopy(transformer.getShift(previous), 0, shift, 0, inputLength);
-            shift[inputLength] = timeStampDeviations[0].getMean() + previousTimeStamps[shingleSize - 1];
+            // time is always differenced
+            shift[inputLength] = ((normalizeTime) ? getTimeShift() : 0) + previousTimeStamps[shingleSize - 1];
             return shift;
+        }
+    }
+
+    public double[] getSmoothedDeviations() {
+        if (mode != ForestMode.TIME_AUGMENTED) {
+            double[] deviations = new double[2 * inputLength];
+            System.arraycopy(transformer.getSmoothedDeviations(), 0, deviations, 0, inputLength);
+            System.arraycopy(transformer.getSmoothedDifferenceDeviations(), 0, deviations, inputLength, inputLength);
+            return deviations;
+        } else {
+            double[] deviations = new double[2 * inputLength + 2];
+            System.arraycopy(transformer.getSmoothedDeviations(), 0, deviations, 0, inputLength);
+            System.arraycopy(transformer.getSmoothedDifferenceDeviations(), 0, deviations, inputLength + 1,
+                    inputLength);
+            // time is differenced (for now) or unchanged
+            deviations[inputLength + 1] = timeStampDeviations[4].getMean();
+            deviations[2 * inputLength + 1] = timeStampDeviations[4].getMean();
+            return deviations;
         }
     }
 
@@ -434,6 +451,8 @@ public class Preprocessor implements IPreprocessor {
             result.setPostShift(postShift);
             result.setTransformDecay(transformDecay);
         }
+        // after the insertions
+        result.setPostDeviations(getSmoothedDeviations());
         return result;
     }
 
@@ -517,15 +536,15 @@ public class Preprocessor implements IPreprocessor {
 
     // same as inverseMapTime, using explicit value also useful in forecast
     protected long inverseMapTimeValue(double gap, long timestamp) {
-        double factor = weightTime;
+        double factor = (weightTime == 0) ? 0 : 1.0 / weightTime;
         if (factor == 0) {
             return 0;
         }
         if (normalizeTime) {
-            return (long) Math.round(timestamp + timeStampDeviations[0].getMean()
-                    + NORMALIZATION_SCALING_FACTOR * gap * timeStampDeviations[2].getMean() / factor);
+            return (long) Math
+                    .round(timestamp + getTimeShift() + NORMALIZATION_SCALING_FACTOR * gap * getTimeScale() * factor);
         } else {
-            return (long) Math.round(gap / factor + timestamp);
+            return (long) Math.round(gap * factor + timestamp);
         }
     }
 
@@ -612,6 +631,16 @@ public class Preprocessor implements IPreprocessor {
         int horizon = ranges.values.length / baseDimension;
 
         int gap = (int) (internalTimeStamp - lastAnomalyDescriptor.getInternalTimeStamp());
+        double[] correction = lastAnomalyDescriptor.getDeltaShift();
+        if (correction != null) {
+            double decay = max(lastAnomalyDescriptor.getTransformDecay(), 1.0 / (3 * shingleSize));
+            double factor = exp(-gap * decay);
+            for (int i = 0; i < correction.length; i++) {
+                correction[i] *= factor;
+            }
+        } else {
+            correction = new double[baseDimension];
+        }
         long localTimeStamp = previousTimeStamps[shingleSize - 1];
 
         TimedRangeVector timedRangeVector;
@@ -620,13 +649,11 @@ public class Preprocessor implements IPreprocessor {
             // Note that STREAMING_IMPUTE we are already using the time values
             // to fill in values -- moreover such missing values can be large in number
             // predicting next timestamps in the future in such a scenario would correspond
-            // to a
-            // joint prediction and TIME_AUGMENTED mode may be more suitable.
-            // and therefore for STREAMING_INPUTE the timestamps values are not predicted
-            // and kept at 0
+            // to a joint prediction and TIME_AUGMENTED mode may be more suitable.
+            // therefore for STREAMING_IMPUTE the timestamps values are not predicted
             if (mode != ForestMode.STREAMING_IMPUTE) {
-                double timeGap = (normalizeTime) ? 0 : timeStampDeviations[0].getMean();
-                double timeBound = (normalizeTime) ? 2.5 : 2.5 * timeStampDeviations[2].getMean();
+                double timeGap = getTimeDrift();
+                double timeBound = 1.3 * getTimeGapDifference();
 
                 for (int i = 0; i < horizon; i++) {
                     timedRangeVector.timeStamps[i] = inverseMapTimeValue(timeGap, localTimeStamp);
@@ -634,14 +661,14 @@ public class Preprocessor implements IPreprocessor {
                             inverseMapTimeValue(timeGap + timeBound, localTimeStamp));
                     timedRangeVector.lowerTimeStamps[i] = min(timedRangeVector.timeStamps[i],
                             inverseMapTimeValue(max(0, timeGap - timeBound), localTimeStamp));
-                    localTimeStamp = timedRangeVector.upperTimeStamps[i];
+                    localTimeStamp = timedRangeVector.timeStamps[i];
                 }
             }
         } else {
-            timedRangeVector = new TimedRangeVector(inputLength * horizon, horizon);
             if (gap <= shingleSize && lastAnomalyDescriptor.getExpectedRCFPoint() != null && gap == 1) {
                 localTimeStamp = lastAnomalyDescriptor.getExpectedTimeStamp();
             }
+            timedRangeVector = new TimedRangeVector(inputLength * horizon, horizon);
             for (int i = 0; i < horizon; i++) {
                 for (int j = 0; j < inputLength; j++) {
                     timedRangeVector.rangeVector.values[i * inputLength + j] = ranges.values[i * baseDimension + j];
@@ -657,7 +684,10 @@ public class Preprocessor implements IPreprocessor {
                 localTimeStamp = timedRangeVector.upperTimeStamps[i];
             }
         }
-        transformer.invertForecastRange(timedRangeVector.rangeVector, inputLength, getShingledInput(shingleSize - 1));
+        // the following is the post-anomaly transformation, can be impacted by
+        // anomalies
+        transformer.invertForecastRange(timedRangeVector.rangeVector, inputLength, getShingledInput(shingleSize - 1),
+                correction);
         return timedRangeVector;
     }
 
@@ -716,6 +746,33 @@ public class Preprocessor implements IPreprocessor {
         ++internalTimeStamp;
     }
 
+    protected void updateTimeStampDeviations(long timestamp, long previous) {
+        if (timeStampDeviations != null) {
+            timeStampDeviations[0].update(timestamp);
+            timeStampDeviations[1].update(timestamp - previous);
+            // smoothing - not used currently
+            timeStampDeviations[2].update(timeStampDeviations[0].getDeviation());
+            timeStampDeviations[3].update(timeStampDeviations[1].getMean());
+            timeStampDeviations[4].update(timeStampDeviations[1].getDeviation());
+        }
+    }
+
+    double getTimeScale() {
+        return 1.0 + getTimeGapDifference();
+    }
+
+    double getTimeGapDifference() {
+        return Math.abs(timeStampDeviations[4].getMean());
+    }
+
+    double getTimeShift() {
+        return timeStampDeviations[1].getMean();
+    }
+
+    double getTimeDrift() {
+        return timeStampDeviations[3].getMean();
+    }
+
     /**
      * updates the state of the preprocessor
      * 
@@ -725,13 +782,7 @@ public class Preprocessor implements IPreprocessor {
      * @param previous    the previous timestamp
      */
     protected void updateState(double[] inputPoint, double[] scaledInput, long timestamp, long previous) {
-        if (timeStampDeviations != null) {
-            double value = timestamp - previous;
-            timeStampDeviations[0].update(value);
-            timeStampDeviations[1].update(log(Math.max(1.0, 1.0 + value)));
-            // smoothing
-            timeStampDeviations[2].update(timeStampDeviations[0].getDeviation());
-        }
+        updateTimeStampDeviations(timestamp, previous);
         updateTimestamps(timestamp);
         double[] previousInput = (inputLength == lastShingledInput.length) ? lastShingledInput
                 : getShingledInput(shingleSize - 1);
@@ -763,25 +814,22 @@ public class Preprocessor implements IPreprocessor {
     }
 
     /**
-     * maps a value shifted to the current mean or to a relative space
+     * maps a value shifted to the current mean or to a relative space for time
      *
-     * @param value     input value of dimension
-     * @param deviation statistic
-     * @param factor    a control parameter for deviation
      * @return the normalized value
      */
-    protected double normalize(double value, Deviation[] deviation, double factor) {
-        double currentFactor = (factor != 0) ? factor : Math.abs(deviation[2].getMean());
-        if (value - deviation[0].getMean() >= NORMALIZATION_SCALING_FACTOR * clipFactor
+    protected double normalize(double value, double factor) {
+        double currentFactor = (factor != 0) ? factor : getTimeScale();
+        if (value - getTimeShift() >= NORMALIZATION_SCALING_FACTOR * clipFactor
                 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return clipFactor;
         }
-        if (value - deviation[0].getMean() <= -NORMALIZATION_SCALING_FACTOR * clipFactor
+        if (value - getTimeShift() <= -NORMALIZATION_SCALING_FACTOR * clipFactor
                 * (currentFactor + DEFAULT_NORMALIZATION_PRECISION)) {
             return -clipFactor;
         } else {
             // deviation cannot be 0
-            return (value - deviation[0].getMean())
+            return (value - getTimeShift())
                     / (NORMALIZATION_SCALING_FACTOR * (currentFactor + DEFAULT_NORMALIZATION_PRECISION));
         }
     }
@@ -803,7 +851,7 @@ public class Preprocessor implements IPreprocessor {
         } else {
             double timeShift = timestamp - previousTimeStamps[shingleSize - 1];
             scaledInput[normalized.length] = weightTime
-                    * ((normalizeTime) ? normalize(timeShift, timeStampDeviations, timeFactor) : timeShift);
+                    * ((normalizeTime) ? normalize(timeShift, timeFactor) : timeShift);
         }
         return scaledInput;
     }
@@ -955,7 +1003,7 @@ public class Preprocessor implements IPreprocessor {
         public Preprocessor build() {
             if (forestMode == ForestMode.STREAMING_IMPUTE) {
                 return new ImputePreprocessor(this);
-            } else if (requireInitialSegment(normalizeTime, transformMethod)) {
+            } else if (requireInitialSegment(normalizeTime, transformMethod, forestMode)) {
                 return new InitialSegmentPreprocessor(this);
             }
             return new Preprocessor(this);

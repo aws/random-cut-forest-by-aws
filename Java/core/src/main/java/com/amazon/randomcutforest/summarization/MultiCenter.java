@@ -33,10 +33,6 @@ public class MultiCenter extends GenericMultiCenter<float[]> {
         this.assignedPoints = new ArrayList<>();
     }
 
-    public static MultiCenter initialize(float[] coordinate, float weight) {
-        return new MultiCenter(coordinate, weight, DEFAULT_SHRINKAGE, DEFAULT_NUMBER_OF_REPRESENTATIVES);
-    }
-
     public static MultiCenter initialize(float[] coordinate, float weight, double shrinkage,
             int numberOfRepresentatives) {
         checkArgument(shrinkage >= 0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
@@ -70,9 +66,9 @@ public class MultiCenter extends GenericMultiCenter<float[]> {
         previousSumOFRadius = sumOfRadius;
         sumOfRadius = 0;
         for (int j = 0; j < assignedPoints.size(); j++) {
+            // distance will check for -negative internally
             double addTerm = distance(getPoint.apply(assignedPoints.get(j).index), distanceFunction)
                     * assignedPoints.get(j).weight;
-            checkArgument(addTerm >= 0, "distances or weights cannot be negative");
             sumOfRadius += addTerm;
         }
         return (previousSumOFRadius - sumOfRadius);

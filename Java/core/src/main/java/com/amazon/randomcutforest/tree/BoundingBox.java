@@ -91,18 +91,6 @@ public class BoundingBox implements IBoundingBoxView {
         return new BoundingBox(minValuesMerged, maxValuesMerged, sum);
     }
 
-    public void replaceBox(float[] point) {
-        System.arraycopy(point, 0, minValues, 0, point.length);
-        System.arraycopy(point, 0, maxValues, 0, point.length);
-        rangeSum = 0;
-    }
-
-    public void copyFrom(BoundingBox otherBox) {
-        System.arraycopy(otherBox.minValues, 0, minValues, 0, otherBox.minValues.length);
-        System.arraycopy(otherBox.maxValues, 0, maxValues, 0, otherBox.maxValues.length);
-        rangeSum = otherBox.rangeSum;
-    }
-
     public double probabilityOfCut(float[] point) {
         double range = 0;
         for (int i = 0; i < point.length; i++) {

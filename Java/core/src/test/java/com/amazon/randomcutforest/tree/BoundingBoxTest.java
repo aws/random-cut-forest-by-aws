@@ -19,7 +19,9 @@ import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +43,22 @@ public class BoundingBoxTest {
     }
 
     @Test
+    public void dimensionTest() {
+        assertThrows(IllegalArgumentException.class, () -> new BoundingBox(point1, new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.getMergedBox(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.contains(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.contains(new BoundingBox(new float[1])));
+    }
+
+    @Test
+    public void equalsTest() {
+        assertFalse(box1.equals(point1));
+        assertFalse(box1.equals(box2));
+        assertFalse(box1.equals(new BoundingBox(point1, new float[] { 3.0f, 2.7f })));
+        assertTrue(box1.equals(box1.copy()));
+    }
+
+    @Test
     public void testNewFromSinglePoint() {
         assertThat(box1.getDimensions(), is(2));
         assertThat((float) box1.getMinValue(0), is(point1[0]));
@@ -59,10 +77,19 @@ public class BoundingBoxTest {
         assertThat((float) box2.getMaxValue(1), is(point2[1]));
         assertThat(box2.getRange(1), is(0.0));
         assertThat(box2.getRangeSum(), is(0.0));
+
+        assertTrue(box1.probabilityOfCut(point2) == 1.0);
+        assertTrue(box1.probabilityOfCut(point1) == 0.0);
     }
 
     @Test
     public void testGetMergedBoxWithOtherBox() {
+
+        assertThrows(IllegalStateException.class, () -> box1.addBox(box2));
+        assertThrows(IllegalArgumentException.class, () -> box1.addPoint(new float[1]));
+        assertThrows(IllegalArgumentException.class, () -> box1.addPoint(new float[2]));
+        assertDoesNotThrow(() -> box1.copy().addPoint(new float[2]));
+
         BoundingBox mergedBox = box1.getMergedBox(box2);
 
         assertThat(mergedBox.getDimensions(), is(2));
@@ -108,7 +135,7 @@ public class BoundingBoxTest {
         BoundingBox box3 = new BoundingBox(new float[] { -4.0f, -4.0f })
                 .getMergedBox(new BoundingBox(new float[] { -1.0f, -1.0f }));
 
-        BoundingBox box4 = new BoundingBox(new float[] { 1.0f, -1.0f })
+        BoundingBox box4 = new BoundingBox(new float[] { -1.0f, -1.0f })
                 .getMergedBox(new BoundingBox(new float[] { 5.0f, 5.0f }));
 
         // completely contains
@@ -133,6 +160,7 @@ public class BoundingBoxTest {
         assertTrue(box1.contains(new float[] { 5.5f, 6.5f }));
         assertFalse(box1.contains(new float[] { -0.7f, -4.5f }));
         assertFalse(box1.contains(new float[] { 5.0f, 11.0f }));
+        assertFalse(box1.contains(new float[] { -5.0f, 10.0f }));
     }
 
 }

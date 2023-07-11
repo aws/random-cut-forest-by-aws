@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.parkservices.preprocessor.transform;
 
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+
 import java.util.Arrays;
 
 import lombok.Getter;
@@ -51,15 +53,17 @@ public class DifferenceTransformer extends WeightedTransformer {
      * @param previousInput the last input of length baseDimension
      */
     @Override
-    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput) {
+    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput,
+            double[] correction) {
         int inputLength = weights.length;
         int horizon = ranges.values.length / baseDimension;
         double[] last = Arrays.copyOf(previousInput, previousInput.length);
+        checkArgument(correction.length >= inputLength, " incorrect length ");
         for (int i = 0; i < horizon; i++) {
             for (int j = 0; j < inputLength; j++) {
                 float weight = (weights[j] == 0) ? 0f : 1.0f / (float) weights[j];
                 ranges.scale(i * baseDimension + j, weight);
-                ranges.shift(i * baseDimension + j, (float) last[j]);
+                ranges.shift(i * baseDimension + j, (float) (getShift(j, deviations) + last[j]));
                 last[j] = ranges.values[j];
             }
         }

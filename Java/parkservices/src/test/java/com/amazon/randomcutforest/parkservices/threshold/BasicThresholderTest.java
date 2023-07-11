@@ -59,9 +59,9 @@ public class BasicThresholderTest {
         basicThresholder.setScoreDifferencing(0);
         assertFalse(basicThresholder.isDeviationReady());
         basicThresholder.setMinimumScores(5);
-        assertFalse(basicThresholder.isDeviationReady());
-        basicThresholder.setScoreDifferencing(1.0);
         assertTrue(basicThresholder.isDeviationReady());
+        basicThresholder.setScoreDifferencing(1.0);
+        assertFalse(basicThresholder.isDeviationReady());
 
         basicThresholder.updatePrimary(0.0);
         basicThresholder.updatePrimary(0.0);

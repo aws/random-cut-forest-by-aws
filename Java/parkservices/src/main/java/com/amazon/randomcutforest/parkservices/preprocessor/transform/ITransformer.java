@@ -25,7 +25,7 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
  * (streaming/stochastic) normalization, etc.
  *
  * This interface class spells out the operations required from such
- * transformers. Some of the operations below are specific to the existing
+ * transformers. Some operations below are specific to the existing
  * implementation and required by the mappers to produce state classes.
  */
 
@@ -60,8 +60,9 @@ public interface ITransformer {
     // input length (number of variables in a multivariate analysis) baseDimension
     // and
     // previousInput[] corresponds to the last observed values of those input.
+    // correction is the effect of last anomaly
 
-    void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput);
+    void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput, double[] correction);
 
     // update the internal data structures based on the current (multivariate) input
     // inputPoint
@@ -80,16 +81,15 @@ public interface ITransformer {
 
     // used for converting RCF representations to actuals, used in
     // predictor-corrector
-    default double[] getShift(double[] previous) {
-        return null;
-    };
+    double[] getShift(double[] previous);
 
     // used for converting RCF representations to actuals, used in
     // predictor-corrector
-    default double[] getScale() {
-        return null;
-    }
+    double[] getScale();
 
-    // used for computing errors in RCFcaster before the model is callibrated
+    // used for computing errors in RCFcaster before the model is calibrated
     double[] getSmoothedDeviations();
+
+    // used for determining noise
+    double[] getSmoothedDifferenceDeviations();
 }

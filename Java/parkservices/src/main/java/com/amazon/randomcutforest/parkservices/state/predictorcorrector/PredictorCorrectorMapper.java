@@ -50,6 +50,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
             }
             state.setDeviationStates(deviationState);
         }
+        state.setNoiseFactor(model.getNoiseFactor());
         state.setBaseDimension(model.getBaseDimension());
         state.setLastStrategy(model.getLastStrategy().name());
         state.setRandomSeed(model.getRandomSeed());
@@ -79,6 +80,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         predictorCorrector.setLastScore(state.getLastScore());
         predictorCorrector.setIgnoreNearExpected(state.getIgnoreNearExpected());
         predictorCorrector.setAutoAdjust(state.isAutoAdjust());
+        predictorCorrector.setNoiseFactor(state.getNoiseFactor());
         return predictorCorrector;
     }
 

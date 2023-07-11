@@ -185,7 +185,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         int savedNumberOfImputed = numberOfImputed;
         int lastActualInternal = internalTimeStamp;
 
-        double[] point = generateShingle(description, getTimeFactor(timeStampDeviations[0]), false, forest);
+        double[] point = generateShingle(description, getTimeFactor(timeStampDeviations[1]), false, forest);
 
         // restore state
         internalTimeStamp = lastActualInternal;
@@ -299,7 +299,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 // imputations in the shingle)
                 populateAnomalyDescriptorDetails(result);
             }
-            generateShingle(result, getTimeFactor(timeStampDeviations[0]), true, forest);
+            generateShingle(result, getTimeFactor(timeStampDeviations[1]), true, forest);
         }
         ++valuesSeen;
         return result;
@@ -427,7 +427,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
 
         updateForest(changeForest, newInput, timestamp, forest, false);
         if (changeForest) {
-            timeStampDeviations[0].update(timestamp - lastInputTimeStamp);
+            updateTimeStampDeviations(timestamp, lastInputTimeStamp);
             transformer.updateDeviation(newInput, savedInput);
         }
         return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);

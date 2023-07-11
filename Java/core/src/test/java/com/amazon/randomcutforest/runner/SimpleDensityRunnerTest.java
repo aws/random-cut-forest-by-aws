@@ -15,12 +15,21 @@
 
 package com.amazon.randomcutforest.runner;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
 
 public class SimpleDensityRunnerTest {
     private int numberOfTrees;
@@ -51,40 +60,57 @@ public class SimpleDensityRunnerTest {
         in = mock(BufferedReader.class);
         out = mock(PrintWriter.class);
     }
-    /*
-     * @Test public void testRun() throws IOException {
-     * when(in.readLine()).thenReturn("a,b") .thenReturn("1.0,2.0")
-     * .thenReturn("4.0,5.0") .thenReturn(null); runner.run(in, out);
-     * verify(out).println(
-     * "a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down");
-     * verify(out).println("1.0,2.0,0.0,0.0,0.0,0.0");
-     * verify(out).println("4.0,5.0,0.0,0.0,0.0,0.0"); }
-     * 
-     * @Test public void testWriteHeader() { String[] line = new String[] {"a",
-     * "b"}; runner.prepareAlgorithm(2); runner.writeHeader(line, out);
-     * verify(out).println(
-     * "a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down"); }
-     * 
-     * @Test public void testProcessLine() { String[] line = new String[] {"1.0",
-     * "2.0"}; runner.prepareAlgorithm(2); runner.processLine(line, out);
-     * verify(out).println("1.0,2.0,0.0,0.0,0.0,0.0"); }
-     * 
-     * @Test public void testSimpleDensityTransformer() { RandomCutForest forest =
-     * mock(RandomCutForest.class); when(forest.getDimensions()).thenReturn(2);
-     * 
-     * SimpleDensityRunner.SimpleDensityTransformer transformer = new
-     * SimpleDensityRunner.SimpleDensityTransformer(forest);
-     * 
-     * DensityOutput expected = new DensityOutput(2, 256); expected.probMass.high[0]
-     * = 0.0; expected.probMass.low[0] = 9.0; expected.probMass.high[1] = 8.0;
-     * expected.probMass.low[1] = 7.0;
-     * 
-     * when(forest.getSimpleDensity(1.0, 2.0)).thenReturn(expected);
-     * assertEquals(Arrays.asList("0.0", "9.0", "8.0", "7.0"),
-     * transformer.getResultValues(1.0, 2.0));
-     * assertEquals(Arrays.asList("prob_mass_0_up", "prob_mass_0_down",
-     * "prob_mass_1_up", "prob_mass_1_down"), transformer.getResultColumnNames());
-     * assertEquals(Arrays.asList("NA", "NA", "NA", "NA"),
-     * transformer.getEmptyResultValue()); }
-     */
+
+    @Test
+    public void testRun() throws IOException {
+        when(in.readLine()).thenReturn("a,b").thenReturn("1.0,2.0").thenReturn("4.0,5.0").thenReturn(null);
+        runner.run(in, out);
+
+        verify(out).println("a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down");
+        verify(out).println("1.0,2.0,0.000000,0.000000,0.000000,0.000000");
+        verify(out).println("4.0,5.0,0.000000,0.000000,0.000000,0.000000");
+    }
+
+    @Test
+    public void testWriteHeader() {
+        String[] line = new String[] { "a", "b" };
+        runner.prepareAlgorithm(2);
+        runner.writeHeader(line, out);
+        verify(out).println("a,b,prob_mass_0_up,prob_mass_0_down,prob_mass_1_up,prob_mass_1_down");
+    }
+
+    @Test
+    public void testProcessLine() {
+        String[] line = new String[] { "1.0", "2.0" };
+        runner.prepareAlgorithm(2);
+        runner.processLine(line, out);
+
+        verify(out).println("1.0,2.0,0.000000,0.000000,0.000000,0.000000");
+    }
+
+    @Test
+    public void testSimpleDensityTransformer() {
+        RandomCutForest forest = mock(RandomCutForest.class);
+        when(forest.getDimensions()).thenReturn(2);
+        SimpleDensityRunner.SimpleDensityTransformer transformer = new SimpleDensityRunner.SimpleDensityTransformer(
+                forest);
+
+        DensityOutput expected = new DensityOutput(2, 1);
+        expected.probMass.high[0] = 0.0;
+        expected.probMass.low[0] = 0.5;
+        expected.probMass.high[1] = 0.25;
+        expected.probMass.low[1] = 0.25;
+        expected.measure.high[0] = 0.0;
+        expected.measure.low[0] = 8.0;
+        expected.measure.high[1] = 8.0;
+        expected.measure.low[1] = 4.0;
+
+        when(forest.getSimpleDensity(new double[] { 1.0, 2.0 })).thenReturn(expected);
+        assertEquals(Arrays.asList("0.000000", "400.000000", "400.000000", "200.000000"),
+                transformer.getResultValues(1.0, 2.0));
+        assertEquals(Arrays.asList("prob_mass_0_up", "prob_mass_0_down", "prob_mass_1_up", "prob_mass_1_down"),
+                transformer.getResultColumnNames());
+        assertEquals(Arrays.asList("NA", "NA", "NA", "NA"), transformer.getEmptyResultValue());
+    }
+
 }

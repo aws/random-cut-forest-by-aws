@@ -35,6 +35,7 @@ public class PredictorCorrectorState implements Serializable {
     private int numberOfAttributors;
     private int baseDimension;
     private long randomSeed;
+    private double noiseFactor;
     private boolean autoAdjust;
     private double[] modeInformation; // multiple modes -- to be used in future
     private DeviationState[] deviationStates; // in future to be used for learning deviations

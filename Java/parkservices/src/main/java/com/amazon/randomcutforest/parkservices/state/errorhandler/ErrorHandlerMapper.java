@@ -32,6 +32,7 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
         errorHandlerState.setPercentile(model.getPercentile());
         errorHandlerState.setForecastHorizon(model.getForecastHorizon());
         errorHandlerState.setErrorHorizon(model.getErrorHorizon());
+        errorHandlerState.setLastDeviations(model.getLastDeviations());
 
         // pastForecasts[i] contains forecasts at timestamp i. We have three float
         // arrays:
@@ -84,7 +85,7 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
     public ErrorHandler toModel(ErrorHandlerState state, long seed) {
         return new ErrorHandler(state.getErrorHorizon(), state.getForecastHorizon(), state.getSequenceIndex(),
                 state.getPercentile(), state.getInputLength(), state.getActualsFlattened(),
-                state.getPastForecastsFlattened(), null);
+                state.getPastForecastsFlattened(), state.getLastDeviations(), null);
     }
 
 }

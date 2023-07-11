@@ -22,9 +22,6 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
@@ -76,7 +73,7 @@ public class ForecastDescriptor extends AnomalyDescriptor {
      * the fraction of variables \predicted correctly over the error horizon. A
      * value of 1.0 is terrific.
      */
-    float[] calibration;
+    float[] intervalPrecision;
 
     public ForecastDescriptor(double[] input, long inputTimeStamp, int horizon) {
         super(input, inputTimeStamp);
@@ -87,18 +84,7 @@ public class ForecastDescriptor extends AnomalyDescriptor {
         Arrays.fill(this.observedErrorDistribution.upper, Float.MAX_VALUE);
         this.errorMean = new float[forecastLength];
         this.errorRMSE = new DiVector(forecastLength);
-        this.calibration = new float[forecastLength];
-    }
-
-    public ForecastDescriptor(double[] input, long inputTimeStamp, ForestMode forestMode,
-            TransformMethod transformMethod, ImputationMethod imputationMethod, int dimensions, int horizon) {
-        super(input, inputTimeStamp, forestMode, transformMethod, imputationMethod);
-        this.timedForecast = new TimedRangeVector(dimensions, horizon);
-        this.observedErrorDistribution = new RangeVector(dimensions);
-        Arrays.fill(this.observedErrorDistribution.lower, -Float.MAX_VALUE);
-        Arrays.fill(this.observedErrorDistribution.upper, Float.MAX_VALUE);
-        this.errorMean = new float[dimensions];
-        this.errorRMSE = new DiVector(dimensions);
+        this.intervalPrecision = new float[forecastLength];
     }
 
     void setObservedErrorDistribution(RangeVector base) {
@@ -108,8 +94,13 @@ public class ForecastDescriptor extends AnomalyDescriptor {
         System.arraycopy(base.lower, 0, this.observedErrorDistribution.lower, 0, base.lower.length);
     }
 
-    void setCalibration(float[] calibration) {
-        System.arraycopy(calibration, 0, this.calibration, 0, calibration.length);
+    void setIntervalPrecision(float[] calibration) {
+        System.arraycopy(calibration, 0, this.intervalPrecision, 0, calibration.length);
+    }
+
+    @Deprecated
+    float[] getCalibration() {
+        return (intervalPrecision == null) ? null : Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 
     void setErrorMean(float[] errorMean) {

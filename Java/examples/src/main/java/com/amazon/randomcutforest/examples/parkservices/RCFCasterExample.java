@@ -154,7 +154,7 @@ public class RCFCasterExample implements Example {
         float[] lowerError = result.getObservedErrorDistribution().lower;
         DiVector rmse = result.getErrorRMSE();
         float[] mean = result.getErrorMean();
-        float[] calibration = result.getCalibration();
+        float[] intervalPrecision = result.getIntervalPrecision();
 
         file.append(current + " " + 1000 + "\n");
         file.append("\n");
@@ -166,7 +166,7 @@ public class RCFCasterExample implements Example {
             for (int j = 0; j < inputLength; j++) {
                 int k = i * inputLength + j;
                 file.append(mean[k] + " " + rmse.high[k] + " " + rmse.low[k] + " " + errorP50[k] + " " + upperError[k]
-                        + " " + lowerError[k] + " " + calibration[k] + " ");
+                        + " " + lowerError[k] + " " + intervalPrecision[k] + " ");
             }
             file.append("\n");
         }

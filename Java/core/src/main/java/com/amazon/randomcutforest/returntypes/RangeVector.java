@@ -92,7 +92,7 @@ public class RangeVector {
 
     public void scale(int i, float weight) {
         checkArgument(i >= 0 && i < values.length, "incorrect index");
-        checkArgument(weight > 0, " negative weight not permitted");
+        checkArgument(weight >= 0, " negative weight not permitted");
         values[i] = values[i] * weight;
         // managing precision
         upper[i] = max(upper[i] * weight, values[i]);

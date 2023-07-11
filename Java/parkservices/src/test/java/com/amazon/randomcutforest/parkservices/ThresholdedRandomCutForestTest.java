@@ -191,7 +191,7 @@ public class ThresholdedRandomCutForestTest {
             assertDoesNotThrow(() -> forest.predictorCorrector.setSamplingRate(random));
             assertEquals(forest.predictorCorrector.getSamplingRate(), random, 1e-10);
             long newSeed = forest.predictorCorrector.getRandomSeed();
-            assertEquals(new Random(seed).nextLong(), newSeed);
+            assertEquals(seed, newSeed);
             assertFalse(forest.predictorCorrector.autoAdjust);
             assertNull(forest.predictorCorrector.getDeviations());
         });

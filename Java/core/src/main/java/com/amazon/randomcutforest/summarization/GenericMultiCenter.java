@@ -72,10 +72,6 @@ public class GenericMultiCenter<R> implements ICluster<R> {
         this.shrinkage = shrinkage;
     }
 
-    public static <R> GenericMultiCenter<R> initialize(R coordinate, float weight) {
-        return new GenericMultiCenter<>(coordinate, weight, DEFAULT_SHRINKAGE, DEFAULT_NUMBER_OF_REPRESENTATIVES);
-    }
-
     public static <R> GenericMultiCenter<R> initialize(R coordinate, float weight, double shrinkage,
             int numberOfRepresentatives) {
         checkArgument(shrinkage >= 0 && shrinkage <= 1.0, " parameter has to be in [0,1]");
@@ -128,10 +124,6 @@ public class GenericMultiCenter<R> implements ICluster<R> {
 
     public double getWeight() {
         return weight;
-    }
-
-    public boolean captureBeforeReset(R point, BiFunction<R, R, Double> distanceFunction) {
-        return previousWeight * distance(point, distanceFunction) < 3 * previousSumOFRadius;
     }
 
     // reassignment may not be meaningful for generic types, without additional
@@ -191,7 +183,7 @@ public class GenericMultiCenter<R> implements ICluster<R> {
             savedRepresentatives.remove(farthestIndex);
         }
 
-        // absorb the remainder into existing represen tatives
+        // absorb the remainder into existing representatives
         for (Weighted<R> representative : savedRepresentatives) {
             double dist = distance.apply(representative.index, this.representatives.get(0).index);
             checkArgument(dist >= 0, "distance cannot be negative");

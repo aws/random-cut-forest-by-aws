@@ -48,16 +48,13 @@ public interface ICluster<R> {
     // weight computation
     double getWeight();
 
-    // is a point well expressed by the cluster? To be used in the future.
-    boolean captureBeforeReset(R point, BiFunction<R, R, Double> distance);
-
     // merge another cluster of same type
     void absorb(ICluster<R> other, BiFunction<R, R, Double> distance);
 
-    // distance of apoint from a cluster
+    // distance of apoint from a cluster, has to be non-negative
     double distance(R point, BiFunction<R, R, Double> distance);
 
-    // distance of another cluster from this cluster
+    // distance of another cluster from this cluster, has to be non negative
     double distance(ICluster<R> other, BiFunction<R, R, Double> distance);
 
     // all potential representativess of a cluster these are typically chosen to be

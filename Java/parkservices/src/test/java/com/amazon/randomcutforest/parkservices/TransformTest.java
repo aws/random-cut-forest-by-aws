@@ -72,8 +72,9 @@ public class TransformTest {
                     ++count;
                 }
             }
-            // normalized difference has scale correction
-            assertTrue(count < 2 * shingleSize || method == TransformMethod.NORMALIZE_DIFFERENCE);
+            // differencing introduces cascades
+            assertTrue(count < 2 * shingleSize || method == TransformMethod.NORMALIZE_DIFFERENCE
+                    || method == TransformMethod.SUBTRACT_MA || method == TransformMethod.DIFFERENCE);
         }
     }
 

@@ -105,8 +105,8 @@ public class Summarizer {
                 double minDist = Double.MAX_VALUE;
                 int minDistNbr = -1;
                 for (int i = 0; i < clusters.size(); i++) {
+                    // will check for negative distances
                     dist[i] = clusters.get(i).distance(getPoint.apply(point.index), distance);
-                    checkArgument(dist[i] >= 0, "distance cannot be negative");
                     if (minDist > dist[i]) {
                         minDist = dist[i];
                         minDistNbr = i;
@@ -201,10 +201,18 @@ public class Summarizer {
             boolean phase2GlobalReassign, double overlapParameter, List<ICluster<R>> previousClustering) {
 
         checkArgument(refs.size() > 0, "empty list, nothing to do");
-        checkArgument(maxAllowed >= stopAt && stopAt > 0, "incorrect bounds on number of clusters");
+        checkArgument(stopAt > 0, "has to stop at 1 cluster");
+        checkArgument(stopAt <= maxAllowed, "cannot stop before achieving the limit");
 
         Random rng = new Random(seed);
-        double sampledSum = refs.stream().map(e -> (double) e.weight).reduce(Double::sum).get();
+        double sampledSum = refs.stream().map(e -> {
+            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
+            checkArgument(Double.isFinite(e.weight), " weights have to be finite");
+            checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
+            return (double) e.weight;
+        }).reduce(0.0, Double::sum);
+        checkArgument(sampledSum > 0, " total weight has to be positive");
+
         ArrayList<ICluster<R>> centers = new ArrayList<>();
         if (refs.size() < 10 * (initial + 5)) {
             for (Weighted<Integer> point : refs) {
@@ -294,6 +302,8 @@ public class Summarizer {
                 }
                 centers.sort(Comparator.comparingDouble(ICluster::getWeight));
                 while (centers.get(0).getWeight() == 0.0) {
+                    // this line is reachable via zeroTest() in
+                    // SampleSummaryTest
                     centers.remove(0);
                 }
                 if (inital < 1.2 * maxAllowed + 1) {
@@ -345,14 +355,14 @@ public class Summarizer {
             List<ICluster<R>> previousClustering) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
-        checkArgument(stopAt > 0 && stopAt <= maxAllowed, "lower bound set incorrectly");
 
         double totalWeight = points.stream().map(e -> {
-            checkArgument(e.weight >= 0.0, "negative weights are not meaningful");
+            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
+            checkArgument(Double.isFinite(e.weight), " weights have to be finite");
+            checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
             return (double) e.weight;
         }).reduce(0.0, Double::sum);
-        checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
-                " weights have to finite and non-NaN");
+        checkArgument(totalWeight > 0, " total weight has to be positive");
         Random rng = new Random(seed);
         // the following list is explicity copied and sorted for potential efficiency
         List<Weighted<R>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
@@ -363,8 +373,6 @@ public class Summarizer {
         }
 
         Function<Integer, R> getPoint = (i) -> sampledPoints.get(i).index;
-        checkArgument(sampledPoints.size() > 0, "empty list, nothing to do");
-        double sampledSum = sampledPoints.stream().map(e -> (double) e.weight).reduce(Double::sum).get();
 
         return iterativeClustering(maxAllowed, initial, stopAt, refs, getPoint, distance, clusterInitializer,
                 rng.nextLong(), parallelEnabled, phase2GlobalReassign, overlapParameter, previousClustering);
@@ -403,11 +411,13 @@ public class Summarizer {
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
         double totalWeight = points.stream().map(e -> {
-            checkArgument(e.weight >= 0.0, "negative weights are not meaningful");
+            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
+            checkArgument(Double.isFinite(e.weight), " weights have to be finite");
+            checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
             return (double) e.weight;
         }).reduce(0.0, Double::sum);
-        checkArgument(!Double.isNaN(totalWeight) && Double.isFinite(totalWeight),
-                " weights have to finite and non-NaN");
+        checkArgument(totalWeight > 0, " total weight has to be positive");
+
         Random rng = new Random(seed);
         // the following list is explicity copied and sorted for potential efficiency
         List<Weighted<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
@@ -458,12 +468,12 @@ public class Summarizer {
      * @param maxAllowed      maximum number of groups/clusters
      * @param initial         a parameter controlling the initialization
      * @param reassignPerStep if reassignment is to be performed each step
+     * @param seed            random seed
      * @return a summarization
      */
-    public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
-            boolean reassignPerStep) {
-        return summarize(points, maxAllowed, initial, reassignPerStep, Summarizer::L2distance, new Random().nextLong(),
-                false);
+    public static SampleSummary l2summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
+            boolean reassignPerStep, long seed) {
+        return summarize(points, maxAllowed, initial, reassignPerStep, Summarizer::L2distance, seed, false);
     }
 
     /**
@@ -471,11 +481,11 @@ public class Summarizer {
      *
      * @param points     points in float[][], each of weight 1.0
      * @param maxAllowed maximum number of clusters one is interested in
+     * @param seed       random seed
      * @return a summarization
      */
-    public static SampleSummary summarize(float[][] points, int maxAllowed) {
-        return summarize(points, maxAllowed, 4 * maxAllowed, false, Summarizer::L2distance, new Random().nextLong(),
-                false);
+    public static SampleSummary l2summarize(float[][] points, int maxAllowed, long seed) {
+        return summarize(points, maxAllowed, 4 * maxAllowed, false, Summarizer::L2distance, seed, false);
     }
 
     /**
@@ -529,9 +539,9 @@ public class Summarizer {
                 clusterInitializer, seed, parallelEnabled, null);
     }
 
-    // same as above, with defaults
+    // same as above, with multicenter instead of generic
     public static List<ICluster<float[]>> multiSummarize(float[][] points, int maxAllowed, double shrinkage,
-            int numberOfRepresentatives) {
+            int numberOfRepresentatives, long seed) {
 
         ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
         for (float[] point : points) {
@@ -540,7 +550,7 @@ public class Summarizer {
         BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
                 shrinkage, numberOfRepresentatives);
         return summarize(weighted, maxAllowed, 4 * maxAllowed, 1, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,
-                Summarizer::L2distance, clusterInitializer, new Random().nextLong(), true, null);
+                Summarizer::L2distance, clusterInitializer, seed, true, null);
     }
 
 }

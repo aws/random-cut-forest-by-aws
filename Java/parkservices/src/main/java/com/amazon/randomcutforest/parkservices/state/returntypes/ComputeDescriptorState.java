@@ -35,7 +35,8 @@ public class ComputeDescriptorState implements Serializable {
     private int lastReset;
     private String lastStrategy;
     private double[] lastShift;
+    private double[] lastScale;
     private double[] lastPostShift;
     private double transformDecay;
-
+    private double[] postDeviations;
 }

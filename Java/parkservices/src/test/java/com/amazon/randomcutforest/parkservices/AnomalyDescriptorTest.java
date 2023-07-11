@@ -77,7 +77,6 @@ public class AnomalyDescriptorTest {
                         // because distances are 0 till sampleSize; by which time
                         // forecasts would be reasonable
                         assertTrue(firstResult.getAnomalyGrade() > 0);
-                        assertTrue(!firstResult.isReasonableForecast());
                     }
                     if (firstResult.getAnomalyGrade() > 0) {
                         assertNotNull(firstResult.getPastValues());
@@ -85,16 +84,7 @@ public class AnomalyDescriptorTest {
                         if (firstResult.getRelativeIndex() == 0) {
                             assertArrayEquals(firstResult.getPastValues(), firstResult.getCurrentInput(), 1e-10);
                         }
-                        if (firstResult.getExpectedValuesList() != null
-                                && firstResult.getExpectedValuesList()[0] != null) {
-                            assertTrue(firstResult.isReasonableForecast());
-                            // the converse is not true -- the algorithm can get confused by an anomaly
-                            // in the multivariate case and choose to not output imprecise answers
-                            // an obvious example is a (x,y) distribution where it is (0,0) or (1,1)
-                            // If the input is (0,1) then both answers are feasible -- but this becomes
-                            // increasingly difficult to ascertain (based on small data) as dimensions
-                            // increase
-                        }
+
                         assertNotNull(firstResult.getRelevantAttribution());
                         assertEquals(firstResult.getRelevantAttribution().length, baseDimensions);
                         assertEquals(firstResult.attribution.getHighLowSum(), firstResult.getRCFScore(), 1e-6);

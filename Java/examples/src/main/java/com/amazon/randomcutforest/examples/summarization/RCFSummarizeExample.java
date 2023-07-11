@@ -67,7 +67,7 @@ public class RCFSummarizeExample implements Example {
 
         float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
-        SampleSummary summary = Summarizer.summarize(points, 5 * newDimensions);
+        SampleSummary summary = Summarizer.l2summarize(points, 5 * newDimensions, 42);
         System.out.println(
                 summary.summaryPoints.length + " clusters for " + newDimensions + " dimensions, seed : " + seed);
         double epsilon = 0.01;

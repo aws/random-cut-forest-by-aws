@@ -41,6 +41,8 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         descriptor.setShift(state.getLastShift());
         descriptor.setPostShift(state.getLastPostShift());
         descriptor.setTransformDecay(state.getTransformDecay());
+        descriptor.setPostDeviations(state.getPostDeviations());
+        descriptor.setScale(state.getLastScale());
         return descriptor;
     }
 
@@ -58,6 +60,8 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         state.setLastShift(descriptor.getShift());
         state.setLastPostShift(descriptor.getPostShift());
         state.setTransformDecay(descriptor.getTransformDecay());
+        state.setPostDeviations(descriptor.getPostDeviations());
+        state.setLastScale(descriptor.getScale());
         return state;
     }
 
