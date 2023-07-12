@@ -22,6 +22,7 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.config.CorrectionMode;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.ScoringStrategy;
@@ -34,7 +35,7 @@ import com.amazon.randomcutforest.returntypes.DiVector;
  */
 @Getter
 @Setter
-public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor {
+public class RCFComputeDescriptor extends Point {
 
     ForestMode forestMode = ForestMode.STANDARD;
 
@@ -43,6 +44,8 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
     ImputationMethod imputationMethod = ImputationMethod.PREVIOUS;
 
     ScoringStrategy scoringStrategy = ScoringStrategy.EXPECTED_INVERSE_DEPTH;
+
+    CorrectionMode correctionMode = CorrectionMode.NONE;
 
     // the most important parameter of the forest
     int shingleSize;
@@ -81,6 +84,13 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
 
     // score for various postprocessing
     double RCFScore;
+
+    // the following describes the grade of the anomaly in the range [0:1] where
+    // 0 is not an anomaly
+    double anomalyGrade;
+
+    // the threshold used in inference
+    double threshold;
 
     // same for attribution; this is basic RCF attribution which has high/low
     // information
@@ -170,10 +180,6 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
         return answer;
     }
 
-    public double[] getCurrentInput() {
-        return copyIfNotnull(currentInput);
-    }
-
     public void setExpectedRCFPoint(double[] point) {
         expectedRCFPoint = copyIfNotnull(point);
     }
@@ -247,6 +253,9 @@ public class RCFComputeDescriptor extends Point implements IRCFComputeDescriptor
         answer.setScale(scale);
         answer.setPostShift(postShift);
         answer.setTransformDecay(transformDecay);
+        answer.setAnomalyGrade(anomalyGrade);
+        answer.setThreshold(threshold);
+        answer.setCorrectionMode(correctionMode);
         return answer;
     }
 }

@@ -64,7 +64,7 @@ public class InterpolationMeasure {
         probMass = new DiVector(base.probMass);
     }
 
-    private InterpolationMeasure(int sampleSize, DiVector measure, DiVector distances, DiVector probMass) {
+    protected InterpolationMeasure(int sampleSize, DiVector measure, DiVector distances, DiVector probMass) {
 
         checkArgument(measure.getDimensions() == distances.getDimensions(),
                 "measure.getDimensions() should be equal to distances.getDimensions()");

@@ -137,9 +137,12 @@ public class ConditionalSampleSummarizer {
         double currentWeight = 0;
         int alwaysInclude = 0;
         double remainderWeight = totalWeight;
-        while (alwaysInclude < newList.size() && newList.get(alwaysInclude).distance == 0) {
+        while (newList.get(alwaysInclude).distance == 0) {
             remainderWeight -= newList.get(alwaysInclude).weight;
             ++alwaysInclude;
+            if (alwaysInclude == newList.size()) {
+                break;
+            }
         }
         for (int j = 1; j < newList.size(); j++) {
             if ((currentWeight < remainderWeight / 3 && currentWeight + newList.get(j).weight >= remainderWeight / 3)
@@ -173,8 +176,7 @@ public class ConditionalSampleSummarizer {
             }
             // weight is changed for clustering,
             // based on the distance of the sample from the query point
-            double weight = (e.distance <= threshold) ? e.weight : e.weight * threshold / e.distance;
-            typicalPoints.add(new Weighted<>(values, (float) weight));
+            typicalPoints.add(new Weighted<>(values, (float) e.weight));
 
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);

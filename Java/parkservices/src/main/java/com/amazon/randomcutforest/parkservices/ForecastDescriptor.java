@@ -100,7 +100,7 @@ public class ForecastDescriptor extends AnomalyDescriptor {
 
     @Deprecated
     float[] getCalibration() {
-        return (intervalPrecision == null) ? null : Arrays.copyOf(intervalPrecision, intervalPrecision.length);
+        return Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 
     void setErrorMean(float[] errorMean) {

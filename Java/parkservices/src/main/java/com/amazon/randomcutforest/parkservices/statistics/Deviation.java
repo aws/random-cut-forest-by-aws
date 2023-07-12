@@ -106,4 +106,11 @@ public class Deviation {
     public void setCount(int count) {
         this.count = count;
     }
+
+    public void reset() {
+        weight = 0;
+        sum = 0;
+        count = 0;
+        sumSquared = 0;
+    }
 }

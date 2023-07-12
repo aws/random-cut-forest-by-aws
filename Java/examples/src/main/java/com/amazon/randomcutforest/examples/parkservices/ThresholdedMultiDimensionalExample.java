@@ -18,7 +18,7 @@ package com.amazon.randomcutforest.examples.parkservices;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.CorrectionMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
@@ -58,11 +58,45 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int baseDimensions = 3;
 
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
-                .randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                // shingling is now performed internally by default
-                .internalShinglingEnabled(true).transformMethod(TransformMethod.NORMALIZE).precision(precision)
-                .anomalyRate(0.01).forestMode(ForestMode.STANDARD).build();
+        ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder()
+                // dimensions is shingleSize x the number of base dimensions in input (in this
+                // case 3)
+                .dimensions(dimensions)
+                // shingle size is the context (sliding) window of last contiguous observations
+                .shingleSize(shingleSize)
+                // fixed random seed would produce deterministic/reprodicble results
+                .randomSeed(0)
+                // use about 50; more than 100 may not be useful
+                .numberOfTrees(numberOfTrees)
+                // samplesize should be large enough to cover the desired phenomenon; for a 5
+                // minute interval reading
+                // if one is intetested investigating anomalies over a weekly pattern -- there
+                // are 12 * 24 * 7 different
+                // 5 minute intervals in a week. That being said, larger samplesize is a larger
+                // model.
+                .sampleSize(sampleSize)
+                // shingling is now performed internally by default -- best not to change it
+                // .internalShinglingEnabled(true)
+                // change to different streaming transformations that are performed on the fly
+                // note the transformation affects the charateristics of the anomaly that can be
+                // detected
+                .transformMethod(TransformMethod.NORMALIZE)
+                // the following would increase precision at the cost of recall
+                // for the reverse, try ScoringStrategy.MULTI_MODE_RECALL
+                // the default strategy is an attempted goldilocks version and may not work
+                // for all data
+                // .scoringStrategy(ScoringStrategy.MULTI_MODE)
+                // the following will learn data (concept) drifts (also refererred as level
+                // shifts) automatically and
+                // stop repeated alarms. The reverse is also true -- to detect level shifts, set
+                // the following to false
+                // and test for continuous alarms
+                .learnIgnoreNearExpected(true)
+                // the following is a much coarser tool to eliminate repeated alarms
+                // the descriptor below 'result' will contain information about different
+                // correction/suppression modes
+                // .alertOnce(true)
+                .build();
 
         long seed = new Random().nextLong();
         System.out.println("seed = " + seed);
@@ -81,8 +115,11 @@ public class ThresholdedMultiDimensionalExample implements Example {
         // the following determines if a random linear trend should be added
         boolean useSlope = false;
 
+        // provide explanations and alternatives considered for non-anomalies
+        boolean verboseSupression = true;
+
         // change the last argument seed for a different run
-        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 24,
                 amplitude, noise, seed, baseDimensions, anomalyFactor, useSlope);
         int keyCounter = 0;
         int count = 0;
@@ -129,6 +166,8 @@ public class ThresholdedMultiDimensionalExample implements Example {
                     }
                 }
                 System.out.println();
+            } else if (verboseSupression && result.getCorrectionMode() != CorrectionMode.NONE) {
+                System.out.println(count + " corrected via " + result.getCorrectionMode().name());
             }
             ++count;
         }

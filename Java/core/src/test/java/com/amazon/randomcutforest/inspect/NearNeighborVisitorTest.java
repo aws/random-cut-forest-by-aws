@@ -27,7 +27,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collector;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,6 +88,17 @@ public class NearNeighborVisitorTest {
 
         Optional<Neighbor> optional = visitor.getResult();
         assertTrue(optional.isPresent());
+        NearNeighborVisitor nearNeighborVisitor = new NearNeighborVisitor(queryPoint);
+        nearNeighborVisitor.acceptLeaf(leafNode, depth);
+
+        Map<Integer, Neighbor> map1 = new HashMap<>();
+        Map<Integer, Neighbor> map2 = new HashMap<>();
+        // an equality test
+        Collector<Optional<Neighbor>, Map<Integer, Neighbor>, List<Neighbor>> collector = Neighbor.collector();
+        map1.put(Arrays.hashCode(optional.get().point), optional.get());
+        map2.put(Arrays.hashCode(nearNeighborVisitor.getResult().get().point), optional.get());
+        collector.combiner().apply(map1, map2);
+        assertEquals(map1.size(), 1);
 
         Neighbor neighbor = optional.get();
         assertNotSame(leafPoint, neighbor.point);
@@ -111,4 +125,5 @@ public class NearNeighborVisitorTest {
         Optional<Neighbor> optional = visitor.getResult();
         assertFalse(optional.isPresent());
     }
+
 }

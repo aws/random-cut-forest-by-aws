@@ -92,10 +92,10 @@ public class PredictorCorrectorTest {
         assertArrayEquals(copy.ignoreNearExpectedFromBelowByRatio, testFour, 1e-10);
         assertNotNull(copy.getDeviations());
         assertEquals(copy.lastStrategy, ScoringStrategy.DISTANCE);
-        copy.deviationsAbove = new Deviation[1]; // changing the state
+        copy.deviationsActual = new Deviation[1]; // changing the state
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> copy.getDeviations());
         assertEquals("incorrect state", exception.getMessage());
-        copy.deviationsBelow = new Deviation[1];
+        copy.deviationsExpected = new Deviation[1];
         exception = assertThrows(IllegalArgumentException.class, () -> copy.getDeviations());
         assertEquals("length should be base dimension", exception.getMessage());
 

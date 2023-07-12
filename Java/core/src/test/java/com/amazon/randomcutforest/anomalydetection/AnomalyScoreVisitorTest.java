@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,6 +100,14 @@ public class AnomalyScoreVisitorTest {
         assertThat(visitor.getResult(),
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, subSampleSize), EPSILON));
         assertTrue(visitor.pointInsideBox);
+
+        AnomalyScoreVisitor anotherVisitor = new AnomalyScoreVisitor(point, subSampleSize, 7);
+        anotherVisitor.acceptLeaf(leafNode, 0);
+        assertEquals(anotherVisitor.score, visitor.score);
+
+        AnomalyScoreVisitor yetAnotherVisitor = new AnomalyScoreVisitor(point, subSampleSize, 12);
+        yetAnotherVisitor.acceptLeaf(leafNode, 0);
+        assertNotEquals(yetAnotherVisitor.score, visitor.score);
     }
 
     @Test
@@ -117,6 +126,17 @@ public class AnomalyScoreVisitorTest {
         assertThat(visitor.getResult(),
                 closeTo(CommonUtils.defaultScalarNormalizerFunction(expectedScore, 2), EPSILON));
         assertFalse(visitor.pointInsideBox);
+
+        int leafMass = 10;
+        when(leafNode.getMass()).thenReturn(leafMass);
+        AnomalyScoreVisitor anotherVisitor = new AnomalyScoreVisitor(point, 2, 7);
+        anotherVisitor.acceptLeaf(leafNode, 100);
+        assertEquals(anotherVisitor.score, visitor.score);
+
+        AnomalyScoreVisitor yetAnotherVisitor = new AnomalyScoreVisitor(point, 2, 12);
+        yetAnotherVisitor.acceptLeaf(leafNode, 100);
+        assertEquals(yetAnotherVisitor.score, visitor.score);
+
     }
 
     @Test
@@ -265,5 +285,11 @@ public class AnomalyScoreVisitorTest {
 
         AnomalyScoreVisitor visitor = new AnomalyScoreVisitor(point, 2);
         assertThrows(IllegalStateException.class, () -> visitor.getProbabilityOfSeparation(boundingBox));
+
+        TransductiveScalarScoreVisitor esotericVisitor = new TransductiveScalarScoreVisitor(leafPoint, 2,
+                CommonUtils::defaultScoreSeenFunction, CommonUtils::defaultScoreUnseenFunction,
+                CommonUtils::defaultDampFunction, b -> new double[3]);
+        assertThrows(IllegalStateException.class, () -> esotericVisitor.getProbabilityOfSeparation(boundingBox));
+
     }
 }

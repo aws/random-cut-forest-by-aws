@@ -304,9 +304,5 @@ public abstract class AbstractStreamSampler<P> implements IStreamSampler<P> {
             this.timeDecay = timeDecay;
             return (T) this;
         }
-
-        public double getTimeDecay() {
-            return timeDecay;
-        }
     }
 }

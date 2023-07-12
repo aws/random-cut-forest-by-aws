@@ -25,18 +25,21 @@ import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 public class ComputeDescriptorState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private long lastAnomalyTimeStamp;
-    private double lastAnomalyScore;
-    private DiVectorState lastAnomalyAttribution;
+    private long internalTimeStamp;
+    private double score;
+    private DiVectorState attribution;
     private double lastScore;
-    private double[] lastAnomalyPoint;
-    private double[] lastExpectedPoint;
-    private int lastRelativeIndex;
+    private double[] point;
+    private double[] expectedPoint;
+    private int relativeIndex;
     private int lastReset;
-    private String lastStrategy;
-    private double[] lastShift;
-    private double[] lastScale;
-    private double[] lastPostShift;
+    private String strategy;
+    private double[] shift;
+    private double[] scale;
+    private double[] postShift;
     private double transformDecay;
     private double[] postDeviations;
+    private double threshold;
+    private double anomalyGrade;
+    private String correctionMode;
 }

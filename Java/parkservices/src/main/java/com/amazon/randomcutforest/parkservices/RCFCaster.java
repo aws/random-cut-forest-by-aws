@@ -112,8 +112,6 @@ public class RCFCaster extends ThresholdedRandomCutForest {
 
     public RCFCaster(Builder builder) {
         super(builder);
-        checkArgument(errorHorizon >= 2 * forecastHorizon,
-                "Error (used to compute interval precision of forecasts) horizon should be at least twice as large as forecast horizon");
         forecastHorizon = builder.forecastHorizon;
         errorHorizon = builder.errorHorizon;
         errorHandler = new ErrorHandler(builder);
@@ -229,27 +227,27 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     @Override
     public List<AnomalyDescriptor> processSequentially(double[][] data, Function<AnomalyDescriptor, Boolean> filter) {
         ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
-        Function<AnomalyDescriptor, AnomalyDescriptor> function = (x) -> predictorCorrector.detect(x,
-                lastAnomalyDescriptor, forest);
-        if (data != null && data.length > 0) {
-            boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
-            try {
-                if (cacheDisabled) { // turn caching on temporarily
-                    forest.setBoundingBoxCacheFraction(1.0);
-                }
-                long timestamp = preprocessor.getInternalTimeStamp();
-                int length = preprocessor.getInputLength();
-                for (double[] point : data) {
-                    checkArgument(point.length == length, " nonuniform lengths ");
-                    ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
-                    augmentForecast(description);
-                    if (filter.apply(description)) {
-                        answer.add(description);
+        if (data != null) {
+            if (data.length > 0) {
+                boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
+                try {
+                    if (cacheDisabled) { // turn caching on temporarily
+                        forest.setBoundingBoxCacheFraction(1.0);
                     }
-                }
-            } finally {
-                if (cacheDisabled) { // turn caching off
-                    forest.setBoundingBoxCacheFraction(0);
+                    long timestamp = preprocessor.getInternalTimeStamp();
+                    int length = preprocessor.getInputLength();
+                    for (double[] point : data) {
+                        checkArgument(point.length == length, " nonuniform lengths ");
+                        ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
+                        augmentForecast(description);
+                        if (filter.apply(description)) {
+                            answer.add(description);
+                        }
+                    }
+                } finally {
+                    if (cacheDisabled) { // turn caching off
+                        forest.setBoundingBoxCacheFraction(0);
+                    }
                 }
             }
         }

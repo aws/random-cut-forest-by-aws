@@ -33,7 +33,7 @@ import lombok.Setter;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 
@@ -162,7 +162,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @return an AnomalyDescriptor used in anomaly detection
      */
     @Override
-    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         initialSetup(description, lastAnomalyDescriptor, forest);
@@ -283,7 +283,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      * @return the description with the explanation added and state updated
      */
     @Override
-    public AnomalyDescriptor postProcess(AnomalyDescriptor result, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public AnomalyDescriptor postProcess(AnomalyDescriptor result, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         if (valuesSeen == startNormalization - 1) {

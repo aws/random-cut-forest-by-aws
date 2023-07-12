@@ -54,6 +54,10 @@ public class OneSidedConvergingDiVectorTest {
 
     @Test
     public void testAccumulateValue() {
+        assertEquals(accumulator.getWitnesses(), 0);
+        assertEquals(accumulator.getMean(), 0);
+        assertEquals(accumulator.getDeviation(), 0);
+
         DiVector vector1 = new DiVector(dimensions);
         vector1.high[0] = 1.1;
         vector1.low[1] = 2.3;
@@ -74,5 +78,12 @@ public class OneSidedConvergingDiVectorTest {
         DiVector.addToLeft(vector1, vector2);
         assertArrayEquals(vector1.high, result.high, EPSILON);
         assertArrayEquals(vector1.low, result.low, EPSILON);
+
+        for (int i = 0; i < 5; i++) {
+            accumulator.accept(vector2);
+        }
+        assertEquals(accumulator.getWitnesses(), 3);
+        assertEquals(accumulator.getDeviation(), 0, 1e-6f);
+        assertEquals(accumulator.getMean(), 13, 1e-6f);
     }
 }

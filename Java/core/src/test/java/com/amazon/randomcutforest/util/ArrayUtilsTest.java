@@ -25,6 +25,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 public class ArrayUtilsTest {
 
+    ArrayUtils utils = new ArrayUtils();
+
     @ParameterizedTest
     @CsvSource({ "-0.0,0.0", "0.0,0.0", "-0.0:0.0:1.0,0.0:0.0:1.0" })
     public void cleanCopy(String input, String expected) {

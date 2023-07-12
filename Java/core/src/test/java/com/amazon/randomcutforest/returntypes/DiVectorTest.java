@@ -17,13 +17,19 @@ package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.state.returntypes.DiVectorMapper;
+import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
 public class DiVectorTest {
 
@@ -42,6 +48,9 @@ public class DiVectorTest {
         assertEquals(dimensions, vector.getDimensions());
         assertArrayEquals(expected, vector.high);
         assertArrayEquals(expected, vector.low);
+        assertThrows(IllegalArgumentException.class, () -> new DiVector(0));
+        assertThrows(IllegalArgumentException.class, () -> new DiVector(new double[10], new double[9]));
+        assertDoesNotThrow(() -> new DiVector(new double[10], new double[10]));
     }
 
     @Test
@@ -54,7 +63,7 @@ public class DiVectorTest {
             right.low[i] = Math.random();
             right.high[i] = Math.random();
         }
-
+        assertThrows(IllegalArgumentException.class, () -> DiVector.addToLeft(left, new DiVector(dimensions + 1)));
         DiVector leftCopy = new DiVector(dimensions);
         System.arraycopy(left.low, 0, leftCopy.low, 0, dimensions);
         System.arraycopy(left.high, 0, leftCopy.high, 0, dimensions);
@@ -107,6 +116,11 @@ public class DiVectorTest {
 
     @Test
     public void testRenormalize() {
+
+        DiVector testVector = new DiVector(10);
+        // cannot renormalize really
+        testVector.renormalize(100);
+        assertEquals(testVector.getHighLowSum(), 0);
         vector.high[0] = 1.1;
         vector.high[2] = 3.1;
         vector.low[1] = 2.2;
@@ -116,6 +130,7 @@ public class DiVectorTest {
         vector.renormalize(100.0);
 
         assertEquals(100.0, vector.getHighLowSum());
+
     }
 
     @Test
@@ -135,5 +150,25 @@ public class DiVectorTest {
             assertEquals(2 * highCopy[i] - 1, vector.high[i], EPSILON);
             assertEquals(2 * lowCopy[i] - 1, vector.low[i], EPSILON);
         }
+    }
+
+    @Test
+    public void testMapper() {
+        DiVector left = new DiVector(dimensions);
+        for (int i = 0; i < dimensions; i++) {
+            left.low[i] = Math.random();
+            left.high[i] = Math.random();
+        }
+        DiVectorMapper mapper = new DiVectorMapper();
+        DiVector another = mapper.toModel(mapper.toState(left));
+        assertArrayEquals(another.high, left.high, 1e-10);
+        assertArrayEquals(another.low, left.low, 1e-10);
+        assertNull(mapper.toModel(mapper.toState(null)));
+        DiVectorState state = new DiVectorState();
+        state.setHigh(left.high);
+        assertNull(mapper.toModel(state));
+        state.setHigh(null);
+        state.setLow(left.low);
+        assertNull(mapper.toModel(state));
     }
 }

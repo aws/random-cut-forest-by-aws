@@ -66,23 +66,6 @@ public class DynamicAttributionVisitor extends AbstractAttributionVisitor {
         this.damp = damp;
     }
 
-    /**
-     * Same as above with a default non-dampening
-     * 
-     * @param point                   to be scored
-     * @param treeMass                mass of the tree
-     * @param ignoreLeafMassThreshold mass of the leaves to be ignored
-     * @param scoreSeen               score when point has been seen
-     * @param scoreUnseen             score when point has not been seen
-     */
-    public DynamicAttributionVisitor(float[] point, int treeMass, int ignoreLeafMassThreshold,
-            BiFunction<Double, Double, Double> scoreSeen, BiFunction<Double, Double, Double> scoreUnseen) {
-        super(point, treeMass, ignoreLeafMassThreshold);
-        this.scoreSeen = scoreSeen;
-        this.scoreUnseen = scoreUnseen;
-        this.damp = (x, y) -> 1.0;
-    }
-
     @Override
     protected double scoreSeen(int depth, int leafMass) {
         return scoreSeen.apply((double) depth, (double) leafMass);

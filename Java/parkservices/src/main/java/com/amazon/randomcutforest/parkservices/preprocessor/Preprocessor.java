@@ -37,7 +37,7 @@ import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.DifferenceTransformer;
 import com.amazon.randomcutforest.parkservices.preprocessor.transform.ITransformer;
@@ -297,7 +297,7 @@ public class Preprocessor implements IPreprocessor {
      * @param forest                the RCF
      * @return the descriptor to be used for anomaly scoring
      */
-    <P extends AnomalyDescriptor> P initialSetup(P description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    <P extends AnomalyDescriptor> P initialSetup(P description, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
         description.setForestMode(mode);
         description.setTransformMethod(transformMethod);
@@ -335,7 +335,7 @@ public class Preprocessor implements IPreprocessor {
      * @return the initialized AnomalyDescriptor with the actual RCF point filled in
      *         (could be a result of multiple transformations)
      */
-    public <P extends AnomalyDescriptor> P preProcess(P description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public <P extends AnomalyDescriptor> P preProcess(P description, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         initialSetup(description, lastAnomalyDescriptor, forest);
@@ -361,6 +361,13 @@ public class Preprocessor implements IPreprocessor {
                 System.arraycopy(scaledInput, 0, point, dimension - scaledInput.length, scaledInput.length);
             }
         }
+        if (description.getMissingValues() != null) {
+            int[] missing = new int[description.getMissingValues().length];
+            for (int i = 0; i < missing.length; i++) {
+                missing[i] = description.getMissingValues()[i] + dimension - scaledInput.length + i;
+            }
+            point = forest.imputeMissingValues(point, missing.length, missing);
+        }
         description.setRCFPoint(point);
         description.setInternalTimeStamp(internalTimeStamp); // no impute
         description.setNumberOfNewImputes(0);
@@ -376,7 +383,7 @@ public class Preprocessor implements IPreprocessor {
             scale[inputLength] = (weightTime == 0) ? 0 : 1.0 / weightTime;
             if (normalizeTime) {
                 scale[inputLength] *= NORMALIZATION_SCALING_FACTOR
-                        * (timeStampDeviations[4].getMean() + DEFAULT_NORMALIZATION_PRECISION);
+                        * (getTimeGapDifference() + DEFAULT_NORMALIZATION_PRECISION);
             }
             return scale;
         }
@@ -421,7 +428,7 @@ public class Preprocessor implements IPreprocessor {
      * @param forest the resident RCF
      * @return the descriptor (mutated and augmented appropriately)
      */
-    public <P extends AnomalyDescriptor> P postProcess(P result, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public <P extends AnomalyDescriptor> P postProcess(P result, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         double[] point = result.getRCFPoint();
@@ -435,6 +442,9 @@ public class Preprocessor implements IPreprocessor {
 
         double[] inputPoint = result.getCurrentInput();
         long timestamp = result.getInputTimestamp();
+        if (result.getMissingValues() != null) {
+
+        }
         updateState(inputPoint, point, timestamp, previousTimeStamps[shingleSize - 1]);
         ++valuesSeen;
         dataQuality[0].update(1.0);
@@ -625,7 +635,7 @@ public class Preprocessor implements IPreprocessor {
      *         corresponding to the forecasts; note that the time values would be 0
      *         for STREAMING_IMPUTE mode
      */
-    public TimedRangeVector invertForecastRange(RangeVector ranges, IRCFComputeDescriptor lastAnomalyDescriptor) {
+    public TimedRangeVector invertForecastRange(RangeVector ranges, RCFComputeDescriptor lastAnomalyDescriptor) {
         int baseDimension = inputLength + (mode == ForestMode.TIME_AUGMENTED ? 1 : 0);
         checkArgument(ranges.values.length % baseDimension == 0, " incorrect length of ranges");
         int horizon = ranges.values.length / baseDimension;
