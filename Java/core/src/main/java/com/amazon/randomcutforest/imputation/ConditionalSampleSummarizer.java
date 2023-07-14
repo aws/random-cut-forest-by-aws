@@ -173,6 +173,7 @@ public class ConditionalSampleSummarizer {
             } else {
                 values = Arrays.copyOf(e.leafPoint, dimensions);
             }
+            typicalPoints.add(new Weighted<>(values, (float) e.weight));
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
         maxAllowed = min(maxAllowed, num);
