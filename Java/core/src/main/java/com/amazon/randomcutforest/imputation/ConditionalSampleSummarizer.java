@@ -164,7 +164,6 @@ public class ConditionalSampleSummarizer {
         ArrayList<Weighted<float[]>> typicalPoints = new ArrayList<>();
         for (int j = 0; j < num; j++) {
             ConditionalTreeSample e = newList.get(j);
-
             float[] values;
             if (project) {
                 values = new float[missingDimensions.length];
@@ -174,10 +173,6 @@ public class ConditionalSampleSummarizer {
             } else {
                 values = Arrays.copyOf(e.leafPoint, dimensions);
             }
-            // weight is changed for clustering,
-            // based on the distance of the sample from the query point
-            typicalPoints.add(new Weighted<>(values, (float) e.weight));
-
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
         maxAllowed = min(maxAllowed, num);
