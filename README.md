@@ -8,6 +8,9 @@ and forecasting.
 The different directories correspond to equivalent implementations in different languages, and bindings to
 to those base implementations, using language specific features for greater flexibility of use. 
 
+RandomCutForest in the randomcutforest-core package provides an estimation (say anomaly score, or extrapolation over a forecast horizon)
+and using that raw estimation can be challenging. The randomcutforest-parkservices package provides
+several capabilities (ThresholdedRandomCutForest, RCFCaster, respectively) for distilling the scores to a determination of
 The package randomcutforest-examples showcases several example scenarios for using the repository. 
 They also provide examples for some of the parameter settings. Many of these examples are built in tests.
 

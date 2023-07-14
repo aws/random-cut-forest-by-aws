@@ -206,7 +206,6 @@ public class Summarizer {
 
         Random rng = new Random(seed);
         double sampledSum = refs.stream().map(e -> {
-            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
             checkArgument(Double.isFinite(e.weight), " weights have to be finite");
             checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
             return (double) e.weight;
@@ -357,7 +356,6 @@ public class Summarizer {
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
         double totalWeight = points.stream().map(e -> {
-            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
             checkArgument(Double.isFinite(e.weight), " weights have to be finite");
             checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
             return (double) e.weight;
@@ -411,7 +409,6 @@ public class Summarizer {
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
         double totalWeight = points.stream().map(e -> {
-            checkArgument(!Double.isNaN(e.weight), " weights have to be non-NaN");
             checkArgument(Double.isFinite(e.weight), " weights have to be finite");
             checkArgument(e.weight >= 0.0, () -> "negative weights are not meaningful" + e.weight);
             return (double) e.weight;

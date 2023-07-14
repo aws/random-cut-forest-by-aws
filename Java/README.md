@@ -16,7 +16,7 @@ int dimensions = 5; // The number of dimensions in the input data, required
 RandomCutForest forest = RandomCutForest.defaultForest(dimensions);
 ```
 We recommend using shingle size which correspond to contextual analysis of data, 
-and RCF uses iodeas not dissimilar from higher order Markov Chains to improve its 
+and RCF uses ideas not dissimilar from higher order Markov Chains to improve its 
 accuracy. An option is provided to have the shingles be constructed internally. 
 To explicitly set optional parameters like number of trees in the forest or 
 sample size, RandomCutForest provides a builder (for example with 4 input dimensions for 
