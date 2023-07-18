@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.inspect;
 
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -91,7 +89,7 @@ public class NearNeighborVisitor implements Visitor<Optional<Neighbor>> {
         if (Math.sqrt(distanceSquared) < distanceThreshold) {
             List<Long> sequenceIndexes = new ArrayList<>(leafNode.getSequenceIndexes().keySet());
 
-            neighbor = new Neighbor(toDoubleArray(leafPoint), Math.sqrt(distanceSquared), sequenceIndexes);
+            neighbor = new Neighbor(leafPoint, Math.sqrt(distanceSquared), sequenceIndexes);
         }
     }
 

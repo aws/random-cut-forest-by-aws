@@ -225,10 +225,10 @@ public class ThresholdedRandomCutForestMapperTest {
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .anomalyRate(0.01).adjustThreshold(true).boundingBoxCacheFraction(0).build();
+                .anomalyRate(0.01).autoAdjust(true).boundingBoxCacheFraction(0).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .anomalyRate(0.01).adjustThreshold(true).build();
+                .anomalyRate(0.01).autoAdjust(true).build();
 
         double value = 0.75 + 0.5 * new Random().nextDouble();
         first.setLowerThreshold(value);
@@ -299,10 +299,10 @@ public class ThresholdedRandomCutForestMapperTest {
         long seed = new Random().nextLong();
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).adjustThreshold(true).build();
+                .shingleSize(shingleSize).anomalyRate(0.01).autoAdjust(true).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).adjustThreshold(true).build();
+                .shingleSize(shingleSize).anomalyRate(0.01).autoAdjust(true).build();
 
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(sampleSize, 50, 100, 5, seed,
                 baseDimensions);
@@ -333,11 +333,11 @@ public class ThresholdedRandomCutForestMapperTest {
 
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).autoAdjust(true)
                 .boundingBoxCacheFraction(0).weights(new double[] { 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed).internalShinglingEnabled(true)
-                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).adjustThreshold(true)
+                .shingleSize(shingleSize).anomalyRate(0.01).transformMethod(method).autoAdjust(true)
                 .weights(new double[] { 1.0 }).build();
 
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(10 * sampleSize, 50, 100, 5,
@@ -385,13 +385,11 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0, 2.0 })
-                .build();
+                .transformMethod(method).anomalyRate(0.01).autoAdjust(true).weights(new double[] { 1.0, 2.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0, 2.0 })
-                .build();
+                .transformMethod(method).anomalyRate(0.01).autoAdjust(true).weights(new double[] { 1.0, 2.0 }).build();
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);
@@ -426,12 +424,12 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).adjustThreshold(true)
+                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).autoAdjust(true)
                 .weights(new double[] { 1.0, 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).adjustThreshold(true)
+                .transformMethod(TransformMethod.NONE).anomalyRate(0.01).autoAdjust(true)
                 .weights(new double[] { 1.0, 1.0 }).build();
 
         first.setLowerThreshold(value);
@@ -468,11 +466,11 @@ public class ThresholdedRandomCutForestMapperTest {
         ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
+                .transformMethod(method).anomalyRate(0.01).autoAdjust(true).weights(new double[] { 1.0 }).build();
         ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                 .forestMode(ForestMode.TIME_AUGMENTED).internalShinglingEnabled(true).shingleSize(shingleSize)
-                .transformMethod(method).anomalyRate(0.01).adjustThreshold(true).weights(new double[] { 1.0 }).build();
+                .transformMethod(method).anomalyRate(0.01).autoAdjust(true).weights(new double[] { 1.0 }).build();
 
         first.setLowerThreshold(value);
         second.setLowerThreshold(value);

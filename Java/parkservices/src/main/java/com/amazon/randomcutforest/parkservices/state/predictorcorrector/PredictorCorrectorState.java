@@ -41,6 +41,7 @@ public class PredictorCorrectorState implements Serializable {
     private boolean ignoreDrift;
     private ComputeDescriptorState lastDescriptor;
     private int runLength;
+    private double samplingSuppport;
     private double[] modeInformation; // multiple modes -- to be used in future
     private DeviationState[] deviationStates; // in future to be used for learning deviations
     private double[] ignoreNearExpected;

@@ -71,7 +71,7 @@ public class PredictorCorrectorTest {
         ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true).dimensions(dimensions)
                 .precision(Precision.FLOAT_32).randomSeed(0L).forestMode(ForestMode.STANDARD).shingleSize(shingleSize)
                 .anomalyRate(0.01).scoringStrategy(ScoringStrategy.DISTANCE).transformMethod(NORMALIZE).randomSeed(1110)
-                .learnIgnoreNearExpected(true).ignoreNearExpectedFromAbove(testOne).ignoreNearExpectedFromBelow(testTwo)
+                .autoAdjust(true).ignoreNearExpectedFromAbove(testOne).ignoreNearExpectedFromBelow(testTwo)
                 .ignoreNearExpectedFromAboveByRatio(testThree).ignoreNearExpectedFromBelowByRatio(testFour).build();
         PredictorCorrector predictorCorrector = forest.getPredictorCorrector();
         double[] test = new double[1];

@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.inspect;
 
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,7 +70,7 @@ public class NearNeighborVisitorTest {
 
         Neighbor neighbor = optional.get();
         assertNotSame(leafPoint, neighbor.point);
-        assertArrayEquals(toDoubleArray(leafPoint), neighbor.point);
+        assertArrayEquals(leafPoint, neighbor.point);
         assertEquals(Math.sqrt(3 * 1.1 * 1.1), neighbor.distance, EPSILON);
         assertNotSame(leafNode.getSequenceIndexes(), neighbor.sequenceIndexes);
     }
@@ -102,7 +101,7 @@ public class NearNeighborVisitorTest {
 
         Neighbor neighbor = optional.get();
         assertNotSame(leafPoint, neighbor.point);
-        assertArrayEquals(toDoubleArray(leafPoint), neighbor.point);
+        assertArrayEquals(leafPoint, neighbor.point);
         assertEquals(Math.sqrt(3 * 1.1 * 1.1), neighbor.distance, EPSILON);
         assertTrue(neighbor.sequenceIndexes.isEmpty());
     }

@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.config.CorrectionMode;
-import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
@@ -50,7 +49,6 @@ public class ThresholdedMultiDimensionalExample implements Example {
         int shingleSize = 8;
         int numberOfTrees = 50;
         int sampleSize = 256;
-        Precision precision = Precision.FLOAT_32;
         int dataSize = 4 * sampleSize;
 
         // change this to try different number of attributes,
@@ -64,21 +62,23 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 .dimensions(dimensions)
                 // shingle size is the context (sliding) window of last contiguous observations
                 .shingleSize(shingleSize)
-                // fixed random seed would produce deterministic/reprodicble results
+                // fixed random seed would produce deterministic/reproducible results
                 .randomSeed(0)
                 // use about 50; more than 100 may not be useful
                 .numberOfTrees(numberOfTrees)
-                // samplesize should be large enough to cover the desired phenomenon; for a 5
-                // minute interval reading
-                // if one is intetested investigating anomalies over a weekly pattern -- there
-                // are 12 * 24 * 7 different
-                // 5 minute intervals in a week. That being said, larger samplesize is a larger
+                // samplesize should be large enough to cover the desired phenomenon; for a
+                // 5-minute
+                // interval reading if one is interested investigating anomalies over a weekly
+                // pattern
+                // there are 12 * 24 * 7 different
+                // 5-minute intervals in a week. That being said, larger samplesize is a larger
                 // model.
                 .sampleSize(sampleSize)
                 // shingling is now performed internally by default -- best not to change it
                 // .internalShinglingEnabled(true)
                 // change to different streaming transformations that are performed on the fly
-                // note the transformation affects the charateristics of the anomaly that can be
+                // note the transformation affects the characteristics of the anomaly that can
+                // be
                 // detected
                 .transformMethod(TransformMethod.NORMALIZE)
                 // the following would increase precision at the cost of recall
@@ -86,12 +86,12 @@ public class ThresholdedMultiDimensionalExample implements Example {
                 // the default strategy is an attempted goldilocks version and may not work
                 // for all data
                 // .scoringStrategy(ScoringStrategy.MULTI_MODE)
-                // the following will learn data (concept) drifts (also refererred as level
+                // the following will learn data (concept) drifts (also referered to as level
                 // shifts) automatically and
                 // stop repeated alarms. The reverse is also true -- to detect level shifts, set
                 // the following to false
                 // and test for continuous alarms
-                .learnIgnoreNearExpected(true)
+                .autoAdjust(true)
                 // the following is a much coarser tool to eliminate repeated alarms
                 // the descriptor below 'result' will contain information about different
                 // correction/suppression modes
@@ -102,7 +102,7 @@ public class ThresholdedMultiDimensionalExample implements Example {
         System.out.println("seed = " + seed);
 
         // basic amplitude of the waves -- the parameter will be randomly scaled up
-        // betwee 0-20 percent
+        // between 0-20 percent
         double amplitude = 100.0;
 
         // the amplitude of random noise it will be +ve/-ve uniformly at random

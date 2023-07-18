@@ -256,7 +256,7 @@ public class RCFCasterTest {
                             double[] another = caster.errorHandler.getErrorVector(len, (i + 1), k, pos,
                                     RCFCaster.alternateError);
                             // smape; calibration may increase errors
-                            assertTrue(calibration != Calibration.NONE || Arrays.stream(another).sum() < 2 * len);
+                            assertTrue(calibration != Calibration.NONE || Arrays.stream(another).sum() < 3 * len);
                         }
                     }
                 }

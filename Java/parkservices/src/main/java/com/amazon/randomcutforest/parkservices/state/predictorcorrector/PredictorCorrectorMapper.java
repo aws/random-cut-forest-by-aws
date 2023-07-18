@@ -61,6 +61,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         }
         state.setRunLength(model.getRunLength());
         state.setIgnoreDrift(model.isIgnoreDrift());
+        state.setSamplingSuppport(model.getSamplingSupport());
         return state;
     }
 
@@ -94,6 +95,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
             predictorCorrector.setLastDescriptor(descriptorMapper.toModel(state.getLastDescriptor()));
         }
         predictorCorrector.setIgnoreDrift(state.isIgnoreDrift());
+        predictorCorrector.setSamplingSupport(state.getSamplingSuppport());
         return predictorCorrector;
     }
 

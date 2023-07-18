@@ -43,6 +43,12 @@ public enum CorrectionMode {
     ANOMALY_IN_SHINGLE,
 
     /**
+     * conditional forecast, using conditional fields
+     */
+
+    CONDITIONAL_FORECAST,
+
+    /**
      * forecasted value was not very different
      */
 

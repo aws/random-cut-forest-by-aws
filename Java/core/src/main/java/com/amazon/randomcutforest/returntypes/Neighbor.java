@@ -42,7 +42,7 @@ public class Neighbor {
     /**
      * The neighbor point.
      */
-    public final double[] point;
+    public final float[] point;
 
     /**
      * The distance between the neighbor point and the query point it was created
@@ -57,6 +57,8 @@ public class Neighbor {
      */
     public final List<Long> sequenceIndexes;
 
+    public int count;
+
     /**
      * Create a new Neighbor.
      *
@@ -66,10 +68,11 @@ public class Neighbor {
      * @param sequenceIndexes A list of sequence indexes corresponding to the times
      *                        when this neighbor point was added to the forest.
      */
-    public Neighbor(double[] point, double distance, List<Long> sequenceIndexes) {
+    public Neighbor(float[] point, double distance, List<Long> sequenceIndexes) {
         this.point = point;
         this.distance = distance;
         this.sequenceIndexes = sequenceIndexes;
+        this.count = 1;
     }
 
     /**
@@ -89,6 +92,7 @@ public class Neighbor {
      */
     private void mergeSequenceIndexes(Neighbor other) {
         this.sequenceIndexes.addAll(other.sequenceIndexes);
+        this.count += other.count;
     }
 
     /**

@@ -64,7 +64,7 @@ public class ThresholdedImpute implements Example {
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).imputationMethod(ImputationMethod.RCF)
                 .forestMode(ForestMode.STREAMING_IMPUTE).transformMethod(TransformMethod.NORMALIZE_DIFFERENCE)
-                .adjustThreshold(true).build();
+                .autoAdjust(true).build();
 
         long seed = new Random().nextLong();
         Random noisePRG = new Random(0);

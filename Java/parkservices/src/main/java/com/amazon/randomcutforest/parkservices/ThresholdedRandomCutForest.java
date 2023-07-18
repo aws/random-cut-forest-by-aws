@@ -31,7 +31,6 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_START_NORMALIZATION;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_ABSOLUTE_THRESHOLD;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_Z_FACTOR;
 import static java.lang.Math.max;
@@ -133,9 +132,8 @@ public class ThresholdedRandomCutForest {
         preprocessorBuilder.startNormalization(builder.startNormalization.orElse(DEFAULT_START_NORMALIZATION));
 
         preprocessor = preprocessorBuilder.build();
-        predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
-                builder.learnIgnoreNearExpected, builder.dimensions / builder.shingleSize,
-                builder.randomSeed.orElse(0L));
+        predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.autoAdjust,
+                builder.dimensions / builder.shingleSize, builder.randomSeed.orElse(0L));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
@@ -459,8 +457,7 @@ public class ThresholdedRandomCutForest {
         protected double[] fillValues = null;
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
-        protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
-        protected boolean learnIgnoreNearExpected = false;
+        protected boolean autoAdjust = false;
         protected double zFactor = DEFAULT_Z_FACTOR;
         protected boolean alertOnceInDrift = false;
         protected Optional<Double> transformDecay = Optional.empty();
@@ -696,13 +693,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T adjustThreshold(boolean adjustThreshold) {
-            this.adjustThreshold = adjustThreshold;
-            return (T) this;
-        }
-
-        public T learnIgnoreNearExpected(boolean learnNearIgnoreExpected) {
-            this.learnIgnoreNearExpected = learnNearIgnoreExpected;
+        public T autoAdjust(boolean autoAdjust) {
+            this.autoAdjust = autoAdjust;
             return (T) this;
         }
 
