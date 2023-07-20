@@ -17,7 +17,7 @@ package com.amazon.randomcutforest.parkservices.preprocessor;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
@@ -35,9 +35,9 @@ public interface IPreprocessor {
 
     int getInternalTimeStamp();
 
-    TimedRangeVector invertForecastRange(RangeVector ranges, IRCFComputeDescriptor lastRelevant);
+    TimedRangeVector invertForecastRange(RangeVector ranges, RCFComputeDescriptor lastRelevant);
 
-    <P extends AnomalyDescriptor> P preProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
+    <P extends AnomalyDescriptor> P preProcess(P current, RCFComputeDescriptor lastRelevant, RandomCutForest forest);
 
-    <P extends AnomalyDescriptor> P postProcess(P current, IRCFComputeDescriptor lastRelevant, RandomCutForest forest);
+    <P extends AnomalyDescriptor> P postProcess(P current, RCFComputeDescriptor lastRelevant, RandomCutForest forest);
 }

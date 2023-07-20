@@ -156,7 +156,8 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
             }
         }
 
-        if ((hitDuplicates || ignoreLeaf) && (pointInsideBox || depthOfNode == 0)) {
+        boolean capture = (pointInsideBox || depthOfNode == 0);
+        if ((hitDuplicates || ignoreLeaf) && capture) {
             // final rescaling; this ensures agreement with the ScalarScoreVector
             // the scoreUnseen/scoreSeen should be the same as scoring; other uses need
             // caution.
@@ -170,7 +171,9 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
 
         updateRangesForScoring(leafNode.getBoundingBox(), leafNode.getBoundingBox().getMergedBox(pointToScore));
 
-        if (Arrays.equals(leafNode.getLeafPoint(), pointToScore)) {
+        // newrange == 0 corresponds to equality of points and is fater than
+        // Array.equals
+        if (sumOfNewRange <= 0) {
             hitDuplicates = true;
         }
 
@@ -180,9 +183,7 @@ public abstract class AbstractAttributionVisitor implements Visitor<DiVector> {
             savedScore = scoreUnseen(depthOfNode, leafNode.getMass());
         }
 
-        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))
-                || sumOfNewRange <= 0) {
-
+        if ((hitDuplicates) || ((ignoreLeaf) && (leafNode.getMass() <= ignoreLeafMassThreshold))) {
             Arrays.fill(directionalAttribution.high, savedScore / (2 * pointToScore.length));
             Arrays.fill(directionalAttribution.low, savedScore / (2 * pointToScore.length));
             /* in this case do not have a better option than an equal attribution */

@@ -18,6 +18,8 @@ package com.amazon.randomcutforest.util;
 import static com.amazon.randomcutforest.util.ArrayPacking.pack;
 import static com.amazon.randomcutforest.util.ArrayPacking.unpackDoubles;
 import static com.amazon.randomcutforest.util.ArrayPacking.unpackFloats;
+import static com.amazon.randomcutforest.util.ArrayPacking.unpackInts;
+import static com.amazon.randomcutforest.util.ArrayPacking.unpackShorts;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +40,7 @@ public class ArrayPackingTest {
     @BeforeEach
     public void setUp() {
         rng = new Random();
+        ArrayPacking arrayPacking = new ArrayPacking();
     }
 
     @Test
@@ -58,7 +61,7 @@ public class ArrayPackingTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 2, 11, 100 })
+    @ValueSource(ints = { 0, 1, 2, 3, 11, 100 })
     public void testIntsPackRoundTrip(int inputLength) {
         int[] inputArray = rng.ints().limit(inputLength).toArray();
         assertArrayEquals(inputArray, ArrayPacking.unpackInts(ArrayPacking.pack(inputArray, false), false));
@@ -66,7 +69,7 @@ public class ArrayPackingTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 2, 17, 100 })
+    @ValueSource(ints = { 0, 1, 2, 3, 17, 100 })
     public void testShortsPackRoundTrip(int inputLength) {
         short[] inputArray = new short[inputLength];
         for (int i = 0; i < inputLength; i++) {
@@ -117,6 +120,7 @@ public class ArrayPackingTest {
         int[] compressed = ArrayPacking.pack(inputArray, true);
 
         int[] result = ArrayPacking.unpackInts(uncompressed, 50, false);
+        assertThrows(IllegalArgumentException.class, () -> unpackInts(compressed, -1, true));
         assertEquals(50, result.length);
         assertArrayEquals(Arrays.copyOf(inputArray, 50), result);
 
@@ -139,15 +143,45 @@ public class ArrayPackingTest {
         }
     }
 
+    @Test
+    public void testUnpackShortsWithLengthGiven() {
+        int inputLength = 100;
+        short[] inputArray = new short[50];
+        Arrays.fill(inputArray, (short) 2);
+        short[] test = new short[2];
+        short[] test2 = new short[3];
+        int[] uncompressed = ArrayPacking.pack(inputArray, false);
+        int[] compressed = ArrayPacking.pack(inputArray, true);
+
+        assertArrayEquals(test, unpackShorts(new int[2], true));
+        assertArrayEquals(test, unpackShorts(new int[2], false));
+        assertArrayEquals(test2, unpackShorts(new int[3], false));
+
+        assertThrows(IllegalArgumentException.class, () -> unpackShorts(uncompressed, -1, false));
+
+        short[] result = ArrayPacking.unpackShorts(uncompressed, 50, false);
+        assertEquals(50, result.length);
+        assertArrayEquals(Arrays.copyOf(inputArray, 50), result);
+
+        result = ArrayPacking.unpackShorts(compressed, 100, true);
+        assertEquals(100, result.length);
+        for (int y = 0; y < 50; y++) {
+            assertTrue(result[y] == 2);
+        }
+        for (int y = 50; y < 100; y++) {
+            assertTrue(result[y] == 0);
+        }
+    }
+
     @ParameterizedTest
-    @ValueSource(ints = { 0, 1, 2, 17, 100 })
+    @ValueSource(ints = { 0, 1, 2, 3, 17, 100 })
     public void testPackDoublesRoundTrip(int inputLength) {
         double[] inputArray = rng.doubles().limit(inputLength).toArray();
         assertArrayEquals(inputArray, ArrayPacking.unpackDoubles(ArrayPacking.pack(inputArray)));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 0, 1, 2, 5, 100 })
+    @ValueSource(ints = { 0, 1, 2, 3, 5, 100 })
     public void testPackFloatsRoundTrip(int inputLength) {
         float[] inputArray = new float[inputLength];
         for (int i = 0; i < inputLength; i++) {
@@ -184,6 +218,9 @@ public class ArrayPackingTest {
 
         assertEquals(packLength, outputArray.length);
         assertArrayEquals(Arrays.copyOf(inputArray, packLength), outputArray);
+        assertDoesNotThrow(() -> pack(new double[0], 0));
+        assertThrows(IllegalArgumentException.class, () -> pack(new double[10], 11));
+        assertThrows(IllegalArgumentException.class, () -> pack(new double[10], -1));
     }
 
     @Test
@@ -200,6 +237,8 @@ public class ArrayPackingTest {
 
         assertEquals(packLength, outputArray.length);
         assertArrayEquals(Arrays.copyOf(inputArray, packLength), outputArray);
+        assertDoesNotThrow(() -> pack(new float[0], 0));
+        assertThrows(IllegalArgumentException.class, () -> pack(new float[10], -1));
     }
 
     @Test

@@ -38,7 +38,8 @@ public class StatisticsTest {
 
     @Test
     void getMeanTest() {
-        Deviation deviation = new Deviation();
+        double discount = new Random().nextDouble();
+        Deviation deviation = new Deviation(discount);
         assertEquals(deviation.getMean(), 0);
         assertTrue(deviation.isEmpty());
         deviation.setCount(100);
@@ -48,6 +49,9 @@ public class StatisticsTest {
         assertEquals(101, deviation.count);
         assertEquals(deviation.getMean(), 0);
         assertFalse(deviation.isEmpty());
+        deviation.reset();
+        assertEquals(deviation.getDiscount(), discount);
+        assertTrue(deviation.isEmpty());
     }
 
 }

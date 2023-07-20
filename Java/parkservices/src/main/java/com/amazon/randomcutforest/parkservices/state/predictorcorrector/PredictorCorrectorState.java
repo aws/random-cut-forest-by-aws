@@ -21,6 +21,7 @@ import java.io.Serializable;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorState;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
 
@@ -37,6 +38,10 @@ public class PredictorCorrectorState implements Serializable {
     private long randomSeed;
     private double noiseFactor;
     private boolean autoAdjust;
+    private boolean ignoreDrift;
+    private ComputeDescriptorState lastDescriptor;
+    private int runLength;
+    private double samplingSuppport;
     private double[] modeInformation; // multiple modes -- to be used in future
     private DeviationState[] deviationStates; // in future to be used for learning deviations
     private double[] ignoreNearExpected;

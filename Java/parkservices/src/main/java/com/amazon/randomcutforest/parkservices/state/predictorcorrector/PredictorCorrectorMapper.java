@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.parkservices.state.predictorcorrector;
 
 import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
+import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorMapper;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
 import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
@@ -54,6 +55,13 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         state.setBaseDimension(model.getBaseDimension());
         state.setLastStrategy(model.getLastStrategy().name());
         state.setRandomSeed(model.getRandomSeed());
+        if (model.getLastDescriptor() != null) {
+            ComputeDescriptorMapper descriptorMapper = new ComputeDescriptorMapper();
+            state.setLastDescriptor(descriptorMapper.toState(model.getLastDescriptor()));
+        }
+        state.setRunLength(model.getRunLength());
+        state.setIgnoreDrift(model.isIgnoreDrift());
+        state.setSamplingSuppport(model.getSamplingSupport());
         return state;
     }
 
@@ -81,6 +89,13 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         predictorCorrector.setIgnoreNearExpected(state.getIgnoreNearExpected());
         predictorCorrector.setAutoAdjust(state.isAutoAdjust());
         predictorCorrector.setNoiseFactor(state.getNoiseFactor());
+        predictorCorrector.setRunLength(state.getRunLength());
+        if (state.getLastDescriptor() != null) {
+            ComputeDescriptorMapper descriptorMapper = new ComputeDescriptorMapper();
+            predictorCorrector.setLastDescriptor(descriptorMapper.toModel(state.getLastDescriptor()));
+        }
+        predictorCorrector.setIgnoreDrift(state.isIgnoreDrift());
+        predictorCorrector.setSamplingSupport(state.getSamplingSuppport());
         return predictorCorrector;
     }
 

@@ -28,10 +28,6 @@ public class AnomalyDescriptor extends RCFComputeDescriptor {
 
     public static int NUMBER_OF_EXPECTED_VALUES = 1;
 
-    // the following describes the grade of the anomaly in the range [0:1] where
-    // 0 is not an anomaly
-    double anomalyGrade;
-
     // confidence, for both anomalies/non-anomalies
     double dataConfidence;
 
@@ -62,9 +58,6 @@ public class AnomalyDescriptor extends RCFComputeDescriptor {
 
     // likelihood values for the list
     double[] likelihoodOfValues;
-
-    // the threshold used in inference
-    double threshold;
 
     public AnomalyDescriptor(double[] input, long inputTimeStamp) {
         super(input, inputTimeStamp);

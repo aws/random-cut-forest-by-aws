@@ -20,7 +20,10 @@ import static com.amazon.randomcutforest.CommonUtils.defaultScoreUnseenFunction;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -41,6 +44,7 @@ public class ImputeVisitorTest {
     private int numberOfMissingValues;
     private int[] missingIndexes;
     private ImputeVisitor visitor;
+    private ImputeVisitor anotherVisitor;
 
     @BeforeEach
     public void setUp() {
@@ -53,6 +57,7 @@ public class ImputeVisitorTest {
         missingIndexes = new int[] { 1, 99, -888 };
 
         visitor = new ImputeVisitor(queryPoint, numberOfMissingValues, missingIndexes);
+        anotherVisitor = new ImputeVisitor(queryPoint, queryPoint, null, null, 0.8, 42);
     }
 
     @Test
@@ -60,6 +65,19 @@ public class ImputeVisitorTest {
         assertArrayEquals(queryPoint, visitor.getResult().leafPoint);
         assertNotSame(queryPoint, visitor.getResult());
         assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.adjustedRank());
+        assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, anotherVisitor.getAnomalyRank());
+        assertNotEquals(ImputeVisitor.DEFAULT_INIT_VALUE, anotherVisitor.adjustedRank());
+        assertEquals(visitor.getDistance(), Double.MAX_VALUE);
+        assertFalse(visitor.isConverged());
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImputeVisitor(queryPoint, queryPoint, null, null, -1.0, 42));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImputeVisitor(queryPoint, queryPoint, null, null, 2.0, 42));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImputeVisitor(queryPoint, queryPoint, null, new int[] { -1 }, 1.0, 42));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImputeVisitor(queryPoint, queryPoint, null, new int[] { 4 }, 1.0, 42));
     }
 
     @Test
@@ -83,10 +101,11 @@ public class ImputeVisitorTest {
         when(leafNode.getMass()).thenReturn(leafMass);
 
         visitor.acceptLeaf(leafNode, leafDepth);
+        anotherVisitor.acceptLeaf(leafNode, leafDepth);
 
         float[] expected = new float[] { -1.0f, 2.0f, 3.0f };
         assertArrayEquals(expected, visitor.getResult().leafPoint);
-
+        assertEquals(visitor.getDistance(), 0, 1e-6);
         assertEquals(defaultScoreSeenFunction(leafDepth, leafMass), visitor.getAnomalyRank());
     }
 

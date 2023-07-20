@@ -672,22 +672,22 @@ public class RandomCutForestTest {
         indexes5.add(2L);
         indexes5.add(4L);
 
-        Neighbor neighbor1 = new Neighbor(new double[] { 1, 2 }, 5, indexes1);
+        Neighbor neighbor1 = new Neighbor(new float[] { 1, 2 }, 5, indexes1);
         when(((SamplerPlusTree<?, ?>) components.get(0)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor1));
 
-        Neighbor neighbor2 = new Neighbor(new double[] { 1, 2 }, 5, indexes2);
+        Neighbor neighbor2 = new Neighbor(new float[] { 1, 2 }, 5, indexes2);
         when(((SamplerPlusTree<?, ?>) components.get(1)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor2));
 
         when(((SamplerPlusTree<?, ?>) components.get(2)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.empty());
 
-        Neighbor neighbor4 = new Neighbor(new double[] { 2, 3 }, 4, indexes4);
+        Neighbor neighbor4 = new Neighbor(new float[] { 2, 3 }, 4, indexes4);
         when(((SamplerPlusTree<?, ?>) components.get(3)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor4));
 
-        Neighbor neighbor5 = new Neighbor(new double[] { 2, 3 }, 4, indexes5);
+        Neighbor neighbor5 = new Neighbor(new float[] { 2, 3 }, 4, indexes5);
         when(((SamplerPlusTree<?, ?>) components.get(4)).getTree().traverse(any(float[].class),
                 any(IVisitorFactory.class))).thenReturn(Optional.of(neighbor5));
 
@@ -723,7 +723,7 @@ public class RandomCutForestTest {
     @Test
     public void testGetNearNeighborsInSampleNoDistanceThreshold() {
         forest.getNearNeighborsInSample(new double[] { 0.1, 0.2 });
-        verify(forest, times(1)).getNearNeighborsInSample(aryEq(new double[] { 0.1, 0.2 }),
+        verify(forest, times(1)).getNearNeighborsInSample(aryEq(new float[] { 0.1f, 0.2f }),
                 eq(Double.POSITIVE_INFINITY));
     }
 

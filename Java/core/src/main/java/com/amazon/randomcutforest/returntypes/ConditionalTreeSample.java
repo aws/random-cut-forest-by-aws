@@ -15,8 +15,6 @@
 
 package com.amazon.randomcutforest.returntypes;
 
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -90,10 +88,4 @@ public class ConditionalTreeSample {
         return newList;
     }
 
-    // for older tests
-    public ConditionalTreeSample(double[] point) {
-        this.pointStoreIndex = 0;
-        this.leafPoint = toFloatArray(point);
-        this.weight = 1;
-    }
 }

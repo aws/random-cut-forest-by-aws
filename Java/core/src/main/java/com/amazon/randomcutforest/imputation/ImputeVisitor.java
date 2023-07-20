@@ -90,6 +90,8 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
      */
     public ImputeVisitor(float[] liftedPoint, float[] queryPoint, int[] liftedMissingIndexes, int[] missingIndexes,
             double centrality, long randomSeed) {
+        checkArgument(centrality >= 0, " cannoit be negative ");
+        checkArgument(centrality <= 1.0, " cannot be more than 1.0");
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.missing = new boolean[queryPoint.length];
         this.centrality = centrality;
@@ -101,9 +103,9 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
         }
 
         for (int i = 0; i < missingIndexes.length; i++) {
-            checkArgument(0 <= missingIndexes[i] && missingIndexes[i] < queryPoint.length,
-                    "Missing value indexes must be between 0 (inclusive) and queryPoint.length (exclusive)");
-
+            checkArgument(0 <= missingIndexes[i], "Missing value indexes cannot be negative");
+            checkArgument(missingIndexes[i] < queryPoint.length,
+                    "Missing value indexes must be less than query length");
             missing[missingIndexes[i]] = true;
         }
 

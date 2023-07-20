@@ -2,8 +2,10 @@
 
 This directory contains a Java implementation of the Random Cut Forest data structure and algorithms
 for anomaly detection, density estimation, imputation, and forecast. The goal of this library 
-is to be easy to use and to strike a balance between efficiency and extensibility. Please see randomcutforest-examples 
-for a few detailed examples and extensions.
+is to be easy to use and to strike a balance between efficiency and extensibility. Please do not forget 
+to look into the ParkServices package that provide many augmented functionalities such as explicit determination 
+of anomaly grade based on the first hand understanding of the core algorithm. Please also see randomcutforest-examples 
+for a few detailed examples and extensions. Please do not hesitate to creat an issue for any discussion item.
 
 ## Basic operations
 
@@ -13,20 +15,26 @@ To create a RandomCutForest instance with all parameters set to defaults:
 int dimensions = 5; // The number of dimensions in the input data, required
 RandomCutForest forest = RandomCutForest.defaultForest(dimensions);
 ```
-
+We recommend using shingle size which correspond to contextual analysis of data, 
+and RCF uses ideas not dissimilar from higher order Markov Chains to improve its 
+accuracy. An option is provided to have the shingles be constructed internally. 
 To explicitly set optional parameters like number of trees in the forest or 
-sample size, RandomCutForest provides a builder:
+sample size, RandomCutForest provides a builder (for example with 4 input dimensions for 
+a 4-way multivariate analysis):
 
 ```java
 RandomCutForest forest = RandomCutForest.builder()
-    .numberOfTrees(90)
-    .sampleSize(200)
-    .dimensions(2) // still required!
-    .lambda(0.2)
-    .randomSeed(123)
-    .storeSequenceIndexesEnabled(true)
-    .centerOfMassEnabled(true)
-    .build();
+        .numberOfTrees(90)
+        .sampleSize(200) // use this cover the phenomenon of interest
+                         // for analysis of 5 minute aggregations, a week has
+                         // about 12 * 24 * 7 starting points of interest
+                         // larger sample sizes will be larger models 
+        .dimensions(inputDimension*4) // still required!
+        .timeDecay(0.2) // determines half life of data
+        .randomSeed(123)
+        .internalShingleEnabled(true)
+        .shingleSize(7)
+        .build();
 ```
 
 Typical usage of a forest is to compute a statistic on an input data point and then update the forest with that point 
@@ -53,27 +61,40 @@ while (true) {
 
 The following parameters can be configured in the RandomCutForest builder. 
 
-| Parameter Name | Type | Description | Default Value|
-| --- | --- | --- | --- |
-| centerOfMassEnabled | boolean | If true, then tree nodes in the forest will compute their center of mass as part of tree update operations. | false |
-| dimensions | int | The number of dimensions in the input data. | Required, no default value |
-| lambda | double | The decay factor used by stream samplers in this forest. See the next section for guidance. | 1 / (10 * sampleSize) |
-| numberOfTrees | int | The number of trees in this forest. | 50 |
-| outputAfter | int | The number of points required by stream samplers before results are returned. | 0.25 * sampleSize |
-| parallelExecutionEnabled | boolean | If true, then the forest will create an internal threadpool. Forest updates and traversals will be submitted to this threadpool, and individual trees will be updated or traversed in parallel. For larger shingle sizes, dimensions, and number of trees, parallelization may improve throughput. We recommend users benchmark against their target use case. | false |
-| randomSeed | long | A seed value used to initialize the random number generators in this forest. | |
-| sampleSize | int | The sample size used by stream samplers in this forest | 256 |
-| storeSequenceIndexesEnabled | boolean | If true, then sequence indexes (ordinals indicating when a point was added to a tree) will be stored in the forest along with poitn values. | false |
-| threadPoolSize | int | The number of threads to use in the internal threadpool. | Number of available processors - 1 |
+| Parameter Name              | Type    | Description                                                                                                                                                                                                                                                                                                                                                    | Default Value                                                                         |
+|-----------------------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| dimensions                  | int     | The number of dimensions in the input data.                                                                                                                                                                                                                                                                                                                    | Required, no default value. Should be the product of input dimensions and shingleSize |
+| shingleSize                 | int     | The number of contiguous observations across all the input variables that would be used for analysis                                                                                                                                                                                                                                                           | Strongly recommended for contextual anomalies. Required for Forecast/Extrapolate      |
+| lambda                      | double  | The decay factor used by stream samplers in this forest. See the next section for guidance.                                                                                                                                                                                                                                                                    | 1 / (10 * sampleSize)                                                                 |
+| numberOfTrees               | int     | The number of trees in this forest.                                                                                                                                                                                                                                                                                                                            | 50                                                                                    |
+| outputAfter                 | int     | The number of points required by stream samplers before results are returned.                                                                                                                                                                                                                                                                                  | 0.25 * sampleSize                                                                     |
+| internalShinglingEnabled    | boolean | Whether the shingling is performed by RCF itself since it has already seen previous values.                                                                                                                                                                                                                                                                    | false (for historical reasons). Recommended : true, will result in smaller models.    |
+| parallelExecutionEnabled    | boolean | If true, then the forest will create an internal threadpool. Forest updates and traversals will be submitted to this threadpool, and individual trees will be updated or traversed in parallel. For larger shingle sizes, dimensions, and number of trees, parallelization may improve throughput. We recommend users benchmark against their target use case. | false                                                                                 |
+| randomSeed                  | long    | A seed value used to initialize the random number generators in this forest.                                                                                                                                                                                                                                                                                   |                                                                                       |
+| sampleSize                  | int     | The sample size used by stream samplers in this forest                                                                                                                                                                                                                                                                                                         | 256                                                                                   |
+| centerOfMassEnabled         | boolean | If true, then tree nodes in the forest will compute their center of mass as part of tree update operations.                                                                                                                                                                                                                                                    | false                                                                                 |
+| storeSequenceIndexesEnabled | boolean | If true, then sequence indexes (ordinals indicating when a point was added to a tree) will be stored in the forest along with poitn values.                                                                                                                                                                                                                    | false                                                                                 |
+| threadPoolSize              | int     | The number of threads to use in the internal threadpool.                                                                                                                                                                                                                                                                                                       | Number of available processors - 1                                                    |
 
-## Choosing a `lambda` value for your application
+The above parameters are the most common and historical. Please use the issues to request additions/discussions of other parameters of interest.
+
+RandomCutForest primarily provides an estimation (say anomaly score, or extrapolation over a forecast horizon) and using that raw estimation can be challenging. The ParkServices package provides 
+several capabilities (ThresholdedRandomCutForest, RCFCaster, respectively) for distilling the scores to a determination of 
+anomaly/otherwise (an assesment of grade) or calibrated conformal forecasts. These have natural parameter choices that are different 
+from the core RandomCutForest -- for example internalShinglingEnabled defaults to true since that is more natural in those contexts.
+The package examples provides a collection of examples and uses of parameters, we draw the attention to ThresholdedMultiDimensionalExample 
+and RCFCasterExample. If one is interested in sequential analysis of a series of consecutive inputs, check out SequentialAnomalyExample. 
+ParkServices also exposes many other functionalities of RCF which were covert, such as clustering (including multi-centroid representations) 
+-- see NumericGLADExample for instance. 
+
+## Choosing a `timeDecay` value for your application
 
 When we submit a point to the sampler, it is included into the sample with some probability, and 
 it will remain in the for some number of steps before being replaced. Call the number of steps that
 a point is included in the sample the "lifetime" of the point (which may be 0). Over a finite time
 window, the distribution of the lifetime of a point is approximately exponential with parameter
-`lambda`. Thus, `1 / lambda` is approximately the average number of steps that a point will be included
-in the sample. By default, we set `lambda` equal to `1 / (10 * sampleSize)`.
+`lambda`. Thus, `1 / timmeDecay` is approximately the average number of steps that a point will be included
+in the sample. By default, we set `timeDecay` equal to `1 / (10 * sampleSize)`.
 
 Alternatively, if you want the probability that a point survives longer than n steps to be 0.05,
 you can solve for `lambda` in the equation `exp(-lambda * n) = 0.05`.

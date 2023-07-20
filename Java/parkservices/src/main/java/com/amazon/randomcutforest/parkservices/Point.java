@@ -44,9 +44,4 @@ public class Point {
     protected double[] copyIfNotnull(double[] array) {
         return array == null ? null : Arrays.copyOf(array, array.length);
     }
-
-    // an explicit copy operation to control the stored state
-    public Point copyOf() {
-        return new Point(currentInput, inputTimestamp);
-    }
 }

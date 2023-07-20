@@ -31,7 +31,6 @@ import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_STORE_SEQUENCE_
 import static com.amazon.randomcutforest.config.ImputationMethod.PREVIOUS;
 import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_START_NORMALIZATION;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_ABSOLUTE_THRESHOLD;
-import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_AUTO_THRESHOLD;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_SCORE_DIFFERENCING;
 import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_Z_FACTOR;
 import static java.lang.Math.max;
@@ -68,7 +67,7 @@ import com.amazon.randomcutforest.returntypes.RangeVector;
 public class ThresholdedRandomCutForest {
 
     // saved description of the last seen anomaly
-    IRCFComputeDescriptor lastAnomalyDescriptor;
+    RCFComputeDescriptor lastAnomalyDescriptor;
 
     // forestMode of operation
     protected ForestMode forestMode = ForestMode.STANDARD;
@@ -133,9 +132,8 @@ public class ThresholdedRandomCutForest {
         preprocessorBuilder.startNormalization(builder.startNormalization.orElse(DEFAULT_START_NORMALIZATION));
 
         preprocessor = preprocessorBuilder.build();
-        predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.adjustThreshold,
-                builder.learnIgnoreNearExpected, builder.dimensions / builder.shingleSize,
-                builder.randomSeed.orElse(0L));
+        predictorCorrector = new PredictorCorrector(forest.getTimeDecay(), builder.anomalyRate, builder.autoAdjust,
+                builder.dimensions / builder.shingleSize, builder.randomSeed.orElse(0L));
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
@@ -148,6 +146,7 @@ public class ThresholdedRandomCutForest {
         builder.ignoreNearExpectedFromAboveByRatio.ifPresent(predictorCorrector::setIgnoreNearExpectedFromAboveByRatio);
         builder.ignoreNearExpectedFromBelowByRatio.ifPresent(predictorCorrector::setIgnoreNearExpectedFromBelowByRatio);
         predictorCorrector.setLastStrategy(builder.scoringStrategy);
+        predictorCorrector.setIgnoreDrift(builder.alertOnceInDrift);
     }
 
     void validateNonNegativeArray(double[] array) {
@@ -373,7 +372,7 @@ public class ThresholdedRandomCutForest {
                     newPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
                 } else {
                     newPoint = predictorCorrector.applyPastCorrector(newPoint, gap, shingleSize, blockSize,
-                            preprocessor.getScale(), lastAnomalyDescriptor);
+                            preprocessor.getScale(), transformMethod, lastAnomalyDescriptor);
                 }
             }
             RangeVector answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
@@ -406,6 +405,22 @@ public class ThresholdedRandomCutForest {
 
     public void setScoreDifferencing(double scoreDifferencing) {
         predictorCorrector.setScoreDifferencing(scoreDifferencing);
+    }
+
+    public void setIgnoreNearExpectedFromAbove(double[] ignoreSimilarFromAbove) {
+        predictorCorrector.setIgnoreNearExpectedFromAbove(ignoreSimilarFromAbove);
+    }
+
+    public void setIgnoreNearExpectedFromAboveByRatio(double[] ignoreSimilarFromAbove) {
+        predictorCorrector.setIgnoreNearExpectedFromAboveByRatio(ignoreSimilarFromAbove);
+    }
+
+    public void setIgnoreNearExpectedFromBelow(double[] ignoreSimilarFromBelow) {
+        predictorCorrector.setIgnoreNearExpectedFromBelow(ignoreSimilarFromBelow);
+    }
+
+    public void setIgnoreNearExpectedFromBelowByRatio(double[] ignoreSimilarFromBelow) {
+        predictorCorrector.setIgnoreNearExpectedFromBelowByRatio(ignoreSimilarFromBelow);
     }
 
     public void setScoringStrategy(ScoringStrategy strategy) {
@@ -458,9 +473,9 @@ public class ThresholdedRandomCutForest {
         protected double[] fillValues = null;
         protected double[] weights = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
-        protected boolean adjustThreshold = DEFAULT_AUTO_THRESHOLD;
-        protected boolean learnIgnoreNearExpected = false;
+        protected boolean autoAdjust = false;
         protected double zFactor = DEFAULT_Z_FACTOR;
+        protected boolean alertOnceInDrift = false;
         protected Optional<Double> transformDecay = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromAbove = Optional.empty();
         protected Optional<double[]> ignoreNearExpectedFromBelow = Optional.empty();
@@ -694,13 +709,8 @@ public class ThresholdedRandomCutForest {
             return (T) this;
         }
 
-        public T adjustThreshold(boolean adjustThreshold) {
-            this.adjustThreshold = adjustThreshold;
-            return (T) this;
-        }
-
-        public T learnIgnoreNearExpected(boolean learnNearIgnoreExpected) {
-            this.learnIgnoreNearExpected = learnNearIgnoreExpected;
+        public T autoAdjust(boolean autoAdjust) {
+            this.autoAdjust = autoAdjust;
             return (T) this;
         }
 
@@ -731,6 +741,11 @@ public class ThresholdedRandomCutForest {
 
         public T scoringStrategy(ScoringStrategy scoringStrategy) {
             this.scoringStrategy = scoringStrategy;
+            return (T) this;
+        }
+
+        public T alertOnce(boolean alertOnceInDrift) {
+            this.alertOnceInDrift = alertOnceInDrift;
             return (T) this;
         }
     }

@@ -16,7 +16,6 @@
 package com.amazon.randomcutforest.state.tree;
 
 import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
-import static java.lang.Math.min;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -50,12 +49,7 @@ public class AbstractNodeStoreMapper
             cutValue = ArrayPacking.unpackFloats(state.getCutValueData(), capacity);
             leftIndex = ArrayPacking.unpackInts(state.getLeftIndex(), capacity, state.isCompressed());
             rightIndex = ArrayPacking.unpackInts(state.getRightIndex(), capacity, state.isCompressed());
-            if (state.isCanonicalAndNotALeaf()) {
-                reverseBits(state.getSize(), leftIndex, rightIndex, capacity);
-            } else {
-                replaceLeaves(leftIndex, capacity);
-                replaceLeaves(rightIndex, capacity);
-            }
+            reverseBits(state.getSize(), leftIndex, rightIndex, capacity);
         }
         // note boundingBoxCache is not set deliberately
         return AbstractNodeStore.builder().capacity(capacity).useRoot(root).leftIndex(leftIndex).rightIndex(rightIndex)
@@ -136,21 +130,6 @@ public class AbstractNodeStoreMapper
         }
         for (int i = size; i < leftIndex.length; i++) {
             leftIndex[i] = rightIndex[i] = capacity;
-        }
-    }
-
-    /**
-     * takes a non-negative array and truncates it (in place) to [-1..capacity]; the
-     * intended use is that [0..capacity-1] are internal nodes and if the array
-     * represents left/right indices then the reachable nodes with valu capacity
-     * correspond to leaves (which would be differentiated outsde this mappaer)
-     * 
-     * @param array    input array
-     * @param capacity the truncation value
-     */
-    protected static void replaceLeaves(int[] array, int capacity) {
-        for (int i = 0; i < array.length; i++) {
-            array[i] = min(array[i], capacity);
         }
     }
 

@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.util;
 
 import static com.amazon.randomcutforest.util.Weighted.createSample;
 import static com.amazon.randomcutforest.util.Weighted.prefixPick;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -72,6 +73,12 @@ public class WeightedTest {
         heavyItem = prefixPick(list, 2 * size);
         assertTrue(heavyItem.index == heavyIndex);
         assertTrue(heavyItem.weight == (float) size);
+    }
+
+    @Test
+    public void emptyList() {
+        List<Weighted<Integer>> list = new ArrayList<>();
+        assertThrows(IllegalArgumentException.class, () -> prefixPick(list, 1.0f));
     }
 
 }

@@ -222,7 +222,8 @@ public class SequentialAnalysisTest {
             assertArrayEquals(current.values, sequential.values, 1e-3f);
             assertArrayEquals(current.upper, sequential.upper, 1e-3f);
             assertArrayEquals(current.lower, sequential.lower, 1e-3f);
-            assertArrayEquals(descriptor.getForecastDescriptor().getCalibration(), last.getCalibration(), 1e-3f);
+            assertArrayEquals(descriptor.getForecastDescriptor().getIntervalPrecision(), last.getIntervalPrecision(),
+                    1e-3f);
             assertArrayEquals(descriptor.getForecastDescriptor().getErrorMean(), last.getErrorMean(), 1e-3f);
         }
     }

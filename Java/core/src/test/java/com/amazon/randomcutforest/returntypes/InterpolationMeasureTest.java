@@ -16,7 +16,9 @@
 package com.amazon.randomcutforest.returntypes;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,13 @@ public class InterpolationMeasureTest {
         assertArrayEquals(zero, output.measure.low);
         assertArrayEquals(zero, output.distances.low);
         assertArrayEquals(zero, output.probMass.low);
+        assertEquals(output.getSampleSize(), sampleSize);
+        assertThrows(IllegalArgumentException.class, () -> new InterpolationMeasure(0, sampleSize));
+        assertThrows(IllegalArgumentException.class,
+                () -> new InterpolationMeasure(1, new DiVector(1), new DiVector(2), new DiVector(3)));
+        assertThrows(IllegalArgumentException.class,
+                () -> new InterpolationMeasure(1, new DiVector(2), new DiVector(2), new DiVector(3)));
+        assertDoesNotThrow(() -> new InterpolationMeasure(1, new DiVector(2), new DiVector(2), new DiVector(2)));
     }
 
     @Test
@@ -50,6 +59,8 @@ public class InterpolationMeasureTest {
         InterpolationMeasure other1 = new InterpolationMeasure(dimensions, sampleSize);
         InterpolationMeasure other2 = new InterpolationMeasure(dimensions, sampleSize);
 
+        assertThrows(IllegalArgumentException.class,
+                () -> InterpolationMeasure.addToLeft(other1, new InterpolationMeasure(dimensions + 1, sampleSize)));
         for (int i = 0; i < dimensions; i++) {
             output.probMass.high[i] = 2 * i;
             output.probMass.low[i] = 2 * i + 1;

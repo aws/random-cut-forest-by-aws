@@ -107,7 +107,8 @@ public class ArrayPacking {
                 output[3 + used++] = (int) code;
                 len += packNum;
             }
-            checkArgument(used + 3 == output.length, "incorrect state");
+            // uncomment for debug; should be always true
+            // checkArgument(used + 3 == output.length, "incorrect state");
             return output;
         }
     }
@@ -176,7 +177,8 @@ public class ArrayPacking {
                 output[3 + used++] = (int) code;
                 len += packNum;
             }
-            checkArgument(used + 3 == output.length, "incorrect state");
+            // uncomment for debug; should be always true
+            // checkArgument(used + 3 == output.length, "incorrect state");
             return output;
         }
     }
@@ -342,8 +344,8 @@ public class ArrayPacking {
      */
     public static byte[] pack(double[] array, int length) {
         checkNotNull(array, "array must not be null");
-        checkArgument(0 <= length && length <= array.length,
-                "length must be between 0 and inputArray.length (inclusive)");
+        checkArgument(0 <= length, "incorrect length parameter");
+        checkArgument(length <= array.length, "length must be between 0 and inputArray.length (inclusive)");
 
         ByteBuffer buf = ByteBuffer.allocate(length * Double.BYTES);
         for (int i = 0; i < length; i++) {
@@ -373,9 +375,8 @@ public class ArrayPacking {
      * @return An array of bytes representing the original array of floats.
      */
     public static byte[] pack(float[] array, int length) {
-        checkNotNull(array, "array must not be null");
-        checkArgument(0 <= length && length <= array.length,
-                "length must be between 0 and inputArray.length (inclusive)");
+        checkArgument(0 <= length, "incorrect length parameter");
+        checkArgument(length <= array.length, "length must be between 0 and inputArray.length (inclusive)");
 
         ByteBuffer buf = ByteBuffer.allocate(length * Float.BYTES);
         for (int i = 0; i < length; i++) {

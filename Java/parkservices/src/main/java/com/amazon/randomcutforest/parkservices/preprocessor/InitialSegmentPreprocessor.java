@@ -24,7 +24,7 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
-import com.amazon.randomcutforest.parkservices.IRCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 
 @Getter
@@ -47,7 +47,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
      * @return an AnomalyDescriptor object to be used in anomaly detection
      */
     @Override
-    public AnomalyDescriptor preProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public AnomalyDescriptor preProcess(AnomalyDescriptor description, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         if (valuesSeen < startNormalization) {
@@ -61,7 +61,7 @@ public class InitialSegmentPreprocessor extends Preprocessor {
 
     // same for post process
     @Override
-    public AnomalyDescriptor postProcess(AnomalyDescriptor description, IRCFComputeDescriptor lastAnomalyDescriptor,
+    public AnomalyDescriptor postProcess(AnomalyDescriptor description, RCFComputeDescriptor lastAnomalyDescriptor,
             RandomCutForest forest) {
 
         AnomalyDescriptor answer = super.postProcess(description, lastAnomalyDescriptor, forest);

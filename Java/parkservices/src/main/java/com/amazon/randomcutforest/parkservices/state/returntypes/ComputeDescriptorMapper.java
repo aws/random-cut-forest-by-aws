@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.parkservices.state.returntypes;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.config.CorrectionMode;
 import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.state.IStateMapper;
@@ -31,18 +32,21 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
     public RCFComputeDescriptor toModel(ComputeDescriptorState state, long seed) {
 
         RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
-        descriptor.setRCFScore(state.getLastAnomalyScore());
-        descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
-        descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
-        descriptor.setRCFPoint(state.getLastAnomalyPoint());
-        descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
-        descriptor.setRelativeIndex(state.getLastRelativeIndex());
-        descriptor.setScoringStrategy(ScoringStrategy.valueOf(state.getLastStrategy()));
-        descriptor.setShift(state.getLastShift());
-        descriptor.setPostShift(state.getLastPostShift());
+        descriptor.setRCFScore(state.getScore());
+        descriptor.setInternalTimeStamp(state.getInternalTimeStamp());
+        descriptor.setAttribution(new DiVectorMapper().toModel(state.getAttribution()));
+        descriptor.setRCFPoint(state.getPoint());
+        descriptor.setExpectedRCFPoint(state.getExpectedPoint());
+        descriptor.setRelativeIndex(state.getRelativeIndex());
+        descriptor.setScoringStrategy(ScoringStrategy.valueOf(state.getStrategy()));
+        descriptor.setShift(state.getShift());
+        descriptor.setPostShift(state.getPostShift());
         descriptor.setTransformDecay(state.getTransformDecay());
         descriptor.setPostDeviations(state.getPostDeviations());
-        descriptor.setScale(state.getLastScale());
+        descriptor.setScale(state.getScale());
+        descriptor.setAnomalyGrade(state.getAnomalyGrade());
+        descriptor.setThreshold(state.getThreshold());
+        descriptor.setCorrectionMode(CorrectionMode.valueOf(state.getCorrectionMode()));
         return descriptor;
     }
 
@@ -50,18 +54,21 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
     public ComputeDescriptorState toState(RCFComputeDescriptor descriptor) {
 
         ComputeDescriptorState state = new ComputeDescriptorState();
-        state.setLastAnomalyTimeStamp(descriptor.getInternalTimeStamp());
-        state.setLastAnomalyScore(descriptor.getRCFScore());
-        state.setLastAnomalyAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
-        state.setLastAnomalyPoint(descriptor.getRCFPoint());
-        state.setLastExpectedPoint(descriptor.getExpectedRCFPoint());
-        state.setLastRelativeIndex(descriptor.getRelativeIndex());
-        state.setLastStrategy(descriptor.getScoringStrategy().name());
-        state.setLastShift(descriptor.getShift());
-        state.setLastPostShift(descriptor.getPostShift());
+        state.setInternalTimeStamp(descriptor.getInternalTimeStamp());
+        state.setScore(descriptor.getRCFScore());
+        state.setAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
+        state.setPoint(descriptor.getRCFPoint());
+        state.setExpectedPoint(descriptor.getExpectedRCFPoint());
+        state.setRelativeIndex(descriptor.getRelativeIndex());
+        state.setStrategy(descriptor.getScoringStrategy().name());
+        state.setShift(descriptor.getShift());
+        state.setPostShift(descriptor.getPostShift());
         state.setTransformDecay(descriptor.getTransformDecay());
         state.setPostDeviations(descriptor.getPostDeviations());
-        state.setLastScale(descriptor.getScale());
+        state.setScale(descriptor.getScale());
+        state.setAnomalyGrade(descriptor.getAnomalyGrade());
+        state.setThreshold(descriptor.getThreshold());
+        state.setCorrectionMode(descriptor.getCorrectionMode().name());
         return state;
     }
 

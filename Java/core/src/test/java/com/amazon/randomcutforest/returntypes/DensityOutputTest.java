@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.returntypes;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,11 +99,12 @@ public class DensityOutputTest {
 
     @Test
     public void testGetDensity() {
+        assertTrue(output.getDensity(0.5, 3) == 0);
         for (int i = 0; i < dimensions; i++) {
             output.probMass.high[i] = 2 * i;
             output.distances.high[i] = 4 * i;
             output.measure.high[i] = 6 * i;
-            output.probMass.low[i] = 2 * i + 1;
+            output.probMass.low[i] = 2 * i;
             output.distances.low[i] = 4 * i + 2;
             output.measure.low[i] = 6 * i + 3;
         }
@@ -116,7 +118,7 @@ public class DensityOutputTest {
         for (int i = 0; i < dimensions; i++) {
             double mass = output.probMass.getHighLowSum(i);
             double distance = output.distances.getHighLowSum(i);
-            double t = distance / mass;
+            double t = (mass != 0) ? distance / mass : 0;
             t = Math.pow(t, dimensions) * mass;
             sumOfFactors += t;
         }

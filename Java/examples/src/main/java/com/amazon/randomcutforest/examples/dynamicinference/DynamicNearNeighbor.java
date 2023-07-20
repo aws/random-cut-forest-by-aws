@@ -65,7 +65,7 @@ public class DynamicNearNeighbor implements Example {
             file.append("\n");
 
             double[] movingQuery = rotateClockWise(queryPoint, -3 * PI * degree / 360);
-            double[] neighbor = newForest.getNearNeighborsInSample(movingQuery, 1).get(0).point;
+            float[] neighbor = newForest.getNearNeighborsInSample(movingQuery, 1).get(0).point;
             file.append(movingQuery[0] + " " + movingQuery[1] + " " + (neighbor[0] - movingQuery[0]) + " "
                     + (neighbor[1] - movingQuery[1]) + "\n");
             file.append("\n");

@@ -207,6 +207,36 @@ public class SimpleInterpolationVisitorTest {
             assertEquals(expected[2 * i + 1], result.distances.low[i]);
         }
 
+        // reset to probmass
+        for (int i = 0; i < expected.length; i++) {
+            expected[i] = probVector[i];
+        }
+
+        // testing shawbox setup for grandparent
+        INodeView uncle = mock(NodeView.class);
+        int uncleMass = 2;
+        when(sibling.getMass()).thenReturn(uncleMass);
+        INodeView grandParent = mock(NodeView.class);
+        when(grandParent.getMass()).thenReturn(1 + siblingMass + uncleMass);
+        BoundingBox grandBox = boundingBox.getMergedBox(new float[] { 2.0f, 2.0f });
+        when(grandParent.getBoundingBox()).thenReturn(grandBox);
+        when(grandParent.getSiblingBoundingBox(any())).thenReturn(new BoundingBox(new float[] { 2.0f, 2.0f }));
+        visitor.accept(grandParent, depth - 1);
+        result = visitor.getResult();
+
+        directionalDistance = new double[] { 0.0, 2.0, 0.0, 0.0 };
+        differenceInRange = new double[] { 0.0, 1.0, 0.0, 0.0 };
+        double newSumOfNewRange = 1.0 + 2.0 + 1.0 + 2.0;
+        probVector = Arrays.stream(differenceInRange).map(x -> x / newSumOfNewRange).toArray();
+        double prob = Arrays.stream(probVector).sum();
+        for (int i = 0; i < expected.length; i++) {
+            expected[i] = probVector[i] + (1 - prob) * expected[i];
+        }
+        for (int i = 0; i < pointToScore.length; i++) {
+            System.out.println(i);
+            assertEquals(expected[2 * i], result.probMass.high[i]);
+            assertEquals(expected[2 * i + 1], result.probMass.low[i]);
+        }
     }
 
     @Test

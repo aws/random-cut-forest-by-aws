@@ -1228,6 +1228,7 @@ public class RandomCutForest {
      *                          considered a neighbor.
      * @return a list of Neighbors, ordered from closest to furthest.
      */
+    @Deprecated
     public List<Neighbor> getNearNeighborsInSample(double[] point, double distanceThreshold) {
         return getNearNeighborsInSample(toFloatArray(point), distanceThreshold);
     }
@@ -1258,7 +1259,12 @@ public class RandomCutForest {
      * @param point A point whose neighbors we want to find.
      * @return a list of Neighbors, ordered from closest to furthest.
      */
+    @Deprecated
     public List<Neighbor> getNearNeighborsInSample(double[] point) {
+        return getNearNeighborsInSample(toFloatArray(point));
+    }
+
+    public List<Neighbor> getNearNeighborsInSample(float[] point) {
         return getNearNeighborsInSample(point, Double.POSITIVE_INFINITY);
     }
 

@@ -74,19 +74,6 @@ public class SampleSummary {
      */
     public float[] lower;
 
-    public SampleSummary(double weightOfSamples, float[][] typicalPoints, float[] relativeLikelihood, float[] median,
-            float[] mean, float[] deviation, float[] upper, float[] lower) {
-        checkArgument(typicalPoints.length == relativeLikelihood.length, "incorrect lengths of fields");
-        this.weightOfSamples = weightOfSamples;
-        this.summaryPoints = typicalPoints;
-        this.relativeWeight = relativeLikelihood;
-        this.mean = mean;
-        this.median = median;
-        this.deviation = deviation;
-        this.upper = upper;
-        this.lower = lower;
-    }
-
     public SampleSummary(int dimensions) {
         this.weightOfSamples = 0;
         this.summaryPoints = new float[1][];
@@ -113,10 +100,6 @@ public class SampleSummary {
         System.arraycopy(this.summaryPoints[0], 0, this.mean, 0, point.length);
         System.arraycopy(this.summaryPoints[0], 0, this.upper, 0, point.length);
         System.arraycopy(this.summaryPoints[0], 0, this.lower, 0, point.length);
-    }
-
-    public SampleSummary(float[][] summaryPoints, float[] relativeWeight) {
-        this.addTypical(summaryPoints, relativeWeight);
     }
 
     void addTypical(float[][] summaryPoints, float[] relativeWeight) {
@@ -156,7 +139,8 @@ public class SampleSummary {
      */
     public SampleSummary(List<Weighted<float[]>> points, double percentile) {
         checkArgument(points.size() > 0, "point list cannot be empty");
-        checkArgument(percentile > 0.5 && percentile < 1.0, "invalid ranges of the bound");
+        checkArgument(percentile > 0.5, " has to be more than 0.5");
+        checkArgument(percentile < 1.0, "has to be less than 1");
         int dimension = points.get(0).index.length;
         double[] coordinateSum = new double[dimension];
         double[] coordinateSumSquare = new double[dimension];
@@ -164,13 +148,16 @@ public class SampleSummary {
         for (Weighted<float[]> e : points) {
             checkArgument(e.index.length == dimension, "points have to be of same length");
             float weight = e.weight;
+            checkArgument(!Float.isNaN(weight), " weights must be non-NaN values ");
+            checkArgument(Float.isFinite(weight), " weights must be finite ");
             checkArgument(weight >= 0, "weights have to be non-negative");
             totalWeight += weight;
             for (int i = 0; i < dimension; i++) {
-                checkArgument(!Float.isNaN(weight) && Float.isFinite(weight),
-                        " weights must be finite, non-NaN values ");
-                checkArgument(!Float.isNaN(e.index[i]) && Float.isFinite(e.index[i]),
-                        " improper input, in coordinate " + i + ", must be finite, non-NaN values");
+                int index = i;
+                checkArgument(!Float.isNaN(e.index[i]),
+                        () -> " improper input, in coordinate " + index + ", must be non-NaN values");
+                checkArgument(Float.isFinite(e.index[i]),
+                        () -> " improper input, in coordinate " + index + ", must be finite values");
                 coordinateSum[i] += e.index[i] * weight;
                 coordinateSumSquare[i] += e.index[i] * e.index[i] * weight;
             }

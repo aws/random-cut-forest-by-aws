@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 public class NeighborTest {
     @Test
     public void testNew() {
-        double[] point = new double[] { 1.0, -2.0, 3.3 };
+        float[] point = new float[] { 1.0f, -2.0f, 3.3f };
         double distance = 1234.5;
         List<Long> timestamps = new ArrayList<>();
         timestamps.add(99999L);

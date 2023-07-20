@@ -62,7 +62,11 @@ public class CompactSamplerTest {
             Random random2 = spy(new Random(seed));
             CompactSampler sampler2 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random2)
                     .initialAcceptFraction(0.1).storeSequenceIndexesEnabled(true).build();
-            return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2));
+
+            CompactSampler sampler3 = CompactSampler.builder().capacity(sampleSize).timeDecay(lambda).random(random1)
+                    .initialAcceptFraction(1.0).storeSequenceIndexesEnabled(false).build();
+            return Stream.of(Arguments.of(random1, sampler1), Arguments.of(random2, sampler2),
+                    Arguments.of(random1, sampler3));
         }
     }
 
@@ -76,6 +80,8 @@ public class CompactSamplerTest {
         long seq = new Random().nextLong();
         sampler.setMaxSequenceIndex(seq);
         assertEquals(sampler.getMaxSequenceIndex(), seq);
+        assertFalse(sampler.isFull());
+        assertFalse(sampler.isReady());
 
         double newLambda = new Random().nextDouble();
         sampler.setTimeDecay(newLambda);
@@ -190,7 +196,12 @@ public class CompactSamplerTest {
         sampler.addPoint(1);
         sampler.acceptPoint(11L);
         double weight2 = sampler.acceptPointState.getWeight();
+        // acceptstate is non-null
+        assertThrows(IllegalArgumentException.class, () -> sampler.addPoint(12, 2.0f, 0L));
         sampler.addPoint(12);
+        assertThrows(IllegalArgumentException.class, () -> sampler.acceptPoint(12L, -1f));
+        sampler.acceptPoint(12L, 0f);
+        assertNull(sampler.acceptPointState);
         sampler.acceptPoint(12L);
         double weight3 = sampler.acceptPointState.getWeight();
         sampler.addPoint(123);
@@ -215,20 +226,29 @@ public class CompactSamplerTest {
     @ParameterizedTest
     @ArgumentsSource(SamplerProvider.class)
     public void testAcceptPoint(Random random, CompactSampler sampler) {
-        // The sampler should accept all samples until the sampler is full
+
+        assertThrows(IllegalArgumentException.class, () -> sampler.addPoint(null, 1, 0L));
+        assertThrows(IllegalArgumentException.class, () -> sampler.addPoint(null, -1, 0L));
+        assertDoesNotThrow(() -> sampler.addPoint(0, 0f, 0L));
+        assertEquals(sampler.size, 1);
+
+        // The sampler should accept all samples until initial fraction
         for (int i = 0; i < sampleSize * sampler.initialAcceptFraction; i++) {
             assertTrue(sampler.acceptPoint(i));
             assertNotNull(sampler.acceptPointState);
             sampler.addPoint(i);
         }
-
+        assertTrue(sampler.initialAcceptProbability(sampler.size) < 1.0);
         for (int i = 0; i < sampleSize * 10; i++) {
             if (sampler.acceptPoint(i)) {
                 sampler.addPoint(i);
             }
         }
 
+        assertTrue(sampler.isFull());
+        assertTrue(sampler.isReady());
         assertThrows(IllegalStateException.class, () -> sampler.addPoint(sampleSize));
+        assertThrows(IllegalArgumentException.class, () -> sampler.addPoint(sampleSize, 1.0f, 0L));
         sampler.setTimeDecay(0);
         // we should only accept sequences of value samplesize - 1 or higher
         assertThrows(IllegalStateException.class, () -> sampler.acceptPoint(sampleSize - 2));
@@ -271,7 +291,7 @@ public class CompactSamplerTest {
             }
         }
         assertTrue(numSampled > 0, "no new values were sampled");
-        assertTrue(numSampled < 2 * sampleSize - num, "all values were sampled");
+        assertTrue(sampler.initialAcceptFraction > 0.5 || numSampled < 2 * sampleSize - num, "all values were sampled");
 
         verify(sampler, times(numSampled)).addPoint(any());
     }

@@ -15,6 +15,8 @@
 
 package com.amazon.randomcutforest.returntypes;
 
+import static java.lang.Math.max;
+
 /**
  * This accumulator checks to see if a result is converging by testing the
  * sample mean and standard deviation of a scalar value computed from the
@@ -125,7 +127,8 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
         if (valuesAccepted >= minValuesAccepted) {
             // note that using the last seen value in the deviation dampens its effect
 
-            if (sign * (value - getMean()) > ALPHA * getDeviation()) {
+            // floating point comparisons!
+            if (sign * (value - getMean()) + 1e-6 > ALPHA * getDeviation()) {
                 witnesses++;
             }
         }
@@ -196,9 +199,9 @@ public abstract class OneSidedStDevAccumulator<R> implements ConvergingAccumulat
         }
 
         double mean = sumConvergeVal / valuesAccepted;
-        double stdev = sumSqConvergeVal / valuesAccepted - mean * mean;
+        double stdev = max(0, sumSqConvergeVal / valuesAccepted - mean * mean);
 
-        stdev = stdev < 0 ? 0 : Math.sqrt(valuesAccepted * stdev / (valuesAccepted - 1));
+        stdev = Math.sqrt(valuesAccepted * stdev / (valuesAccepted - 1));
         return stdev;
     }
 }

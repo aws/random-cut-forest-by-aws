@@ -85,7 +85,8 @@ public class BasicThresholder {
     }
 
     public BasicThresholder(Deviation[] deviations) {
-        if (deviations == null || deviations.length != DEFAULT_DEVIATION_STATES) {
+        int length = (deviations == null) ? 0 : deviations.length;
+        if (length != DEFAULT_DEVIATION_STATES) {
             double timeDecay = 1.0 / (DEFAULT_SAMPLE_SIZE * DEFAULT_SAMPLE_SIZE_COEFFICIENT_IN_TIME_DECAY);
             this.primaryDeviation = new Deviation(timeDecay);
             this.secondaryDeviation = new Deviation(timeDecay);
@@ -120,13 +121,10 @@ public class BasicThresholder {
             return false;
         }
 
-        if (scoreDifferencing == 1) {
+        if (scoreDifferencing != 0) {
             return secondaryDeviation.getCount() >= minimumScores;
-        } else if (scoreDifferencing == 0) {
-            return primaryDeviation.getCount() >= minimumScores;
-        } else {
-            return secondaryDeviation.getCount() >= minimumScores && primaryDeviation.getCount() >= minimumScores;
         }
+        return true;
     }
 
     /**
@@ -158,7 +156,7 @@ public class BasicThresholder {
         if (!isDeviationReady()) {
             return 0;
         }
-        return max(absoluteThreshold, primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation());
+        return primaryDeviation.getMean() + zFactor * primaryDeviation.getDeviation();
     }
 
     /**
@@ -177,6 +175,8 @@ public class BasicThresholder {
         double deviation = primaryDeviation.getDeviation();
         if (deviation > 0) {
             tFactor = min(tFactor, (score - primaryDeviation.getMean()) / deviation);
+        } else {
+            return (score > primaryDeviation.getMean() + 1e-10) ? 1.0 : 0;
         }
         double t = (tFactor - zFactor) / (zFactor);
         return max(0, t);
@@ -212,7 +212,7 @@ public class BasicThresholder {
     protected double adjustedFactor(double factor, TransformMethod method, int dimension) {
         double correctedFactor = factor;
         double base = primaryDeviation.getMean();
-        if (autoThreshold && base < factorAdjustmentThreshold && method != TransformMethod.NONE) {
+        if (base < factorAdjustmentThreshold && method != TransformMethod.NONE) {
             correctedFactor = primaryDeviation.getMean() * factor / factorAdjustmentThreshold;
         }
         return max(correctedFactor, MINIMUM_Z_FACTOR);
@@ -243,11 +243,8 @@ public class BasicThresholder {
             return min(sqrt(2.0) * thresholdDeviation.getDeviation(), primaryDeviation.getDeviation());
         } else {
             double first = primaryDeviation.getDeviation();
-            if (method != TransformMethod.NORMALIZE) {
-                first = min(first, sqrt(2.0) * thresholdDeviation.getDeviation());
-
-            }
-            // there is a role of differenceing; either by shingling or by explicit
+            first = min(first, max(secondaryDeviation.getDeviation(), sqrt(2.0) * thresholdDeviation.getDeviation()));
+            // there is a role of differencing; either by shingling or by explicit
             // transformation
             return scoreDifferencing * first + (1 - scoreDifferencing) * secondaryDeviation.getDeviation();
         }
@@ -265,15 +262,23 @@ public class BasicThresholder {
         double longTerm = longTermDeviation(method, shingleSize);
         double scaledDeviation = (newFactor - 1) * longTerm + primaryDeviation.getDeviation();
 
-        double threshold = (!isDeviationReady()) ? max(initialThreshold, absoluteThreshold)
-                : max(absoluteThreshold, intermediateFraction * (primaryDeviation.getMean() + scaledDeviation)
+        double absolute = absoluteThreshold;
+        if (autoThreshold && intermediateFraction >= 1.0 && primaryDeviation.getMean() < factorAdjustmentThreshold) {
+            absolute = primaryDeviation.getMean() * absolute / factorAdjustmentThreshold;
+        }
+        double threshold = (!isDeviationReady()) ? max(initialThreshold, absolute)
+                : max(absolute, intermediateFraction * (primaryDeviation.getMean() + scaledDeviation)
                         + (1 - intermediateFraction) * initialThreshold);
         if (score < threshold || threshold <= 0) {
             return new Weighted<>(threshold, 0);
         } else {
-            double base = min(threshold, max(absoluteThreshold, primaryDeviation.getMean()));
-            // the value below should not be 0 because of min()
-            return new Weighted<>(threshold, getSurpriseIndex(score, base, newFactor, scaledDeviation / newFactor));
+            double t = getSurpriseIndex(score, threshold, newFactor, scaledDeviation / newFactor);
+            t = min((Math.floor(t * 20)) / 16, 1.0); // grade 1 at scaledDeviation at 4 sigma
+            if (t == 0) {
+                // round off errors
+                threshold = score;
+            }
+            return new Weighted<>(threshold, (float) t);
         }
     }
 
@@ -321,7 +326,7 @@ public class BasicThresholder {
     }
 
     public void update(double score, double secondScore, double lastScore, TransformMethod method) {
-        update(score, secondScore - lastScore);
+        update(min(score, 2.0), secondScore - lastScore);
     }
 
     public Deviation getPrimaryDeviation() {
@@ -345,9 +350,11 @@ public class BasicThresholder {
 
     /**
      * 
-     * @param value absolute lower bound thresholds
+     * @param value absolute lower bound thresholds turns off auto adjustment -- to
+     *              respect the direct setting
      */
     public void setAbsoluteThreshold(double value) {
+        autoThreshold = false;
         absoluteThreshold = value;
     }
 

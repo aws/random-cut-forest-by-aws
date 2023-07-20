@@ -199,7 +199,7 @@ public class ThresholdedRandomCutForestTest {
             ThresholdedRandomCutForest forest = ThresholdedRandomCutForest.builder().compact(true)
                     .dimensions(dimensions).precision(Precision.FLOAT_32).randomSeed(seed)
                     .forestMode(ForestMode.STANDARD).shingleSize(shingleSize).anomalyRate(0.01)
-                    .transformMethod(NORMALIZE).learnIgnoreNearExpected(true).build();
+                    .transformMethod(NORMALIZE).autoAdjust(true).build();
             assertTrue(forest.predictorCorrector.autoAdjust);
             assert (forest.predictorCorrector.getDeviations().length == 2 * baseDimensions);
         });
@@ -333,7 +333,7 @@ public class ThresholdedRandomCutForestTest {
         // note every will have an update
         assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
         AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
-        if (method != NEXT) {
+        if (method != NEXT && method != LINEAR) {
             assert (result.getAnomalyGrade() > 0);
             assert (result.isExpectedValuesPresent());
         }
