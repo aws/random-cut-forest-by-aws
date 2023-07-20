@@ -472,7 +472,7 @@ public class PredictorCorrector {
             double gap = max(scale[y] * pathGap, noiseGap) + shiftAmount + DEFAULT_NORMALIZATION_PRECISION;
             gapLow[y] = max(max(ignoreNearExpectedFromBelow[y], ignoreNearExpectedFromBelowByRatio[y] * Math.abs(a)),
                     gap);
-            gapHigh[y] = max(max(ignoreNearExpectedFromBelow[y], ignoreNearExpectedFromBelowByRatio[y] * Math.abs(a)),
+            gapHigh[y] = max(max(ignoreNearExpectedFromAbove[y], ignoreNearExpectedFromAboveByRatio[y] * Math.abs(a)),
                     gap);
         }
         return new DiVector(gapHigh, gapLow);
@@ -525,6 +525,8 @@ public class PredictorCorrector {
      * attributions can remain null (for efficiency reasons)
      *
      * @param strategy          the scoring strategy
+     * @param point             the current point being evaluated
+     * @param forest            the resident RCF
      * @param scoreVector       the vector of scores
      * @param attributionVector the vector of attributions
      * @return the index of the score/attribution that is relevant

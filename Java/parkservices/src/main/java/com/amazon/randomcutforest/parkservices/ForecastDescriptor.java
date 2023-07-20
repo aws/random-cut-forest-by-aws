@@ -98,8 +98,7 @@ public class ForecastDescriptor extends AnomalyDescriptor {
         System.arraycopy(calibration, 0, this.intervalPrecision, 0, calibration.length);
     }
 
-    @Deprecated
-    float[] getCalibration() {
+    public float[] getIntervalPrecision() {
         return Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 

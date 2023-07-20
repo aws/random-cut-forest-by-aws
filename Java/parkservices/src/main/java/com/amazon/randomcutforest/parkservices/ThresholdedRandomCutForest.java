@@ -407,6 +407,22 @@ public class ThresholdedRandomCutForest {
         predictorCorrector.setScoreDifferencing(scoreDifferencing);
     }
 
+    public void setIgnoreNearExpectedFromAbove(double[] ignoreSimilarFromAbove) {
+        predictorCorrector.setIgnoreNearExpectedFromAbove(ignoreSimilarFromAbove);
+    }
+
+    public void setIgnoreNearExpectedFromAboveByRatio(double[] ignoreSimilarFromAbove) {
+        predictorCorrector.setIgnoreNearExpectedFromAboveByRatio(ignoreSimilarFromAbove);
+    }
+
+    public void setIgnoreNearExpectedFromBelow(double[] ignoreSimilarFromBelow) {
+        predictorCorrector.setIgnoreNearExpectedFromBelow(ignoreSimilarFromBelow);
+    }
+
+    public void setIgnoreNearExpectedFromBelowByRatio(double[] ignoreSimilarFromBelow) {
+        predictorCorrector.setIgnoreNearExpectedFromBelowByRatio(ignoreSimilarFromBelow);
+    }
+
     public void setScoringStrategy(ScoringStrategy strategy) {
         this.scoringStrategy = strategy;
     }

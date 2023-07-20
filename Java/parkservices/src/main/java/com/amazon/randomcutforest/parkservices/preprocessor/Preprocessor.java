@@ -442,9 +442,7 @@ public class Preprocessor implements IPreprocessor {
 
         double[] inputPoint = result.getCurrentInput();
         long timestamp = result.getInputTimestamp();
-        if (result.getMissingValues() != null) {
 
-        }
         updateState(inputPoint, point, timestamp, previousTimeStamps[shingleSize - 1]);
         ++valuesSeen;
         dataQuality[0].update(1.0);
