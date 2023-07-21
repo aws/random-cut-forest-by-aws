@@ -4,7 +4,7 @@
   <parent>
     <artifactId>randomcutforest-parent</artifactId>
     <groupId>software.amazon.randomcutforest</groupId>
-    <version>3.8.0-SNAPSHOT</version>
+    <version>3.8.0</version>
   </parent>
 
   <artifactId>randomcutforest-testutils</artifactId>
