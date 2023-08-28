@@ -1,6 +1,8 @@
+use std::hash::Hash;
 use crate::{
     common::samplesummary::{summarize, SampleSummary},
     pointstore::PointStore,
+    types::Result
 };
 
 fn project_missing(point: &Vec<f32>, position: &[usize]) -> Vec<f32> {
@@ -52,12 +54,12 @@ impl FieldSummarizer {
         }
     }
 
-    pub fn summarize_list(
+    pub fn summarize_list<Label:Copy + Sync + Send, Attributes : Copy + Sync + Hash + Eq + Send>(
         &self,
-        pointstore: &dyn PointStore,
+        pointstore: &dyn PointStore<Label,Attributes>,
         point_list_with_distance: &[(f64, usize, f64)],
         missing: &[usize]
-    ) -> SampleSummary {
+    ) -> Result<SampleSummary> {
         let mut distance_list: Vec<f64> = point_list_with_distance.iter().map(|a| a.2).collect();
         distance_list.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         let mut threshold = 0.0;
@@ -78,7 +80,7 @@ impl FieldSummarizer {
 
         let total_weight = point_list_with_distance.len() as f64;
         let dimensions = if !self.project || missing.len() == 0 {
-            pointstore.get_copy(point_list_with_distance[0].1).len()
+            pointstore.copy(point_list_with_distance[0].1)?.len()
         } else {
             missing.len()
         };
@@ -89,10 +91,10 @@ impl FieldSummarizer {
         let mut vec = Vec::new();
         for i in 0..point_list_with_distance.len() {
             let point = if !self.project || missing.len() == 0 {
-                pointstore.get_copy(point_list_with_distance[i].1)
+                pointstore.copy(point_list_with_distance[i].1)?
             } else {
                 project_missing(
-                    &pointstore.get_copy(point_list_with_distance[i].1),
+                    &pointstore.copy(point_list_with_distance[i].1)?,
                     &missing,
                 )
             };
@@ -136,7 +138,7 @@ impl FieldSummarizer {
         }
 
         let summary = summarize(&vec, self.distance, self.max_number, false).unwrap();
-        SampleSummary {
+        Ok(SampleSummary {
             summary_points: summary.summary_points.clone(),
             relative_weight: summary.relative_weight.clone(),
             total_weight: summary.total_weight,
@@ -145,6 +147,6 @@ impl FieldSummarizer {
             upper,
             lower,
             deviation,
-        }
+        })
     }
 }

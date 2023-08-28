@@ -1,11 +1,7 @@
 use std::cmp::min;
 use std::ops::Index;
-use std::slice::SliceIndex;
 use crate::types::Result;
-use crate::errors;
 use crate::util::check_argument;
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 use rayon::range;
 
 use crate::common::cluster::{Center, multi_cluster_as_weighted_obj, multi_cluster_as_weighted_ref, single_centroid_cluster_weighted_vec_with_distance_over_slices};

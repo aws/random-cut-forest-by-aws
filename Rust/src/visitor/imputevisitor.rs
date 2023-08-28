@@ -5,7 +5,9 @@ use rand_chacha::ChaCha20Rng;
 use crate::{
     samplerplustree::nodeview::MediumNodeView,
     visitor::visitor::{SimpleMultiVisitor, Visitor, VisitorInfo},
+    types::Result
 };
+use crate::util::check_argument;
 
 #[repr(C)]
 pub struct ImputeVisitor {
@@ -77,9 +79,9 @@ impl Visitor<MediumNodeView, (f64, usize, f64)> for ImputeVisitor {
         point: &[f32],
         visitor_info: &VisitorInfo,
         node_view: &MediumNodeView,
-    ) {
-        let mass = node_view.get_mass();
-        let leaf_point = node_view.get_leaf_point();
+    ) -> Result<()>{
+        let mass = node_view.mass();
+        let leaf_point = node_view.leaf_point();
         let mut new_point = Vec::from(point);
         for i in self.missing.iter() {
             new_point[*i] = leaf_point[*i];
@@ -90,69 +92,65 @@ impl Visitor<MediumNodeView, (f64, usize, f64)> for ImputeVisitor {
         if mass > visitor_info.ignore_mass || self.missing.len() != 0 {
             if node_view.is_duplicate() {
                 score = (visitor_info.damp)(mass, self.tree_mass)
-                    * (visitor_info.score_seen)(node_view.get_depth(), mass);
+                    * (visitor_info.score_seen)(node_view.depth(), mass);
                 converged = true;
             } else {
-                score = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+                score = (visitor_info.score_unseen)(node_view.depth(), mass);
             }
         } else {
             // shadow box is undefined for missing values
             // for not missing values, this block corresponds to exact same evaluation
             // in score and attribution visitor
             // note that multi-visitors ignore the shadow box anyways
-            score = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+            score = (visitor_info.score_unseen)(node_view.depth(), mass);
             self.use_shadow_box = true;
         }
         let dist = (visitor_info.distance)(&new_point, &leaf_point);
         self.stack.push(ImputeVisitorStackElement {
             converged,
             score,
-            index: node_view.get_leaf_index(),
+            index: node_view.leaf_index(),
             random: self.rng.gen::<f32>(),
             distance: dist,
         });
+        Ok(())
     }
 
-    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &MediumNodeView) {
-        assert!(
-            self.stack.len() > 0,
-            " there should have been an accept_leaf call which would have created a non-null stack"
-        );
-        let mut top_of_stack = self.stack.pop().unwrap();
+    fn accept(&mut self, _point: &[f32], visitor_info: &VisitorInfo, node_view: &MediumNodeView) -> Result<()>{
+        let mut top_of_stack = self.stack.pop().expect(" stack cannot be empty");
         if !top_of_stack.converged {
             let prob = if !self.use_shadow_box {
-                // note that this probablity ignores any missing coordinates
+                // note that this probability ignores any missing coordinates
                 // which would be accurate since the value used is inside the box
-                node_view.get_probability_of_cut()
+                node_view.probability_of_cut()
             } else {
-                node_view.get_shadow_box_probability_of_cut()
+                node_view.shadow_box_probability_of_cut()
             };
             if prob == 0.0 {
                 top_of_stack.converged = true;
             } else {
                 let new_score = (1.0 - prob) * top_of_stack.score
                     + prob
-                        * (visitor_info.score_unseen)(node_view.get_depth(), node_view.get_mass());
+                        * (visitor_info.score_unseen)(node_view.depth(), node_view.mass());
                 top_of_stack.converged = false;
                 top_of_stack.score = new_score;
             }
             self.stack.push(top_of_stack);
         }
+        Ok(())
     }
 
-    fn result(&self, visitor_info: &VisitorInfo) -> (f64, usize, f64) {
-        assert_eq!(
-            self.stack.len(),
-            1,
+    fn result(&self, visitor_info: &VisitorInfo) -> Result<(f64, usize, f64)> {
+        check_argument(self.stack.len() == 1,
             "incorrect state, stack length should be 1"
-        );
-        let top_of_stack = self.stack.last().unwrap();
+        )?;
+        let top_of_stack = self.stack.last().expect("should be length 1");
         let t = (visitor_info.normalizer)(top_of_stack.score, self.tree_mass);
-        (t, top_of_stack.index, top_of_stack.distance)
+        Ok((t, top_of_stack.index, top_of_stack.distance))
     }
 
-    fn is_converged(&self) -> bool {
-        self.stack.len() != 0 && self.stack.last().unwrap().converged
+    fn is_converged(&self) -> Result<bool> {
+        Ok(self.stack.len() != 0 && self.stack.last().expect("cannot be empty").converged)
     }
 
     fn use_shadow_box(&self) -> bool {
@@ -166,10 +164,9 @@ impl SimpleMultiVisitor<MediumNodeView, (f64, usize, f64)> for ImputeVisitor {
         _point: &[f32],
         _node_view: &MediumNodeView,
         visitor_info: &VisitorInfo,
-    ) {
-        assert!(self.stack.len() >= 2, "incorrect state");
-        let mut top_of_stack = self.stack.pop().unwrap();
-        let mut next_of_stack = self.stack.pop().unwrap();
+    ) -> Result<()>{
+        let mut top_of_stack = self.stack.pop().expect("has to be size 1, corrupt state");
+        let mut next_of_stack = self.stack.pop().expect("has to be size 2, corrupt state");
 
         if self.adjusted_score(&top_of_stack, &visitor_info)
             < self.adjusted_score(&next_of_stack, &visitor_info)
@@ -180,5 +177,6 @@ impl SimpleMultiVisitor<MediumNodeView, (f64, usize, f64)> for ImputeVisitor {
             next_of_stack.converged = top_of_stack.converged || next_of_stack.converged;
             self.stack.push(next_of_stack);
         }
+        Ok(())
     }
 }

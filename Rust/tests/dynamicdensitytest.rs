@@ -8,15 +8,16 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rcflib::{
     common::multidimdatawithkey::MultiDimDataWithKey,
-    rcf::{create_rcf, RCF},
+    rcf::{ RCF},
 };
+use rcflib::rcf::{RCFBuilder, RCFOptionsBuilder};
 
 /// try cargo test --release
 /// these tests are designed to be longish
 
 #[test]
 fn dynamic_density() {
-    let dimensions = 2;
+    let base_dimension = 2;
     let shingle_size = 1;
     let number_of_trees = 50;
     let capacity = 256;
@@ -30,20 +31,18 @@ fn dynamic_density() {
     let internal_shingling: bool = false;
     let internal_rotation = false;
 
-    let mut forest: Box<dyn RCF> = create_rcf(
-        dimensions,
-        shingle_size,
-        capacity,
-        number_of_trees,
-        random_seed,
-        store_attributes,
-        parallel_enabled,
-        internal_shingling,
-        internal_rotation,
-        time_decay,
-        initial_accept_fraction,
-        bounding_box_cache_fraction,
-    );
+    let mut forest = RCFBuilder::<u64,u64>::new(base_dimension,shingle_size)
+        .tree_capacity(capacity)
+        .number_of_trees(number_of_trees)
+        .random_seed(random_seed)
+        .store_attributes(store_attributes)
+        .parallel_enabled(parallel_enabled)
+        .internal_shingling(internal_shingling)
+        .internal_rotation(internal_rotation)
+        .time_decay(time_decay)
+        .initial_accept_fraction(initial_accept_fraction)
+        .bounding_box_cache_fraction(bounding_box_cache_fraction).build().unwrap();
+
 
     let data: Vec<Vec<f32>> = generate_fan(1000, 3);
     let query_point = vec![0.7, 0.0f32];
@@ -138,7 +137,7 @@ fn generate_fan(num_per_blade: usize, blades: usize) -> Vec<Vec<f32>> {
         &vec![vec![0.05, 0.2]],
         &vec![1.0f32],
         0,
-    );
+    ).unwrap();
     let mut rng = ChaCha20Rng::seed_from_u64(72345);
     for point in data_with_key.data {
         let toss: f64 = rng.gen();

@@ -1,4 +1,6 @@
 use crate::samplerplustree::boundingbox::BoundingBox;
+use crate::util::check_argument;
+use crate::types::Result;
 
 #[repr(C)]
 #[derive(Clone)]
@@ -15,12 +17,12 @@ impl DiVector {
         }
     }
 
-    pub fn new(high: &[f64], low: &[f64]) -> Self {
-        assert!(high.len() == low.len(), " incorrect lengths");
-        DiVector {
+    pub fn new(high: &[f64], low: &[f64]) -> Result<Self> {
+        check_argument(high.len() == low.len(), " incorrect lengths")?;
+        Ok(DiVector {
             high: Vec::from(high),
             low: Vec::from(low),
-        }
+        })
     }
 
     pub fn assign_as_probability_of_cut(&mut self, bounding_box: &BoundingBox, point: &[f32]) {
@@ -177,13 +179,20 @@ impl DiVector {
         self.high[index] + self.low[index]
     }
 
-    pub fn max_contribution(&self, base_dimension: usize) -> usize {
+    pub fn max_contribution(&self, base_dimension: usize) -> Result<usize> {
+        self.max_gap_contribution(base_dimension,self.dimensions())
+    }
+
+    pub fn max_gap_contribution(&self, base_dimension: usize, gap: usize) -> Result<usize> {
+        check_argument(gap>0, "incorrect input")?;
+        check_argument(base_dimension>0, "incorrect input")?;
+        check_argument(self.dimensions()%base_dimension == 0, "incorrect input")?;
         let mut val = 0.0;
-        let mut index = 0;
+        let mut index = if  gap * base_dimension > self.dimensions() {0} else { self.dimensions()/base_dimension - gap};
         for i in 0..base_dimension {
-            val += self.high_low_sum(i);
+            val += self.high_low_sum(index*base_dimension + i);
         }
-        for j in 1..(self.dimensions() / base_dimension) {
+        for j in (index+1)..(self.dimensions() / base_dimension) {
             let mut sum = 0.0;
             for i in 0..base_dimension {
                 sum += self.high_low_sum(j * base_dimension + i);
@@ -193,6 +202,6 @@ impl DiVector {
                 index = j;
             }
         }
-        index
+        Ok(index)
     }
 }

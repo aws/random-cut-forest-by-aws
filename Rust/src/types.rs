@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use crate::errors;
 
 /// A trait that defines a maximum value constant.
@@ -17,13 +18,11 @@ impl Max for usize {
     const MAX: usize = usize::MAX;
 }
 
-pub type PointIndex = usize;
-
 /// The Location trait is used as a shorthand for the various traits needed by store (e.g., point
 /// store, node store) locations. These are the values vended by stores to reference a stored
 /// value.
 pub trait Location:
-    Copy + Max + std::cmp::PartialEq + TryFrom<usize> + std::marker::Send + Sync
+    Copy + Max + Eq + Hash + PartialEq + TryFrom<usize> + Send + Sync
 {
 }
 

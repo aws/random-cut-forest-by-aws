@@ -12,7 +12,6 @@ use rcflib::{
     common::{multidimdatawithkey::MultiDimDataWithKey, samplesummary::summarize},
     l1distance, l2distance, linfinitydistance,
 };
-use rcflib::common::cluster::multi_cluster_as_ref;
 use rcflib::common::samplesummary::multi_summarize_ref;
 
 #[cfg(test)]
@@ -46,7 +45,7 @@ fn core(
         &scale,
         &vec![0.5 / test_dimension as f32; 2 * test_dimension],
         seed,
-    );
+    ).unwrap();
 
     let mut input = Vec::new();
     for i in 0..data_with_key.data.len() {
@@ -140,7 +139,7 @@ fn core_ref(
         &scale,
         &vec![0.5 / test_dimension as f32; 2 * test_dimension],
         seed,
-    );
+    ).unwrap();
 
     let mut input:Vec<(&[f32],f32)> = Vec::new();
     for i in 0..data_with_key.data.len() {

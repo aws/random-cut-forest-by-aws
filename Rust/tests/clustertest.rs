@@ -9,11 +9,11 @@ use rand::{prelude::ThreadRng, Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
 use rcflib::{
-    common::{multidimdatawithkey::MultiDimDataWithKey, samplesummary::summarize},
-    l1distance, l2distance, linfinitydistance,
+    common::{multidimdatawithkey::MultiDimDataWithKey},
+    l1distance, l2distance,
 };
 use rcflib::common::cluster::{Center, multi_cluster_as_object_with_weight_array, multi_cluster_as_ref, multi_cluster_as_weighted_ref, multi_cluster_obj, persist, single_centroid_cluster_slice_with_weight_arrays, single_centroid_cluster_weighted_vec, single_centroid_cluster_weighted_vec_with_distance_over_slices, single_centroid_unweighted_cluster_slice};
-use rcflib::errors::RCFError;
+
 
 fn gen_data(data_size:usize, test_dimension:usize, seed:u64,yard_stick : f32) -> MultiDimDataWithKey {
     let mut mean = Vec::new();
@@ -34,7 +34,7 @@ fn gen_data(data_size:usize, test_dimension:usize, seed:u64,yard_stick : f32) ->
         &scale,
         &vec![0.5 / test_dimension as f32; 2 * test_dimension],
         seed,
-    )
+    ).unwrap()
 }
 
 fn test_center(result: &mut Vec<Center>,test_dimension:usize, yard_stick : f32) -> bool {
@@ -51,7 +51,7 @@ fn test_center(result: &mut Vec<Center>,test_dimension:usize, yard_stick : f32) 
     answer
 }
 
-fn bad_distance<T :?Sized>(a : &T, b:&T) -> f64{
+fn bad_distance<T :?Sized>(_a : &T, _b:&T) -> f64{
     -1.0
 }
 
@@ -64,32 +64,32 @@ fn test_config() {
     for i in 0..data_with_key.data.len() {
         input.push((data_with_key.data[i].clone(), 1.0f32));
     }
-    let mut result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, bad_distance, 2 * test_dimension + 3, false);
+    let result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, bad_distance, 2 * test_dimension + 3, false);
 
     match &result {
-        Ok(x) => assert!(false),
-        Err(y) => assert!(true),
+        Ok(_x) => assert!(false),
+        Err(_y) => assert!(true),
     };
 
-    let mut result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 0, false);
+    let result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 0, false);
 
     match &result {
-        Ok(x) => assert!(false),
-        Err(y) => assert!(true),
+        Ok(_x) => assert!(false),
+        Err(_y) => assert!(true),
     };
 
-    let mut result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 200, false);
+    let result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 200, false);
 
     match &result {
-        Ok(x) => assert!(false),
-        Err(y) => assert!(true),
+        Ok(_x) => assert!(false),
+        Err(_y) => assert!(true),
     };
 
-    let mut result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 20, false);
+    let result = single_centroid_cluster_weighted_vec_with_distance_over_slices(&input, l2distance, 20, false);
 
     match &result {
-        Ok(x) => assert!(true),
-        Err(y) => assert!(false),
+        Ok(_x) => assert!(true),
+        Err(_y) => assert!(false),
     };
 }
 
@@ -256,7 +256,7 @@ fn multi_as_vec(
         input.push(data_with_key.data[i].clone());
     }
     let mut result = multi_cluster_obj(&input,   vec_dist, 5,0.1,true,2 * test_dimension + 3, false).unwrap();
-    let mut answer = (result.len() == 2 * test_dimension);
+    let mut answer = result.len() == 2 * test_dimension;
     for i in 0..test_dimension {
         result.sort_by(|a, b| a.representatives()[0].0[i].partial_cmp(&b.representatives()[0].0[i]).unwrap());
         answer = answer && abs(result[0].representatives()[0].0[i] + 2.0 * yard_stick) < 0.5;
@@ -300,7 +300,7 @@ fn multi_as_ref(
         input.push(&data_with_key.data[i]);
     }
     let mut result = multi_cluster_as_ref(&input,   vec_dist, 5,0.1,true,2 * test_dimension + 3, false).unwrap();
-    let mut answer = (result.len() == 2 * test_dimension);
+    let mut answer = result.len() == 2 * test_dimension;
     for i in 0..test_dimension {
         result.sort_by(|a, b| a.representatives()[0].0[i].partial_cmp(&b.representatives()[0].0[i]).unwrap());
         answer = answer && abs(result[0].representatives()[0].0[i] + 2.0 * yard_stick) < 0.5;
@@ -344,7 +344,7 @@ fn multi_as_weighted_ref(
         input.push((&data_with_key.data[i],1.0f32));
     }
     let mut result = multi_cluster_as_weighted_ref(&input,   vec_dist, 5,0.1,true,2 * test_dimension + 3, false).unwrap();
-    let mut answer = (result.len() == 2 * test_dimension);
+    let mut answer = result.len() == 2 * test_dimension;
     for i in 0..test_dimension {
         result.sort_by(|a, b| a.representatives()[0].0[i].partial_cmp(&b.representatives()[0].0[i]).unwrap());
         answer = answer && abs(result[0].representatives()[0].0[i] + 2.0 * yard_stick) < 0.5;
@@ -389,9 +389,9 @@ fn multi_as_vec_weighted(
         input.push(data_with_key.data[i].clone());
     }
     let weights = vec![1.0f32;data_with_key.data.len()];
-    let mut ref_result = multi_cluster_as_object_with_weight_array(&input,  &weights, vec_dist, 5,0.1,true,2 * test_dimension + 3, false).unwrap();
+    let ref_result = multi_cluster_as_object_with_weight_array(&input,  &weights, vec_dist, 5,0.1,true,2 * test_dimension + 3, false).unwrap();
     let mut result = persist(&ref_result);
-    let mut answer = (result.len() == 2 * test_dimension);
+    let mut answer = result.len() == 2 * test_dimension;
     for i in 0..test_dimension {
         result.sort_by(|a, b| a.representatives()[0].0[i].partial_cmp(&b.representatives()[0].0[i]).unwrap());
         answer = answer && abs(result[0].representatives()[0].0[i] + 2.0 * yard_stick) < 0.5;

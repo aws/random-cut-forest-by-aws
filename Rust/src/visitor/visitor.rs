@@ -4,6 +4,7 @@ use crate::{
         damp, displacement_normalizer, identity, normalizer, score_seen, score_seen_displacement,
         score_unseen, score_unseen_displacement,
     },
+    types::Result,
 };
 
 #[repr(C)]
@@ -16,29 +17,29 @@ pub struct VisitorInfo {
     pub distance: fn(&[f32], &[f32]) -> f64,
 }
 
-pub trait Visitor<NodeView, Result> {
-    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &NodeView);
-    fn accept_leaf(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &NodeView);
-    fn is_converged(&self) -> bool;
-    fn result(&self, visitor_info: &VisitorInfo) -> Result;
+pub trait Visitor<NodeView, R> {
+    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &NodeView) -> Result<()>;
+    fn accept_leaf(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &NodeView) -> Result<()>;
+    fn is_converged(&self) -> Result<bool>;
+    fn result(&self, visitor_info: &VisitorInfo) -> Result<R>;
     fn use_shadow_box(&self) -> bool;
 }
 
-pub trait SimpleMultiVisitor<NodeView, Result>: Visitor<NodeView, Result> {
+pub trait SimpleMultiVisitor<NodeView, R>: Visitor<NodeView, R> {
     fn combine_branches(
         &mut self,
         point: &[f32],
         _node_view: &NodeView,
         visitor_info: &VisitorInfo,
-    );
+    ) -> Result<()>;
 }
 
-pub trait UniqueMultiVisitor<NodeView, Result>: SimpleMultiVisitor<NodeView, Result> {
+pub trait UniqueMultiVisitor<NodeView, R>: SimpleMultiVisitor<NodeView, R> {
     fn trigger(&self, point: &[f32], node_view: &NodeView, visitor_info: &VisitorInfo) -> bool;
     fn unique_answer(&self, visitor_info: &VisitorInfo) -> Vec<f32>;
 }
 
-pub trait StreamingMultiVisitor<NodeView, Result>: UniqueMultiVisitor<NodeView, Result> {
+pub trait StreamingMultiVisitor<NodeView, R>: UniqueMultiVisitor<NodeView, R> {
     fn initialize_branch_split(
         &mut self,
         point: &[f32],

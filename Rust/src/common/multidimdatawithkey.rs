@@ -8,6 +8,8 @@ use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
 
 use crate::rand::Rng;
+use crate::util::check_argument;
+use crate::types::Result;
 
 pub struct MultiDimDataWithKey {
     pub data: Vec<Vec<f32>>,
@@ -24,15 +26,15 @@ impl MultiDimDataWithKey {
         noise: f32,
         seed: u64,
         base_dimension: usize,
-    ) -> Self {
-        assert!(
+    ) -> Result<Self> {
+        check_argument(
             period.len() == base_dimension,
             " need a period for each dimension "
-        );
-        assert!(
+        )?;
+        check_argument(
             amplitude.len() == base_dimension,
             " need an amplitude for each dimension"
-        );
+        )?;
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
         let mut noiserng = ChaCha20Rng::seed_from_u64(seed + 1);
         let mut phase: Vec<usize> = Vec::new();
@@ -71,12 +73,12 @@ impl MultiDimDataWithKey {
                 changes.push(new_change);
             }
         }
-        MultiDimDataWithKey {
+        Ok(MultiDimDataWithKey {
             data,
             change_indices,
             labels: Vec::new(),
             changes,
-        }
+        })
     }
 
     pub fn mixture(
@@ -85,29 +87,29 @@ impl MultiDimDataWithKey {
         scale: &[Vec<f32>],
         weight: &[f32],
         seed: u64,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
-        assert!(num > 0, " number of elements cannot be 0");
-        assert!(mean.len() > 0, " cannot be null");
+        check_argument(num > 0, " number of elements cannot be 0")?;
+        check_argument(mean.len() > 0, " cannot be null")?;
         let base_dimension = mean[0].len();
-        assert!(
+        check_argument(
             mean.len() == scale.len(),
             " need scales and means to be 1-1"
-        );
-        assert!(
+        )?;
+        check_argument(
             weight.len() == mean.len(),
             " need weights and means to be 1-1"
-        );
+        )?;
         for i in 0..mean.len() {
-            assert!(
+            check_argument(
                 mean[i].len() == base_dimension,
                 " must have the same dimensions"
-            );
-            assert!(
+            )?;
+            check_argument(
                 scale[i].len() == base_dimension,
                 "sclaes must have the same dimension as the mean"
-            );
-            assert!(weight[i] >= 0.0, " weights cannot be negative");
+            )?;
+            check_argument(weight[i] >= 0.0, " weights cannot be negative")?;
         }
         let sum: f32 = weight.iter().sum();
 
@@ -124,12 +126,12 @@ impl MultiDimDataWithKey {
             labels.push(i);
         }
 
-        MultiDimDataWithKey {
+        Ok(MultiDimDataWithKey {
             data,
             labels,
             change_indices: vec![],
             changes: vec![],
-        }
+        })
     }
 }
 

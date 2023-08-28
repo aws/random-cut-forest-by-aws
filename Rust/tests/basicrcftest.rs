@@ -5,9 +5,10 @@ extern crate rcflib;
 use num::abs;
 use rcflib::{
     common::multidimdatawithkey::MultiDimDataWithKey,
-    rcf::{create_rcf, RCF},
+    rcf::{RCF},
     visitor::visitor::VisitorInfo,
 };
+use rcflib::rcf::{RCFBuilder, RCFOptionsBuilder};
 
 /// try cargo test --release
 /// these tests are designed to be longish
@@ -24,7 +25,7 @@ fn two_distribution_test_static() {
     let scale = vec![vec![0.1f32; dimensions], vec![0.1f32; dimensions]];
     let mean = vec![vec1.clone(), vec2.clone()].clone();
     let data_with_key =
-        MultiDimDataWithKey::mixture(data_size, &mean, &scale, &vec![0.5f32, 0.5f32], 0);
+        MultiDimDataWithKey::mixture(data_size, &mean, &scale, &vec![0.5f32, 0.5f32], 0).unwrap();
 
     let shingle_size = 1;
     let number_of_trees = 50;
@@ -39,35 +40,32 @@ fn two_distribution_test_static() {
     let internal_shingling: bool = false;
     let internal_rotation = false;
 
-    let mut forest: Box<dyn RCF> = create_rcf(
-        dimensions,
-        shingle_size,
-        capacity,
-        number_of_trees,
-        random_seed,
-        store_attributes,
-        parallel_enabled,
-        internal_shingling,
-        internal_rotation,
-        time_decay,
-        initial_accept_fraction,
-        bounding_box_cache_fraction,
-    );
+    let mut forest = RCFBuilder::<u64,u64>::new(dimensions,shingle_size)
+        .tree_capacity(capacity)
+        .number_of_trees(number_of_trees)
+        .random_seed(random_seed)
+        .store_attributes(store_attributes)
+        .parallel_enabled(parallel_enabled)
+        .internal_shingling(internal_shingling)
+        .internal_rotation(internal_rotation)
+        .time_decay(time_decay)
+        .initial_accept_fraction(initial_accept_fraction)
+        .bounding_box_cache_fraction(bounding_box_cache_fraction).build().unwrap();
 
-    let mut another_forest: Box<dyn RCF> = create_rcf(
-        dimensions,
-        shingle_size,
-        capacity * 2,
-        number_of_trees,
-        random_seed,
-        store_attributes,
-        parallel_enabled,
-        internal_shingling,
-        internal_rotation,
-        time_decay,
-        initial_accept_fraction,
-        bounding_box_cache_fraction,
-    );
+
+    let mut another_forest =
+        RCFBuilder::<u64,u64>::new(dimensions,shingle_size)
+            .tree_capacity(2*capacity)
+            .number_of_trees(number_of_trees)
+            .random_seed(random_seed)
+            .store_attributes(store_attributes)
+            .parallel_enabled(parallel_enabled)
+            .internal_shingling(internal_shingling)
+            .internal_rotation(internal_rotation)
+            .time_decay(time_decay)
+            .initial_accept_fraction(initial_accept_fraction)
+            .bounding_box_cache_fraction(bounding_box_cache_fraction).build().unwrap();
+
 
     for i in 0..data_with_key.data.len() {
         forest.update(&data_with_key.data[i], 0).unwrap();

@@ -1,3 +1,6 @@
+use crate::util::check_argument;
+use crate::types::Result;
+
 /**
  * This class maintains a simple discounted statistics. Setters are avoided
  * except for discount rate which is useful as initialization from raw scores
@@ -13,15 +16,15 @@ pub struct Deviation {
 }
 
 impl Deviation {
-    pub fn new(discount: f64) -> Self {
-        assert!(discount>=0.0 && discount < 1.0, "incorrect discount value");
-        Deviation {
+    pub fn new(discount: f64) -> Result<Self> {
+        check_argument(discount>=0.0 && discount < 1.0, "incorrect discount value")?;
+        Ok(Deviation {
             discount,
             weight: 0.0,
             sum:0.0,
             sum_squared:0.0,
             count:0
-        }
+        })
     }
 
     pub fn default() -> Self {
@@ -42,6 +45,13 @@ impl Deviation {
             sum_squared,
             count
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.weight = 0.0;
+        self.count = 0;
+        self.sum = 0.0;
+        self.sum_squared = 0.0;
     }
 
     pub fn mean(&self) -> f64 {

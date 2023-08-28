@@ -1,4 +1,8 @@
+use crate::util::check_argument;
+use crate::types::Result;
+
 #[repr(C)]
+#[derive(Clone)]
 pub struct BoundingBox {
     range_sum: f64,
     min_values: Vec<f32>,
@@ -6,8 +10,8 @@ pub struct BoundingBox {
 }
 
 impl BoundingBox {
-    pub fn new(first_values: &[f32], second_values: &[f32]) -> Self {
-        assert!(first_values.len() == second_values.len());
+    pub fn new(first_values: &[f32], second_values: &[f32]) -> Result<Self> {
+        check_argument(first_values.len() == second_values.len(), " mismatched lengths")?;
         let minv: Vec<f32> = first_values
             .iter()
             .zip(second_values)
@@ -20,11 +24,11 @@ impl BoundingBox {
             .collect();
 
         let sum = minv.iter().zip(&maxv).map(|(x, y)| (y - x) as f64).sum();
-        BoundingBox {
+        Ok(BoundingBox {
             min_values: minv,
             max_values: maxv,
             range_sum: sum,
-        }
+        })
     }
 
     pub fn check_contains_and_add_point(&mut self, values: &[f32]) -> bool {
@@ -51,18 +55,12 @@ impl BoundingBox {
             .zip(self.get_max_values())
             .map(|(x, y)| (y - x) as f64)
             .sum();
-        if old_sum > self.range_sum {
-            panic!();
-        }
+
         old_sum == self.range_sum
     }
 
     pub fn get_range_sum(&self) -> f64 {
         self.range_sum
-    }
-
-    pub fn copy(&self) -> BoundingBox {
-        BoundingBox::new(&self.min_values, &self.max_values)
     }
 
     pub fn get_min_values(&self) -> &[f32] {

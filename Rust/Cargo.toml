@@ -1,6 +1,6 @@
 [package]
 name = "rcf"
-version = "3.3.0"
+version = "4.0.0"
 edition = "2021"
 license = "Apache-2.0"
 
@@ -18,11 +18,11 @@ path = "src/example.rs"
 
 
 [dependencies]
-num = "0.4"
-rayon = "1.5"
+num = "0.4.1"
+rayon = "1.7"
 rand = "*" 
-rand_chacha = "0.3.0"
-rand_core = "0.6"
+rand_chacha = "0.3.1"
+rand_core = "0.6.2"
 
 [dev-dependencies]
 parameterized_test = "0.1.0"
