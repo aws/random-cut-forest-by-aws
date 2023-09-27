@@ -1,4 +1,6 @@
 use crate::{common::divector::DiVector, samplerplustree::boundingbox::BoundingBox};
+use crate::types::Result;
+use crate::util::check_argument;
 
 #[repr(C)]
 #[derive(Clone)]
@@ -24,21 +26,21 @@ impl InterpolationMeasure {
         distance: DiVector,
         prob_mass: DiVector,
         sample_size: f32,
-    ) -> Self {
-        assert!(
+    ) -> Result<Self> {
+        check_argument(
             measure.dimensions() == distance.dimensions(),
             " incorrect lengths"
-        );
-        assert!(
+        )?;
+        check_argument(
             measure.dimensions() == prob_mass.dimensions(),
             " incorrect lengths"
-        );
-        InterpolationMeasure {
+        )?;
+        Ok(InterpolationMeasure {
             measure: measure,
             distance: distance,
             probability_mass: prob_mass,
             sample_size,
-        }
+        })
     }
 
     pub fn add_to(&self, other: &mut InterpolationMeasure) {
@@ -98,13 +100,13 @@ impl InterpolationMeasure {
         prob
     }
 
-    pub fn directional_measure(&self, threshold: f64, manifold_dimension: f64) -> DiVector {
-        assert!(
+    pub fn directional_measure(&self, threshold: f64, manifold_dimension: f64) -> Result<DiVector> {
+        check_argument(
             self.sample_size >= 0.0 && self.measure.total() >= 0.0,
             " cannot have negative samples or measure"
-        );
+        )?;
         if self.sample_size == 0.0f32 || self.measure.total() == 0.0 {
-            return DiVector::empty(self.measure.dimensions());
+            return Ok(DiVector::empty(self.measure.dimensions()));
         }
 
         let mut sum_of_factors = 0.0;
@@ -126,14 +128,14 @@ impl InterpolationMeasure {
         let density_factor = 1.0 / (threshold + sum_of_factors);
         let mut answer = self.measure.clone();
         answer.scale(density_factor);
-        answer
+        Ok(answer)
     }
 
-    pub fn directional_density(&self) -> DiVector {
+    pub fn directional_density(&self) -> Result<DiVector> {
         self.directional_measure(1e-3, self.measure.dimensions() as f64)
     }
 
-    pub fn density(&self) -> f64 {
-        self.directional_density().total()
+    pub fn density(&self) -> Result<f64> {
+        Ok(self.directional_density()?.total())
     }
 }

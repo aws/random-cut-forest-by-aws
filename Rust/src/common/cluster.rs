@@ -1,5 +1,4 @@
 use std::cmp::{max, min};
-use std::f32::NAN;
 use std::ops::{Deref, Index};
 use std::slice;
 use rand::{Rng, SeedableRng};
@@ -42,7 +41,7 @@ pub trait IntermediateCluster<Z, Q, T: ?Sized> {
     // a function that assigns a point indexed by usize from a list of samples to
     // the cluster; note the weight used in the function need not be the entire weight of the
     // sampled point (for example in case of soft assignments)
-    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative: usize);
+    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative: usize) -> Result<()>;
     // given a set of previous assignments, recomputes the optimal set of representatives
     // this is the classic optimization step for k-Means; but the analogue exists for every
     // clustering; note that it is possible that recompute does nothing
@@ -56,11 +55,11 @@ pub trait IntermediateCluster<Z, Q, T: ?Sized> {
     // a function that indicates cluster quality
     fn average_radius(&self) -> f64;
     // a function that absorbs another cluster
-    fn absorb<'a>(&mut self, dictionary: &'a [Z], get_point: fn (usize,&'a [Z]) -> &'a T, another: &dyn IntermediateCluster<Z, Q, T>, distance: fn(&T, &T) -> f64);
+    fn absorb<'a>(&mut self, dictionary: &'a [Z], get_point: fn (usize,&'a [Z]) -> &'a T, another: &dyn IntermediateCluster<Z, Q, T>, distance: fn(&T, &T) -> f64) -> Result<()>;
     // a function to return a list of representatives corresponding to pairs (Q,weight)
     fn representatives(&self) -> Vec<(Q, f32)>;
     // a function that helps scale (by multiplication) the cluster weight
-    fn scale_weight(&mut self, factor: f64);
+    fn scale_weight(&mut self, factor: f64) -> Result<()>;
 }
 
 
@@ -102,22 +101,22 @@ pub struct Center {
 }
 
 impl Center {
-    pub fn new(representative: usize, point:&[f32], weight: f32, _params:usize) -> Self {
-        Center {
+    pub fn new(_representative: usize, point:&[f32], weight: f32, _params:usize) -> Result<Self> {
+        Ok(Center {
             representative: Vec::from(point),
             weight: weight as f64,
             points: Vec::new(),
             sum_of_radii: 0.0,
-        }
+        })
     }
 
-    pub fn new_as_vec(representative: usize, point:&Vec<f32>, weight: f32,_params:usize) -> Self {
-        Center {
+    pub fn new_as_vec(_representative: usize, point:&Vec<f32>, weight: f32,_params:usize) -> Result<Self> {
+        Ok(Center {
             representative: point.clone(),
             weight: weight as f64,
             points: Vec::new(),
             sum_of_radii: 0.0,
-        }
+        })
     }
 
     pub fn average_radius(&self) -> f64 {
@@ -217,9 +216,10 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, [f32]> for Center {
         self.weight()
     }
 
-    fn scale_weight(&mut self, factor: f64){
-        assert!(!factor.is_nan() && factor>0.0," has to be positive");
-        self.weight = (self.weight as f64 * factor);
+    fn scale_weight(&mut self, factor: f64) -> Result<()>{
+        check_argument(!factor.is_nan() && factor>0.0," has to be positive")?;
+        self.weight = self.weight as f64 * factor;
+        Ok(())
     }
 
     fn distance_to_point<'a>(&self, _points:&'a [Z],_get_point: fn(usize,&'a [Z]) ->&'a [f32],point: &[f32], distance: fn(&[f32], &[f32]) -> f64) -> (f64,usize) {
@@ -237,10 +237,11 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, [f32]> for Center {
         (tuple.0,0,tuple.1)
     }
 
-    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative:usize) {
-        assert!(representative==0,"can have only one representative");
-        assert!(!weight.is_nan() && weight >= 0.0f32, "non-negative weight");
+    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative:usize) -> Result<()> {
+        check_argument(representative==0,"can have only one representative")?;
+        check_argument(!weight.is_nan() && weight >= 0.0f32, "non-negative weight")?;
         self.add_point(index,weight,dist);
+        Ok(())
     }
 
     fn recompute<'a>(&mut self, points:&'a [Z],get_point: fn(usize,&'a [Z]) ->&'a [f32], distance: fn(&[f32], &[f32]) -> f64) -> f64 {
@@ -266,9 +267,10 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, [f32]> for Center {
         get_point: fn(usize,&'a [Z]) ->&'a [f32],
         another: &dyn IntermediateCluster<Z, Vec<f32>, [f32]>,
         distance: fn(&[f32], &[f32]) -> f64,
-    ) {
-        let closest = another.distance_to_point(points,get_point, &self.representative,distance);
-        self.absorb_list(another.weight(),&another.representatives(),closest);
+    ) ->Result<()> {
+        let closest = another.distance_to_point(points, get_point, &self.representative, distance);
+        self.absorb_list(another.weight(), &another.representatives(), closest);
+        Ok(())
     }
 
     fn representatives(&self) -> Vec<(Vec<f32>, f32)> {
@@ -281,9 +283,10 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, Vec<f32>> for Center {
         self.weight()
     }
 
-    fn scale_weight(&mut self, factor: f64){
-        assert!(!factor.is_nan() && factor>0.0," has to be positive");
-        self.weight = (self.weight as f64 * factor);
+    fn scale_weight(&mut self, factor: f64) -> Result<()>{
+        check_argument(!factor.is_nan() && factor>0.0," has to be positive")?;
+        self.weight = self.weight as f64 * factor;
+        Ok(())
     }
 
     fn distance_to_point<'a>(&self, _points:&'a [Z],_get_point: fn(usize,&'a [Z]) ->&'a Vec<f32>,point: &Vec<f32>, distance: fn(&Vec<f32>, &Vec<f32>) -> f64) -> (f64,usize) {
@@ -301,10 +304,11 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, Vec<f32>> for Center {
         (tuple.0,0,tuple.1)
     }
 
-    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative:usize) {
-        assert!(representative==0,"can have only one representative");
-        assert!(!weight.is_nan() && weight >= 0.0f32, "non-negative weight");
+    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative:usize) ->Result<()>{
+        check_argument(representative==0,"can have only one representative")?;
+        check_argument(!weight.is_nan() && weight >= 0.0f32, "non-negative weight")?;
         self.add_point(index,weight,dist);
+        Ok(())
     }
 
     fn recompute<'a>(&mut self, points:&'a [Z],get_point: fn(usize,&'a [Z]) ->&'a Vec<f32>, distance: fn(&Vec<f32>, &Vec<f32>) -> f64) -> f64 {
@@ -330,9 +334,10 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, Vec<f32>> for Center {
         get_point: fn(usize,&'a [Z]) ->&'a Vec<f32>,
         another: &dyn IntermediateCluster<Z, Vec<f32>, Vec<f32>>,
         distance: fn(&Vec<f32>, &Vec<f32>) -> f64,
-    ) {
+    ) -> Result<()>{
         let closest = another.distance_to_point(points,get_point, &self.representative,distance);
         self.absorb_list(another.weight(),&another.representatives(),closest);
+        Ok(())
     }
 
     fn representatives(&self) -> Vec<(Vec<f32>, f32)> {
@@ -345,7 +350,7 @@ impl<Z> IntermediateCluster<Z,Vec<f32>, Vec<f32>> for Center {
 fn process_point<'a,Z,U,Q,T :?Sized>(dictionary: &'a [Z], get_point: fn(usize,&'a [Z])->&'a T, index: usize, centers: &mut [U], weight : f32, distance: fn(&T, &T) -> f64) -> Result<()>
     where
         U: IntermediateCluster<Z,Q, T> + Send,
-        T: std::marker::Sync,
+        T: Sync,
 {
     let mut dist = vec![(0.0, 1); centers.len()];
     let mut min_distance = (f64::MAX, 1);
@@ -356,11 +361,11 @@ fn process_point<'a,Z,U,Q,T :?Sized>(dictionary: &'a [Z], get_point: fn(usize,&'
             min_distance = dist[j];
         }
     };
-    //check_argument(min_distance.0>=0.0," distances cannot be negative")?;
+    check_argument(min_distance.0>=0.0," distances cannot be negative")?;
     if min_distance.0 == 0.0 {
         for j in 0..centers.len() {
             if dist[j].0 == 0.0 {
-                centers[j].add_point(index, weight, 0.0, dist[j].1);
+                centers[j].add_point(index, weight, 0.0, dist[j].1)?;
             }
         }
     } else {
@@ -376,7 +381,7 @@ fn process_point<'a,Z,U,Q,T :?Sized>(dictionary: &'a [Z], get_point: fn(usize,&'
                     index,
                     (weight as f64 * min_distance.0 / (sum * dist[j].0)) as f32,
                     dist[j].0, dist[j].1
-                );
+                )?;
             }
         }
     }
@@ -396,14 +401,14 @@ fn assign_and_recompute<'a, Z, Q, U, T: ?Sized>(
 ) -> Result<f64>
     where
         U: IntermediateCluster<Z,Q, T> + Send,
-        T: std::marker::Sync,
-        Z: std::marker::Sync,
+        T: Sync,
+        Z: Sync,
 {
     for j in 0..centers.len() {
         centers[j].reset();
     }
 
-    if (samples.len() == 0){
+    if samples.len() == 0{
         for i in 0..dictionary.len() {
             process_point(dictionary,get_point,i,centers,get_weight(i,dictionary,weights),distance)?;
         }
@@ -487,7 +492,7 @@ pub fn general_iterative_clustering<'a, U, V, Q, Z, T: ?Sized>(
     approximate_bound: usize,
     seed: u64,
     parallel_enabled: bool,
-    create: fn(usize, &'a T, f32, V) -> U,
+    create: fn(usize, &'a T, f32, V) -> Result<U>,
     create_params: V,
     distance: fn(&T, &T) -> f64,
     phase_2_reassign: bool,
@@ -496,8 +501,8 @@ pub fn general_iterative_clustering<'a, U, V, Q, Z, T: ?Sized>(
 ) -> Result<Vec<U>>
 where
     U: IntermediateCluster<Z,Q, T> + Send,
-    T: std::marker::Sync,
-    Z: std::marker::Sync,
+    T: Sync,
+    Z: Sync,
     V: Copy,
 {
     check_argument(max_allowed < 51, " for large number of clusters, other methods may be better, consider recursively removing clusters")?;
@@ -506,7 +511,7 @@ where
 
     let mut centers: Vec<U> = Vec::new();
 
-    let mut samples : Vec<(usize,f32)> = if dictionary.len() > approximate_bound {
+    let samples : Vec<(usize,f32)> = if dictionary.len() > approximate_bound {
         down_sample(dictionary,weights,get_weight,rng.next_u64(),approximate_bound)
     } else {
         Vec::new()
@@ -537,7 +542,7 @@ where
             };
         }
         if min_dist > 0.0 {
-            centers.push(create(index,get_point(index,dictionary), weight,create_params));
+            centers.push(create(index,get_point(index,dictionary), weight,create_params)?);
         }
     }
 
@@ -594,10 +599,10 @@ where
         let inital = centers.len();
         if inital > max_allowed || found_merge || (enable_phase_3 && measure > overlap_parameter) {
             let (small, large) = centers.split_at_mut(second);
-            large.first_mut().unwrap().absorb(&dictionary,get_point, &small[first], distance);
+            large.first_mut().unwrap().absorb(&dictionary,get_point, &small[first], distance)?;
             centers.swap_remove(first);
             if phase_2_reassign && centers.len() <= PHASE2_THRESHOLD * max_allowed + 1{
-                assign_and_recompute(&dictionary, weights,get_point,get_weight, &samples, &mut centers, distance, parallel_enabled);
+                assign_and_recompute(&dictionary, weights,get_point,get_weight, &samples, &mut centers, distance, parallel_enabled)?;
             }
 
             centers.sort_by(|o1, o2| o1.weight().partial_cmp(&o2.weight()).unwrap());
@@ -618,7 +623,7 @@ where
     centers.sort_by(|o1, o2| o2.weight().partial_cmp(&o1.weight()).unwrap()); // decreasing order
     let center_sum: f64 = centers.iter().map(|x| x.weight() as f64).sum();
     for i in 0..centers.len() {
-        centers[i].scale_weight(1.0/center_sum);
+        centers[i].scale_weight(1.0/center_sum)?;
     }
     Ok(centers)
 }
@@ -642,11 +647,11 @@ fn pick_to_slice<'a>(index: usize, entry:&'a [Vec<f32>]) -> &'a [f32]{
 }
 
 
-fn pick_tuple_weight<T>(index:usize, entry:&[(T,f32)], weights: &[f32]) -> f32{
+fn pick_tuple_weight<T>(index:usize, entry:&[(T,f32)], _weights: &[f32]) -> f32{
     entry[index].1
 }
 
-fn pick_weight<T>(index:usize, entry:&[T], weights: &[f32]) -> f32{
+fn pick_weight<T>(index:usize, _entry:&[T], weights: &[f32]) -> f32{
     weights[index]
 }
 
@@ -835,18 +840,18 @@ impl<'b,T :?Sized> MultiCenterRef<'b,T>{
         self.representatives.clone()
     }
 
-    pub fn new(representative: usize, point: &'b T, weight: f32, params : (usize,f32,bool)) -> Self {
+    pub fn new(_representative: usize, point: &'b T, weight: f32, params : (usize,f32,bool)) -> Result<Self> {
         let (number_of_representatives, shrinkage,is_compact) = params;
-        assert!(number_of_representatives>0,"has to be positive");
-        assert!(shrinkage>=0.0 && shrinkage<= 1.0," has to between [0,1]");
-        MultiCenterRef {
+        check_argument(number_of_representatives>0,"has to be positive")?;
+        check_argument(shrinkage>=0.0 && shrinkage<= 1.0," has to between [0,1]")?;
+        Ok(MultiCenterRef {
             representatives: vec![(point, weight as f32);1],
             number_of_representatives,
             shrinkage,
             is_compact,
             weight: weight as f64,
             sum_of_radii: 0.0,
-        }
+        })
     }
 
     pub fn average_radius(&self) -> f64 {
@@ -900,13 +905,14 @@ impl<'b, Z, T:?Sized> IntermediateCluster<Z, &'b T,T> for MultiCenterRef<'b,T> {
         ((closest.0 * (1.0 - self.shrinkage as f64) + self.shrinkage as f64 * original.0), closest.1, closest.2)
     }
 
-    fn add_point(&mut self, index: usize, weight: f32, dist: f64, representative: usize) {
+    fn add_point(&mut self, _index: usize, weight: f32, dist: f64, representative: usize) -> Result<()>{
         self.representatives[representative].1 += weight;
         self.sum_of_radii += weight as f64 * dist;
         self.weight += weight as f64;
+        Ok(())
     }
 
-    fn recompute<'a>(&mut self, points:&'a [Z],get_point: fn(usize,&'a [Z]) ->&'a T, distance: fn(&T, &T) -> f64) -> f64 {
+    fn recompute<'a>(&mut self, _points:&'a [Z],_get_point: fn(usize,&'a [Z]) ->&'a T, _distance: fn(&T, &T) -> f64) -> f64 {
         self.representatives.sort_by(|a,b| a.1.partial_cmp(&b.1).unwrap());
         0.0
     }
@@ -929,11 +935,11 @@ impl<'b, Z, T:?Sized> IntermediateCluster<Z, &'b T,T> for MultiCenterRef<'b,T> {
 
     fn absorb<'a>(
         &mut self,
-        points:&'a [Z],
-        get_point: fn(usize,&'a [Z]) ->&'a T,
+        _points:&'a [Z],
+        _get_point: fn(usize,&'a [Z]) ->&'a T,
         another: &dyn IntermediateCluster<Z, &'b T, T>,
         distance: fn(&T, &T) -> f64,
-    ) {
+    )  -> Result<()> {
         self.sum_of_radii += if self.is_compact {
             another.average_radius()*another.weight()
         } else {
@@ -962,19 +968,19 @@ impl<'b, Z, T:?Sized> IntermediateCluster<Z, &'b T,T> for MultiCenterRef<'b,T> {
          * correspond to a well scattered set. See
          * https://en.wikipedia.org/wiki/CURE_algorithm
          */
-        while (representatives.len() > 0 && self.representatives.len() < self.number_of_representatives) {
+        while representatives.len() > 0 && self.representatives.len() < self.number_of_representatives {
             let mut farthest_weighted_distance = 0.0;
             let mut farthest_index: usize = usize::MAX;
             for j in 0..representatives.len() {
                 if representatives[j].1 as f64 > (weight as f64) / (2.0 * self.number_of_representatives as f64) {
                     let mut new_weighted_distance = (distance)(self.representatives[0].0,
                                                                representatives[j].0) * representatives[j].1 as f64;
-                    assert!(new_weighted_distance >= 0.0, " weights or distances cannot be negative");
+                    check_argument(new_weighted_distance >= 0.0, " weights or distances cannot be negative")?;
                     for i in 1..self.representatives.len() {
                         let t = (distance)(self.representatives[i].0,
                                            representatives[j].0) * representatives[j].1 as f64;
-                        assert!(t >= 0.0, " weights or distances cannot be negative");
-                        if (t < new_weighted_distance) {
+                        check_argument(t >= 0.0, " weights or distances cannot be negative")?;
+                        if t < new_weighted_distance {
                             new_weighted_distance = t;
                         }
                     }
@@ -994,13 +1000,13 @@ impl<'b, Z, T:?Sized> IntermediateCluster<Z, &'b T,T> for MultiCenterRef<'b,T> {
         // absorb the remainder into existing representatives
         for j in 0..representatives.len() {
             let dist = (distance)(representatives[0].0, self.representatives[0].0);
-            assert!(dist >= 0.0, "distance cannot be negative");
+            check_argument(dist >= 0.0, "distance cannot be negative")?;
             let mut min_dist = dist;
             let mut min_index: usize = 0;
             for i in 1..self.representatives.len() {
                 let new_dist = (distance)(self.representatives[i].0, representatives[j].0);
-                assert!(new_dist >= 0.0, "distance cannot be negative");
-                if (new_dist < min_dist) {
+                check_argument(new_dist >= 0.0, "distance cannot be negative")?;
+                if new_dist < min_dist {
                     min_dist = new_dist;
                     min_index = i;
                 }
@@ -1009,16 +1015,19 @@ impl<'b, Z, T:?Sized> IntermediateCluster<Z, &'b T,T> for MultiCenterRef<'b,T> {
             self.sum_of_radii += representatives[j].1 as f64 * min_dist;
         }
         self.representatives.sort_by(|a,b| b.1.partial_cmp(&a.1).unwrap());
+        Ok(())
     }
 
     fn representatives(&self) -> Vec<(&'b T, f32)> {
         self.representatives()
     }
 
-    fn scale_weight(&mut self, factor: f64) {
+    fn scale_weight(&mut self, factor: f64) -> Result<()>{
+        check_argument(!factor.is_nan() && factor>0.0," has to be positive")?;
         for i in 0..self.representatives.len() {
             self.representatives[i].1 = (self.representatives[i].1 as f64 * factor) as f32;
         }
+        Ok(())
     }
 
 }

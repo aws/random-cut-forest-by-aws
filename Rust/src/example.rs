@@ -5,8 +5,9 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rcflib::{
     common::multidimdatawithkey,
-    rcf::{create_rcf, RCF},
+    rcf::{RCF},
 };
+use rcflib::rcf::{RCFBuilder, RCFOptionsBuilder};
 
 fn main() {
     let shingle_size = 8;
@@ -15,7 +16,6 @@ fn main() {
     let number_of_trees = 30;
     let capacity = 256;
     let initial_accept_fraction = 0.1;
-    let dimensions = shingle_size * base_dimension;
     let _point_store_capacity = capacity * number_of_trees + 1;
     let time_decay = 0.1 / capacity as f64;
     let bounding_box_cache_fraction = 1.0;
@@ -26,20 +26,12 @@ fn main() {
     let internal_rotation = false;
     let noise = 5.0;
 
-    let mut forest: Box<dyn RCF> = create_rcf(
-        dimensions,
-        shingle_size,
-        capacity,
-        number_of_trees,
-        random_seed,
-        store_attributes,
-        parallel_enabled,
-        internal_shingling,
-        internal_rotation,
-        time_decay,
-        initial_accept_fraction,
-        bounding_box_cache_fraction,
-    );
+    let mut forest = RCFBuilder::<u64,u64>::new(base_dimension,shingle_size)
+        .tree_capacity(capacity).number_of_trees(number_of_trees).random_seed(random_seed)
+        .store_attributes(store_attributes).parallel_enabled(parallel_enabled).internal_shingling(internal_shingling)
+        .time_decay(time_decay).initial_accept_fraction(initial_accept_fraction)
+        .internal_rotation(internal_rotation)
+        .bounding_box_cache_fraction(bounding_box_cache_fraction).build_default().unwrap();
 
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let mut amplitude = Vec::new();
@@ -54,7 +46,7 @@ fn main() {
         noise,
         0,
         base_dimension.into(),
-    );
+    ).unwrap();
 
     let mut score: f64 = 0.0;
     let _next_index = 0;
@@ -64,7 +56,7 @@ fn main() {
     for i in 0..data_with_key.data.len() {
         if i > 200 {
             let next_values = forest.extrapolate(1).unwrap().values;
-            assert!(next_values.len() == base_dimension);
+            assert_eq!(next_values.len(), base_dimension);
             error += next_values
                 .iter()
                 .zip(&data_with_key.data[i])

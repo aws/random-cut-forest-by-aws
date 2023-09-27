@@ -4,6 +4,7 @@ use crate::{
     common::divector::DiVector,
     samplerplustree::nodeview::LargeNodeView,
     visitor::visitor::{Visitor, VisitorInfo},
+    types::Result,
 };
 
 #[repr(C)]
@@ -19,7 +20,7 @@ pub struct AttributionVisitor {
 }
 
 impl AttributionVisitor {
-    pub fn new(tree_mass: usize, dimension: usize, visitor_info: &VisitorInfo) -> Self {
+    pub fn new(tree_mass: usize, dimension: usize, _visitor_info: &VisitorInfo) -> Self {
         AttributionVisitor {
             tree_mass,
             leaf_index: usize::MAX,
@@ -48,28 +49,29 @@ impl Visitor<LargeNodeView, DiVector> for AttributionVisitor {
         point: &[f32],
         visitor_info: &VisitorInfo,
         node_view: &LargeNodeView,
-    ) {
-        let mass = node_view.get_mass();
-        self.leaf_index = node_view.get_leaf_index();
+    ) -> Result<()> {
+        let mass = node_view.mass();
+        self.leaf_index = node_view.leaf_index();
         if mass > visitor_info.ignore_mass {
             if node_view.is_duplicate() {
                 self.score = (visitor_info.damp)(mass, self.tree_mass)
-                    * (visitor_info.score_seen)(node_view.get_depth(), mass);
+                    * (visitor_info.score_seen)(node_view.depth(), mass);
                 self.hit_duplicate = true;
                 self.use_shadow_box = true;
             } else {
-                self.score = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+                self.score = (visitor_info.score_unseen)(node_view.depth(), mass);
                 node_view.assign_probability_of_cut(&mut self.probability, point);
                 assert!(abs(self.probability.total() - 1.0) < 1e-6);
                 self.attribution.add_from(&self.probability, self.score);
             }
         } else {
-            self.score = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+            self.score = (visitor_info.score_unseen)(node_view.depth(), mass);
             self.use_shadow_box = true;
         }
+        Ok(())
     }
 
-    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &LargeNodeView) {
+    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &LargeNodeView) -> Result<()>{
         if !self.converged {
             if !self.use_shadow_box {
                 node_view.assign_probability_of_cut(&mut self.probability, point);
@@ -81,7 +83,7 @@ impl Visitor<LargeNodeView, DiVector> for AttributionVisitor {
                 self.converged = true;
             } else {
                 let new_value =
-                    (visitor_info.score_unseen)(node_view.get_depth(), node_view.get_mass());
+                    (visitor_info.score_unseen)(node_view.depth(), node_view.mass());
                 if !self.hit_duplicate {
                     self.score = (1.0 - prob) * self.score + prob * new_value;
                 }
@@ -89,17 +91,18 @@ impl Visitor<LargeNodeView, DiVector> for AttributionVisitor {
                 self.attribution.add_from(&self.probability, new_value);
             }
         }
+        Ok(())
     }
 
-    fn result(&self, visitor_info: &VisitorInfo) -> DiVector {
+    fn result(&self, visitor_info: &VisitorInfo) -> Result<DiVector> {
         let t = (visitor_info.normalizer)(self.score, self.tree_mass);
         let mut answer = self.attribution.clone();
         answer.normalize(t);
-        answer
+        Ok(answer)
     }
 
-    fn is_converged(&self) -> bool {
-        self.converged
+    fn is_converged(&self) -> Result<bool> {
+        Ok(self.converged)
     }
 
     fn use_shadow_box(&self) -> bool {

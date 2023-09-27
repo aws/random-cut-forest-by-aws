@@ -6,5 +6,5 @@ pub mod intervalstoremanager;
 pub mod multidimdatawithkey;
 pub mod samplesummary;
 pub mod deviation;
-pub mod anomalydescriptor;
 pub mod rangevector;
+pub mod descriptor;

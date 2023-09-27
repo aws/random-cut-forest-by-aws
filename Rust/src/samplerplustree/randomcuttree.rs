@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
@@ -9,15 +11,17 @@ use crate::{
     samplerplustree::{
         boundingbox::BoundingBox,
         cut::Cut,
-        nodestore::{NodeStore, VectorNodeStore},
+        nodestore::{NodeStore, BasicStore, BoxStore, VectorNodeStore},
         nodeview::{MediumNodeView, UpdatableMultiNodeView, UpdatableNodeView},
     },
-    types::Location,
+    types::{Result, Location},
     visitor::{
         imputevisitor::ImputeVisitor,
         visitor::{SimpleMultiVisitor, Visitor, VisitorInfo},
     },
 };
+use crate::errors::RCFError;
+use crate::util::check_argument;
 
 extern crate rand;
 extern crate rand_chacha;
@@ -27,10 +31,10 @@ pub struct RCFTree<C, P, N>
 where
     C: Location,
     usize: From<C>,
-    P: Location,
+    P: Location + Eq + Hash,
     usize: From<P>,
     N: Location,
-    usize: From<N>,
+    usize: From<N>
 {
     dimensions: usize,
     capacity: usize,
@@ -39,73 +43,91 @@ where
     root: usize,
     tree_mass: usize,
     using_transforms: bool,
+    store_attributes: bool,
+    store_pointsum: bool,
+    propagate_attributes: bool,
 }
 
 impl<C, P, N> RCFTree<C, P, N>
 where
     C: Location,
     usize: From<C>,
-    P: Location,
+    P: Location + Eq + Hash,
     usize: From<P>,
     N: Location,
     usize: From<N>,
     <C as TryFrom<usize>>::Error: Debug,
     <P as TryFrom<usize>>::Error: Debug,
-    <N as TryFrom<usize>>::Error: Debug,
+    <N as TryFrom<usize>>::Error: Debug
 {
     pub fn new(
         dimensions: usize,
         capacity: usize,
         using_transforms: bool,
+        store_attributes: bool,
+        store_pointsum: bool,
+        propagate_attributes: bool,
         bounding_box_cache_fraction: f64,
         random_seed: u64,
-    ) -> Self {
+    ) -> Result<Self> {
         let project_to_tree: fn(Vec<f32>) -> Vec<f32> = { |x| x };
         let node_store = VectorNodeStore::<C, P, N>::new(
             capacity,
             dimensions,
             using_transforms,
+            store_attributes,
+            store_pointsum,
+            propagate_attributes,
             project_to_tree,
             bounding_box_cache_fraction,
-        );
+        )?;
         let root = node_store.null_node();
-        RCFTree {
+        Ok(RCFTree {
             dimensions,
             capacity,
             using_transforms,
+            store_attributes,
+            store_pointsum,
             random_seed,
             node_store,
             root,
             tree_mass: 0,
-        }
+            propagate_attributes
+        })
     }
 
-    pub fn add(
+    pub fn add<Label : Copy + Sync ,Attributes: Copy + Sync+ Hash + Eq + Send, PS: PointStore<Label,Attributes>>(
         &mut self,
         point_index: usize,
-        _point_attribute: usize,
-        point_store: &dyn PointStore,
-    ) -> usize {
+        point_attribute: usize,
+        point_store: &PS,
+    ) -> Result<usize> {
         if self.root == self.node_store.null_node() {
             self.root = self.node_store.leaf_index(point_index);
             self.tree_mass = 1;
-            point_index
+            if self.store_attributes {
+               self.node_store.add_attrib_at_leaf(point_index,point_attribute)?;
+            }
+            Ok(point_index)
         } else {
-            let point = &point_store.get_copy(point_index);
+            let point = &point_store.copy(point_index)?;
             let mut path_to_root = Vec::new();
             self.node_store
                 .set_path(&mut path_to_root, self.root, point);
             let (mut node, mut sibling) = path_to_root.pop().unwrap();
 
-            let leaf_point_index = self.node_store.get_point_index(node);
-            let old_point = &point_store.get_copy(leaf_point_index);
+            let leaf_point_index = self.node_store.leaf_point_index(node)?;
+            let old_point = &point_store.copy(leaf_point_index)?;
 
             self.tree_mass += 1;
             if point.eq(old_point) {
-                self.node_store.increase_leaf_mass(node);
+                self.node_store.increase_leaf_mass(node)?;
+                if self.store_attributes {
+                    self.node_store.add_attrib_at_leaf(leaf_point_index, point_attribute)?;
+                }
                 self.node_store
-                    .manage_ancestors_add(&mut path_to_root, point, point_store, true);
-                return leaf_point_index;
+                    .manage_ancestors_add(&mut path_to_root, point, point_store, true)?;
+                return Ok(leaf_point_index);
             } else {
                 let mut saved_parent = if path_to_root.len() != 0 {
                     path_to_root.last().unwrap().0
@@ -113,8 +135,8 @@ where
                     self.node_store.null_node()
                 };
                 let mut saved_node = node;
-                let mut current_box = BoundingBox::new(old_point, old_point);
-                let mut saved_box = current_box.copy();
+                let mut current_box = BoundingBox::new(old_point, old_point)?;
+                let mut saved_box = current_box.clone();
                 let mut parent_path: Vec<(usize, usize)> = Vec::new();
                 let mut rng = ChaCha20Rng::seed_from_u64(self.random_seed);
                 self.random_seed = rng.next_u64();
@@ -130,12 +152,12 @@ where
                         saved_cut = new_cut;
                         saved_parent = parent;
                         saved_node = node;
-                        saved_box = current_box.copy();
+                        saved_box = current_box.clone();
                         parent_path.clear();
                     } else {
                         parent_path.push((node, sibling));
                     }
-                    assert!(saved_cut.dimension != usize::MAX);
+                    check_argument(saved_cut.dimension != usize::MAX, "incorrect state")?;
 
                     if parent == self.node_store.null_node() {
                         break;
@@ -145,7 +167,7 @@ where
                             point_store,
                             parent,
                             sibling,
-                        );
+                        )?;
                         let (a, b) = path_to_root.pop().unwrap();
                         node = a;
                         sibling = b;
@@ -161,9 +183,9 @@ where
                     while !parent_path.is_empty() {
                         path_to_root.push(parent_path.pop().unwrap());
                     }
-                    assert!(path_to_root.last().unwrap().0 == saved_parent);
+                    check_argument(path_to_root.last().unwrap().0 == saved_parent, "incorrect state")?;
                 } else {
-                    assert!(path_to_root.len() == 0);
+                    check_argument(path_to_root.len() == 0, "incorrect state")?;
                 }
                 let merged_node = self.node_store.add_node(
                     saved_parent,
@@ -172,56 +194,61 @@ where
                     point_index,
                     saved_cut,
                     &saved_box,
-                );
+                )?;
 
+                if self.store_attributes {
+                    self.node_store.add_attrib_at_leaf(point_index,point_attribute)?;
+                }
+                if self.store_pointsum {
+                    self.node_store.recompute_pointsum(merged_node,point_store)?;
+                }
+                if self.propagate_attributes {
+                    self.node_store.recompute_attribute_vec(merged_node,point_store)?;
+                }
                 if saved_parent != self.node_store.null_node() {
                     self.node_store.manage_ancestors_add(
                         &mut path_to_root,
                         point,
                         point_store,
                         false,
-                    );
+                    )?;
                 } else {
                     self.root = merged_node;
                 }
             }
-            point_index
+            Ok(point_index)
         }
     }
 
-    pub fn delete(
+    pub fn delete<Label : Copy + Sync ,Attributes: Copy + Sync+ Hash + Eq + Send,PS:PointStore<Label,Attributes>>(
         &mut self,
         point_index: usize,
-        _point_attribute: usize,
-        point_store: &dyn PointStore,
-    ) -> usize {
-        if self.root == self.node_store.null_node() {
-            println!(" deleting from an empty tree");
-            panic!();
-        }
+        point_attribute: usize,
+        point_store: &PS
+    ) -> Result<usize> {
+        check_argument(self.root != self.node_store.null_node() ," deleting from an empty tree")?;
+
         self.tree_mass = self.tree_mass - 1;
-        let point = &point_store.get_copy(point_index);
+        let point = &point_store.copy(point_index)?;
         let mut leaf_path = Vec::new();
         self.node_store.set_path(&mut leaf_path, self.root, point);
         let (leaf_node, leaf_saved_sibling) = leaf_path.pop().unwrap();
 
-        let leaf_point_index = self.node_store.get_point_index(leaf_node);
+        let leaf_point_index = self.node_store.leaf_point_index(leaf_node)?;
 
         if leaf_point_index != point_index {
-            if !point_store.is_equal(point, leaf_point_index) {
-                println!(
-                    " deleting wrong node; looking for {} found {}",
-                    point_index, leaf_point_index
-                );
-                let old_point = point_store.get_copy(leaf_point_index);
-                for j in 0..self.dimensions.into() {
-                    println!("want {} found {}", point[j], old_point[j]);
-                }
-                panic!();
+            if !point_store.is_equal(point, leaf_point_index)? {
+                return Err(RCFError::InvalidArgument {
+                    msg: " deleting wrong node "
+                });
             }
         }
 
-        if self.node_store.decrease_leaf_mass(leaf_node) == 0 {
+        if self.store_attributes {
+            self.node_store.del_attrib_at_leaf(leaf_point_index, point_attribute)?;
+        }
+
+        if self.node_store.decrease_leaf_mass(leaf_node)? == 0 {
             if leaf_path.len() == 0 {
                 self.root = self.node_store.null_node();
             } else {
@@ -243,19 +270,22 @@ where
                         point,
                         point_store,
                         false,
-                    );
+                    )?;
                 }
 
-                self.node_store.delete_internal_node(parent);
+                self.node_store.delete_internal_node(parent)?;
+                if self.store_pointsum {
+                    self.node_store.invalidate_pointsum(parent)?;
+                }
             }
         } else {
             self.node_store
-                .manage_ancestors_delete(&mut leaf_path, point, point_store, true);
+                .manage_ancestors_delete(&mut leaf_path, point, point_store, true)?;
         }
-        leaf_point_index
+        Ok(leaf_point_index)
     }
 
-    pub fn conditional_field<PS: PointStore>(
+    pub fn conditional_field<Label : Copy + Sync ,Attributes: Copy + Sync+ Hash + Eq + Send,PS: PointStore<Label,Attributes>>(
         &self,
         missing: &[usize],
         point: &[f32],
@@ -263,12 +293,14 @@ where
         centrality: f64,
         seed: u64,
         visitor_info: &VisitorInfo,
-    ) -> (f64, usize, f64) {
+    ) -> Result<(f64, usize, f64)> {
         if self.root == self.node_store.null_node() {
-            return (0.0, usize::MAX, 0.0);
+            return Ok((0.0, usize::MAX, 0.0));
         }
         let mut visitor = ImputeVisitor::new(missing, centrality, self.tree_mass, seed);
-        let mut node_view = MediumNodeView::new(self.root, &self.node_store);
+        let (cut_dimension, cut_value, _left_child, _right_child) = self.node_store.cut_and_children(self.root);
+        let mass = self.node_store.mass(self.root);
+        let mut node_view = MediumNodeView::new::<Label,Attributes>(self.root, cut_dimension,cut_value,mass);
         let mut missing_coordinates = vec![false; self.dimensions];
         for i in missing.iter() {
             missing_coordinates[*i] = true;
@@ -280,11 +312,11 @@ where
             point,
             &missing_coordinates,
             point_store,
-        );
+        )?;
         visitor.result(&visitor_info)
     }
 
-    pub fn traverse_multi_with_missing_coordinates<V, NodeView, PS, R>(
+    pub fn traverse_multi_with_missing_coordinates<V, NodeView, PS, R, Label, Attributes>(
         &self,
         node_view: &mut NodeView,
         visitor: &mut V,
@@ -292,15 +324,17 @@ where
         point: &[f32],
         missing_coordinates: &[bool],
         point_store: &PS,
-    ) where
+    ) -> Result<()> where
         V: SimpleMultiVisitor<NodeView, R>,
-        NodeView: UpdatableMultiNodeView<VectorNodeStore<C, P, N>, PS>,
-        PS: PointStore,
+        Label: Copy + Sync,
+        Attributes : Copy + Sync+ Hash + Eq + Send,
+        NodeView: UpdatableMultiNodeView<Label,Attributes>,
+        PS: PointStore<Label,Attributes>,
     {
-        let node = node_view.get_current_node();
+        let node = node_view.current_node();
         if self.node_store.is_leaf(node) {
-            node_view.update_at_leaf(point, node, &self.node_store, &point_store, &visitor_info);
-            visitor.accept_leaf(point, visitor_info, node_view);
+            node_view.update_at_leaf(point, node, &self.node_store, point_store, &visitor_info)?;
+            visitor.accept_leaf(point, visitor_info, node_view)?;
         } else {
             let parent = node;
             node_view.set_trigger_traversing_down(
@@ -310,9 +344,9 @@ where
                 point_store,
                 visitor_info,
             );
-            if missing_coordinates[self.node_store.get_cut_dimension(parent)] {
-                let right = self.node_store.get_left_index(parent);
-                let left = self.node_store.get_right_index(parent);
+            if missing_coordinates[self.node_store.cut_dimension(parent)] {
+                let right = self.node_store.left_index(parent);
+                let left = self.node_store.right_index(parent);
                 node_view.set_current_node(left);
                 self.traverse_multi_with_missing_coordinates(
                     node_view,
@@ -321,8 +355,8 @@ where
                     point,
                     missing_coordinates,
                     point_store,
-                );
-                let saved_box = node_view.get_bounding_box();
+                )?;
+                let saved_box = node_view.bounding_box();
                 node_view.set_current_node(right);
                 self.traverse_multi_with_missing_coordinates(
                     node_view,
@@ -331,9 +365,9 @@ where
                     point,
                     missing_coordinates,
                     point_store,
-                );
-                visitor.combine_branches(point, &node_view, visitor_info);
-                if !visitor.is_converged() {
+                )?;
+                visitor.combine_branches(point, &node_view, visitor_info)?;
+                if !visitor.is_converged()? {
                     node_view.merge_paths(
                         parent,
                         saved_box,
@@ -341,7 +375,7 @@ where
                         missing_coordinates,
                         &self.node_store,
                         point_store,
-                    );
+                    )?;
                 }
             } else {
                 node_view.update_from_node_traversing_down(
@@ -350,7 +384,7 @@ where
                     &self.node_store,
                     point_store,
                     &visitor_info,
-                );
+                )?;
                 self.traverse_multi_with_missing_coordinates(
                     node_view,
                     visitor,
@@ -358,8 +392,8 @@ where
                     point,
                     missing_coordinates,
                     point_store,
-                );
-                if !visitor.is_converged() {
+                )?;
+                if !visitor.is_converged()? {
                     node_view.update_view_to_parent_with_missing_coordinates(
                         parent,
                         point,
@@ -367,44 +401,47 @@ where
                         &self.node_store,
                         point_store,
                         &visitor_info,
-                    );
+                    )?;
                 }
             }
-            if !visitor.is_converged() {
-                visitor.accept(point, visitor_info, node_view);
+            if !visitor.is_converged()? {
+                visitor.accept(point, visitor_info, node_view)?;
             }
         }
+        Ok(())
     }
 
     pub fn get_size(&self) -> usize {
-        self.node_store.get_size(self.dimensions.into()) + std::mem::size_of::<RCFTree<C, P, N>>()
+        self.node_store.size(self.dimensions.into()) + std::mem::size_of::<RCFTree<C, P, N>>()
     }
 
-    fn traverse_recursive<R, PS, NodeView, V>(
+    fn traverse_recursive<R, PS, NodeView, V,Label,Attributes>(
         &self,
         point: &[f32],
         node_view: &mut NodeView,
         visitor: &mut V,
         visitor_info: &VisitorInfo,
         point_store: &PS,
-    ) where
-        PS: PointStore,
+    ) -> Result<()> where
+        PS: PointStore<Label,Attributes>,
         V: Visitor<NodeView, R>,
         R: Clone,
-        NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
+        Label: Copy + Sync,
+        Attributes : Copy + Sync+ Hash + Eq + Send,
+        NodeView: UpdatableNodeView<Label,Attributes>,
     {
-        let current_node = node_view.get_current_node();
+        let current_node = node_view.current_node();
         if self.node_store.is_leaf(current_node) {
             node_view.update_at_leaf(
                 point,
                 current_node,
                 &self.node_store,
-                &point_store,
+                point_store,
                 &visitor_info,
-            );
-            visitor.accept_leaf(point, visitor_info, &node_view);
+            )?;
+            visitor.accept_leaf(point, visitor_info, &node_view)?;
             if visitor.use_shadow_box() {
-                node_view.set_use_shadow_box(&self.node_store, point_store);
+                node_view.set_use_shadow_box(&self.node_store, point_store)?;
             }
         } else {
             node_view.update_from_node_traversing_down(
@@ -413,31 +450,30 @@ where
                 &self.node_store,
                 point_store,
                 visitor_info,
-            );
-            self.traverse_recursive(point, node_view, visitor, visitor_info, point_store);
-            if !visitor.is_converged() {
+            )?;
+            self.traverse_recursive(point, node_view, visitor, visitor_info, point_store)?;
+            if !visitor.is_converged()? {
                 node_view.update_from_node_traversing_up(
                     point,
                     current_node,
                     &self.node_store,
-                    &point_store,
+                    point_store,
                     &visitor_info,
-                );
-                visitor.accept(point, visitor_info, &node_view);
+                )?;
+                visitor.accept(point, visitor_info, &node_view)?;
             }
         }
+        Ok(())
     }
 }
 
-pub trait Traversable<NodeView, N, PS, V, R>
+pub trait Traversable<NodeView, V, R, Label,Attributes>
 where
-    N: Location,
-    <N as TryFrom<usize>>::Error: Debug,
-    usize: From<N>,
-    PS: PointStore,
     V: Visitor<NodeView, R>,
+    Label: Copy + Sync,
+    Attributes: Copy + Sync+ Hash + Eq + Send,
 {
-    fn traverse(
+    fn traverse<PS: PointStore<Label,Attributes>>(
         &self,
         point: &[f32],
         parameters: &[usize],
@@ -445,26 +481,28 @@ where
         visitor_info: &VisitorInfo,
         point_store: &PS,
         default: &R,
-    ) -> R;
+    ) -> Result<R>;
 }
 
-impl<C, P, N, PS, NodeView, V, R> Traversable<NodeView, N, PS, V, R> for RCFTree<C, P, N>
+impl<C, P, N, NodeView, V, R, Label,Attributes> Traversable<NodeView, V, R,Label,Attributes>
+for RCFTree<C, P, N>
 where
     C: Location,
     <C as TryFrom<usize>>::Error: Debug,
     usize: From<C>,
-    P: Location,
+    P: Location + Eq + Hash,
     <P as TryFrom<usize>>::Error: Debug,
     usize: From<P>,
     N: Location,
     <N as TryFrom<usize>>::Error: Debug,
     usize: From<N>,
-    PS: PointStore,
-    NodeView: UpdatableNodeView<VectorNodeStore<C, P, N>, PS>,
+    Label: Copy + Sync,
+    Attributes : Copy + Sync+ Hash + Eq + Send,
+    NodeView: UpdatableNodeView<Label,Attributes>,
     V: Visitor<NodeView, R>,
     R: Clone,
 {
-    fn traverse(
+    fn traverse<PS: PointStore<Label,Attributes>>(
         &self,
         point: &[f32],
         parameters: &[usize],
@@ -472,9 +510,9 @@ where
         visitor_info: &VisitorInfo,
         point_store: &PS,
         default: &R,
-    ) -> R {
+    ) -> Result<R> {
         if self.root == self.node_store.null_node() {
-            return default.clone();
+            return Ok(default.clone());
         }
         let mut visitor = visitor_factory(self.tree_mass, parameters, &visitor_info);
         let mut node_view = NodeView::create(self.root, &self.node_store);
@@ -483,8 +521,8 @@ where
             &mut node_view,
             &mut visitor,
             &visitor_info,
-            &point_store,
-        );
+            point_store,
+        )?;
         visitor.result(visitor_info)
     }
 }

@@ -9,12 +9,11 @@ use rand::{prelude::ThreadRng, Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
 use rcflib::{
-    common::{multidimdatawithkey::MultiDimDataWithKey, samplesummary::summarize},
-    l1distance, l2distance, linfinitydistance,
+    common::{multidimdatawithkey::MultiDimDataWithKey},
+    l2distance,
 };
-use rcflib::common::cluster::{Center, multi_cluster_as_object_with_weight_array, multi_cluster_as_ref, multi_cluster_as_weighted_ref, multi_cluster_obj, MultiCenter, persist, single_centroid_cluster_slice_with_weight_arrays, single_centroid_cluster_weighted_vec, single_centroid_cluster_weighted_vec_with_distance_over_slices, single_centroid_unweighted_cluster_slice};
+use rcflib::common::cluster::MultiCenter;
 use rcflib::common::multidimdatawithkey::new_vec;
-use rcflib::errors::RCFError;
 use rcflib::glad::GlobalLocalAnomalyDetector;
 
 
@@ -26,7 +25,7 @@ fn rotate_clockwise(point: &[f32], theta: f32) -> Vec<f32> {
 }
 
 fn gen_numeric_data(data_size:usize, seed:u64, shift : (f32,f32), number_of_fans: usize) -> MultiDimDataWithKey {
-    let mut vec_mean = vec![shift.0,shift.1];
+    let vec_mean = vec![shift.0,shift.1];
     let scale = vec![1.0,0.5/number_of_fans as f32];
     let mut data :Vec<Vec<f32>> = Vec::new();
     let mut labels:Vec<usize> = Vec::new();
@@ -55,7 +54,7 @@ fn vec_dist(a: &Vec<f32>, b : &Vec<f32>) -> f64 {
     l2distance(a,b)
 }
 
-fn bad_distance<T :?Sized>(a : &T, b:&T) -> f64{
+fn bad_distance<T :?Sized>(_a : &T, _b:&T) -> f64{
     -0.0001
 }
 
@@ -66,18 +65,17 @@ fn numeric_glad() {
     let mut generator = ThreadRng::default();
     let one_seed: u64 = generator.gen();
     println!(" single seed is {}", one_seed);
-    let mut rng = ChaCha20Rng::seed_from_u64(one_seed);
     let capacity = 2000;
     let time_decay = 1.0 /capacity as f64;
     let data_with_key = gen_numeric_data(data_size,one_seed,(5.0 + 1.0/number_of_fans as f32,0.0),number_of_fans);
-    let mut glad = GlobalLocalAnomalyDetector::<Vec<f32>>::new(2000,0,time_decay,5, 0.1,true);
+    let mut glad = GlobalLocalAnomalyDetector::<Vec<f32>>::new(2000,0,time_decay,5, 0.1,true).unwrap();
 
     glad.set_z_factor(6.0 + number_of_fans as f32/4.0);
 
     let mut false_neg = 0;
     let mut false_pos = 0;
     let mut true_pos = 0;
-    let mut print_clusters = false;
+    let print_clusters = false;
     // set the above to see the cluster centers printed with associated relative mass
     // each block is separated by two println!()
     // a simple visualization tool can plot an animation of the clusters
@@ -132,8 +130,8 @@ pub fn toy_d(a:&Vec<char>, b: &Vec<char>) -> f64 {
     if a.len() > b.len() {
         return toy_d(b, a);
     }
-    let mut one = vec![0.0;(b.len()+1)];
-    let mut two = vec![0.0;(b.len()+1)];
+    let mut one = vec![0.0;b.len()+1];
+    let mut two = vec![0.0;b.len()+1];
 
     for j in 0..b.len()+1 {
         one[j] = j as f64;
@@ -231,7 +229,7 @@ fn string_glad() {
 
     let print_clusters_strings = true;
 
-    let mut glad = GlobalLocalAnomalyDetector::<Vec<char>>::new(2000,0,time_decay,5, 0.1,false);
+    let mut glad = GlobalLocalAnomalyDetector::<Vec<char>>::new(2000,0,time_decay,5, 0.1,false).unwrap();
 
     // we will not store the points but perform streaming
 
@@ -252,7 +250,7 @@ fn string_glad() {
             let prob = if rng.gen::<f64>() < 0.5 {
                 gap_prob_of_a
             } else {
-                (1.0 - gap_prob_of_a )
+                1.0 - gap_prob_of_a
             };
             injected = false;
             point = get_ab_array(string_size, prob, &mut rng, flag, 0.25 * i as f64/ data_size as f64);

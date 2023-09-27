@@ -2,10 +2,9 @@
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::RngCore;
-use crate::common::cluster::{multi_cluster_as_object_with_weight_array, multi_cluster_as_weighted_obj, MultiCenter, persist};
+use crate::common::cluster::{multi_cluster_as_weighted_obj, MultiCenter, persist};
 use crate::util::check_argument;
 use crate::trcf::basicthresholder::BasicThresholder;
-use crate::common::intervalstoremanager;
 use crate::common::intervalstoremanager::IntervalStoreManager;
 use crate::types::Result;
 
@@ -52,13 +51,13 @@ pub struct GlobalLocalAnomalyDetector<T:Clone + Sync> {
 }
 
 impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
-    pub fn new(capacity: usize, random_seed: u64, time_decay: f64, number_of_representatives: usize, shrinkage: f32, is_compact: bool) -> Self{
-        let mut basic_thresholder = BasicThresholder::new_adjustible(time_decay as f32,false);
+    pub fn new(capacity: usize, random_seed: u64, time_decay: f64, number_of_representatives: usize, shrinkage: f32, is_compact: bool) -> Result<Self>{
+        let mut basic_thresholder = BasicThresholder::new_adjustible(time_decay,false)?;
         basic_thresholder.set_absolute_threshold(1.2);
         if !is_compact {
             basic_thresholder.set_z_factor(2.5);
         }
-        GlobalLocalAnomalyDetector{
+        Ok(GlobalLocalAnomalyDetector{
             capacity,
             current_size: 0,
             random_seed,
@@ -83,7 +82,7 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
             ignore_below: DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE,
             initial_accept_fraction: 0.125,
             //global_distance: ()
-        }
+        })
     }
 
     fn initial_accept_probability(&self, fill_fraction: f64) -> f64 {
@@ -101,7 +100,7 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
         if self.current_size == self.capacity {
             return 1.0;
         };
-        (self.current_size as f64 / self.capacity as f64)
+        self.current_size as f64 / self.capacity as f64
     }
 
     fn compute_weight(&self, random_number: f64, weight: f32) -> f64 {
@@ -144,7 +143,7 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
         evicted_point
     }
 
-    fn sample(&mut self, object: &T, weight: f32) -> bool {
+    fn sample(&mut self, object: &T, weight: f32) -> Result<bool> {
         self.sequence_number += 1;
         self.entries_seen += 1;
         let mut initial = false;
@@ -160,15 +159,15 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
             if !initial {
                 let old_index = self.evict_max().1;
                 self.evicted = Some(self.object_list[old_index].clone());
-                self.interval_manager.release(old_index);
+                self.interval_manager.release(old_index)?;
             }
-            let index = self.interval_manager.get();
+            let index = self.interval_manager.get()?;
             if index < self.object_list.len() {
                 self.object_list[index] = (object.clone(), weight);
             } else {
                 self.object_list.push((object.clone(), weight));
             }
-            if (self.heap.len() == self.current_size){
+            if self.heap.len() == self.current_size {
                 self.heap.push((heap_weight, index));
             } else {
                 self.heap[self.current_size] = (heap_weight, index);
@@ -185,9 +184,9 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
                     break;
                 }
             }
-            return true;
+            return Ok(true);
         };
-        false
+        Ok(false)
     }
 
     pub fn set_z_factor(&mut self, z_factor : f32){
@@ -195,7 +194,7 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
     }
 
     pub fn score(&self, current: &T, local_distance: fn(&T, &T) -> f64, consider_occlusion: bool) -> Result<Vec<(T, f32)>> {
-        if (self.clusters.len() == 0) {
+        if self.clusters.len() == 0 {
             return Ok(Vec::new());
         } else {
             let mut candidate_list: Vec<(usize, (f64, &T), f64)> = Vec::new();
@@ -204,15 +203,16 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
                 let close = self.clusters[j].distance_to_point_and_ref(current, self.ignore_below, local_distance)?;
                 candidate_list.push((j, close, rad));
             }
-            candidate_list.sort_by(|a, b| a.1.0.partial_cmp(&b.1.0).unwrap());
+            candidate_list.sort_by(|a, b| a.1.0.partial_cmp(&b.1.0)
+                .expect("should not have NaN/Infinities"));
 
-            if (candidate_list[0].1.0 == 0.0) {
+            if candidate_list[0].1.0 == 0.0 {
                 return Ok(vec![(candidate_list[0].1.1.clone(), 0.0)]);
             }
             let mut index = 0;
-            while (index < candidate_list.len()) {
+            while index < candidate_list.len() {
                 let head = candidate_list[index];
-                if (consider_occlusion) {
+                if consider_occlusion {
                     for j in index + 1..candidate_list.len() {
                         let occlude = (local_distance)(head.1.1, candidate_list[j].1.1);
                         check_argument(occlude>=0.0, "distances cannot be negative")?;
@@ -243,10 +243,10 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
                    -> Result<GenericAnomalyDescriptor<T>> {
         check_argument(weight >= 0.0, "weight cannot be negative")?;
         // recompute clusters first; this enables easier merges and deserialization
-        if (self.sequence_number > self.last_cluster + self.do_not_recluster_within) {
+        if self.sequence_number > self.last_cluster + self.do_not_recluster_within {
             let current_mean = self.basic_thresholder.primary_mean() as f32;
-            if (f32::abs(current_mean - self.last_mean) > 0.1 || current_mean > 1.7f32
-                || self.sequence_number > self.last_cluster + 20 * self.do_not_recluster_within) {
+            if f32::abs(current_mean - self.last_mean) > 0.1 || current_mean > 1.7f32
+                || self.sequence_number > self.last_cluster + 20 * self.do_not_recluster_within {
                 self.last_cluster = self.sequence_number;
                 self.last_mean = current_mean;
                 let temp = multi_cluster_as_weighted_obj(&self.object_list,
@@ -258,7 +258,9 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
         let threshold = self.basic_thresholder.threshold();
         let mut grade: f32 = 0.0;
         let score: f32 = if score_list.len() == 0 { 0.0 } else {
-            score_list.iter().map(|a| a.1).min_by(|a,b| a.partial_cmp(b).unwrap()).unwrap()
+            score_list.iter().map(|a| a.1).min_by(|a, b| a.partial_cmp(b)
+                .expect("should not contain NaN, corrupt state"))
+                .expect("should be total order, corrupt state")
         };
 
         if score_list.len() > 0 {
@@ -266,7 +268,7 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
                 // an exponential attribution
                 let sum: f64 = score_list.iter().map(|a|
                     if a.1 == SCORE_MAX { 0.0f64 } else {
-                        f64::exp(-( a.1 * a.1) as f64)
+                        f64::exp(-(a.1 * a.1) as f64)
                     }
                 ).sum();
                 for mut item in &mut score_list {
@@ -281,13 +283,13 @@ impl<T:Clone + Sync> GlobalLocalAnomalyDetector<T> {
                     item.1 = 1.0 / (y as f32);
                 }
             }
-            grade = self.basic_thresholder.anomaly_grade(score, false);
+            grade = self.basic_thresholder.primary_grade(score);
             let other = self.basic_thresholder.z_factor();
             self.basic_thresholder.update_both(score, f32::min(score, other));
         }
-        self.sample(object, weight);
+        self.sample(object, weight)?;
 
-        return Ok(GenericAnomalyDescriptor {
+        Ok(GenericAnomalyDescriptor {
             representative_list: score_list,
             score: score as f64,
             threshold,

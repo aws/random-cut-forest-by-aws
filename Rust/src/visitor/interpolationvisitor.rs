@@ -2,7 +2,9 @@ use crate::{
     common::{directionaldensity::InterpolationMeasure},
     samplerplustree::nodeview::LargeNodeView,
     visitor::visitor::{Visitor, VisitorInfo},
+    types::Result,
 };
+use crate::errors::RCFError;
 
 #[repr(C)]
 pub struct InterpolationVisitor {
@@ -44,28 +46,31 @@ impl Visitor<LargeNodeView, InterpolationMeasure> for InterpolationVisitor {
         point: &[f32],
         visitor_info: &VisitorInfo,
         node_view: &LargeNodeView,
-    ) {
-        let mass = node_view.get_mass();
-        self.leaf_index = node_view.get_leaf_index();
+    ) ->Result<()>{
+        let mass = node_view.mass();
+        self.leaf_index = node_view.leaf_index();
         if mass > visitor_info.ignore_mass {
             if node_view.is_duplicate() {
                 self.score = (visitor_info.damp)(mass, self.tree_mass)
-                    * (visitor_info.score_seen)(node_view.get_depth(), mass);
+                    * (visitor_info.score_seen)(node_view.depth(), mass);
                 self.hit_duplicate = true;
                 self.use_shadow_box = true;
             } else {
-                let t = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+                let t = (visitor_info.score_unseen)(node_view.depth(), mass);
                 self.score = t;
-                let bounding_box = node_view.bounding_box();
-                self.interpolation_measure.update(point, &bounding_box, t);
+                match &node_view.bounding_box() {
+                    Some(x) => {self.interpolation_measure.update(point, x, t); Ok(())},
+                    _ => Err(RCFError::InvalidArgument {msg :" incorrect state"})
+                }?;
             }
         } else {
-            self.score = (visitor_info.score_unseen)(node_view.get_depth(), mass);
+            self.score = (visitor_info.score_unseen)(node_view.depth(), mass);
             self.use_shadow_box = true;
         }
+        Ok(())
     }
 
-    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &LargeNodeView) {
+    fn accept(&mut self, point: &[f32], visitor_info: &VisitorInfo, node_view: &LargeNodeView) -> Result<()>{
         if !self.converged {
             let bounding_box = if !self.use_shadow_box {
                 node_view.bounding_box()
@@ -73,10 +78,11 @@ impl Visitor<LargeNodeView, InterpolationMeasure> for InterpolationVisitor {
                 node_view.shadow_box()
             };
             let new_value =
-                (visitor_info.score_unseen)(node_view.get_depth(), node_view.get_mass());
-            let prob = self
-                .interpolation_measure
-                .update(point, &bounding_box, new_value);
+                (visitor_info.score_unseen)(node_view.depth(), node_view.mass());
+            let prob = match &bounding_box {
+                Some(x) => Ok(self.interpolation_measure.update(point, &x, new_value)),
+                _ => Err(RCFError::InvalidArgument {msg: "incorrect state"})
+            }?;
             if prob == 0.0 {
                 self.converged = true;
             } else {
@@ -85,17 +91,18 @@ impl Visitor<LargeNodeView, InterpolationMeasure> for InterpolationVisitor {
                 }
             }
         }
+        Ok(())
     }
 
-    fn result(&self, visitor_info: &VisitorInfo) -> InterpolationMeasure {
+    fn result(&self, visitor_info: &VisitorInfo) -> Result<InterpolationMeasure> {
         let t = (visitor_info.normalizer)(self.score, self.tree_mass);
         let mut answer = self.interpolation_measure.clone();
         answer.measure.normalize(t);
-        answer
+        Ok(answer)
     }
 
-    fn is_converged(&self) -> bool {
-        self.converged
+    fn is_converged(&self) -> Result<bool> {
+        Ok(self.converged)
     }
 
     fn use_shadow_box(&self) -> bool {

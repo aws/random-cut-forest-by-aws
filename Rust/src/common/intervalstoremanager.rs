@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use crate::types::Result;
+use crate::util::check_argument;
 
 #[repr(C)]
 pub struct IntervalStoreManager<T> {
@@ -52,14 +54,11 @@ where
         self.last_in_use == 0
     }
 
-    pub fn get(&mut self) -> usize
+    pub fn get(&mut self) -> Result<usize>
     where
         <T as TryFrom<usize>>::Error: Debug,
     {
-        if self.is_empty() {
-            println!(" no more indices left");
-            panic!();
-        }
+        check_argument(!self.is_empty(),"no more indices left in interval manager")?;
         let answer = self.free_indices_start[self.last_in_use - 1];
         let new_value: usize = answer.into();
         if answer == self.free_indices_end[self.last_in_use - 1] {
@@ -67,10 +66,10 @@ where
         } else {
             self.free_indices_start[self.last_in_use - 1] = (new_value + 1).try_into().unwrap();
         }
-        new_value
+        Ok(new_value)
     }
 
-    pub fn release(&mut self, index: usize)
+    pub fn release(&mut self, index: usize) -> Result<()>
     where
         <T as TryFrom<usize>>::Error: Debug,
     {
@@ -80,10 +79,10 @@ where
             let end: usize = self.free_indices_end[self.last_in_use - 1].into();
             if start == index + 1 {
                 self.free_indices_start[self.last_in_use - 1] = val;
-                return;
+                return Ok(());
             } else if end + 1 == index {
                 self.free_indices_end[self.last_in_use - 1] = val;
-                return;
+                return Ok(());
             }
         }
         if self.last_in_use < self.free_indices_start.len() {
@@ -94,6 +93,7 @@ where
             self.free_indices_end.resize(self.last_in_use + 1, val);
         }
         self.last_in_use += 1;
+        Ok(())
     }
 
     pub fn used(&self) -> usize {
