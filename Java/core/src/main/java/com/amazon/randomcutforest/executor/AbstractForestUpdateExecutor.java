@@ -36,6 +36,7 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
     protected final IStateCoordinator<PointReference, Point> updateCoordinator;
     protected final ComponentList<PointReference, Point> components;
+    protected boolean currentlySampling = true;
 
     /**
      * Create a new AbstractForestUpdateExecutor.
@@ -69,7 +70,8 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
 
     public void update(Point point, long sequenceNumber) {
         PointReference updateInput = updateCoordinator.initUpdate(point, sequenceNumber);
-        List<UpdateResult<PointReference>> results = (updateInput == null) ? Collections.emptyList()
+        boolean propagate = (updateInput != null) && currentlySampling;
+        List<UpdateResult<PointReference>> results = (!propagate) ? Collections.emptyList()
                 : updateInternal(updateInput, sequenceNumber);
         updateCoordinator.completeUpdate(results, updateInput);
     }
@@ -85,5 +87,9 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      *         update.
      */
     protected abstract List<UpdateResult<PointReference>> updateInternal(PointReference updateInput, long currentIndex);
+
+    public void setCurrentlySampling(boolean value) {
+        currentlySampling = value;
+    }
 
 }

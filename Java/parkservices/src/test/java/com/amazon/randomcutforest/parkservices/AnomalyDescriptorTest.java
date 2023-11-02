@@ -27,7 +27,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
-import com.amazon.randomcutforest.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
@@ -63,13 +63,13 @@ public class AnomalyDescriptorTest {
                 }
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 assertArrayEquals(firstResult.getCurrentInput(), point, 1e-6);
-                assertEquals(firstResult.scoringStrategy, strategy);
+                assertEquals(firstResult.getScoringStrategy(), strategy);
                 if (count < outputAfter || count < shingleSize) {
                     assertEquals(firstResult.getRCFScore(), 0);
                 } else {
                     // distances can be 0
                     assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
-                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getThreshold() > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions);
                     assertEquals(firstResult.getShift().length, baseDimensions);
                     assertTrue(firstResult.getRelativeIndex() <= 0);
@@ -87,7 +87,7 @@ public class AnomalyDescriptorTest {
 
                         assertNotNull(firstResult.getRelevantAttribution());
                         assertEquals(firstResult.getRelevantAttribution().length, baseDimensions);
-                        assertEquals(firstResult.attribution.getHighLowSum(), firstResult.getRCFScore(), 1e-6);
+                        assertEquals(firstResult.getAttribution().getHighLowSum(), firstResult.getRCFScore(), 1e-6);
                         // the reverse of this condition need not be true -- the predictor corrector
                         // often may declare grade 0 even when score is greater than threshold, to
                         // account for shingling and initial results that populate the thresholder
@@ -130,13 +130,13 @@ public class AnomalyDescriptorTest {
             for (double[] point : dataWithKeys.data) {
                 AnomalyDescriptor firstResult = first.process(point, 0L);
                 assertArrayEquals(firstResult.getCurrentInput(), point, 1e-6);
-                assertEquals(firstResult.scoringStrategy, strategy);
+                assertEquals(firstResult.getScoringStrategy(), strategy);
                 if (count < outputAfter || count < shingleSize) {
                     assertEquals(firstResult.getRCFScore(), 0);
                 } else {
                     // distances can be 0
                     assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getRCFScore() > 0);
-                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.threshold > 0);
+                    assertTrue(strategy == ScoringStrategy.DISTANCE || firstResult.getThreshold() > 0);
                     assertEquals(firstResult.getScale().length, baseDimensions + 1);
                     assertEquals(firstResult.getShift().length, baseDimensions + 1);
                     assertTrue(firstResult.getRelativeIndex() <= 0);
@@ -146,7 +146,7 @@ public class AnomalyDescriptorTest {
                         if (firstResult.getRelativeIndex() == 0) {
                             assertArrayEquals(firstResult.getPastValues(), firstResult.getCurrentInput(), 1e-10);
                         }
-                        assertEquals(firstResult.attribution.getHighLowSum(), firstResult.getRCFScore(), 1e-6);
+                        assertEquals(firstResult.getAttribution().getHighLowSum(), firstResult.getRCFScore(), 1e-6);
                         assertNotNull(firstResult.getRelevantAttribution());
                         assertEquals(firstResult.getRelevantAttribution().length, baseDimensions);
                         assertTrue(strategy == ScoringStrategy.MULTI_MODE_RECALL

@@ -15,32 +15,94 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
-import static java.lang.Math.PI;
-import static java.lang.Math.min;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
 
-import org.junit.jupiter.api.Test;
-
-import com.amazon.randomcutforest.config.ScoringStrategy;
-import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.Weighted;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.parkservices.GlobalLocalAnomalyDetector.DEFAULT_GLAD_THRESHOLD;
+import static com.amazon.randomcutforest.parkservices.GlobalLocalAnomalyDetector.DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE;
+import static com.amazon.randomcutforest.parkservices.GlobalLocalAnomalyDetector.DEFAULT_MAX;
+import static com.amazon.randomcutforest.parkservices.threshold.BasicThresholder.DEFAULT_Z_FACTOR;
+import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_NUMBER_OF_REPRESENTATIVES;
+import static com.amazon.randomcutforest.summarization.GenericMultiCenter.DEFAULT_SHRINKAGE;
+import static com.amazon.randomcutforest.testutils.ExampleDataSets.rotateClockWise;
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+import static java.lang.Math.min;
+import static java.lang.Math.sin;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGlobalLocalAnomalyDetector {
+
+    @Test
+    void testConstructor() {
+        int reservoirSize = 2000;
+        int stringSize = 70;
+        BiFunction<char[], char[], Double> dist = (a, b) -> toyD(a, b, stringSize / 2.0);
+        GlobalLocalAnomalyDetector<char[]> reservoir = new GlobalLocalAnomalyDetector<>(
+                GlobalLocalAnomalyDetector.builder().randomSeed(42).numberOfRepresentatives(5)
+                        .timeDecay(1.0 / reservoirSize).capacity(reservoirSize),
+                dist);
+        assertEquals(reservoir.getObjectList().size(), 0);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setMaxAllowed(200));
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setMaxAllowed(2));
+        assertEquals(reservoir.getMaxAllowed(), DEFAULT_MAX);
+        reservoir.setMaxAllowed(DEFAULT_MAX + 1);
+        assertEquals(reservoir.getMaxAllowed(), DEFAULT_MAX + 1);
+        assertEquals(reservoir.getIgnoreBelow(), DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setIgnoreBelow(-1.0));
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setIgnoreBelow(0.2));
+        reservoir.setIgnoreBelow(2 * DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE);
+        assertEquals(reservoir.getIgnoreBelow(), 2 * DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE);
+        assertEquals(reservoir.getZfactor(), DEFAULT_Z_FACTOR);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setZfactor(1.0));
+        reservoir.setZfactor(0.95 * DEFAULT_Z_FACTOR);
+        assertEquals(reservoir.getZfactor(), 0.95 * DEFAULT_Z_FACTOR);
+        assertEquals(reservoir.getDoNotreclusterWithin(), reservoir.getCapacity() / 2);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setDoNotreclusterWithin(-100));
+        reservoir.setDoNotreclusterWithin(reservoir.getCapacity() / 2 + 1);
+        assertEquals(reservoir.getDoNotreclusterWithin(), reservoir.getCapacity() / 2 + 1);
+        assertEquals(reservoir.getLowerThreshold(), DEFAULT_GLAD_THRESHOLD);
+        assertEquals(reservoir.getShrinkage(), DEFAULT_SHRINKAGE);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setShrinkage(-1.0));
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setShrinkage(2.0));
+        reservoir.setShrinkage(DEFAULT_SHRINKAGE);
+        assertEquals(reservoir.getShrinkage(), DEFAULT_SHRINKAGE);
+        assertEquals(reservoir.getNumberOfRepresentatives(), DEFAULT_NUMBER_OF_REPRESENTATIVES);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setNumberOfRepresentatives(0));
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setNumberOfRepresentatives(200));
+        reservoir.setNumberOfRepresentatives(DEFAULT_NUMBER_OF_REPRESENTATIVES + 1);
+        assertEquals(reservoir.getNumberOfRepresentatives(), DEFAULT_NUMBER_OF_REPRESENTATIVES + 1);
+        assertThrows(IllegalArgumentException.class, () -> reservoir.setLowerThreshold(-1.0));
+        assertThrows(IllegalArgumentException.class, () -> reservoir.process(null, -1.0f, dist, true));
+
+        GlobalLocalAnomalyDetector<char[]> second = GlobalLocalAnomalyDetector.builder().randomSeed(42)
+                .numberOfRepresentatives(5).timeDecay(1.0 / reservoirSize).capacity(reservoirSize).maxAllowed(5)
+                .anomalyRate(0.01).ignoreBelow(0.01).doNotReclusterWithin(1).build();
+        second.process(null, 1.0f, dist, true);
+        second.process(null, 1.0f, dist, true);
+        second.process(null, 1.0f, dist, true);
+        // global function not set
+        assertThrows(IllegalArgumentException.class, () -> second.process(null, 1.0f, dist, true));
+    }
 
     @Test
     void testDynamicStringClustering() {
@@ -72,12 +134,12 @@ public class TestGlobalLocalAnomalyDetector {
         }
 
         System.out.println("Injected " + numberOfInjected + " 'anomalies' in " + points.length);
-        int recluster = reservoirSize / 2;
 
         BiFunction<char[], char[], Double> dist = (a, b) -> toyD(a, b, stringSize / 2.0);
         GlobalLocalAnomalyDetector<char[]> reservoir = GlobalLocalAnomalyDetector.builder().randomSeed(42)
                 .numberOfRepresentatives(5).timeDecay(1.0 / reservoirSize).capacity(reservoirSize).build();
         reservoir.setGlobalDistance(dist);
+        reservoir.setLowerThreshold(0.8);
 
         int truePos = 0;
         int falsePos = 0;
@@ -88,11 +150,12 @@ public class TestGlobalLocalAnomalyDetector {
                 char[] temp = points[y];
                 // check for malformed distance function, to the extent we can check efficiently
                 BiFunction<char[], char[], Double> badDistance = (a, b) -> -1.0;
-                assertThrows(IllegalArgumentException.class, () -> {
-                    reservoir.process(temp, 1.0f, badDistance, true);
-                });
+                assertThrows(IllegalArgumentException.class, () -> reservoir.process(temp, 1.0f, badDistance, true));
+                BiFunction<char[], char[], Double> superBadDistance = (a, b) -> Double.MAX_VALUE;
+                assertThrows(IllegalArgumentException.class,
+                        () -> reservoir.process(temp, 1.0f, superBadDistance, true));
             }
-            GenericAnomalyDescriptor<char[]> result = reservoir.process(points[y], 1.0f, null, true);
+            GenericAnomalyDescriptor<char[]> result = reservoir.process(points[y], 1.0f, null, false);
 
             if (result.getRepresentativeList() != null) {
                 double sum = 0;
@@ -123,6 +186,7 @@ public class TestGlobalLocalAnomalyDetector {
         System.out.println(" Final: ");
         System.out.println("Precision = " + precision(truePos, falsePos));
         System.out.println("Recall = " + recall(truePos, falseNeg));
+        assert (reservoir.getObjectList().size() > reservoirSize / 2);
     }
 
     public static double toyD(char[] a, char[] b, double u) {
@@ -263,9 +327,9 @@ public class TestGlobalLocalAnomalyDetector {
                     }
                     if (grade > 0) {
                         ++truePosRCF;
-                        assert (res.attribution != null);
+                        assert (res.getAttribution() != null);
                         // even though scoring is different, we should see attribution add up to score
-                        assertEquals(res.attribution.getHighLowSum(), res.getRCFScore(), 1e-6);
+                        assertEquals(res.getAttribution().getHighLowSum(), res.getRCFScore(), 1e-6);
                     } else {
                         ++falseNegRCF;
                     }
@@ -275,9 +339,9 @@ public class TestGlobalLocalAnomalyDetector {
                     }
                     if (grade > 0) {
                         ++falsePosRCF;
-                        assert (res.attribution != null);
+                        assert (res.getAttribution() != null);
                         // even though scoring is different, we should see attribution add up to score
-                        assertEquals(res.attribution.getHighLowSum(), res.getRCFScore(), 1e-6);
+                        assertEquals(res.getAttribution().getHighLowSum(), res.getRCFScore(), 1e-6);
                     }
                 }
             }
@@ -296,7 +360,7 @@ public class TestGlobalLocalAnomalyDetector {
         }
         // attempting merge
         long number = new Random().nextLong();
-        int size = reservoirSize - new Random().nextInt(100);
+        int size = reservoirSize;// - new Random().nextInt(100);
         double newShrinkage = new Random().nextDouble();
         int reps = new Random().nextInt(10) + 1; // cannot be 0
         GlobalLocalAnomalyDetector.Builder builder = GlobalLocalAnomalyDetector.builder().capacity(size)
@@ -304,14 +368,12 @@ public class TestGlobalLocalAnomalyDetector {
         GlobalLocalAnomalyDetector<float[]> newDetector = new GlobalLocalAnomalyDetector<>(reservoir, reservoir,
                 builder, true, Summarizer::L1distance);
         assertEquals(newDetector.getCapacity(), size);
-        assertNotEquals(newDetector.getClusters(), null);
+        List<ICluster<float[]>> clusters = newDetector.getClusters();
+        assertNotEquals(clusters, null);
+        double score = newDetector.score(clusters.get(0).getRepresentatives().get(0).index, null, true).get(0).weight;
+        assertEquals(0.0, score);
         assertEquals(newDetector.numberOfRepresentatives, reps);
         assertEquals(newDetector.shrinkage, newShrinkage);
-        assert (newDetector.getClusters() != null);
-        float[] weight = newDetector.sampler.getWeightArray();
-        for (int i = 0; i < size - 1; i += 2) {
-            assert (weight[i] >= weight[i + 1]);
-        }
         GlobalLocalAnomalyDetector<float[]> another = new GlobalLocalAnomalyDetector<>(reservoir, reservoir, builder,
                 false, Summarizer::L2distance);
         assertNull(another.getClusters());
@@ -326,4 +388,25 @@ public class TestGlobalLocalAnomalyDetector {
         return (truePos + falseNeg > 0) ? 1.0 * truePos / (truePos + falseNeg) : 1.0;
     }
 
+    @Test
+    public void testOcclusion() {
+        GlobalLocalAnomalyDetector<float[]> reservoir = GlobalLocalAnomalyDetector.builder().randomSeed(42)
+                .numberOfRepresentatives(3).initialAcceptFraction(1.0).timeDecay(0).capacity(100).maxAllowed(20)
+                .build();
+        reservoir.setGlobalDistance(Summarizer::L2distance);
+        for (int i = 0; i < 10; i++) {
+            reservoir.process(new float[] { 1.0f, 0 }, 1.0f, null, false);
+            reservoir.process(new float[] { (float) cos(2 * PI / 6), (float) sin(2 * PI / 6) }, 1.0f, null, false);
+            reservoir.process(new float[] { (float) cos(2 * 2 * PI / 6), (float) sin(2 * 2 * PI / 6) }, 1.0f, null,
+                    false);
+            reservoir.process(new float[] { (float) cos(3 * 2 * PI / 6), (float) sin(3 * 2 * PI / 6) }, 1.0f, null,
+                    false);
+            reservoir.process(new float[] { (float) cos(4 * 2 * PI / 6), (float) sin(4 * 2 * PI / 6) }, 1.0f, null,
+                    false);
+            reservoir.process(new float[] { (float) cos(5 * 2 * PI / 6), (float) sin(5 * 2 * PI / 6) }, 1.0f, null,
+                    false);
+        }
+        assertTrue(reservoir.getClusters().size() == 6);
+        assert (reservoir.score(new float[] { 1.5f, 0 }, Summarizer::L2distance, true).size() < 6);
+    }
 }

@@ -64,18 +64,18 @@ public class ConditionalSampleSummarizer {
      */
     protected boolean project = false;
 
-    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality) {
-        this.missingDimensions = Arrays.copyOf(missingDimensions, missingDimensions.length);
-        this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
-        this.centrality = centrality;
-    }
+    protected int numberOfReps = 1;
 
-    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality,
-            boolean project) {
+    protected double shrinkage = 0;
+
+    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality, boolean project,
+            int numberOfReps, double shrinkage) {
         this.missingDimensions = Arrays.copyOf(missingDimensions, missingDimensions.length);
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.centrality = centrality;
         this.project = project;
+        this.numberOfReps = numberOfReps;
+        this.shrinkage = shrinkage;
     }
 
     public SampleSummary summarize(List<ConditionalTreeSample> alist) {
@@ -177,20 +177,11 @@ public class ConditionalSampleSummarizer {
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
         maxAllowed = min(maxAllowed, num);
-        SampleSummary projectedSummary = Summarizer.l2summarize(typicalPoints, maxAllowed, num, false, 72);
 
-        float[][] pointList = new float[projectedSummary.summaryPoints.length][];
-        float[] likelihood = new float[projectedSummary.summaryPoints.length];
+        SampleSummary projectedSummary = Summarizer.summarize(typicalPoints, maxAllowed, num, false,
+                Summarizer::L2distance, 72, false, numberOfReps, shrinkage);
 
-        for (int i = 0; i < projectedSummary.summaryPoints.length; i++) {
-            pointList[i] = Arrays.copyOf(queryPoint, dimensions);
-            for (int j = 0; j < missingDimensions.length; j++) {
-                pointList[i][missingDimensions[j]] = projectedSummary.summaryPoints[i][j];
-            }
-            likelihood[i] = projectedSummary.relativeWeight[i];
-        }
-
-        return new SampleSummary(points, pointList, likelihood);
+        return new SampleSummary(points, projectedSummary);
     }
 
 }

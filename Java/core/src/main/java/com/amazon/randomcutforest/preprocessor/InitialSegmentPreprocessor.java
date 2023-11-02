@@ -1,0 +1,123 @@
+/*
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package com.amazon.randomcutforest.preprocessor;
+
+import static com.amazon.randomcutforest.preprocessor.transform.WeightedTransformer.NUMBER_OF_STATS;
+
+import java.util.Arrays;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.statistics.Deviation;
+
+@Getter
+@Setter
+public class InitialSegmentPreprocessor extends Preprocessor {
+
+    public InitialSegmentPreprocessor(Builder<?> builder) {
+        super(builder);
+        initialValues = new double[startNormalization][];
+        initialTimeStamps = new long[startNormalization];
+    }
+
+    @Override
+    public void update(double[] point, float[] rcfPoint, long timestamp, int[] missing, RandomCutForest forest) {
+        if (valuesSeen < startNormalization) {
+            storeInitial(point, timestamp);
+            // will change valuesSeen
+            if (valuesSeen == startNormalization) {
+                dischargeInitial(forest);
+            }
+            return;
+        }
+        updateState(point, rcfPoint, timestamp, previousTimeStamps[shingleSize - 1]);
+        ++valuesSeen;
+        dataQuality[0].update(1.0);
+        if (forest.isInternalShinglingEnabled()) {
+            int length = inputLength + ((mode == ForestMode.TIME_AUGMENTED) ? 1 : 0);
+            float[] scaledInput = new float[length];
+            System.arraycopy(rcfPoint, rcfPoint.length - length, scaledInput, 0, length);
+            forest.update(scaledInput);
+        } else {
+            forest.update(rcfPoint);
+        }
+    }
+
+    /**
+     * stores initial data for normalization
+     *
+     * @param inputPoint input data
+     * @param timestamp  timestamp
+     */
+    protected void storeInitial(double[] inputPoint, long timestamp) {
+        initialTimeStamps[valuesSeen] = timestamp;
+        initialValues[valuesSeen] = Arrays.copyOf(inputPoint, inputPoint.length);
+        ++valuesSeen;
+    }
+
+    // computes the normalization statistics
+    protected Deviation[] getDeviations() {
+        if (requireInitialSegment(normalizeTime, transformMethod, mode)) {
+            Deviation[] tempList = new Deviation[NUMBER_OF_STATS * inputLength];
+            for (int j = 0; j < NUMBER_OF_STATS * inputLength; j++) {
+                tempList[j] = new Deviation(transformDecay);
+            }
+            for (int i = 0; i < initialValues.length; i++) {
+                for (int j = 0; j < inputLength; j++) {
+                    tempList[j].update(initialValues[i][j]);
+                    double value = (i == 0) ? 0 : initialValues[i][j] - initialValues[i - 1][j];
+                    tempList[j + inputLength].update(value);
+                }
+            }
+            for (int i = 0; i < initialValues.length; i++) {
+                for (int j = 0; j < inputLength; j++) {
+                    tempList[j + 2 * inputLength].update(tempList[j].getDeviation());
+                    tempList[j + 3 * inputLength].update(tempList[j + inputLength].getMean());
+                    tempList[j + 4 * inputLength].update(tempList[j + inputLength].getDeviation());
+                }
+            }
+            return tempList;
+        }
+        return null;
+    }
+
+    /**
+     * a block which executes once; it first computes the multipliers for
+     * normalization and then processes each of the stored inputs
+     */
+    protected void dischargeInitial(RandomCutForest forest) {
+        Deviation tempTimeDeviation = new Deviation();
+        for (int i = 0; i < initialTimeStamps.length - 1; i++) {
+            tempTimeDeviation.update(initialTimeStamps[i + 1] - initialTimeStamps[i]);
+        }
+        // should agree with getTimeScale()
+        double timeFactor = 1.0 + tempTimeDeviation.getDeviation();
+        Deviation[] deviations = getDeviations();
+        for (int i = 0; i < valuesSeen; i++) {
+            float[] scaledInput = getScaledInput(initialValues[i], initialTimeStamps[i], deviations, timeFactor);
+            updateState(initialValues[i], scaledInput, initialTimeStamps[i], previousTimeStamps[shingleSize - 1]);
+            dataQuality[0].update(1.0);
+            forest.update(scaledInput);
+        }
+
+        initialTimeStamps = null;
+        initialValues = null;
+    }
+
+}

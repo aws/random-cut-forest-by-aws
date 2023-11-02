@@ -21,6 +21,7 @@ import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -29,11 +30,13 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.calibration.Calibration;
-import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.calibration.ErrorHandler;
+import com.amazon.randomcutforest.parkservices.config.Calibration;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
 @Getter
@@ -58,6 +61,12 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         int errorHorizon;
         double percentile = DEFAULT_ERROR_PERCENTILE;
         protected Calibration calibrationMethod = DEFAULT_CALIBRATION;
+
+        protected boolean useRCF = true;
+
+        Optional<float[]> upperLimit = Optional.empty();
+
+        Optional<float[]> lowerLimit = Optional.empty();
 
         Builder() {
             super();
@@ -85,6 +94,21 @@ public class RCFCaster extends ThresholdedRandomCutForest {
             return this;
         }
 
+        public Builder lowerLimit(float[] lowerLimit) {
+            this.lowerLimit = Optional.of(lowerLimit);
+            return this;
+        }
+
+        public Builder upperLimit(float[] upperLimit) {
+            this.upperLimit = Optional.of(upperLimit);
+            return this;
+        }
+
+        public Builder useRCFCallibration(boolean use) {
+            useRCF = use;
+            return this;
+        }
+
         @Override
         public RCFCaster build() {
             checkArgument(forecastHorizon > 0, "need non-negative horizon");
@@ -98,6 +122,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                             + "perform estimation outside this code");
             checkArgument(!internalShinglingEnabled.isPresent() || internalShinglingEnabled.get(),
                     "internal shingling only");
+            int inputLength = dimensions / shingleSize;
             if (errorHorizon == 0) {
                 errorHorizon = max(sampleSize, 2 * forecastHorizon);
             }
@@ -114,7 +139,13 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         super(builder);
         forecastHorizon = builder.forecastHorizon;
         errorHorizon = builder.errorHorizon;
-        errorHandler = new ErrorHandler(builder);
+        ErrorHandler.Builder errorBuilder = ErrorHandler.builder().dimensions(builder.dimensions)
+                .shingleSize(builder.shingleSize).forecastHorizon(builder.forecastHorizon)
+                .percentile(builder.percentile).errorHorizon(builder.errorHorizon).useRCF(builder.useRCF);
+        builder.lowerLimit.ifPresent(errorBuilder::lowerLimit);
+        builder.upperLimit.ifPresent(errorBuilder::upperLimit);
+
+        errorHandler = new ErrorHandler(errorBuilder);
         calibrationMethod = builder.calibrationMethod;
     }
 
@@ -144,14 +175,8 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return process(inputPoint, timestamp, null);
     }
 
-    void augmentForecast(ForecastDescriptor answer) {
-        answer.setScoringStrategy(scoringStrategy);
-        answer = preprocessor.postProcess(predictorCorrector
-                .detect(preprocessor.preProcess(answer, lastAnomalyDescriptor, forest), lastAnomalyDescriptor, forest),
-                lastAnomalyDescriptor, forest);
-        if (saveDescriptor(answer)) {
-            lastAnomalyDescriptor = answer.copyOf();
-        }
+    void augment(ForecastDescriptor answer) {
+        super.augment(answer);
         TimedRangeVector timedForecast = new TimedRangeVector(
                 forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
 
@@ -165,11 +190,10 @@ public class RCFCaster extends ThresholdedRandomCutForest {
             // note that forecast would show up for a point even when the anomaly score is 0
             // because anomaly designation needs X previous points and forecast needs X
             // points; note that calibration would have been performed already
-            timedForecast = extrapolate(forecastHorizon);
+            timedForecast = extrapolate(forecastHorizon, true, 1.0);
 
             // note that internal timestamp of answer is 1 step in the past
             // outputReady corresponds to first (and subsequent) forecast
-
             errorHandler.updateForecasts(timedForecast.rangeVector);
         }
         answer.setTimedForecast(timedForecast);
@@ -198,7 +222,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                 // turn caching on temporarily
                 forest.setBoundingBoxCacheFraction(1.0);
             }
-            augmentForecast(answer);
+            augment(answer);
         } finally {
             if (cacheDisabled) {
                 // turn caching off
@@ -209,8 +233,8 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return answer;
     }
 
-    public void calibrate(Calibration calibration, RangeVector ranges) {
-        errorHandler.calibrate(calibration, ranges);
+    public void calibrate(double[] actuals, Calibration calibration, RangeVector ranges) {
+        errorHandler.calibrate(actuals, calibration, ranges);
     }
 
     @Override
@@ -220,7 +244,8 @@ public class RCFCaster extends ThresholdedRandomCutForest {
 
     public TimedRangeVector extrapolate(Calibration calibration, int horizon, boolean correct, double centrality) {
         TimedRangeVector answer = super.extrapolate(horizon, correct, centrality);
-        calibrate(calibration, answer.rangeVector);
+        double[] last = getPreprocessor().getShingledInput(getPreprocessor().getShingleSize() - 1);
+        calibrate(last, calibration, answer.rangeVector);
         return answer;
     }
 
@@ -239,7 +264,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                     for (double[] point : data) {
                         checkArgument(point.length == length, " nonuniform lengths ");
                         ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
-                        augmentForecast(description);
+                        augment(description);
                         if (filter.apply(description)) {
                             answer.add(description);
                         }
@@ -252,5 +277,13 @@ public class RCFCaster extends ThresholdedRandomCutForest {
             }
         }
         return answer;
+    }
+
+    public void setUpperLimit(float[] upperLimit) {
+        errorHandler.setUpperLimit(upperLimit);
+    }
+
+    public void setLowerLimit(float[] lowerLimit) {
+        errorHandler.setLowerLimit(lowerLimit);
     }
 }

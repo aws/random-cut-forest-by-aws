@@ -18,7 +18,6 @@ package com.amazon.randomcutforest.state.store;
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 
 import java.util.Arrays;
 
@@ -61,8 +60,6 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
             int shingleSize = state.getShingleSize();
             int baseDimension = dimensions / shingleSize;
             for (int i = 0; i < tempList.length; i++) {
-                checkArgument(tempList[i] % baseDimension == 0,
-                        "the location field should be a multiple of dimension/shingle size for versions before 3.0");
                 locationList[i] = tempList[i] / baseDimension;
             }
         } else {
@@ -83,13 +80,10 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
                     locationList[i] = PointStoreLarge.INFEASIBLE_LOCN;
                 }
             }
-            checkArgument(nextLocation == tempList.length, "incorrect location encoding");
         }
 
         return PointStore.builder().internalRotationEnabled(state.isRotationEnabled())
-                .internalShinglingEnabled(state.isInternalShinglingEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .directLocationEnabled(state.isDirectLocationMap()).indexCapacity(indexCapacity)
+                .internalShinglingEnabled(state.isInternalShinglingEnabled()).indexCapacity(indexCapacity)
                 .currentStoreCapacity(state.getCurrentStoreCapacity()).capacity(state.getCapacity())
                 .shingleSize(state.getShingleSize()).dimensions(state.getDimensions()).locationList(locationList)
                 .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
@@ -113,10 +107,10 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
             state.setRotationEnabled(model.isInternalRotationEnabled());
         }
         state.setDynamicResizingEnabled(true);
-        if (state.isDynamicResizingEnabled()) {
-            state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
-            state.setIndexCapacity(model.getIndexCapacity());
-        }
+
+        state.setCurrentStoreCapacity(model.getCurrentStoreCapacity());
+        state.setIndexCapacity(model.getIndexCapacity());
+
         state.setStartOfFreeSegment(model.getStartOfFreeSegment());
         state.setPrecision(Precision.FLOAT_32.name());
         int[] refcount = model.getRefCount();
@@ -142,43 +136,6 @@ public class PointStoreMapper implements IStateMapper<PointStore, PointStoreStat
         state.setLocationList(ArrayPacking.pack(locationList, size, state.isCompressed()));
         state.setPointData(ArrayPacking.pack(model.getStore(), model.getStartOfFreeSegment()));
         return state;
-    }
-
-    public PointStore convertFromDouble(PointStoreState state) {
-        checkNotNull(state.getRefCount(), "refCount must not be null");
-        checkNotNull(state.getPointData(), "pointData must not be null");
-        checkArgument(Precision.valueOf(state.getPrecision()) == Precision.FLOAT_64,
-                "precision must be " + Precision.FLOAT_64);
-        int indexCapacity = state.getIndexCapacity();
-        int dimensions = state.getDimensions();
-        float[] store = toFloatArray(
-                ArrayPacking.unpackDoubles(state.getPointData(), state.getCurrentStoreCapacity() * dimensions));
-        int startOfFreeSegment = state.getStartOfFreeSegment();
-        int[] refCount = ArrayPacking.unpackInts(state.getRefCount(), indexCapacity, state.isCompressed());
-        int[] locationList = new int[indexCapacity];
-        int[] tempList = ArrayPacking.unpackInts(state.getLocationList(), state.isCompressed());
-        System.arraycopy(tempList, 0, locationList, 0, tempList.length);
-        if (!state.getVersion().equals(Version.V3_0)) {
-            transformArray(locationList, dimensions / state.getShingleSize());
-        }
-
-        return PointStore.builder().internalRotationEnabled(state.isRotationEnabled())
-                .internalShinglingEnabled(state.isInternalShinglingEnabled())
-                .dynamicResizingEnabled(state.isDynamicResizingEnabled())
-                .directLocationEnabled(state.isDirectLocationMap()).indexCapacity(indexCapacity)
-                .currentStoreCapacity(state.getCurrentStoreCapacity()).capacity(state.getCapacity())
-                .shingleSize(state.getShingleSize()).dimensions(state.getDimensions()).locationList(locationList)
-                .nextTimeStamp(state.getLastTimeStamp()).startOfFreeSegment(startOfFreeSegment).refCount(refCount)
-                .knownShingle(state.getInternalShingle()).store(store).build();
-    }
-
-    void transformArray(int[] location, int baseDimension) {
-        checkArgument(baseDimension > 0, "incorrect invocation");
-        for (int i = 0; i < location.length; i++) {
-            if (location[i] > 0) {
-                location[i] = location[i] / baseDimension;
-            }
-        }
     }
 
 }

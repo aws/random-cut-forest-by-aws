@@ -16,12 +16,10 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
-import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
-import static com.amazon.randomcutforest.config.CorrectionMode.CONDITIONAL_FORECAST;
-import static com.amazon.randomcutforest.config.CorrectionMode.DATA_DRIFT;
-import static com.amazon.randomcutforest.config.CorrectionMode.NONE;
-import static com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
+import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.CONDITIONAL_FORECAST;
+import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.DATA_DRIFT;
+import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.NONE;
+import static com.amazon.randomcutforest.preprocessor.Preprocessor.DEFAULT_NORMALIZATION_PRECISION;
 import static java.lang.Math.exp;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -31,14 +29,15 @@ import java.util.List;
 import java.util.Random;
 
 import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.CorrectionMode;
 import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.parkservices.config.CorrectionMode;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.Neighbor;
+import com.amazon.randomcutforest.statistics.Deviation;
 import com.amazon.randomcutforest.util.Weighted;
 
 /**
@@ -141,18 +140,19 @@ public class PredictorCorrector {
     public PredictorCorrector(BasicThresholder[] thresholders, Deviation[] deviations, int baseDimension,
             long randomSeed) {
         checkArgument(thresholders.length > 0, " cannot be empty");
-        checkArgument(deviations == null || deviations.length == 2 * baseDimension, "incorrect state");
         this.thresholders = new BasicThresholder[NUMBER_OF_MODES];
         int size = min(thresholders.length, NUMBER_OF_MODES);
         for (int i = 0; i < size; i++) {
             this.thresholders[i] = thresholders[i];
         }
+        Deviation deviation = thresholders[0].getPrimaryDeviation();
         for (int i = size; i < NUMBER_OF_MODES; i++) {
             this.thresholders[i] = new BasicThresholder(thresholders[0].getPrimaryDeviation().getDiscount());
         }
         this.deviationsActual = new Deviation[baseDimension];
         this.deviationsExpected = new Deviation[baseDimension];
         if (deviations != null) {
+            checkArgument(deviations.length == 2 * baseDimension, "incorrect state");
             for (int i = 0; i < baseDimension; i++) {
                 deviationsActual[i] = deviations[i];
             }
@@ -349,8 +349,8 @@ public class PredictorCorrector {
 
         // following will fail for first 100ish points and if dimension < 3
         if (lastAnomalyDescriptor.getExpectedRCFPoint() != null) {
-            float[] lastExpectedPoint = toFloatArray(lastAnomalyDescriptor.getExpectedRCFPoint());
-            double[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();
+            float[] lastExpectedPoint = lastAnomalyDescriptor.getExpectedRCFPoint();
+            float[] lastAnomalyPoint = lastAnomalyDescriptor.getRCFPoint();
             int lastRelativeIndex = lastAnomalyDescriptor.getRelativeIndex();
 
             // the following will fail for shingleSize 1
@@ -672,7 +672,7 @@ public class PredictorCorrector {
         if (result.getRCFPoint() == null) {
             return result;
         }
-        float[] point = toFloatArray(result.getRCFPoint());
+        float[] point = result.getRCFPoint();
         ScoringStrategy strategy = result.getScoringStrategy();
         double[] scoreVector = new double[NUMBER_OF_MODES];
         DiVector[] attributionVector = new DiVector[NUMBER_OF_MODES];
@@ -695,7 +695,7 @@ public class PredictorCorrector {
         int shingleSize = result.getShingleSize();
 
         Weighted<Double> thresholdAndGrade = getThresholdAndGrade(strategy, originalChoice, scoreVector,
-                result.transformMethod, point.length, shingleSize);
+                result.getTransformMethod(), point.length, shingleSize);
         final double originalThreshold = thresholdAndGrade.index;
         double workingThreshold = originalThreshold;
         double workingGrade = thresholdAndGrade.weight;
@@ -705,10 +705,12 @@ public class PredictorCorrector {
         boolean candidate = false;
 
         if (workingGrade > 0 && lastDescriptor != null) {
-            if (score > lastDescriptor.getRCFScore()
-                    || lastDescriptor.getRCFScore() - lastDescriptor.getThreshold() > score
-                            - max(workingThreshold, lastDescriptor.getThreshold())
-                                    * (1 + max(0.2, runLength / (2.0 * max(10, shingleSize))))) {
+            if (score > lastDescriptor.getRCFScore()) {
+                candidate = true;
+            }
+            double runDiscount = max(workingThreshold, lastDescriptor.getThreshold())
+                    * (1 + max(0.2, runLength / (2.0 * max(10, shingleSize))));
+            if (lastDescriptor.getRCFScore() - lastDescriptor.getThreshold() > score - runDiscount) {
                 // the 'run' or the sequence of observations that create large scores
                 // because of data (concept?) drift is defined to increase permissively
                 // so that it is clear when the threshold is above the scores
@@ -796,9 +798,7 @@ public class PredictorCorrector {
                 attribution = getCachedAttribution(choice, point, attributionVector, forest);
             }
 
-            assert (workingGrade == 0 || attribution != null);
-
-            if (workingGrade > 0 && result.getScale() != null && result.getShift() != null) {
+            if (workingGrade > 0 && result.getScale() != null) {
                 index = (shingleSize == 1) ? 0 : maxContribution(attribution, point.length / shingleSize, relative) + 1;
 
                 int startPosition = point.length + (index - 1) * point.length / shingleSize;
@@ -886,7 +886,7 @@ public class PredictorCorrector {
 
         if (workingGrade > 0) {
             if (expectedPoint != null) {
-                result.setExpectedRCFPoint(toDoubleArray(expectedPoint));
+                result.setExpectedRCFPoint(expectedPoint);
             }
             attribution.renormalize(result.getRCFScore());
             result.setStartOfAnomaly(true);
@@ -907,7 +907,7 @@ public class PredictorCorrector {
         }
 
         lastDescriptor = result.copyOf();
-        saveScores(strategy, choice, scoreVector, correctedScore, result.transformMethod, shingleSize);
+        saveScores(strategy, choice, scoreVector, correctedScore, result.getTransformMethod(), shingleSize);
         return result;
     }
 
@@ -1050,7 +1050,8 @@ public class PredictorCorrector {
     }
 
     public void setSamplingRate(double samplingRate) {
-        checkArgument(samplingRate > 0 && samplingRate < 1.0, " hast to be in [0,1)");
+        checkArgument(samplingRate > 0, " cannot be negative");
+        checkArgument(samplingRate < 1.0, " has to be in [0,1)");
         this.samplingRate = samplingRate;
     }
 
@@ -1108,7 +1109,7 @@ public class PredictorCorrector {
 
     public void setSamplingSupport(double sampling) {
         checkArgument(sampling >= 0, " cannot be negative ");
-        checkArgument(sampling < 0.2, " cannot be more than 0.2");
-        samplingSupport = sampling;
+        checkArgument(sampling < 2 * DEFAULT_SAMPLING_SUPPORT,
+                " cannot be more than " + (2 * DEFAULT_SAMPLING_SUPPORT));
     }
 }

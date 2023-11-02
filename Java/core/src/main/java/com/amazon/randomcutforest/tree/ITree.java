@@ -44,7 +44,5 @@ public interface ITree<PointReference, Point> extends ITraversable, IDynamicConf
 
     PointReference deletePoint(PointReference point, long sequenceIndex);
 
-    default long getRandomSeed() {
-        return 0L;
-    }
+    long getRandomSeed();
 }

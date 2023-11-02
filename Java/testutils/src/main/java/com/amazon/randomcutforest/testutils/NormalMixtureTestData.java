@@ -120,18 +120,18 @@ public class NormalMixtureTestData {
         }
     }
 
-    static class NormalDistribution {
+    public static class NormalDistribution {
         private final Random rng;
         private final double[] buffer;
         private int index;
 
-        NormalDistribution(Random rng) {
+        public NormalDistribution(Random rng) {
             this.rng = rng;
             buffer = new double[2];
             index = 0;
         }
 
-        double nextDouble() {
+        public double nextDouble() {
             if (index == 0) {
                 // apply the Box-Muller transform to produce Normal variates
                 double u = rng.nextDouble();
@@ -147,7 +147,7 @@ public class NormalMixtureTestData {
             return result;
         }
 
-        double nextDouble(double mu, double sigma) {
+        public double nextDouble(double mu, double sigma) {
             return mu + sigma * nextDouble();
         }
     }

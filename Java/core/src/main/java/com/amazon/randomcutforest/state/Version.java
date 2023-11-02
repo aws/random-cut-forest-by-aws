@@ -22,4 +22,6 @@ public class Version {
     public static final String V3_5 = "3.5";
     public static final String V3_7 = "3.7";
     public static final String V3_8 = "3.8";
+
+    public static final String V4_0 = "4.0";
 }

@@ -23,11 +23,10 @@ import java.util.Random;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.ForecastDescriptor;
 import com.amazon.randomcutforest.parkservices.RCFCaster;
-import com.amazon.randomcutforest.parkservices.calibration.Calibration;
+import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 
@@ -44,11 +43,10 @@ public class RCFCasterMapperTest {
             long seed = new Random().nextLong();
             System.out.println(" seed " + seed);
             // note shingleSize == 8
-            RCFCaster first = RCFCaster.builder().compact(true).dimensions(dimensions).precision(Precision.FLOAT_32)
-                    .randomSeed(seed).internalShinglingEnabled(true).anomalyRate(0.01).shingleSize(shingleSize)
-                    .calibration(Calibration.MINIMAL).forecastHorizon(forecastHorizon)
-                    .calibration(Calibration.valueOf(calibrationString)).transformMethod(TransformMethod.NORMALIZE)
-                    .build();
+            RCFCaster first = RCFCaster.builder().dimensions(dimensions).randomSeed(seed).internalShinglingEnabled(true)
+                    .anomalyRate(0.01).shingleSize(shingleSize).calibration(Calibration.MINIMAL)
+                    .forecastHorizon(forecastHorizon).calibration(Calibration.valueOf(calibrationString))
+                    .transformMethod(TransformMethod.NORMALIZE).build();
 
             Random r = new Random(seed);
             for (int i = 0; i < 2000 + r.nextInt(1000); i++) {
@@ -123,10 +121,10 @@ public class RCFCasterMapperTest {
             System.out.println(" seed " + seed);
 
             // note shingleSize == 8
-            RCFCaster first = RCFCaster.builder().compact(true).dimensions(dimensions).precision(Precision.FLOAT_32)
-                    .randomSeed(seed).internalShinglingEnabled(true).anomalyRate(0.01).shingleSize(shingleSize)
-                    .calibration(Calibration.valueOf(calibrationString)).forecastHorizon(forecastHorizon)
-                    .transformMethod(TransformMethod.NORMALIZE).outputAfter(outputAfter).build();
+            RCFCaster first = RCFCaster.builder().dimensions(dimensions).randomSeed(seed).internalShinglingEnabled(true)
+                    .anomalyRate(0.01).shingleSize(shingleSize).calibration(Calibration.valueOf(calibrationString))
+                    .forecastHorizon(forecastHorizon).transformMethod(TransformMethod.NORMALIZE)
+                    .outputAfter(outputAfter).build();
 
             Random r = new Random();
             for (int i = 0; i < new Random().nextInt(outputAfter); i++) {

@@ -34,7 +34,7 @@ import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
  */
 public class ParallelForestTraversalExecutor extends AbstractForestTraversalExecutor {
 
-    private ForkJoinPool forkJoinPool;
+    ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
     public ParallelForestTraversalExecutor(ComponentList<?, ?> treeExecutors, int threadPoolSize) {
@@ -96,7 +96,7 @@ public class ParallelForestTraversalExecutor extends AbstractForestTraversalExec
                 () -> components.parallelStream().map(c -> c.traverseMulti(point, visitorFactory)).collect(collector));
     }
 
-    private <T> T submitAndJoin(Callable<T> callable) {
+    <T> T submitAndJoin(Callable<T> callable) {
         if (forkJoinPool == null) {
             forkJoinPool = new ForkJoinPool(threadPoolSize);
         }

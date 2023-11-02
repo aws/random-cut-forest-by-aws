@@ -211,7 +211,6 @@ public class Summarizer {
             return (double) e.weight;
         }).reduce(0.0, Double::sum);
         checkArgument(sampledSum > 0, " total weight has to be positive");
-
         ArrayList<ICluster<R>> centers = new ArrayList<>();
         if (refs.size() < 10 * (initial + 5)) {
             for (Weighted<Integer> point : refs) {
@@ -404,7 +403,8 @@ public class Summarizer {
      *         true applications of summarization)
      */
     public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
-            boolean phase1reassign, BiFunction<float[], float[], Double> distance, long seed, boolean parallelEnabled) {
+            boolean phase1reassign, BiFunction<float[], float[], Double> distance, long seed, boolean parallelEnabled,
+            int numberOfReps, double shrinkage) {
         checkArgument(maxAllowed < 100, "are you sure you want more elements in the summary?");
         checkArgument(maxAllowed <= initial, "initial parameter should be at least maximum allowed in final result");
 
@@ -418,19 +418,34 @@ public class Summarizer {
         Random rng = new Random(seed);
         // the following list is explicity copied and sorted for potential efficiency
         List<Weighted<float[]>> sampledPoints = createSample(points, rng.nextLong(), 5 * LENGTH_BOUND, 0.005, 1.0);
-        List<ICluster<float[]>> centers = summarize(sampledPoints, maxAllowed, initial, 1, true,
-                DEFAULT_SEPARATION_RATIO_FOR_MERGE, distance, Center::initialize, seed, parallelEnabled, null);
 
-        float[][] pointList = new float[centers.size()][];
-        float[] likelihood = new float[centers.size()];
+        List<ICluster<float[]>> centers = (numberOfReps == 1)
+                ? summarize(sampledPoints, maxAllowed, initial, 1, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE, distance,
+                        Center::initialize, seed, parallelEnabled, null)
+                : multiSummarizeWeighted(sampledPoints, maxAllowed, initial, 1, false,
+                        DEFAULT_SEPARATION_RATIO_FOR_MERGE, distance, seed, parallelEnabled, shrinkage, numberOfReps);
+
+        int num = centers.stream().mapToInt(x -> x.getRepresentatives().size()).sum();
+        float[][] pointList = new float[num][];
+        float[] likelihood = new float[num];
+        float[] measure = new float[num];
 
         int dimensions = centers.get(0).primaryRepresentative(distance).length;
+        int count = 0;
         for (int i = 0; i < centers.size(); i++) {
-            pointList[i] = Arrays.copyOf(centers.get(i).primaryRepresentative(distance), dimensions);
-            likelihood[i] = (float) (centers.get(i).getWeight() / totalWeight);
+            for (Weighted<float[]> rep : centers.get(i).getRepresentatives()) {
+                pointList[count] = Arrays.copyOf(rep.index, dimensions);
+                likelihood[count] = (float) (rep.weight / totalWeight);
+                measure[count++] = (float) centers.get(i).averageRadius();
+            }
         }
 
-        return new SampleSummary(sampledPoints, pointList, likelihood);
+        return new SampleSummary(sampledPoints, pointList, likelihood, measure);
+    }
+
+    public static SampleSummary summarize(List<Weighted<float[]>> points, int maxAllowed, int initial,
+            boolean phase1reassign, BiFunction<float[], float[], Double> distance, long seed, boolean parallelEnabled) {
+        return summarize(points, maxAllowed, initial, phase1reassign, distance, seed, parallelEnabled, 1, 0);
     }
 
     /**
@@ -515,9 +530,16 @@ public class Summarizer {
         for (R point : points) {
             weighted.add(new Weighted<>(point, 1.0f));
         }
+        return multiSummarizeWeighted(weighted, maxAllowed, initial, stopAt, phase2GlobalReassign, overlapParameter,
+                distance, seed, parallelEnabled, shrinkage, numberOfRepresentatives);
+    }
+
+    public static <R> List<ICluster<R>> multiSummarizeWeighted(List<Weighted<R>> points, int maxAllowed, int initial,
+            int stopAt, boolean phase2GlobalReassign, double overlapParameter, BiFunction<R, R, Double> distance,
+            long seed, boolean parallelEnabled, double shrinkage, int numberOfRepresentatives) {
         BiFunction<R, Float, ICluster<R>> clusterInitializer = (a, b) -> GenericMultiCenter.initialize(a, b, shrinkage,
                 numberOfRepresentatives);
-        return summarize(weighted, maxAllowed, initial, stopAt, phase2GlobalReassign, overlapParameter, distance,
+        return summarize(points, maxAllowed, initial, stopAt, phase2GlobalReassign, overlapParameter, distance,
                 clusterInitializer, seed, parallelEnabled, null);
     }
 
@@ -538,16 +560,20 @@ public class Summarizer {
 
     // same as above, with multicenter instead of generic
     public static List<ICluster<float[]>> multiSummarize(float[][] points, int maxAllowed, double shrinkage,
-            int numberOfRepresentatives, long seed) {
+            boolean parallelEnabled, int numberOfRepresentatives, long seed) {
 
         ArrayList<Weighted<float[]>> weighted = new ArrayList<>();
         for (float[] point : points) {
             weighted.add(new Weighted<>(point, 1.0f));
         }
-        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
-                shrinkage, numberOfRepresentatives);
-        return summarize(weighted, maxAllowed, 4 * maxAllowed, 1, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,
-                Summarizer::L2distance, clusterInitializer, seed, true, null);
+        return multiSummarizeWeighted(weighted, maxAllowed, shrinkage, parallelEnabled, numberOfRepresentatives, seed);
     }
 
+    public static List<ICluster<float[]>> multiSummarizeWeighted(List<Weighted<float[]>> points, int maxAllowed,
+            double shrinkage, boolean parallelEnabled, int numberOfRepresentatives, long seed) {
+        BiFunction<float[], Float, ICluster<float[]>> clusterInitializer = (a, b) -> MultiCenter.initialize(a, b,
+                shrinkage, numberOfRepresentatives);
+        return summarize(points, maxAllowed, 4 * maxAllowed, 1, true, DEFAULT_SEPARATION_RATIO_FOR_MERGE,
+                Summarizer::L2distance, clusterInitializer, seed, parallelEnabled, null);
+    }
 }

@@ -16,39 +16,57 @@
 package com.amazon.randomcutforest.state;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.amazon.randomcutforest.ComponentList;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.PointStoreCoordinator;
+import com.amazon.randomcutforest.executor.SamplerPlusTree;
+import com.amazon.randomcutforest.preprocessor.IPreprocessor;
+import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class RandomCutForestMapperTest {
 
     private static int dimensions = 5;
     private static int sampleSize = 128;
 
+    private Version version = new Version();
+
     private static Stream<RandomCutForest> compactForestProvider() {
         RandomCutForest.Builder<?> builder = RandomCutForest.builder().compact(true).dimensions(dimensions)
                 .sampleSize(sampleSize);
 
-        RandomCutForest cachedDouble = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.FLOAT_64).build();
-        RandomCutForest cachedFloat = builder.boundingBoxCacheFraction(new Random().nextDouble())
-                .precision(Precision.FLOAT_32).build();
-        RandomCutForest uncachedDouble = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_64).build();
-        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).precision(Precision.FLOAT_32).build();
+        RandomCutForest cachedFloat = builder.boundingBoxCacheFraction(new Random().nextDouble()).build();
+        RandomCutForest uncachedFloat = builder.boundingBoxCacheFraction(0.0).build();
 
-        return Stream.of(cachedDouble, cachedFloat, uncachedDouble, uncachedFloat);
+        return Stream.of(cachedFloat, uncachedFloat);
     }
 
     private RandomCutForestMapper mapper;
@@ -59,7 +77,7 @@ public class RandomCutForestMapperTest {
         mapper.setSaveExecutorContextEnabled(true);
     }
 
-    public void assertCompactForestEquals(RandomCutForest forest, RandomCutForest forest2) {
+    public void assertCompactForestEquals(RandomCutForest forest, RandomCutForest forest2, boolean saveTree) {
         assertEquals(forest.getDimensions(), forest2.getDimensions());
         assertEquals(forest.getSampleSize(), forest2.getSampleSize());
         assertEquals(forest.getOutputAfter(), forest2.getOutputAfter());
@@ -83,26 +101,40 @@ public class RandomCutForestMapperTest {
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
 
+        ComponentList<?, ?> components = forest.getComponents();
+        ComponentList<?, ?> otherComponents = new ComponentList(forest2.getComponents());
+        for (int i = 0; i < components.size(); i++) {
+            SamplerPlusTree first = (SamplerPlusTree<?, ?>) components.get(i);
+            SamplerPlusTree second = (SamplerPlusTree<?, ?>) otherComponents.get(i);
+            if (saveTree) {
+                assertEquals(first.getTree().getRandomSeed(), second.getTree().getRandomSeed());
+            }
+            assertEquals(((CompactSampler) first.getSampler()).getRandomSeed(),
+                    ((CompactSampler) second.getSampler()).getRandomSeed());
+        }
+    }
+
+    void testForest(RandomCutForest forest, Boolean saveTree) {
+        NormalMixtureTestData testData = new NormalMixtureTestData();
+        for (double[] point : testData.generateTestData(sampleSize, dimensions)) {
+            forest.update(point);
+        }
+        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+        assertCompactForestEquals(forest, forest2, saveTree);
+
     }
 
     @ParameterizedTest
     @MethodSource("compactForestProvider")
     public void testRoundTripForCompactForest(RandomCutForest forest) {
-
-        NormalMixtureTestData testData = new NormalMixtureTestData();
-        for (double[] point : testData.generateTestData(sampleSize, dimensions)) {
-            forest.update(point);
-        }
-
-        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
-        assertCompactForestEquals(forest, forest2);
+        testForest(forest, false);
     }
 
     @ParameterizedTest
     @MethodSource("compactForestProvider")
     public void testRoundTripForCompactForestSaveTreeState(RandomCutForest forest) {
         mapper.setSaveTreeStateEnabled(true);
-        testRoundTripForCompactForest(forest);
+        testForest(forest, true);
     }
 
     @ParameterizedTest
@@ -114,16 +146,56 @@ public class RandomCutForestMapperTest {
     }
 
     @Test
+    void testSaveSamplers() {
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
+                .numberOfTrees(1).build();
+        NormalMixtureTestData testData = new NormalMixtureTestData();
+        for (double[] point : testData.generateTestData(sampleSize, dimensions)) {
+            forest.update(point);
+        }
+        mapper.setSaveSamplerStateEnabled(false);
+        assertThrows(IllegalArgumentException.class, () -> mapper.toModel(mapper.toState(forest), 10));
+        mapper.setSaveSamplerStateEnabled(true);
+    }
+
+    @Test
+    void executionContext() {
+        ExecutionContext ec = new ExecutionContext();
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
+                .parallelExecutionEnabled(true).threadPoolSize(23).numberOfTrees(1).build();
+        RandomCutForest forest2 = mapper.toModel(mapper.toState(forest), ec);
+        assertFalse(forest2.isParallelExecutionEnabled());
+        assertEquals(0, forest2.getThreadPoolSize());
+    }
+
+    @Test
+    void testVersion() {
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
+                .parallelExecutionEnabled(true).threadPoolSize(23).numberOfTrees(1).build();
+        assertEquals(mapper.toState(forest).getVersion(), version.V4_0);
+    }
+
+    @Test
+    void testPrecisionException() {
+        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
+                .parallelExecutionEnabled(true).threadPoolSize(23).numberOfTrees(1).build();
+        RandomCutForestState state = mapper.toState(forest);
+        assertDoesNotThrow(() -> mapper.toModel(state, 0L));
+        state.setPrecision(Precision.FLOAT_64.name());
+        assertThrows(IllegalStateException.class, () -> mapper.toModel(state, 0));
+    }
+
+    @Test
     public void testRoundTripForEmptyForest() {
         Precision precision = Precision.FLOAT_64;
 
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(sampleSize)
-                .precision(precision).numberOfTrees(1).build();
+        RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(sampleSize)
+                .numberOfTrees(1).build();
 
         mapper.setSaveTreeStateEnabled(true);
         RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
 
-        assertCompactForestEquals(forest, forest2);
+        assertCompactForestEquals(forest, forest2, true);
     }
 
     @Test
@@ -178,4 +250,50 @@ public class RandomCutForestMapperTest {
         }
     }
 
+    @ParameterizedTest
+    @EnumSource(V2RCFJsonResource.class)
+    public void testJson(V2RCFJsonResource jsonResource) throws JsonProcessingException {
+        RandomCutForestMapper rcfMapper = new RandomCutForestMapper();
+        String json = getStateFromFile(jsonResource.getResource());
+        assertNotNull(json);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        RandomCutForestState state = mapper.readValue(json, RandomCutForestState.class);
+        RandomCutForest forest = rcfMapper.toModel(state);
+        Random r = new Random(0);
+        for (int i = 0; i < 20000; i++) {
+            double[] point = r.ints(forest.getDimensions(), 0, 50).asDoubleStream().toArray();
+            forest.getAnomalyScore(point);
+            forest.update(point, 0L);
+        }
+        assertNotNull(forest);
+    }
+
+    @ParameterizedTest
+    @EnumSource(V2PreProcessorJsonResource.class)
+    public void testPreprocessorJson(V2PreProcessorJsonResource jsonResource) throws JsonProcessingException {
+        PreprocessorMapper preMapper = new PreprocessorMapper();
+        String json = getStateFromFile(jsonResource.getResource());
+        assertNotNull(json);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        PreprocessorState state = mapper.readValue(json, PreprocessorState.class);
+        IPreprocessor preprocessor = preMapper.toModel(state);
+        assertNotNull(preprocessor);
+    }
+
+    private String getStateFromFile(String resourceFile) {
+        try (InputStream is = RandomCutForestMapperTest.class.getResourceAsStream(resourceFile);
+                BufferedReader rr = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            StringBuilder b = new StringBuilder();
+            String line;
+            while ((line = rr.readLine()) != null) {
+                b.append(line);
+            }
+            return b.toString();
+        } catch (IOException e) {
+            fail("Unable to load resource");
+        }
+        return null;
+    }
 }

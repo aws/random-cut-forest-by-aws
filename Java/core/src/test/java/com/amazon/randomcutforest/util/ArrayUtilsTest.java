@@ -15,11 +15,19 @@
 
 package com.amazon.randomcutforest.util;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArrayNullable;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArrayNullable;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
+import java.util.Random;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -38,5 +46,16 @@ public class ArrayUtilsTest {
 
     private double[] array(String arrayString) {
         return Arrays.stream(arrayString.split(":")).mapToDouble(Double::valueOf).toArray();
+    }
+
+    @Test
+    void testNullable() {
+        assertNull(toDoubleArrayNullable(null));
+        assertNull(toFloatArrayNullable(null));
+        float random = new Random().nextFloat();
+        assertArrayEquals(toFloatArrayNullable(new double[] { random }), toFloatArray(new double[] { random }));
+        assertArrayEquals(toDoubleArrayNullable(new float[] { random }), toDoubleArray(new float[] { random }));
+        assertThrows(NullPointerException.class, () -> toDoubleArray(null));
+        assertThrows(NullPointerException.class, () -> toFloatArray(null));
     }
 }

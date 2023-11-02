@@ -56,7 +56,5 @@ public interface IStateCoordinator<PointReference, Point> {
 
     void setTotalUpdates(long totalUpdates);
 
-    default IPointStore<PointReference, Point> getStore() {
-        return null;
-    }
+    IPointStore<PointReference, Point> getStore();
 }

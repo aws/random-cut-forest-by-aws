@@ -15,11 +15,15 @@
 
 package com.amazon.randomcutforest.tree;
 
+import static com.amazon.randomcutforest.CommonUtils.defaultRCFgVecFunction;
+import static com.amazon.randomcutforest.CommonUtils.getProbabilityOfSeparation;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -161,6 +165,13 @@ public class BoundingBoxTest {
         assertFalse(box1.contains(new float[] { -0.7f, -4.5f }));
         assertFalse(box1.contains(new float[] { 5.0f, 11.0f }));
         assertFalse(box1.contains(new float[] { -5.0f, 10.0f }));
+    }
+
+    @Test
+    public void probability() {
+        IBoundingBoxView box = new BoundingBox(new float[1], new float[1]);
+        assertEquals(0, getProbabilityOfSeparation(box, new float[1]));
+        assertArrayEquals(new double[1], defaultRCFgVecFunction(box));
     }
 
 }

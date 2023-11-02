@@ -47,6 +47,9 @@ public class SampleSummary {
      */
     public float[] relativeWeight;
 
+    // some measure of the extent of the points
+    public float[][] measure;
+
     /**
      * number of samples, often the number of summary
      */
@@ -64,8 +67,8 @@ public class SampleSummary {
     public float[] deviation;
 
     /**
-     * an upper percentile corresponding to the points, computed dimension
-     * agnostically
+     * an upper percentile corresponding to the points, computed agnostic to
+     * dimension
      */
     public float[] upper;
 
@@ -78,7 +81,9 @@ public class SampleSummary {
         this.weightOfSamples = 0;
         this.summaryPoints = new float[1][];
         this.summaryPoints[0] = new float[dimensions];
-        this.relativeWeight = new float[] { 0.0f };
+        this.relativeWeight = new float[1];
+        this.measure = new float[1][];
+        this.measure[0] = new float[dimensions];
         this.median = new float[dimensions];
         this.mean = new float[dimensions];
         this.deviation = new float[dimensions];
@@ -96,33 +101,56 @@ public class SampleSummary {
         this.weightOfSamples = weight;
         this.summaryPoints[0] = toFloatArray(point);
         this.relativeWeight[0] = weight;
+        this.measure[0] = new float[point.length];
         System.arraycopy(this.summaryPoints[0], 0, this.median, 0, point.length);
         System.arraycopy(this.summaryPoints[0], 0, this.mean, 0, point.length);
         System.arraycopy(this.summaryPoints[0], 0, this.upper, 0, point.length);
         System.arraycopy(this.summaryPoints[0], 0, this.lower, 0, point.length);
     }
 
-    void addTypical(float[][] summaryPoints, float[] relativeWeight) {
+    void addTypical(float[][] summaryPoints, float[] relativeWeight, float[][] measure) {
         checkArgument(summaryPoints.length == relativeWeight.length, "incorrect lengths of fields");
+        checkArgument(summaryPoints.length == measure.length, "incorrect lengths of fields");
         if (summaryPoints.length > 0) {
             int dimension = summaryPoints[0].length;
             this.summaryPoints = new float[summaryPoints.length][];
+            this.measure = new float[summaryPoints.length][];
             for (int i = 0; i < summaryPoints.length; i++) {
                 checkArgument(dimension == summaryPoints[i].length, " incorrect length points");
+                checkArgument(dimension == measure[i].length, " incorrect length points");
                 this.summaryPoints[i] = Arrays.copyOf(summaryPoints[i], dimension);
+                this.measure[i] = Arrays.copyOf(measure[i], dimension);
             }
             this.relativeWeight = Arrays.copyOf(relativeWeight, relativeWeight.length);
         }
     }
 
-    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight,
-            double percentile) {
-        this(points, percentile);
-        this.addTypical(summaryPoints, relativeWeight);
+    public SampleSummary(List<Weighted<float[]>> points, SampleSummary clusters) {
+        this(points, DEFAULT_PERCENTILE);
+        this.addTypical(clusters.summaryPoints, clusters.relativeWeight, clusters.measure);
     }
 
-    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight) {
-        this(points, summaryPoints, relativeWeight, DEFAULT_PERCENTILE);
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight,
+            float[] measure, double percentile) {
+        this(points, percentile);
+        float[][] transformedMeasure = new float[measure.length][];
+        double factor = 0;
+        for (int j = 0; j < this.upper.length; j++) {
+            factor += max(0, this.upper[j] - this.lower[j]);
+        }
+        for (int i = 0; i < measure.length; i++) {
+            transformedMeasure[i] = new float[this.upper.length];
+            for (int j = 0; j < this.upper.length; j++) {
+                transformedMeasure[i][j] = (factor == 0) ? 0
+                        : (float) (max(0, this.upper[j] - this.lower[j]) * measure[i] / factor);
+            }
+        }
+        this.addTypical(summaryPoints, relativeWeight, transformedMeasure);
+    }
+
+    public SampleSummary(List<Weighted<float[]>> points, float[][] summaryPoints, float[] relativeWeight,
+            float[] measure) {
+        this(points, summaryPoints, relativeWeight, measure, DEFAULT_PERCENTILE);
     }
 
     public SampleSummary(List<Weighted<float[]>> points) {
@@ -131,7 +159,7 @@ public class SampleSummary {
 
     /**
      * constructs a summary of the weighted points based on the percentile envelopes
-     * by picking 1-precentile and percentile fractional rank of the items useful in
+     * by picking 1-percentile and percentile fractional rank of the items useful in
      * surfacing a robust range of values
      * 
      * @param points     weighted points

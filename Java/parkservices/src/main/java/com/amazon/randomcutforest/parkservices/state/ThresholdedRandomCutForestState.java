@@ -22,10 +22,10 @@ import java.io.Serializable;
 import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.predictorcorrector.PredictorCorrectorState;
-import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
 import com.amazon.randomcutforest.state.RandomCutForestState;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
 @Data

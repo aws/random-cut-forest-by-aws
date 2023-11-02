@@ -19,7 +19,7 @@ import java.io.Serializable;
 
 import lombok.Data;
 
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
+import com.amazon.randomcutforest.state.statistics.DeviationState;
 
 @Data
 public class BasicThresholderState implements Serializable {

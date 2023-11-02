@@ -21,6 +21,7 @@ import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,7 +55,6 @@ import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
 
 import com.amazon.randomcutforest.config.Config;
-import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.executor.AbstractForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.AbstractForestUpdateExecutor;
 import com.amazon.randomcutforest.executor.IStateCoordinator;
@@ -62,6 +62,7 @@ import com.amazon.randomcutforest.executor.PointStoreCoordinator;
 import com.amazon.randomcutforest.executor.SamplerPlusTree;
 import com.amazon.randomcutforest.executor.SequentialForestTraversalExecutor;
 import com.amazon.randomcutforest.executor.SequentialForestUpdateExecutor;
+import com.amazon.randomcutforest.returntypes.ConditionalTreeSample;
 import com.amazon.randomcutforest.returntypes.ConvergingAccumulator;
 import com.amazon.randomcutforest.returntypes.DensityOutput;
 import com.amazon.randomcutforest.returntypes.DiVector;
@@ -75,6 +76,7 @@ import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.store.PointStore;
+import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.tree.ITree;
 import com.amazon.randomcutforest.tree.RandomCutTree;
 import com.amazon.randomcutforest.util.ShingleBuilder;
@@ -118,10 +120,53 @@ public class RandomCutForestTest {
     }
 
     @Test
+    void checkOutput() {
+        assertFalse(forest.isOutputReady());
+        assertEquals(forest.getConditionalField(null, 1, new int[1], 1.0).size(), 0);
+        assertEquals(forest.extrapolateBasic(new float[2], 1, 1, false)[0], 0);
+        assertEquals(forest.getDynamicScore(new float[2], 1, null, null, null), 0);
+        assertEquals(forest.getDynamicAttribution(new float[2], 1, null, null, null).getHighLowSum(), 0);
+        assertEquals(forest.getDynamicSimulatedScore(new float[2], null, null, null, null), 0);
+        assertEquals(forest.getApproximateDynamicScore(new float[2], 0.1, true, 1, null, null, null), 0);
+        assertEquals(
+                forest.getApproximateDynamicAttribution(new float[2], 0.1, true, 1, null, null, null).getHighLowSum(),
+                0);
+    }
+
+    @Test
+    void checkParameters() {
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 0, null, 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 2, new int[1], 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 1, new int[1], -1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 1, new int[1], 2));
+        assertDoesNotThrow(() -> forest.getConditionalField(null, 1, new int[1], 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 2));
+        assertDoesNotThrow(() -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.setTimeDecay(-2));
+        assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(-1));
+        assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(2));
+        assertThrows(IllegalArgumentException.class, () -> forest.getDynamicScore(new float[2], -1, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> forest.getApproximateDynamicScore(new float[2], 0.1, true, -1, null, null, null));
+    }
+
+    @Test
     public void testUpdate() {
         float[] point = { 2.2f, -1.1f };
         forest.update(point);
         verify(updateExecutor, times(1)).update(point);
+        assertEquals(updateCoordinator.getStore().getCapacity(), 1);
+    }
+
+    @Test
+    public void testUpdateShingled() {
+        float[] point = { 2.2f, -1.1f };
+        RandomCutForest newForest = RandomCutForest.builder().internalShinglingEnabled(true).dimensions(2).build();
+        assertThrows(IllegalArgumentException.class, () -> newForest.update(point, 0L));
+        assertDoesNotThrow(() -> newForest.update(point));
     }
 
     @Test
@@ -129,6 +174,8 @@ public class RandomCutForestTest {
         assertThrows(NullPointerException.class, () -> forest.update((double[]) null));
         assertThrows(NullPointerException.class, () -> forest.update((float[]) null));
         assertThrows(IllegalArgumentException.class, () -> forest.update(new double[] { 1.2, 3.4, -5.6 }));
+        assertThrows(IllegalArgumentException.class, () -> forest.update(new float[3]));
+        assertThrows(IllegalArgumentException.class, () -> forest.update(new float[3], 0l));
     }
 
     @Test
@@ -137,9 +184,7 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.forEach(c -> {
-            doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class));
-        });
+        components.forEach(c -> doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class)));
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher);
         verify(traversalExecutor, times(1)).traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator,
@@ -147,14 +192,12 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testTranverseForestBinaryAccumulatorInvalid() {
+    public void testTraverseForestBinaryAccumulatorInvalid() {
         float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.forEach(c -> {
-            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
-        });
+        components.forEach(c -> when(c.traverse(aryEq(point), any())).thenReturn(0.0));
 
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForest(null, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
@@ -171,9 +214,7 @@ public class RandomCutForestTest {
     public void testTraverseForestCollector() {
         float[] point = { 2.2f, -1.1f };
 
-        components.forEach(c -> {
-            doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class));
-        });
+        components.forEach(c -> doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class)));
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR);
         verify(traversalExecutor, times(1)).traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY,
@@ -181,12 +222,10 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testTranverseForestCollectorInvalid() {
+    public void testTraverseForestCollectorInvalid() {
         float[] point = { 2.2f, -1.1f };
 
-        components.forEach(c -> {
-            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
-        });
+        components.forEach(c -> when(c.traverse(aryEq(point), any())).thenReturn(0.0));
 
         assertThrows(NullPointerException.class, () -> forest.traverseForest(null,
                 TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
@@ -207,9 +246,7 @@ public class RandomCutForestTest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        components.forEach(c -> {
-            doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class));
-        });
+        components.forEach(c -> doReturn(0.0).when(c).traverse(aryEq(point), any(VisitorFactory.class)));
 
         forest.traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher);
         verify(traversalExecutor, times(1)).traverseForest(point, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator,
@@ -225,9 +262,7 @@ public class RandomCutForestTest {
 
         Function<Double, Double> finisher = x -> x / accumulator.getValuesAccepted();
 
-        components.forEach(c -> {
-            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
-        });
+        components.forEach(c -> when(c.traverse(aryEq(point), any())).thenReturn(0.0));
 
         assertThrows(NullPointerException.class,
                 () -> forest.traverseForest(null, TestUtils.DUMMY_GENERIC_VISITOR_FACTORY, accumulator, finisher));
@@ -246,9 +281,7 @@ public class RandomCutForestTest {
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.forEach(c -> {
-            doReturn(0.0).when(c).traverseMulti(aryEq(point), any(MultiVisitorFactory.class));
-        });
+        components.forEach(c -> doReturn(0.0).when(c).traverseMulti(aryEq(point), any(MultiVisitorFactory.class)));
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher);
         verify(traversalExecutor, times(1)).traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY,
@@ -256,22 +289,20 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testTranverseForestMultiBinaryAccumulatorInvalid() {
+    public void testTraverseForestMultiBinaryAccumulatorInvalid() {
         float[] point = { 2.2f, -1.1f };
         BinaryOperator<Double> accumulator = Double::sum;
         Function<Double, Double> finisher = x -> x / numberOfTrees;
 
-        components.forEach(c -> {
-            when(c.traverseMulti(aryEq(point), any())).thenReturn(0.0);
-        });
+        components.forEach(c -> when(c.traverseMulti(aryEq(point), any())).thenReturn(0.0));
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher));
         assertThrows(IllegalArgumentException.class, () -> forest.traverseForestMulti(new float[] { 2.2f, -1.1f, 3.3f },
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(point, null, accumulator, finisher));
-        assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(point,
-                TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, (BinaryOperator<Double>) null, finisher));
+        assertThrows(NullPointerException.class,
+                () -> forest.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, null, finisher));
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(point,
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, accumulator, null));
     }
@@ -280,9 +311,7 @@ public class RandomCutForestTest {
     public void testTraverseForestMultiCollector() {
         float[] point = { 2.2f, -1.1f };
 
-        components.forEach(c -> {
-            doReturn(0.0).when(c).traverseMulti(aryEq(point), any(MultiVisitorFactory.class));
-        });
+        components.forEach(c -> doReturn(0.0).when(c).traverseMulti(aryEq(point), any(MultiVisitorFactory.class)));
 
         forest.traverseForestMulti(point, TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY,
                 TestUtils.SORTED_LIST_COLLECTOR);
@@ -291,12 +320,10 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testTranverseForestCollectorMultiInvalid() {
+    public void testTraverseForestCollectorMultiInvalid() {
         float[] point = { 2.2f, -1.1f };
 
-        components.forEach(c -> {
-            when(c.traverse(aryEq(point), any())).thenReturn(0.0);
-        });
+        components.forEach(c -> when(c.traverse(aryEq(point), any())).thenReturn(0.0));
 
         assertThrows(NullPointerException.class, () -> forest.traverseForestMulti(null,
                 TestUtils.DUMMY_GENERIC_MULTI_VISITOR_FACTORY, TestUtils.SORTED_LIST_COLLECTOR));
@@ -504,7 +531,7 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testImputMissingValuesWithOutputNotReady() {
+    public void testImputeMissingValuesWithOutputNotReady() {
         double[] point = { 12.3, -45.6 };
         int numberOfMissingValues = 1;
         int[] missingIndexes = { 1, 1000 }; // second value doesn't matter since numberOfMissingValues is 1o
@@ -574,7 +601,7 @@ public class RandomCutForestTest {
     }
 
     @Test
-    public void testExrapolateBasicWithShingleBuilder() {
+    public void testExtrapolateBasicWithShingleBuilder() {
         doNothing().when(forest).extrapolateBasicCyclic(any(RangeVector.class), anyInt(), anyInt(), anyInt(),
                 any(float[].class), any(int[].class), anyDouble());
         doNothing().when(forest).extrapolateBasicSliding(any(RangeVector.class), anyInt(), anyInt(), any(float[].class),
@@ -604,7 +631,8 @@ public class RandomCutForestTest {
         doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
-                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyDouble());
+                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
+                        any(Boolean.class), any(Boolean.class), anyDouble());
 
         forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes, 1.0);
 
@@ -641,7 +669,8 @@ public class RandomCutForestTest {
         doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
-                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyDouble());
+                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
+                        any(Boolean.class), any(Boolean.class), anyDouble());
 
         forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes, 1.0);
 
@@ -806,8 +835,7 @@ public class RandomCutForestTest {
     public void testUpdateAfterRoundTrip() {
         int dimensions = 10;
         for (int trials = 0; trials < 10; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).sampleSize(64)
-                    .build();
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64).build();
 
             Random r = new Random();
             for (int i = 0; i < new Random(trials).nextInt(3000); i++) {
@@ -833,11 +861,62 @@ public class RandomCutForestTest {
     }
 
     @Test
+    public void testUpdateAfterRoundTripWithPause() {
+        int dimensions = 10;
+        int shingleSize = 5;
+        for (int trials = 0; trials < 10; trials++) {
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).sampleSize(64)
+                    .shingleSize(shingleSize).internalShinglingEnabled(true).build();
+            RandomCutForest reference = RandomCutForest.builder().dimensions(dimensions).sampleSize(64)
+                    .shingleSize(shingleSize).internalShinglingEnabled(true).build();
+
+            Random r = new Random();
+            for (int i = 0; i < new Random(trials).nextInt(3000); i++) {
+                double[] vec = r.ints(dimensions / shingleSize, 0, 50).asDoubleStream().toArray();
+                forest.update(vec);
+                reference.update(vec);
+            }
+            assertTrue(forest.isCurrentlySampling());
+            forest.pauseSampling();
+            assertFalse(forest.isCurrentlySampling());
+
+            // serialize + deserialize
+            RandomCutForestMapper mapper = new RandomCutForestMapper();
+            mapper.setSaveExecutorContextEnabled(true);
+            mapper.setSaveTreeStateEnabled(true);
+            RandomCutForest forest2 = mapper.toModel(mapper.toState(forest));
+            assertFalse(forest2.isCurrentlySampling());
+
+            // update re-instantiated forest
+            for (int i = 0; i < 1000; i++) {
+                double[] point = r.ints(dimensions / shingleSize, 0, 50).asDoubleStream().toArray();
+
+                if (i % 100 == 0) {
+                    if (forest2.isCurrentlySampling()) {
+                        forest.pauseSampling();
+                        forest.resumeSampling();
+                    } else {
+                        forest.resumeSampling();
+                        forest2.resumeSampling();
+                    }
+                }
+                double score = forest.getAnomalyScore(point);
+                assertEquals(score, forest2.getAnomalyScore(point), 1e-5);
+                forest2.update(point);
+                forest.update(point);
+                reference.update(point);
+            }
+            assertArrayEquals(reference.transformToShingledPoint(new float[dimensions / shingleSize]),
+                    forest.transformToShingledPoint(new float[dimensions / shingleSize]), 1e-10f);
+        }
+    }
+
+    @Test
     public void testUpdateAfterRoundTripMediumNodeStore() {
         int dimensions = 5;
         for (int trials = 0; trials < 10; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
-                    .sampleSize(20000).precision(Precision.FLOAT_32).build();
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(1).sampleSize(20000)
+                    .build();
 
             Random r = new Random();
             for (int i = 0; i < 30000 + new Random().nextInt(300); i++) {
@@ -859,6 +938,12 @@ public class RandomCutForestTest {
                 forest2.update(point);
                 forest.update(point);
             }
+            List<ConditionalTreeSample> first = forest.getConditionalField(new float[dimensions], 1, new int[1], 1.0);
+            List<ConditionalTreeSample> second = forest2.getConditionalField(new float[dimensions], 1, new int[1], 1.0);
+            assertEquals(first.size(), second.size());
+            for (int i = 0; i < first.size(); i++) {
+                assertEquals(first.get(i).pointStoreIndex, second.get(i).pointStoreIndex);
+            }
         }
     }
 
@@ -866,12 +951,14 @@ public class RandomCutForestTest {
     public void testUpdateAfterRoundTripLargeNodeStore() {
         int dimensions = 5;
         for (int trials = 0; trials < 1; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions).numberOfTrees(1)
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(1)
                     .sampleSize(200000).centerOfMassEnabled(true).build();
 
-            Random r = new Random();
+            long seed = new Random().nextLong();
+            System.out.println(" this seed " + seed);
+            Random r = new Random(seed);
             for (int i = 0; i < 300000 + new Random().nextInt(300); i++) {
-                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+                // forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
             // serialize + deserialize
@@ -889,6 +976,10 @@ public class RandomCutForestTest {
                 forest2.update(point);
                 forest.update(point);
             }
+            List<ICluster<float[]>> first = forest.summarize(10, 0.5, 5, null);
+            System.out.println("DONE 1");
+            List<ICluster<float[]>> second = forest2.summarize(10, 0.5, 5, null);
+            assertEquals(first.size(), second.size());
         }
     }
 
@@ -948,9 +1039,8 @@ public class RandomCutForestTest {
         System.out.println(" seed " + seed);
         int dataSize = 4000 * sampleSize;
         double[][] big = generateShingledData(dataSize, dimensions, 2);
-        RandomCutForest forest = RandomCutForest.builder().compact(true).dimensions(dimensions)
-                .numberOfTrees(numberOfTrees).sampleSize(sampleSize).precision(Precision.FLOAT_32).randomSeed(seed)
-                .boundingBoxCacheFraction(1.0).build();
+        RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(numberOfTrees)
+                .sampleSize(sampleSize).randomSeed(seed).boundingBoxCacheFraction(1.0).build();
 
         int num = 0;
         for (double[] point : big) {

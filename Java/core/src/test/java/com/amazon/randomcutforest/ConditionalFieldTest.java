@@ -79,7 +79,8 @@ public class ConditionalFieldTest {
         float[] queryOne = new float[newDimensions];
         float[] queryTwo = new float[newDimensions];
         queryTwo[1] = 1;
-        SampleSummary summary = newForest.getConditionalFieldSummary(queryOne, 1, new int[] { 0 }, 1);
+        SampleSummary summary = newForest.getConditionalFieldSummary(queryOne, 1, new int[] { 0 }, 1, 0, true, false,
+                1);
 
         assert (summary.summaryPoints.length == 2);
         assert (summary.relativeWeight.length == 2);
@@ -90,7 +91,7 @@ public class ConditionalFieldTest {
         assert (summary.relativeWeight[0] > 0.25);
         assert (summary.relativeWeight[1] > 0.25);
 
-        summary = newForest.getConditionalFieldSummary(queryTwo, 1, new int[] { 0 }, 1);
+        summary = newForest.getConditionalFieldSummary(queryTwo, 1, new int[] { 0 }, 1, 0, true, false, 1);
 
         assert (summary.summaryPoints.length == 2);
         assert (summary.relativeWeight.length == 2);

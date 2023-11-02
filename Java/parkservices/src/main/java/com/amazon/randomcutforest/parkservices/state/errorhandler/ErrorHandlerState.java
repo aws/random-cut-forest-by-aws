@@ -15,22 +15,32 @@
 
 package com.amazon.randomcutforest.parkservices.state.errorhandler;
 
+import static com.amazon.randomcutforest.state.Version.V4_0;
+
 import java.io.Serializable;
 
 import lombok.Data;
 
+import com.amazon.randomcutforest.state.PredictiveRandomCutForestState;
+import com.amazon.randomcutforest.state.statistics.DeviationState;
+
 @Data
 public class ErrorHandlerState implements Serializable {
     private static final long serialVersionUID = 1L;
-
+    private String version = V4_0;
     private int sequenceIndex;
     private double percentile;
     private int forecastHorizon;
     private int errorHorizon;
     private float[] pastForecastsFlattened;
-    private float[] actualsFlattened;
     private int inputLength;
-    private float[] lastDeviations;
+    private float[] lastDataDeviations;
+    private double[] lastInput;
+
+    private float[] upperLimit;
+    private float[] lowerLimit;
+    private DeviationState[] deviationStates;
+    private PredictiveRandomCutForestState estimatorState;
     // items below are not used now. Kept for regret computation later.
     // Regret is what we feel when we realize that we should have been better off
     // had we done something else. A basic requirement of regret computation is that

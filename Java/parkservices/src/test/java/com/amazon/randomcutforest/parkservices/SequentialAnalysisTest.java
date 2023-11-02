@@ -18,23 +18,71 @@ package com.amazon.randomcutforest.parkservices;
 import static com.amazon.randomcutforest.RandomCutForest.DEFAULT_SAMPLE_SIZE;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Random;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.calibration.Calibration;
+import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.parkservices.returntypes.AnalysisDescriptor;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 public class SequentialAnalysisTest {
+
+    protected SequentialAnalysis test = new SequentialAnalysis();
+
+    @Test
+    public void basicTest() {
+        int sampleSize = 256;
+        long seed = new Random().nextLong();
+        System.out.println(" seed " + seed);
+        Random rng = new Random(seed);
+        int numTrials = 1; // just once since testing exact equality
+        int length = 40 * sampleSize;
+        int numberOfTrees = 30 + rng.nextInt(20);
+        int outputAfter = 1 + rng.nextInt(50);
+        int shingleSize = 1 + rng.nextInt(15);
+        int baseDimensions = 1 + rng.nextInt(5);
+        int dimensions = baseDimensions * shingleSize;
+        long forestSeed = rng.nextLong();
+        double timeDecay = 0.1 / sampleSize;
+        double transformDecay = 1.0 / sampleSize;
+        double fraction = 1.0 * outputAfter / sampleSize;
+        ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .numberOfTrees(numberOfTrees).randomSeed(forestSeed).outputAfter(outputAfter).timeDecay(timeDecay)
+                .transformDecay(transformDecay).internalShinglingEnabled(true).initialAcceptFraction(fraction)
+                .shingleSize(shingleSize).build();
+        ThresholdedRandomCutForest second = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .numberOfTrees(numberOfTrees).randomSeed(forestSeed).outputAfter(outputAfter).timeDecay(timeDecay)
+                .transformDecay(transformDecay).boundingBoxCacheFraction(0).internalShinglingEnabled(true)
+                .initialAcceptFraction(fraction).shingleSize(shingleSize).build();
+
+        assertEquals(first.processSequentially(null), second.processSequentially(null));
+        assertEquals(first.processSequentially(new double[0][]), second.processSequentially(new double[0][]));
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(length, 50, 100, 5,
+                rng.nextLong(), baseDimensions);
+        List<AnomalyDescriptor> a = first.processSequentially(dataWithKeys.data);
+        List<AnomalyDescriptor> b = second.processSequentially(dataWithKeys.data);
+        assertEquals(a.size(), b.size());
+        assertDoesNotThrow(
+                () -> test.forecastWithAnomalies(dataWithKeys.data, 2, 256, 0.001, TransformMethod.NONE, 10, 10, 0));
+        dataWithKeys.data[0] = new double[0]; // changing length
+        assertThrows(IllegalArgumentException.class, () -> first.processSequentially(dataWithKeys.data));
+        assertThrows(IllegalArgumentException.class,
+                () -> test.detectAnomalies(null, 1, 256, 0.001, TransformMethod.NONE, 0L));
+        assertThrows(IllegalArgumentException.class,
+                () -> test.forecastWithAnomalies(null, 1, 256, 0.001, TransformMethod.NONE, 10, 10, 0));
+    }
 
     @ParameterizedTest
     @EnumSource(TransformMethod.class)

@@ -15,14 +15,19 @@
 
 package com.amazon.randomcutforest;
 
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Random;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.store.PointStore;
 
 public class RandomCutForestBuilderTest {
 
@@ -169,11 +174,46 @@ public class RandomCutForestBuilderTest {
     }
 
     @Test
+    public void testIllegalExceptionIsThrownWhenPoolSizeIsNegative() {
+        assertThrows(IllegalArgumentException.class, () -> RandomCutForest.builder().numberOfTrees(numberOfTrees)
+                .sampleSize(sampleSize).dimensions(dimensions).threadPoolSize(-10).build());
+    }
+
+    @Test
     public void testPoolSizeIsZeroWhenParallelExecutionIsDisabled() {
         RandomCutForest f = RandomCutForest.builder().numberOfTrees(numberOfTrees).sampleSize(sampleSize)
                 .dimensions(dimensions).parallelExecutionEnabled(false).build();
 
         assertFalse(f.isParallelExecutionEnabled());
         assertEquals(0, f.getThreadPoolSize());
+    }
+
+    @Test
+    public void testShingleSize() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RandomCutForest.builder().dimensions(dimensions).shingleSize(3).build());
+    }
+
+    @Test
+    public void testCache() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RandomCutForest.builder().dimensions(dimensions).boundingBoxCacheFraction(-1).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> RandomCutForest.builder().dimensions(dimensions).boundingBoxCacheFraction(2).build());
+    }
+
+    @Test
+    public void initalPointStore() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RandomCutForest.builder().dimensions(1).initialPointStoreSize(-1).build());
+        RandomCutForest f = RandomCutForest.builder().dimensions(1).numberOfTrees(1).initialPointStoreSize(10)
+                .dynamicResizingEnabled(true).build();
+        assertEquals(((PointStore) f.stateCoordinator.getStore()).getCapacity(), 512);
+        assertEquals(((PointStore) f.stateCoordinator.getStore()).getCurrentStoreCapacity(), 10);
+        for (int i = 0; i < 1000; i++) {
+            f.update(new double[] { new Random().nextDouble() });
+        }
+        assertThrows(IllegalStateException.class, () -> validateInternalState(false, "message"));
+        validateInternalState(((PointStore) f.stateCoordinator.getStore()).getCurrentStoreCapacity() > 10, "error");
     }
 }

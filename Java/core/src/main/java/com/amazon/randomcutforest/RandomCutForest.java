@@ -145,7 +145,7 @@ public class RandomCutForest {
     /**
      * Default floating-point precision for internal data structures.
      */
-    public static final Precision DEFAULT_PRECISION = Precision.FLOAT_64;
+    public static final Precision DEFAULT_PRECISION = Precision.FLOAT_32;
 
     /**
      * fraction of bounding boxes maintained by each tree
@@ -330,29 +330,23 @@ public class RandomCutForest {
     protected RandomCutForest(Builder<?> builder, boolean notUsed) {
         checkArgument(builder.numberOfTrees > 0, "numberOfTrees must be greater than 0");
         checkArgument(builder.sampleSize > 0, "sampleSize must be greater than 0");
-        builder.outputAfter.ifPresent(n -> {
-            checkArgument(n > 0, "outputAfter must be greater than 0");
-        });
+        builder.outputAfter.ifPresent(n -> checkArgument(n > 0, "outputAfter must be greater than 0"));
         checkArgument(builder.dimensions > 0, "dimensions must be greater than 0");
-        builder.timeDecay.ifPresent(timeDecay -> {
-            checkArgument(timeDecay >= 0, "timeDecay must be greater than or equal to 0");
+        builder.timeDecay
+                .ifPresent(timeDecay -> checkArgument(timeDecay >= 0, "timeDecay must be greater than or equal to 0"));
+        builder.threadPoolSize.ifPresent(n -> {
+            checkArgument(n >= 0, "cannot be negative");
+            checkArgument((n > 0) || (!builder.parallelExecutionEnabled),
+                    "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'.");
         });
-        builder.threadPoolSize.ifPresent(n -> checkArgument((n > 0) || ((n == 0) && !builder.parallelExecutionEnabled),
-                "threadPoolSize must be greater/equal than 0. To disable thread pool, set parallel execution to 'false'."));
-        checkArgument(builder.internalShinglingEnabled || builder.shingleSize == 1
-                || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
-        // checkArgument(!builder.internalShinglingEnabled || builder.shingleSize > 1,
-        // " need shingle size > 1 for internal shingling");
+        checkArgument(builder.shingleSize == 1 || builder.dimensions % builder.shingleSize == 0, "wrong shingle size");
         if (builder.internalRotationEnabled) {
             checkArgument(builder.internalShinglingEnabled, " enable internal shingling");
         }
-        builder.initialPointStoreSize.ifPresent(n -> {
-            checkArgument(n > 0, "initial point store must be greater than 0");
-            checkArgument(n > builder.sampleSize * builder.numberOfTrees || builder.dynamicResizingEnabled,
-                    " enable dynamic resizing ");
-        });
-        checkArgument(builder.boundingBoxCacheFraction >= 0 && builder.boundingBoxCacheFraction <= 1,
-                "incorrect cache fraction range");
+        builder.initialPointStoreSize
+                .ifPresent(n -> checkArgument(n > 0, "initial point store must be greater than 0"));
+        checkArgument(builder.boundingBoxCacheFraction >= 0, "cache cannot be negative");
+        checkArgument(builder.boundingBoxCacheFraction <= 1, "incorrect cache fraction range");
         numberOfTrees = builder.numberOfTrees;
         sampleSize = builder.sampleSize;
         outputAfter = builder.outputAfter.orElse(max(1, (int) (sampleSize * DEFAULT_OUTPUT_AFTER_FRACTION)));
@@ -617,7 +611,8 @@ public class RandomCutForest {
      *                      caching.
      */
     public void setBoundingBoxCacheFraction(double cacheFraction) {
-        checkArgument(0 <= cacheFraction && cacheFraction <= 1, "cacheFraction must be between 0 and 1 (inclusive)");
+        checkArgument(0 <= cacheFraction, "cache cannot be negative");
+        checkArgument(cacheFraction <= 1, "cacheFraction must be between 0 and 1 (inclusive)");
         updateExecutor.getComponents().forEach(c -> c.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, cacheFraction));
     }
 
@@ -986,7 +981,8 @@ public class RandomCutForest {
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
                 "numberOfMissingValues must be less than or equal to missingIndexes.length");
-        checkArgument(centrality >= 0 && centrality <= 1, "centrality needs to be in range [0,1]");
+        checkArgument(centrality >= 0, " cannot be negative");
+        checkArgument(centrality <= 1, "centrality needs to be in range [0,1]");
 
         if (!isOutputReady()) {
             return new ArrayList<>();
@@ -1000,12 +996,13 @@ public class RandomCutForest {
     }
 
     public SampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues, int[] missingIndexes,
-            double centrality) {
+            int numberOfRepresentatives, double shrinkage, boolean addtypical, boolean project, double centrality) {
         checkArgument(numberOfMissingValues >= 0, "cannot be negative");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
                 "numberOfMissingValues must be less than or equal to missingIndexes.length");
-        checkArgument(centrality >= 0 && centrality <= 1, "centrality needs to be in range [0,1]");
+        checkArgument(centrality >= 0, " cannot be negative");
+        checkArgument(centrality <= 1, "centrality needs to be in range [0,1]");
         checkArgument(point != null, " cannot be null");
         if (!isOutputReady()) {
             return new SampleSummary(dimensions);
@@ -1013,12 +1010,13 @@ public class RandomCutForest {
 
         int[] liftedIndices = transformIndices(missingIndexes, point.length);
         ConditionalSampleSummarizer summarizer = new ConditionalSampleSummarizer(liftedIndices,
-                transformToShingledPoint(point), centrality);
-        return summarizer.summarize(getConditionalField(point, numberOfMissingValues, missingIndexes, centrality));
+                transformToShingledPoint(point), centrality, project, numberOfRepresentatives, shrinkage);
+        return summarizer.summarize(getConditionalField(point, numberOfMissingValues, missingIndexes, centrality),
+                addtypical);
     }
 
     public float[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
-        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1.0).median;
+        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1, 0, false, false, 1.0).median;
     }
 
     /**
@@ -1153,8 +1151,8 @@ public class RandomCutForest {
             // shift all entries in the query point left by 1 block
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
-            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes,
-                    centrality);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
+                    false, false, centrality);
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[dimensions
                         - blockSize + y];
@@ -1177,8 +1175,8 @@ public class RandomCutForest {
                 missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
-            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes,
-                    centrality);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
+                    false, false, centrality);
 
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[(currentPosition + y)
@@ -1294,6 +1292,18 @@ public class RandomCutForest {
         return stateCoordinator.getTotalUpdates();
     }
 
+    public void pauseSampling() {
+        updateExecutor.setCurrentlySampling(false);
+    }
+
+    public void resumeSampling() {
+        updateExecutor.setCurrentlySampling(true);
+    }
+
+    public boolean isCurrentlySampling() {
+        return updateExecutor.isCurrentlySampling();
+    }
+
     /**
      * an L1 clustering primitive that shows the aggregation of the points stored in
      * RCF the clustering uses multi-centroid clustering introduced in CURE
@@ -1342,8 +1352,8 @@ public class RandomCutForest {
     // same as above with default filled in
     public List<ICluster<float[]>> summarize(int maxAllowed, double shrinkage, int numberOfRepresentatives,
             List<ICluster<float[]>> previous) {
-        return stateCoordinator.getStore().summarize(maxAllowed, shrinkage, numberOfRepresentatives,
-                DEFAULT_SEPARATION_RATIO_FOR_MERGE, Summarizer::L1distance, previous);
+        return summarize(maxAllowed, shrinkage, numberOfRepresentatives, DEFAULT_SEPARATION_RATIO_FOR_MERGE,
+                Summarizer::L1distance, previous);
     }
 
     public static class Builder<T extends Builder<T>> {
@@ -1364,7 +1374,7 @@ public class RandomCutForest {
         private boolean directLocationMapEnabled = DEFAULT_DIRECT_LOCATION_MAP;
         private double boundingBoxCacheFraction = DEFAULT_BOUNDING_BOX_CACHE_FRACTION;
         private int shingleSize = DEFAULT_SHINGLE_SIZE;
-        protected boolean dynamicResizingEnabled = DEFAULT_DYNAMIC_RESIZING_ENABLED;
+
         private boolean internalShinglingEnabled = DEFAULT_INTERNAL_SHINGLING_ENABLED;
         protected boolean internalRotationEnabled = DEFAULT_INTERNAL_ROTATION_ENABLED;
         protected Optional<Integer> initialPointStoreSize = Optional.empty();
@@ -1445,8 +1455,8 @@ public class RandomCutForest {
             return (T) this;
         }
 
+        @Deprecated
         public T dynamicResizingEnabled(boolean dynamicResizingEnabled) {
-            this.dynamicResizingEnabled = dynamicResizingEnabled;
             return (T) this;
         }
 
