@@ -130,7 +130,8 @@ public class ErrorHandler {
         }
         if (builder.useRCF) {
             estimator = new PredictiveRandomCutForest.Builder<>().inputDimensions(3 * lastInput.length + 1)
-                    .outputAfter(100).transformMethod(TransformMethod.NORMALIZE).startNormalization(99).build();
+                    .randomSeed(13).outputAfter(100).transformMethod(TransformMethod.NORMALIZE).startNormalization(99)
+                    .build();
         }
     }
 
@@ -258,6 +259,7 @@ public class ErrorHandler {
         // that is, they are only state dependent and not event dependent
         ++sequenceIndex;
         lastDataDeviations = toFloatArray(deviations);
+        lastInput = Arrays.copyOf(input, inputLength);
         recomputeErrors(input);
     }
 

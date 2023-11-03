@@ -15,21 +15,6 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
-import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
-import com.amazon.randomcutforest.summarization.ICluster;
-import com.amazon.randomcutforest.summarization.Summarizer;
-import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
-import com.amazon.randomcutforest.util.Weighted;
-import org.junit.jupiter.api.Test;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
-import java.util.function.BiFunction;
-
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
@@ -49,6 +34,22 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+import java.util.Random;
+import java.util.function.BiFunction;
+
+import org.junit.jupiter.api.Test;
+
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
+import com.amazon.randomcutforest.summarization.ICluster;
+import com.amazon.randomcutforest.summarization.Summarizer;
+import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
+import com.amazon.randomcutforest.util.Weighted;
 
 public class TestGlobalLocalAnomalyDetector {
 
