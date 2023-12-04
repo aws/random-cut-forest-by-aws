@@ -16,13 +16,11 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import lombok.Getter;
@@ -35,9 +33,9 @@ import com.amazon.randomcutforest.parkservices.calibration.ErrorHandler;
 import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 
 @Getter
 @Setter
@@ -46,10 +44,6 @@ public class RCFCaster extends ThresholdedRandomCutForest {
     public static double DEFAULT_ERROR_PERCENTILE = 0.1;
 
     public static Calibration DEFAULT_CALIBRATION = Calibration.SIMPLE;
-
-    public static BiFunction<Float, Float, Float> defaultError = (x, y) -> x - y;
-
-    public static BiFunction<Float, Float, Float> alternateError = (x, y) -> 2 * (x - y) / (abs(x) + abs(y));
 
     protected int forecastHorizon;
     protected ErrorHandler errorHandler;
@@ -62,7 +56,8 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         double percentile = DEFAULT_ERROR_PERCENTILE;
         protected Calibration calibrationMethod = DEFAULT_CALIBRATION;
 
-        protected boolean useRCF = true;
+        // default is to use less space
+        protected boolean useRCF = false;
 
         Optional<float[]> upperLimit = Optional.empty();
 

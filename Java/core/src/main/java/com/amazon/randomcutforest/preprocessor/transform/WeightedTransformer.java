@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.preprocessor.transform;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.min;
 
 import java.util.Arrays;
 
@@ -66,9 +67,10 @@ public class WeightedTransformer implements ITransformer {
      * @param previousInput what was the real (or previously imputed) observation
      */
     @Override
-    public void invert(float[] values, double[] previousInput) {
+    public void invertInPlace(float[] values, double[] previousInput) {
         double output = 0;
-        for (int i = 0; i < values.length; i++) {
+        int length = min(weights.length, values.length);
+        for (int i = 0; i < length; i++) {
             output = (weights[i] == 0) ? 0 : values[i] * getScale(i, deviations) / weights[i];
             output += getShift(i, deviations);
             values[i] = (float) output;
@@ -106,20 +108,31 @@ public class WeightedTransformer implements ITransformer {
      * discounted average of variable i and statistic i + inputPoint.length
      * corresponds to the discounted average single step difference
      * 
-     * @param inputPoint    the input seen by TRCF
+     * @param inputPoint    the input
      * @param previousInput the previous input
+     * @param missingValues any missing values (in range 0..(inputLength-1))
      */
-    public void updateDeviation(double[] inputPoint, double[] previousInput) {
+    public void updateDeviation(double[] inputPoint, double[] previousInput, int[] missingValues) {
         checkArgument(inputPoint.length * NUMBER_OF_STATS == deviations.length, "incorrect lengths");
         checkArgument(inputPoint.length == previousInput.length, " lengths must match");
+        boolean[] missing = new boolean[inputPoint.length];
+        Arrays.fill(missing, false);
+        if (missingValues != null) {
+            for (int index : missingValues) {
+                missing[index] = true;
+            }
+        }
         for (int i = 0; i < inputPoint.length; i++) {
-            deviations[i].update(inputPoint[i]);
+            if (!missing[i]) {
+                deviations[i].update(inputPoint[i]);
+                deviations[i + 2 * inputPoint.length].update(deviations[i].getDeviation());
+            }
+            // the differenced quantities have to be updated
             if (deviations[i + inputPoint.length].getCount() == 0) {
                 deviations[i + inputPoint.length].update(0);
             } else {
                 deviations[i + inputPoint.length].update(inputPoint[i] - previousInput[i]);
             }
-            deviations[i + 2 * inputPoint.length].update(deviations[i].getDeviation());
             deviations[i + 3 * inputPoint.length].update(deviations[i + inputPoint.length].getMean());
             deviations[i + 4 * inputPoint.length].update(deviations[i + inputPoint.length].getDeviation());
         }

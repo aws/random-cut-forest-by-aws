@@ -73,7 +73,7 @@ public class ErrorHandler {
     Deviation[] rmseLowDeviations;
     float[] lowerLimit;
     float[] upperLimit;
-    double[] lastInput;
+    double[] lastInputs;
     PredictiveRandomCutForest estimator;
     float[] lastDataDeviations;
 
@@ -98,7 +98,7 @@ public class ErrorHandler {
             pastForecasts[i] = new RangeVector(length);
         }
         sequenceIndex = 0;
-        lastInput = new double[inputLength];
+        lastInputs = new double[2 * inputLength];
         rmseHighDeviations = new Deviation[length];
         rmseLowDeviations = new Deviation[length];
         intervalPrecision = new Deviation[length];
@@ -128,9 +128,18 @@ public class ErrorHandler {
             lowerLimit = new float[inputLength];
             Arrays.fill(lowerLimit, -Float.MAX_VALUE);
         }
+        // uses lastInputs as a markov input, the +1 corresponds to lookahead and then
+        // 2*inputlength correspond to the (correlated) positive and negative errors
+        //
         if (builder.useRCF) {
-            estimator = new PredictiveRandomCutForest.Builder<>().inputDimensions(3 * lastInput.length + 1)
-                    .randomSeed(13).outputAfter(100).transformMethod(TransformMethod.NORMALIZE).startNormalization(99)
+            int inputDimensions = lastInputs.length + 2 * inputLength + 2;
+            double[] weights = new double[inputDimensions];
+            Arrays.fill(weights, 1.0);
+            // the lookahead has 1/3 the weight of the total
+            weights[lastInputs.length] = lastInputs.length;
+            weights[lastInputs.length + 1] = lastInputs.length;
+            estimator = new PredictiveRandomCutForest.Builder<>().inputDimensions(inputDimensions).weights(weights)
+                    .randomSeed(13).outputAfter(50).transformMethod(TransformMethod.NORMALIZE).startNormalization(49)
                     .build();
         }
     }
@@ -145,14 +154,14 @@ public class ErrorHandler {
         checkArgument(sequenceIndex >= 0, "cannot be negative");
         checkArgument(Math.abs(percentile - 0.25) < 0.24, "has to be between (0,0.5) ");
         checkArgument(deviations.length == 3 * inputLength * forecastHorizon, "incorrect length");
-        checkArgument(lastInput.length == inputLength, "incoorect length");
+        checkArgument(lastInput.length == 2 * inputLength, "incorrect length");
 
         this.sequenceIndex = sequenceIndex;
         this.errorHorizon = errorHorizon;
         this.percentile = percentile;
         this.forecastHorizon = forecastHorizon;
         this.pastForecasts = new RangeVector[forecastHorizon];
-        this.lastInput = Arrays.copyOf(lastInput, lastInput.length);
+        this.lastInputs = Arrays.copyOf(lastInput, lastInput.length);
 
         int length = forecastHorizon * inputLength;
         checkArgument(lastDataDeviations.length >= inputLength, "incorrect length");
@@ -173,19 +182,19 @@ public class ErrorHandler {
         upperLimit = new float[inputLength];
         Arrays.fill(upperLimit, Float.MAX_VALUE);
         this.estimator = estimator;
-        int arrayLength = (pastForecastsFlattened == null) ? 0 : pastForecastsFlattened.length / (3 * length);
-        if (pastForecastsFlattened != null) {
-            for (int i = 0; i < arrayLength; i++) {
-                float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * length, (i * 3 + 1) * length);
-                float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * length, (i * 3 + 2) * length);
-                float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 2) * length, (i * 3 + 3) * length);
-                pastForecasts[i] = new RangeVector(values, upper, lower);
-            }
+        int arrayLength = pastForecastsFlattened.length / (3 * length);
+        checkArgument(arrayLength * 3 * length == pastForecastsFlattened.length, " has to be multiple of 3");
+        for (int i = 0; i < arrayLength; i++) {
+            float[] values = Arrays.copyOfRange(pastForecastsFlattened, i * 3 * length, (i * 3 + 1) * length);
+            float[] upper = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 1) * length, (i * 3 + 2) * length);
+            float[] lower = Arrays.copyOfRange(pastForecastsFlattened, (i * 3 + 2) * length, (i * 3 + 3) * length);
+            pastForecasts[i] = new RangeVector(values, upper, lower);
+
         }
         for (int i = arrayLength; i < forecastHorizon; i++) {
             pastForecasts[i] = new RangeVector(length);
         }
-        recomputeErrors(lastInput);
+        recomputeErrors(lastInputs, inputLength);
     }
 
     public void setUpperLimit(float[] upperLimit) {
@@ -216,36 +225,42 @@ public class ErrorHandler {
         int arrayLength = pastForecasts.length;
         int inputLength = input.length;
 
+        for (int i = 0; i < lastInputs.length - inputLength; i++) {
+            lastInputs[i] = lastInputs[i + inputLength];
+        }
+        System.arraycopy(input, 0, lastInputs, lastInputs.length - inputLength, inputLength);
+
         if (sequenceIndex > 0) {
             // sequenceIndex indicates the first empty place for input
             // note the predictions have already been stored
             int inputIndex = (sequenceIndex + arrayLength - 1) % arrayLength;
-            float[] errorTuple = new float[3 * inputLength + 1];
-            for (int y = 0; y < inputLength; y++) {
-                errorTuple[y] = (float) input[y];
+            float[] errorTuple = new float[lastInputs.length + 2 * inputLength + 2];
+            for (int y = 0; y < lastInputs.length; y++) {
+                errorTuple[y] = (float) lastInputs[y];
             }
-            for (int j = 0; j < forecastHorizon; j++) {
-                if (sequenceIndex > j) {
-                    for (int i = 0; i < inputLength; i++) {
+            for (int i = 0; i < forecastHorizon; i++) {
+                if (sequenceIndex > i) {
+                    for (int j = 0; j < inputLength; j++) {
                         RangeVector a = pastForecasts[inputIndex];
-                        int offset = j * inputLength;
-                        errorTuple[inputLength + 1] = j;
-                        if (input[i] <= a.upper[offset + i] && input[i] >= a.lower[offset + i]) {
-                            intervalPrecision[offset + i].update(1.0);
+                        int offset = i * inputLength;
+                        errorTuple[lastInputs.length] = i;
+                        errorTuple[lastInputs.length + 1] = forecastHorizon - i;
+                        if (input[j] <= a.upper[offset + j] && input[j] >= a.lower[offset + j]) {
+                            intervalPrecision[offset + j].update(1.0);
                         } else {
-                            intervalPrecision[offset + i].update(0);
+                            intervalPrecision[offset + j].update(0);
                         }
-                        double error = input[i] - a.values[offset + i];
+                        double error = input[j] - a.values[offset + j];
                         if (error >= 0) {
-                            rmseHighDeviations[offset + i].update(error);
-                            rmseLowDeviations[offset + i].update(0);
-                            errorTuple[inputLength + 1 + i] = (float) error;
-                            errorTuple[2 * inputLength + 1 + i] = 0;
+                            rmseHighDeviations[offset + j].update(error);
+                            rmseLowDeviations[offset + j].update(0);
+                            errorTuple[lastInputs.length + 2 + j] = (float) error;
+                            errorTuple[lastInputs.length + inputLength + 2 + j] = 0;
                         } else {
-                            rmseLowDeviations[offset + i].update(error);
-                            rmseHighDeviations[offset + i].update(0);
-                            errorTuple[2 * inputLength + 1 + i] = (float) (error);
-                            errorTuple[inputLength + 1 + i] = 0;
+                            rmseLowDeviations[offset + j].update(error);
+                            rmseHighDeviations[offset + j].update(0);
+                            errorTuple[lastInputs.length + inputLength + 2 + j] = (float) (error);
+                            errorTuple[lastInputs.length + 2 + j] = 0;
                         }
                     }
                     if (estimator != null) {
@@ -259,20 +274,18 @@ public class ErrorHandler {
         // that is, they are only state dependent and not event dependent
         ++sequenceIndex;
         lastDataDeviations = toFloatArray(deviations);
-        lastInput = Arrays.copyOf(input, inputLength);
-        recomputeErrors(input);
+        recomputeErrors(lastInputs, inputLength);
     }
 
-    void recomputeErrors(double[] lastInput) {
-        int inputLength = lastInput.length;
+    void recomputeErrors(double[] lastInputs, int inputLength) {
         double a;
         if (estimator != null) {
             a = (double) (sequenceIndex) / (estimator.getForest().getOutputAfter());
         } else {
             a = (double) (sequenceIndex) / (10 * forecastHorizon);
         }
-        float[] query = new float[inputLength * 3 + 1];
-        System.arraycopy(toFloatArray(lastInput), 0, query, 0, inputLength);
+        float[] query = new float[lastInputs.length + inputLength * 2 + 2];
+        System.arraycopy(toFloatArray(lastInputs), 0, query, 0, lastInputs.length);
         float[] errorHigh = new float[intervalPrecision.length];
         float[] errorLow = new float[intervalPrecision.length];
         if (a < 1) {
@@ -293,36 +306,38 @@ public class ErrorHandler {
                     errorRMSE.low[y] = rmseLowDeviations[y].getDeviation();
                 }
             }
+
             if (estimator != null) {
                 for (int i = 0; i < forecastHorizon; i++) {
                     int[] missing = new int[inputLength];
-                    query[inputLength] = i;
+                    query[lastInputs.length] = i;
+                    query[lastInputs.length + 1] = forecastHorizon - i;
                     for (int j = 0; j < inputLength; j++) {
-                        missing[j] = inputLength + 1 + j;
+                        missing[j] = lastInputs.length + 2 + j;
                     }
                     // at this moment we use the PredictiveRCF more for the shorter term estimation,
                     // and use an interpolation
                     // with the observed error for the longer term
-                    SampleSummary answer = estimator.predict(query, 0, missing, 1, 0.5, 1.0, false);
+                    SampleSummary answer = estimator.predict(query, 0, missing, 1, 0.5, 0.7);
                     for (int j = 0; j < inputLength; j++) {
-                        errorHigh[i * inputLength + j] = (forecastHorizon - j)
-                                * max(0, answer.median[inputLength + 1 + j]) / forecastHorizon
-                                + (float) (j * rmseHighDeviations[i * inputLength + j].getDeviation()
+
+                        errorHigh[i * inputLength + j] = (forecastHorizon - i)
+                                * max(0, answer.deviation[lastInputs.length + 2 + j]) / forecastHorizon
+                                + (float) (i * rmseHighDeviations[i * inputLength + j].getDeviation()
                                         / forecastHorizon);
+
                     }
                     for (int j = 0; j < inputLength; j++) {
-                        missing[j] = 2 * inputLength + 1 + j;
+                        missing[j] = lastInputs.length + inputLength + 2 + j;
                     }
-                    answer = estimator.predict(query, 0, missing, 1, 0.5, 1.0, false);
+                    answer = estimator.predict(query, 0, missing, 1, 0.5, 0.7);
                     for (int j = 0; j < inputLength; j++) {
-                        errorLow[i * inputLength + j] = (forecastHorizon - j)
-                                * max(0, -answer.median[2 * inputLength + 1 + j]) / forecastHorizon
-                                + (float) (j * rmseLowDeviations[i * inputLength + j].getDeviation() / forecastHorizon);
+
+                        errorLow[i * inputLength + j] = (forecastHorizon - i)
+                                * max(0, answer.deviation[lastInputs.length + inputLength + 2 + j]) / forecastHorizon
+                                + (float) (i * rmseLowDeviations[i * inputLength + j].getDeviation() / forecastHorizon);
+
                     }
-                }
-                for (int y = 0; y < intervalPrecision.length; y++) {
-                    errorHigh[y] = (float) max(1.0, 1.0 / (intervalPrecision[y].getMean() + 0.1)) * errorHigh[y];
-                    errorLow[y] = (float) max(1.0, 1.0 / (intervalPrecision[y].getMean() + 0.1)) * errorLow[y];
                 }
             } else {
                 for (int y = 0; y < errorRMSE.high.length; y++) {
@@ -330,8 +345,15 @@ public class ErrorHandler {
                     errorLow[y] = (float) errorRMSE.low[y];
                 }
             }
-
         }
+        // a control loop
+        for (int y = 0; y < intervalPrecision.length; y++) {
+            if (intervalPrecision[y].getMean() < 1.0 - percentile) {
+                errorHigh[y] = (float) max(1.0, 1.0 / (intervalPrecision[y].getMean() + 0.1)) * errorHigh[y];
+                errorLow[y] = (float) max(1.0, 1.0 / (intervalPrecision[y].getMean() + 0.1)) * errorLow[y];
+            }
+        }
+
         for (int i = 0; i < errorMean.length; i++) {
             errorMean[i] = (float) (rmseHighDeviations[i].getMean() + rmseLowDeviations[i].getMean());
             errorDistribution.values[i] = errorMean[i];
@@ -419,6 +441,13 @@ public class ErrorHandler {
         }
     }
 
+    public int getInputLength() {
+        return lastInputs.length / 2;
+    }
+
+    /**
+     * produces the stored forecasts as a non-null array
+     */
     public float[] getPastForecastsFlattened() {
         int arrayLength = min(sequenceIndex, pastForecasts.length);
         int length = intervalPrecision.length;

@@ -34,9 +34,10 @@ public class DifferenceTransformer extends WeightedTransformer {
     }
 
     @Override
-    public void invert(float[] values, double[] previousInput) {
-        super.invert(values, previousInput);
-        for (int i = 0; i < values.length; i++) {
+    public void invertInPlace(float[] values, double[] previousInput) {
+        checkArgument(values.length >= previousInput.length, "have to be at least previous");
+        super.invertInPlace(values, previousInput);
+        for (int i = 0; i < previousInput.length; i++) {
             double output = values[i] + previousInput[i];
             values[i] = (float) output;
         }

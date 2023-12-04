@@ -28,13 +28,15 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.parkservices.state.RCFCasterMapper;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
@@ -117,29 +119,39 @@ public class RCFCasterTest {
         MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
                 50, 5, seed, baseDimensions, false);
 
+        // force introduce anomalies
+        double[][] data = new double[dataSize + shingleSize][];
+        for (int i = 0; i < dataWithKeys.data.length; i++) {
+            data[i] = dataWithKeys.data[i];
+        }
+        for (int i = dataSize; i < dataSize + shingleSize; i++) {
+            // all zero
+            data[i] = new double[baseDimensions];
+        }
+
         int dimensions = baseDimensions * shingleSize;
         TransformMethod transformMethod = TransformMethod.NORMALIZE;
-        RCFCaster caster = RCFCaster.builder().compact(true).dimensions(dimensions).randomSeed(seed + 1)
-                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
-                .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
-                .centerOfMassEnabled(true).storeSequenceIndexesEnabled(true) // neither is relevant
+        RCFCaster caster = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1).numberOfTrees(numberOfTrees)
+                .shingleSize(shingleSize).sampleSize(sampleSize).internalShinglingEnabled(true).anomalyRate(0.01)
+                .forestMode(ForestMode.STANDARD).transformMethod(transformMethod).outputAfter(outputAfter)
+                .forecastHorizon(forecastHorizon).centerOfMassEnabled(true).storeSequenceIndexesEnabled(true) // neither
+                                                                                                              // is
+                                                                                                              // relevant
                 .calibration(calibration).errorHorizon(errorHorizon).initialAcceptFraction(0.125).build();
-        RCFCaster shadow = RCFCaster.builder().compact(true).dimensions(dimensions).randomSeed(seed + 1)
+        RCFCaster shadow = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1).numberOfTrees(numberOfTrees)
+                .shingleSize(shingleSize).sampleSize(sampleSize).internalShinglingEnabled(true).anomalyRate(0.01)
+                .forestMode(ForestMode.STANDARD).transformMethod(transformMethod).outputAfter(outputAfter)
+                .forecastHorizon(forecastHorizon).calibration(calibration).errorHorizon(errorHorizon)
+                .initialAcceptFraction(0.125).boundingBoxCacheFraction(0).build();
+        RCFCaster secondShadow = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1)
                 .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                .internalShinglingEnabled(true).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
                 .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
                 .calibration(calibration).errorHorizon(errorHorizon).initialAcceptFraction(0.125)
                 .boundingBoxCacheFraction(0).build();
-        RCFCaster secondShadow = RCFCaster.builder().compact(true).dimensions(dimensions).randomSeed(seed + 1)
+        RCFCaster thirdShadow = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1)
                 .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
-                .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
-                .calibration(calibration).errorHorizon(errorHorizon).initialAcceptFraction(0.125)
-                .boundingBoxCacheFraction(0).build();
-        RCFCaster thirdShadow = RCFCaster.builder().compact(true).dimensions(dimensions).randomSeed(seed + 1)
-                .numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
-                .internalShinglingEnabled(true).precision(precision).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                .internalShinglingEnabled(true).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
                 .transformMethod(transformMethod).outputAfter(outputAfter).forecastHorizon(forecastHorizon)
                 .calibration(calibration).errorHorizon(errorHorizon).initialAcceptFraction(0.125)
                 .boundingBoxCacheFraction(1.0).build();
@@ -150,8 +162,7 @@ public class RCFCasterTest {
         secondShadow.setScoringStrategy(ScoringStrategy.MULTI_MODE);
         thirdShadow.setScoringStrategy(ScoringStrategy.MULTI_MODE);
         // ensuring/testing that the parameters are the same; otherwise the
-        // grades/scores cannot
-        // be the same
+        // grades/scores cannot be the same
         caster.setLowerThreshold(1.1);
         shadow.setLowerThreshold(1.1);
         secondShadow.setLowerThreshold(1.1);
@@ -168,33 +179,31 @@ public class RCFCasterTest {
         assert (caster.errorHandler.getErrorHorizon() == errorHorizon);
         assert (caster.errorHorizon == errorHorizon);
 
-        for (int j = 0; j < dataWithKeys.data.length; j++) {
-            ForecastDescriptor result = caster.process(dataWithKeys.data[j], 0L);
-            ForecastDescriptor shadowResult = shadow.process(dataWithKeys.data[j], 0L);
+        for (int j = 0; j < data.length; j++) {
+            ForecastDescriptor result = caster.process(data[j], 0L);
+            ForecastDescriptor shadowResult = shadow.process(data[j], 0L);
             assertEquals(result.getRCFScore(), shadowResult.getRCFScore(), 1e-6);
-            /*
-             * assertArrayEquals(shadowResult.getTimedForecast().rangeVector.values,
-             * result.getTimedForecast().rangeVector.values, 1e-1f);
-             * assertArrayEquals(shadowResult.getTimedForecast().rangeVector.upper,
-             * result.getTimedForecast().rangeVector.upper, 1e-1f);
-             * assertArrayEquals(shadowResult.getTimedForecast().rangeVector.lower,
-             * result.getTimedForecast().rangeVector.lower, 1e-1f);
-             */
+
             int sequenceIndex = caster.errorHandler.getSequenceIndex();
+            assertEquals(shadow.errorHandler.getSequenceIndex(), sequenceIndex);
             if (caster.forest.isOutputReady()) {
                 float[] meanArray = caster.errorHandler.getErrorMean();
                 float[] intervalPrecision = shadow.errorHandler.getIntervalPrecision();
                 for (float y : intervalPrecision) {
                     assertTrue(0 <= y && y <= 1.0);
                 }
-                // assertArrayEquals(intervalPrecision, result.getIntervalPrecision(), 1e-6f);
+                assertArrayEquals(intervalPrecision, result.getIntervalPrecision(), 1e-6f);
             }
         }
 
         // 0 length arrays do not change state
         secondShadow.processSequentially(new double[0][]);
-        List<AnomalyDescriptor> firstList = secondShadow.processSequentially(dataWithKeys.data);
-        List<AnomalyDescriptor> thirdList = thirdShadow.processSequentially(dataWithKeys.data);
+        List<AnomalyDescriptor> firstList = secondShadow.processSequentially(data, x -> true);
+        List<AnomalyDescriptor> thirdList = thirdShadow.processSequentially(data, x -> true);
+        assertEquals(firstList.size(), data.length);
+        assertEquals(thirdList.size(), data.length);
+        assertEquals(firstList.get(data.length - 1).getInternalTimeStamp(),
+                thirdList.get(data.length - 1).getInternalTimeStamp());
         // null does not change state
         thirdShadow.processSequentially(null);
 
@@ -308,4 +317,93 @@ public class RCFCasterTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testRCFCallibration(boolean useRCF) {
+        int numberOfTrees = 50;
+        int sampleSize = 256;
+        Precision precision = Precision.FLOAT_32;
+        int dataSize = 4 * sampleSize;
+
+        // change this to try different number of attributes,
+        // this parameter is not expected to be larger than 5 for this example
+        int baseDimensions = 1;
+        int forecastHorizon = 15;
+        int shingleSize = 10;
+        int outputAfter = 32;
+        int errorHorizon = 256;
+
+        long seed = new Random().nextLong();
+
+        System.out.println("seed = " + seed);
+        // change the last argument seed for a different run
+        MultiDimDataWithKey dataWithKeys = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize + shingleSize - 1, 50,
+                50, 5, seed, baseDimensions, false);
+
+        int dimensions = baseDimensions * shingleSize;
+        TransformMethod transformMethod = TransformMethod.NORMALIZE;
+
+        RCFCaster caster = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1).numberOfTrees(numberOfTrees)
+                .shingleSize(shingleSize).sampleSize(sampleSize).internalShinglingEnabled(true).anomalyRate(0.01)
+                .forestMode(ForestMode.STANDARD).transformMethod(transformMethod).outputAfter(outputAfter)
+                .forecastHorizon(forecastHorizon).useRCFCallibration(useRCF).calibration(Calibration.SIMPLE)
+                .errorHorizon(errorHorizon).initialAcceptFraction(0.125).build();
+        ThresholdedRandomCutForest shadow = ThresholdedRandomCutForest.builder().dimensions(dimensions)
+                .randomSeed(seed + 1).numberOfTrees(numberOfTrees).shingleSize(shingleSize).sampleSize(sampleSize)
+                .internalShinglingEnabled(true).anomalyRate(0.01).forestMode(ForestMode.STANDARD)
+                .transformMethod(transformMethod).outputAfter(outputAfter).initialAcceptFraction(0.125).build();
+
+        // ensuring that the parameters are the same; otherwise the grades/scores cannot
+        // be the same
+        // weighTime has to be 0
+        caster.setLowerThreshold(1.1);
+        shadow.setLowerThreshold(1.1);
+
+        RCFCasterMapper mapper = new RCFCasterMapper();
+        RCFCaster secondShadow = mapper.toModel(mapper.toState(caster));
+
+        assertTrue(secondShadow.errorHandler.getErrorHorizon() == errorHorizon);
+        assertTrue(secondShadow.errorHorizon == errorHorizon);
+
+        for (int j = 0; j < dataWithKeys.data.length; j++) {
+            ForecastDescriptor result = caster.process(dataWithKeys.data[j], 0L);
+            AnomalyDescriptor shadowResult = shadow.process(dataWithKeys.data[j], 0L);
+            assertEquals(result.getRCFScore(), shadowResult.getRCFScore(), 1e-6f);
+
+            TimedRangeVector timedShadowForecast = shadow.extrapolate(forecastHorizon);
+
+            assertArrayEquals(timedShadowForecast.timeStamps, result.getTimedForecast().timeStamps);
+            assertArrayEquals(timedShadowForecast.upperTimeStamps, result.getTimedForecast().upperTimeStamps);
+            assertArrayEquals(timedShadowForecast.lowerTimeStamps, result.getTimedForecast().lowerTimeStamps);
+
+            // first check idempotence -- forecasts are state dependent only
+            // for ThresholdedRCF
+            TimedRangeVector newShadow = shadow.extrapolate(forecastHorizon);
+            assertArrayEquals(newShadow.rangeVector.values, timedShadowForecast.rangeVector.values, 1e-6f);
+            assertArrayEquals(newShadow.rangeVector.upper, timedShadowForecast.rangeVector.upper, 1e-6f);
+            assertArrayEquals(newShadow.rangeVector.lower, timedShadowForecast.rangeVector.lower, 1e-6f);
+            assertArrayEquals(newShadow.timeStamps, timedShadowForecast.timeStamps);
+            assertArrayEquals(newShadow.upperTimeStamps, timedShadowForecast.upperTimeStamps);
+            assertArrayEquals(newShadow.lowerTimeStamps, timedShadowForecast.lowerTimeStamps);
+
+            // extrapolate is idempotent for RCF casters
+            TimedRangeVector newVector = caster.extrapolate(forecastHorizon);
+            assertArrayEquals(newVector.rangeVector.values, result.getTimedForecast().rangeVector.values, 1e-6f);
+            assertArrayEquals(newVector.rangeVector.upper, result.getTimedForecast().rangeVector.upper, 1e-6f);
+            assertArrayEquals(newVector.rangeVector.lower, result.getTimedForecast().rangeVector.lower, 1e-6f);
+            assertArrayEquals(newVector.timeStamps, result.getTimedForecast().timeStamps);
+            assertArrayEquals(newVector.upperTimeStamps, result.getTimedForecast().upperTimeStamps);
+            assertArrayEquals(newVector.lowerTimeStamps, result.getTimedForecast().lowerTimeStamps);
+
+            // only difference between RCFCaster and ThresholdedRCF is calibration
+            caster.calibrate(dataWithKeys.data[j], Calibration.SIMPLE, timedShadowForecast.rangeVector);
+            assertArrayEquals(timedShadowForecast.rangeVector.values, result.getTimedForecast().rangeVector.values,
+                    1e-6f);
+            assertArrayEquals(timedShadowForecast.rangeVector.upper, result.getTimedForecast().rangeVector.upper,
+                    1e-6f);
+            assertArrayEquals(timedShadowForecast.rangeVector.lower, result.getTimedForecast().rangeVector.lower,
+                    1e-6f);
+
+        }
+    }
 }

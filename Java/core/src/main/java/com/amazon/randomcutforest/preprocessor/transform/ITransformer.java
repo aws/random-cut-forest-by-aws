@@ -54,7 +54,7 @@ public interface ITransformer {
     // then what should be alternative input that would have been transformed into
     // values[]; the transformation is done in place
 
-    void invert(float[] values, double[] previousInput);
+    void invertInPlace(float[] values, double[] previousInput);
 
     // similar to invert() but applies to a forecast provided by RangeVector over an
     // input length (number of variables in a multivariate analysis) baseDimension
@@ -67,8 +67,9 @@ public interface ITransformer {
     // update the internal data structures based on the current (multivariate) input
     // inputPoint
     // previousInput[] is the corresponding values of the last observed values
+    // missing values are in 0..(inputLength-1)
 
-    void updateDeviation(double[] inputPoint, double[] previousInput);
+    void updateDeviation(double[] inputPoint, double[] previousInput, int[] missingValues);
 
     // transforms inputPoint[] to RCF space, non-null values of initials[] are
     // used in normalization

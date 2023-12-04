@@ -31,7 +31,7 @@ public class WeightedTransformerTest {
     public void checkTransformer(WeightedTransformer w, double value, double another) {
         w.setWeights(new double[1]);
         float[] test = new float[] { 1.0f };
-        w.invert(test, new double[] { 2.0 });
+        w.invertInPlace(test, new double[] { 2.0 });
         assertEquals(test[0], value, 1e-6);
         assertEquals(w.getScale()[0], 0, 1e-6);
         RangeVector r = new RangeVector(1);
@@ -60,7 +60,12 @@ public class WeightedTransformerTest {
         assertThrows(IllegalArgumentException.class, () -> w.setWeights(new double[2]));
         checkTransformer(w, 0, 0);
         checkTransformer(new NormalizedDifferenceTransformer(new double[1], deviations), 2.0, 1.0);
+        assertThrows(IllegalArgumentException.class,
+                () -> new NormalizedDifferenceTransformer(new double[1], deviations).invertInPlace(new float[1],
+                        new double[2]));
         checkTransformer(new DifferenceTransformer(new double[1], deviations), 2.0, 1.0);
+        assertThrows(IllegalArgumentException.class,
+                () -> new DifferenceTransformer(new double[1], deviations).invertInPlace(new float[1], new double[2]));
     }
 
     @Test
@@ -70,9 +75,11 @@ public class WeightedTransformerTest {
             deviations[y] = new Deviation(0);
         }
         WeightedTransformer transformer = new WeightedTransformer(new double[2], deviations);
-        assertThrows(IllegalArgumentException.class, () -> transformer.updateDeviation(new double[1], new double[1]));
-        assertThrows(IllegalArgumentException.class, () -> transformer.updateDeviation(new double[2], new double[1]));
-        assertDoesNotThrow(() -> transformer.updateDeviation(new double[2], new double[2]));
+        assertThrows(IllegalArgumentException.class,
+                () -> transformer.updateDeviation(new double[1], new double[1], null));
+        assertThrows(IllegalArgumentException.class,
+                () -> transformer.updateDeviation(new double[2], new double[1], null));
+        assertDoesNotThrow(() -> transformer.updateDeviation(new double[2], new double[2], null));
     }
 
     @Test

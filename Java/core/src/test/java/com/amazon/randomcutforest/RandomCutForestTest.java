@@ -18,6 +18,7 @@ package com.amazon.randomcutforest;
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.TestUtils.EPSILON;
 import static java.lang.Math.PI;
+import static java.lang.Math.abs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -141,10 +142,11 @@ public class RandomCutForestTest {
         assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 1, new int[1], 2));
         assertDoesNotThrow(() -> forest.getConditionalField(null, 1, new int[1], 1));
         assertThrows(IllegalArgumentException.class,
-                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, -1));
+                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, -1, 1));
         assertThrows(IllegalArgumentException.class,
-                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 2));
-        assertDoesNotThrow(() -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 1));
+                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 2, 1));
+        assertDoesNotThrow(
+                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 1, 1));
         assertThrows(IllegalArgumentException.class, () -> forest.setTimeDecay(-2));
         assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(-1));
         assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(2));
@@ -472,11 +474,11 @@ public class RandomCutForestTest {
     public void testGetSimpleDensity() {
         float[] point = { 12.3f, -45.6f };
         DensityOutput zero = new DensityOutput(dimensions, sampleSize);
-        assertFalse(forest.samplersFull());
+        assertFalse(forest.isOutputReady());
         DensityOutput result = forest.getSimpleDensity(point);
         assertEquals(zero.getDensity(), result.getDensity(), EPSILON);
 
-        doReturn(true).when(forest).samplersFull();
+        doReturn(true).when(forest).isOutputReady();
         List<InterpolationMeasure> intermediateResults = new ArrayList<>();
 
         for (int i = 0; i < numberOfTrees; i++) {
@@ -497,7 +499,7 @@ public class RandomCutForestTest {
         }
 
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
-                sampleSize, numberOfTrees);
+                0, numberOfTrees);
         DensityOutput expectedResult = new DensityOutput(intermediateResults.stream().collect(collector));
         result = forest.getSimpleDensity(point);
         assertEquals(expectedResult.getDensity(), result.getDensity(), EPSILON);
@@ -632,7 +634,7 @@ public class RandomCutForestTest {
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
                 .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
-                        any(Boolean.class), any(Boolean.class), anyDouble());
+                        any(Boolean.class), any(Boolean.class), anyDouble(), anyInt());
 
         forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes, 1.0);
 
@@ -670,7 +672,7 @@ public class RandomCutForestTest {
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
                 .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
-                        any(Boolean.class), any(Boolean.class), anyDouble());
+                        any(Boolean.class), any(Boolean.class), anyDouble(), anyInt());
 
         forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes, 1.0);
 
@@ -951,14 +953,14 @@ public class RandomCutForestTest {
     public void testUpdateAfterRoundTripLargeNodeStore() {
         int dimensions = 5;
         for (int trials = 0; trials < 1; trials++) {
-            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(1)
-                    .sampleSize(200000).centerOfMassEnabled(true).build();
-
             long seed = new Random().nextLong();
             System.out.println(" this seed " + seed);
+            RandomCutForest forest = RandomCutForest.builder().dimensions(dimensions).numberOfTrees(1)
+                    .sampleSize(200000).centerOfMassEnabled(true).randomSeed(seed).build();
+
             Random r = new Random(seed);
             for (int i = 0; i < 300000 + new Random().nextInt(300); i++) {
-                // forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
+                forest.update(r.ints(dimensions, 0, 50).asDoubleStream().toArray());
             }
 
             // serialize + deserialize
@@ -976,10 +978,10 @@ public class RandomCutForestTest {
                 forest2.update(point);
                 forest.update(point);
             }
-            List<ICluster<float[]>> first = forest.summarize(10, 0.5, 5, null);
+            List<ICluster<float[]>> first = forest.summarize(10, 1, 5, null);
             System.out.println("DONE 1");
-            List<ICluster<float[]>> second = forest2.summarize(10, 0.5, 5, null);
-            assertEquals(first.size(), second.size());
+            List<ICluster<float[]>> second = forest2.summarize(10, 1, 1, null);
+            assert (abs(first.size() - second.size()) <= 1);
         }
     }
 

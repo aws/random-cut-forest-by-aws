@@ -32,8 +32,11 @@ public class StatisticsTest {
         assertThrows(IllegalArgumentException.class, () -> new Deviation(-1));
 
         assertThrows(IllegalArgumentException.class, () -> new Deviation(2));
-
-        assertDoesNotThrow(() -> new Deviation(new Random().nextDouble()));
+        Deviation newDeviation = new Deviation(new Random().nextDouble());
+        assertThrows(IllegalArgumentException.class, () -> newDeviation.setDiscount(-1));
+        assertThrows(IllegalArgumentException.class, () -> newDeviation.setDiscount(2));
+        assertDoesNotThrow(() -> newDeviation.setDiscount(0.519));
+        assertEquals(newDeviation.getDiscount(), 0.519);
     }
 
     @Test

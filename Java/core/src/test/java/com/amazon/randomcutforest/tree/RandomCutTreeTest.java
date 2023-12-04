@@ -364,7 +364,7 @@ public class RandomCutTreeTest {
             }
 
             @Override
-            public MultiVisitor<Integer> newCopy() {
+            public MultiVisitor<Integer> newPartialCopy() {
                 return new DepthCounter(depth);
             }
 

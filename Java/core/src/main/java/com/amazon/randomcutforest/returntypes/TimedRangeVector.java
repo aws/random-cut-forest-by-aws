@@ -13,15 +13,13 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.parkservices.returntypes;
+package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 import java.util.Arrays;
-
-import com.amazon.randomcutforest.returntypes.RangeVector;
 
 /**
  * ThresholdedRandomCutForests handle time internally and thus the forecast of

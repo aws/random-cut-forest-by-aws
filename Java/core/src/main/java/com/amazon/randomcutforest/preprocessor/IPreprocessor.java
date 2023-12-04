@@ -17,9 +17,9 @@ package com.amazon.randomcutforest.preprocessor;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 
 public interface IPreprocessor {
 
@@ -43,23 +43,23 @@ public interface IPreprocessor {
 
     double dataQuality();
 
-    float[] getScaledInput(float[] point, long timestamp);
-
     float[] getScaledShingledInput(double[] point, long timestamp, int[] missing, RandomCutForest forest);
 
-    SampleSummary invertSummary(SampleSummary summary, int numberOfMissing, int[] missingIndices, float[] point);
+    SampleSummary invertInPlaceRecentSummaryBlock(SampleSummary summary);
 
     void update(double[] point, float[] rcfPoint, long timestamp, int[] missing, RandomCutForest forest);
-
-    boolean isForecastReasonable(boolean internalShingling);
 
     double[] getExpectedValue(int relativeBlockIndex, double[] reference, float[] point, float[] newPoint);
 
     double[] getShingledInput(int index);
 
-    long getTimeStamp(int index);
+    double[] getShingledInput();
 
-    long inverseMapTime(double gap, int relativePosition);
+    double[] getDefaultFill();
+
+    void setDefaultFill(double[] fill);
+
+    long getTimeStamp(int index);
 
     double getTransformDecay();
 

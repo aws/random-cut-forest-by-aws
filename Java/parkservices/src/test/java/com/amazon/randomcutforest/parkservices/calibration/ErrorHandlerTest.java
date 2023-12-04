@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.statistics.Deviation;
 
 public class ErrorHandlerTest {
 
@@ -57,6 +58,8 @@ public class ErrorHandlerTest {
         e.lastDataDeviations = new float[] { 1.0f, 1.3f };
         float v = new Random().nextFloat();
         r.shift(0, v);
+        assertThrows(IllegalArgumentException.class,
+                () -> e.calibrate(new double[1], Calibration.SIMPLE, new RangeVector(r)));
         e.calibrate(new double[2], Calibration.SIMPLE, new RangeVector(r));
         assertEquals(r.values[0], v);
         e.calibrate(new double[2], Calibration.NONE, r);
@@ -67,6 +70,32 @@ public class ErrorHandlerTest {
         e.calibrate(new double[2], Calibration.MINIMAL, r);
         assertEquals(r.values[0], v);
         assertEquals(r.values[1], 0);
+    }
+
+    @Test
+    public void testSerializedConstructor() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(0, 0, 0, 0, 0, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(0, 1, 0, 0, 0, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0, 0, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, -1, 0, 1, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0, 1, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0.1, 1, null, null, null, new Deviation[2], null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ErrorHandler(1, 1, 0, 0.1, 1, null, null, new double[1], new Deviation[3], null, null));
+        assertThrows(IllegalArgumentException.class, () -> new ErrorHandler(1, 1, 0, 0.1, 1, null, new float[0],
+                new double[2], new Deviation[3], null, null));
+        Deviation[] deviations = new Deviation[3];
+        deviations[0] = deviations[1] = deviations[2] = new Deviation(0);
+        assertThrows(IllegalArgumentException.class, () -> new ErrorHandler(1, 1, 0, 0.1, 1, new float[2], new float[1],
+                new double[2], deviations, null, null));
+        assertDoesNotThrow(() -> new ErrorHandler(1, 1, 0, 0.1, 1, new float[0], new float[1], new double[2],
+                deviations, null, null));
     }
 
 }

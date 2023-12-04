@@ -43,8 +43,8 @@ public class ConditionalSampleSummarizerTest {
     public void setUp() {
         queryPoint = new float[] { 50, 70, 90, 100 };
         missingIndexes = new int[] { 2, 3 };
-        summarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, false, 1, 0);
-        projectedSummarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, true, 5, 0.3);
+        summarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, false, 1, 0, 1);
+        projectedSummarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, true, 5, 0.3, 1);
     }
 
     @Test

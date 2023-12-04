@@ -943,16 +943,16 @@ public class RandomCutForest {
         // density estimation should use sufficiently larger number of samples
         // and only return answers when full
 
-        if (!samplersFull()) {
+        if (!isOutputReady()) {
             return new DensityOutput(dimensions, sampleSize);
         }
 
         IVisitorFactory<InterpolationMeasure> visitorFactory = new VisitorFactory<>((tree,
-                y) -> new SimpleInterpolationVisitor(tree.projectToTree(y), sampleSize, 1.0, centerOfMassEnabled),
+                y) -> new SimpleInterpolationVisitor(tree.projectToTree(y), tree.getMass(), 1.0, centerOfMassEnabled),
                 (tree, x) -> x.lift(tree::liftFromTree));
         Collector<InterpolationMeasure, ?, InterpolationMeasure> collector = InterpolationMeasure.collector(dimensions,
-                sampleSize, numberOfTrees);
-
+                0, numberOfTrees);
+        DensityOutput a = new DensityOutput(traverseForest(transformToShingledPoint(point), visitorFactory, collector));
         return new DensityOutput(traverseForest(transformToShingledPoint(point), visitorFactory, collector));
     }
 
@@ -996,7 +996,8 @@ public class RandomCutForest {
     }
 
     public SampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues, int[] missingIndexes,
-            int numberOfRepresentatives, double shrinkage, boolean addtypical, boolean project, double centrality) {
+            int numberOfRepresentatives, double shrinkage, boolean addtypical, boolean project, double centrality,
+            int shingleSize) {
         checkArgument(numberOfMissingValues >= 0, "cannot be negative");
         checkNotNull(missingIndexes, "missingIndexes must not be null");
         checkArgument(numberOfMissingValues <= missingIndexes.length,
@@ -1010,13 +1011,14 @@ public class RandomCutForest {
 
         int[] liftedIndices = transformIndices(missingIndexes, point.length);
         ConditionalSampleSummarizer summarizer = new ConditionalSampleSummarizer(liftedIndices,
-                transformToShingledPoint(point), centrality, project, numberOfRepresentatives, shrinkage);
+                transformToShingledPoint(point), centrality, project, numberOfRepresentatives, shrinkage, shingleSize);
         return summarizer.summarize(getConditionalField(point, numberOfMissingValues, missingIndexes, centrality),
                 addtypical);
     }
 
     public float[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
-        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1, 0, false, false, 1.0).median;
+        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1, 0, false, false, 1.0,
+                1).median;
     }
 
     /**
@@ -1152,7 +1154,7 @@ public class RandomCutForest {
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
             SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
-                    false, false, centrality);
+                    false, false, centrality, 1);
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[dimensions
                         - blockSize + y];
@@ -1176,7 +1178,7 @@ public class RandomCutForest {
             }
 
             SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
-                    false, false, centrality);
+                    false, false, centrality, 1);
 
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[(currentPosition + y)

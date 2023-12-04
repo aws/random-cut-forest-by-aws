@@ -34,9 +34,10 @@ public class NormalizedDifferenceTransformer extends NormalizedTransformer {
     }
 
     @Override
-    public void invert(float[] values, double[] previousInput) {
-        super.invert(values, previousInput);
-        for (int i = 0; i < values.length; i++) {
+    public void invertInPlace(float[] values, double[] previousInput) {
+        checkArgument(values.length >= previousInput.length, "have to be at least as much as input");
+        super.invertInPlace(values, previousInput);
+        for (int i = 0; i < previousInput.length; i++) {
             double output = values[i] + previousInput[i];
             values[i] = (float) output;
         }

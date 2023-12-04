@@ -321,14 +321,17 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                         : FLOAT_MAX;
                 answer.add(new Weighted<P>(head.representative, tempMeasure));
                 if (considerOcclusion) {
-                    for (int j = index + 1; j < candidateList.size(); j++) {
-                        double occludeDistance = local.apply(head.representative, candidateList.get(j).representative);
-                        double candidateDistance = candidateList.get(j).distance;
+                    int consider = index + 1;
+                    while (consider < candidateList.size()) {
+                        double occludeDistance = local.apply(head.representative,
+                                candidateList.get(consider).representative);
+                        double candidateDistance = candidateList.get(consider).distance;
                         if (occludeDistance < candidateDistance && candidateDistance > Math
                                 .sqrt(head.distance * head.distance + occludeDistance * occludeDistance)) {
                             // delete element
-                            candidateList.remove(j);
+                            candidateList.remove(consider);
                         }
+                        consider++;
                     }
                 }
                 ++index;

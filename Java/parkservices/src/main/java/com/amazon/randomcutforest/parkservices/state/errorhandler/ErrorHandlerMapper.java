@@ -15,13 +15,11 @@
 
 package com.amazon.randomcutforest.parkservices.state.errorhandler;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.state.statistics.DeviationMapper.getDeviations;
 import static com.amazon.randomcutforest.state.statistics.DeviationMapper.getStates;
 
 import com.amazon.randomcutforest.PredictiveRandomCutForest;
 import com.amazon.randomcutforest.parkservices.calibration.ErrorHandler;
-import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.PredictiveRandomCutForestMapper;
 import com.amazon.randomcutforest.state.statistics.DeviationMapper;
@@ -38,18 +36,8 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
         errorHandlerState.setLastDataDeviations(model.getLastDataDeviations());
         DeviationMapper deviationMapper = new DeviationMapper();
         errorHandlerState.setDeviationStates(getStates(model.getDeviationList(), deviationMapper));
-        errorHandlerState.setLastInput(model.getLastInput());
-
-        // pastForecasts[i] contains forecasts at timestamp i. We have three float
-        // arrays:
-        // upper, lower, values. Each array is of length forecastHorizon*dimensions
-        // since
-        // we have forecastHorizon forecasts per dimension.
-        RangeVector[] pastForecasts = model.getPastForecasts();
-        int arrayLength = pastForecasts.length;
-        checkArgument(pastForecasts != null, "pastForecasts cannot be null");
-        int forecastHorizon = model.getForecastHorizon();
-        errorHandlerState.setInputLength(model.getLastInput().length);
+        errorHandlerState.setLastInput(model.getLastInputs());
+        errorHandlerState.setInputLength(model.getInputLength());
         errorHandlerState.setPastForecastsFlattened(model.getPastForecastsFlattened());
         if (model.getEstimator() != null) {
             PredictiveRandomCutForestMapper mapper = new PredictiveRandomCutForestMapper();
@@ -72,14 +60,8 @@ public class ErrorHandlerMapper implements IStateMapper<ErrorHandler, ErrorHandl
                 state.getSequenceIndex(), state.getPercentile(), state.getInputLength(),
                 state.getPastForecastsFlattened(), state.getLastDataDeviations(), state.getLastInput(),
                 getDeviations(state.getDeviationStates(), deviationMapper), forest, null);
-        if (state.getUpperLimit() != null) {
-            errorHandler.setUpperLimit(state.getUpperLimit());
-        }
-        if (state.getLowerLimit() != null) {
-            errorHandler.setLowerLimit(state.getLowerLimit());
-        }
-
+        errorHandler.setUpperLimit(state.getUpperLimit());
+        errorHandler.setLowerLimit(state.getLowerLimit());
         return errorHandler;
     }
-
 }

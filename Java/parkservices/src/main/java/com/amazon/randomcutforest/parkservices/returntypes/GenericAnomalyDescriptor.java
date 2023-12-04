@@ -51,7 +51,7 @@ public class GenericAnomalyDescriptor<P> {
 
     public GenericAnomalyDescriptor(List<Weighted<P>> representative, double score, double threshold,
             double anomalyGrade) {
-        this.representativeList = representativeList;
+        this.representativeList = representative;
         this.score = score;
         this.threshold = threshold;
         this.anomalyGrade = anomalyGrade;

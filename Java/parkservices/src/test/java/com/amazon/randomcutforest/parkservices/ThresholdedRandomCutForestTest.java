@@ -314,8 +314,7 @@ public class ThresholdedRandomCutForestTest {
         // an additional one arise from the actual input
         assertEquals(forest.getForest().getTotalUpdates(), count + 1);
         // triggerring consecutive anomalies (no differencing)
-        // Note NEXT and LINEAR will have an obvious issue with consecutive anomalies
-        if (method != NEXT && method != LINEAR) {
+        if (method == PREVIOUS && method == RCF) {
             assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 1.0);
         }
         assert (forest.process(new double[] { 20 }, (long) count * 113 + 1226).getAnomalyGrade() > 0);

@@ -36,22 +36,36 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.preprocessor.IPreprocessor;
 import com.amazon.randomcutforest.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.returntypes.DensityOutput;
+import com.amazon.randomcutforest.returntypes.DiVector;
+import com.amazon.randomcutforest.returntypes.InterpolationMeasure;
 import com.amazon.randomcutforest.returntypes.SampleSummary;
 
 /**
  * This class provides a predictive imputation based on RCF (respecting the
  * arrow of time) alongside streaming normalization
+ *
+ * Many of these capabities existed since RCF 1.0 -- however it seems that
+ * abstracting them into a single collected class can avoid the messier details
+ * and make the capabilites more accessible.
+ *
+ * We reiterate the observation in
+ * <a href="https://opensearch.org/blog/random-cut-forests/">
+ * https://opensearch.org/blog/random-cut-forests/</a> that an unsupervised
+ * anomaly detection that infers "not normal" can be made to predict, "well,
+ * what is normal then"? That is the basis of the time series forecasting in
+ * RCFCaster in parkservices -- one can predict the most likely (approximately
+ * minimum not normal score) value. The clustering inherent in RCF (for example,
+ * see getRCFDistanceAttribution as an alternate scoring metric) and other
+ * multicentroid methods can be then utilized to expose clusters of "likely"
+ * values.
+ *
  */
-@Getter
-@Setter
 public class PredictiveRandomCutForest {
 
     protected TransformMethod transformMethod = TransformMethod.NORMALIZE;
@@ -63,7 +77,6 @@ public class PredictiveRandomCutForest {
     protected ForestMode forestMode = ForestMode.STANDARD;
 
     public PredictiveRandomCutForest(Builder<?> builder) {
-        checkArgument(builder.forestMode != ForestMode.STREAMING_IMPUTE, "not suppoted yet");
         transformMethod = builder.transformMethod;
         Preprocessor.Builder<?> preprocessorBuilder = Preprocessor.builder().shingleSize(builder.shingleSize)
                 .transformMethod(builder.transformMethod).forestMode(builder.forestMode);
@@ -71,8 +84,20 @@ public class PredictiveRandomCutForest {
         int dimensions = builder.inputDimensions * builder.shingleSize;
         if (builder.forestMode == ForestMode.TIME_AUGMENTED) {
             dimensions += builder.shingleSize;
+            // if time is not differenced, then it can be added as a column
+            // without much difficulty
             preprocessorBuilder.normalizeTime(true);
             // force internal shingling for this option
+            builder.internalShinglingEnabled = Optional.of(true);
+        } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
+            preprocessorBuilder.normalizeTime(true);
+            builder.internalShinglingEnabled = Optional.of(false);
+            preprocessorBuilder.imputationMethod(builder.imputationMethod);
+            if (builder.fillValues != null) {
+                preprocessorBuilder.fillValues(builder.fillValues);
+            }
+            preprocessorBuilder.useImputedFraction(builder.useImputedFraction.orElse(0.5));
+        } else {
             builder.internalShinglingEnabled = Optional.of(true);
         }
 
@@ -83,7 +108,7 @@ public class PredictiveRandomCutForest {
         preprocessorBuilder.inputLength(builder.inputDimensions);
         preprocessorBuilder.weights(builder.weights);
         preprocessorBuilder.weightTime(builder.weightTime.orElse(1.0));
-        preprocessorBuilder.timeDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
+        preprocessorBuilder.transformDecay(builder.transformDecay.orElse(1.0 / builder.sampleSize));
         // to be used later
         preprocessorBuilder.randomSeed(builder.randomSeed.orElse(0L) + 1);
         preprocessorBuilder.dimensions(dimensions);
@@ -110,49 +135,92 @@ public class PredictiveRandomCutForest {
     }
 
     public SampleSummary predict(float[] inputPoint, long timestamp, int[] missingValues) {
-        return predict(inputPoint, timestamp, missingValues, 5, 0.3, 0.7, false);
+        return predict(inputPoint, timestamp, missingValues, 5, 0.3, 0.5);
     }
 
     public SampleSummary predict(float[] inputPoint, long timestamp, int[] missingValues, int numberOfRepresentatives,
-            double shrinkage, double centrality, boolean project) {
-
-        SampleSummary summary = null;
-        boolean cacheDisabled = (forest.getBoundingBoxCacheFraction() == 0);
-        try {
-            if (cacheDisabled) { // turn caching on temporarily
-                forest.setBoundingBoxCacheFraction(1.0);
-            }
-            if (missingValues != null) {
-                checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
-                for (int i = 0; i < missingValues.length; i++) {
-                    checkArgument(missingValues[i] >= 0, " missing values cannot be at negative position");
-                    checkArgument(missingValues[i] < inputPoint.length,
-                            "missing values cannot be at position larger than input length");
-                }
-            }
-            float[] scaledInput = preprocessor.getScaledInput(inputPoint, timestamp);
-            summary = preprocessor.invertSummary(
-                    forest.getConditionalFieldSummary(scaledInput, missingValues.length, missingValues,
-                            numberOfRepresentatives, shrinkage, true, project, centrality),
-                    missingValues.length, missingValues, scaledInput);
-        } finally {
-            if (cacheDisabled) { // turn caching off
-                forest.setBoundingBoxCacheFraction(0);
+            double shrinkage, double centrality) {
+        checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
+        int[] newMissingValues = null;
+        if (missingValues != null) {
+            checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
+            newMissingValues = new int[missingValues.length];
+            int startPosition = forest.getDimensions() - forest.getDimensions() / preprocessor.getShingleSize();
+            for (int i = 0; i < missingValues.length; i++) {
+                checkArgument(missingValues[i] >= 0, " missing values cannot be at negative position");
+                checkArgument(missingValues[i] <= inputPoint.length,
+                        "missing values cannot be at position larger than input length");
+                checkArgument(forestMode == ForestMode.TIME_AUGMENTED || missingValues[i] < inputPoint.length,
+                        "cannot be equal to input length");
+                newMissingValues[i] = (forestMode == ForestMode.STREAMING_IMPUTE) ? startPosition + missingValues[i]
+                        : missingValues[i];
             }
         }
-        return summary;
+        // check when TIME_AUGMENTED and missingValue includes timestamp
+        float[] point = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, missingValues,
+                forest);
+        if (point == null) {
+            return new SampleSummary(preprocessor.getInputLength());
+        }
+        return preprocessor.invertInPlaceRecentSummaryBlock(
+                forest.getConditionalFieldSummary(point, newMissingValues.length, newMissingValues,
+                        numberOfRepresentatives, shrinkage, true, false, centrality, preprocessor.getShingleSize()));
+
+    }
+
+    public double getExpectedInverseDepthScore(float[] inputPoint, long timestamp) {
+        checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
+        float[] point = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
+        return (point != null) ? forest.getAnomalyScore(point) : 0;
+    }
+
+    public DiVector getExpectedInverseDepthAttribution(float[] inputPoint, long timestamp) {
+        checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
+        float[] point = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
+        return (point != null) ? forest.getAnomalyAttribution(point) : new DiVector(forest.getDimensions());
+    }
+
+    public DensityOutput getSimpleDensity(float[] inputPoint, long timestamp) {
+        checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
+        float[] scaled = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
+        DensityOutput answer = (scaled != null) ? forest.getSimpleDensity(scaled)
+                : new DensityOutput(new InterpolationMeasure(inputPoint.length, 0));
+        double[] scale = preprocessor.getScale();
+        for (int i = 0; i < answer.getDimensions(); i++) {
+            answer.distances.high[i] *= scale[i % scale.length];
+            answer.distances.low[i] *= scale[i % scale.length];
+        }
+        return answer;
+    }
+
+    public DiVector getRCFDistanceAttribution(float[] inputPoint, long timestamp) {
+        DensityOutput test = getSimpleDensity(inputPoint, timestamp);
+        return test.distances;
     }
 
     public void update(float[] record, long timestamp) {
-        float[] scaled = preprocessor.getScaledInput(record, timestamp);
-        preprocessor.update(toDoubleArray(record), scaled, timestamp, null, forest);
-        if (scaled != null) {
-            forest.update(scaled);
-        }
+        update(record, timestamp, null);
+    }
+
+    public void update(float[] record, long timestamp, int[] missing) {
+        float[] scaled = preprocessor.getScaledShingledInput(toDoubleArray(record), timestamp, missing, forest);
+        preprocessor.update(toDoubleArray(record), scaled, timestamp, missing, forest);
     }
 
     public RandomCutForest getForest() {
         return forest;
+    }
+
+    public IPreprocessor getPreprocessor() {
+        return preprocessor;
+    }
+
+    public ForestMode getForestMode() {
+        return forestMode;
+    }
+
+    public TransformMethod getTransformMethod() {
+        return transformMethod;
     }
 
     /**
@@ -174,9 +242,9 @@ public class PredictiveRandomCutForest {
         protected Optional<Integer> stopNormalization = Optional.empty();
         protected int numberOfTrees = DEFAULT_NUMBER_OF_TREES;
         protected Optional<Double> timeDecay = Optional.empty();
-        protected Optional<Double> scoreDifferencing = Optional.empty();
         protected Optional<Double> lowerThreshold = Optional.empty();
         protected Optional<Double> weightTime = Optional.empty();
+        protected boolean normalizeTime = true;
         protected Optional<Long> randomSeed = Optional.empty();
         protected boolean storeSequenceIndexesEnabled = DEFAULT_STORE_SEQUENCE_INDEXES_ENABLED;
         protected boolean centerOfMassEnabled = DEFAULT_CENTER_OF_MASS_ENABLED;
@@ -186,11 +254,11 @@ public class PredictiveRandomCutForest {
         protected int shingleSize = DEFAULT_SHINGLE_SIZE;
         protected Optional<Boolean> internalShinglingEnabled = Optional.empty();
         protected double initialAcceptFraction = DEFAULT_INITIAL_ACCEPT_FRACTION;
-        protected double anomalyRate = 0.01;
         protected TransformMethod transformMethod = TransformMethod.NONE;
         protected ImputationMethod imputationMethod = PREVIOUS;
         protected ForestMode forestMode = ForestMode.STANDARD;
         protected double[] weights = null;
+        protected double[] fillValues = null;
         protected Optional<Double> useImputedFraction = Optional.empty();
         protected Optional<Double> transformDecay = Optional.empty();
 
@@ -337,11 +405,6 @@ public class PredictiveRandomCutForest {
             return (T) this;
         }
 
-        public T internalShinglingEnabled(boolean internalShinglingEnabled) {
-            this.internalShinglingEnabled = Optional.of(internalShinglingEnabled);
-            return (T) this;
-        }
-
         public T boundingBoxCacheFraction(double boundingBoxCacheFraction) {
             this.boundingBoxCacheFraction = boundingBoxCacheFraction;
             return (T) this;
@@ -358,19 +421,40 @@ public class PredictiveRandomCutForest {
             return randomSeed.map(Random::new).orElseGet(Random::new);
         }
 
-        public T anomalyRate(double anomalyRate) {
-            this.anomalyRate = anomalyRate;
-            return (T) this;
-        }
-
         public T weights(double[] values) {
             // values cannot be a null
             this.weights = Arrays.copyOf(values, values.length);
             return (T) this;
         }
 
+        public T imputationMethod(ImputationMethod imputationMethod) {
+            this.imputationMethod = imputationMethod;
+            return (T) this;
+        }
+
         public T transformMethod(TransformMethod method) {
             this.transformMethod = method;
+            return (T) this;
+        }
+
+        public T fillValues(double[] values) {
+            // values cannot be a null
+            this.fillValues = Arrays.copyOf(values, values.length);
+            return (T) this;
+        }
+
+        public T useImputedFraction(double fraction) {
+            this.useImputedFraction = Optional.of(fraction);
+            return (T) this;
+        }
+
+        public T weightTime(double value) {
+            this.weightTime = Optional.of(value);
+            return (T) this;
+        }
+
+        public T normalizeTime(boolean normalizeTime) {
+            this.normalizeTime = normalizeTime;
             return (T) this;
         }
     }

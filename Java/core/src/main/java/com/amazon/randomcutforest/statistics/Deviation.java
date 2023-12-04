@@ -84,6 +84,8 @@ public class Deviation {
     }
 
     public void setDiscount(double discount) {
+        checkArgument(discount >= 0, "cannot be negative");
+        checkArgument(discount < 1, "can be at most 1");
         this.discount = discount;
     }
 

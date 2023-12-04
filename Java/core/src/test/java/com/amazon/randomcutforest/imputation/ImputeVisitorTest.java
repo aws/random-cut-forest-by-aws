@@ -185,7 +185,7 @@ public class ImputeVisitorTest {
 
     @Test
     public void testNewCopy() {
-        ImputeVisitor copy = (ImputeVisitor) visitor.newCopy();
+        ImputeVisitor copy = (ImputeVisitor) visitor.newPartialCopy();
         assertArrayEquals(queryPoint, copy.getResult().leafPoint);
         assertNotSame(copy.getResult(), visitor.getResult());
         assertEquals(ImputeVisitor.DEFAULT_INIT_VALUE, visitor.getAnomalyRank());

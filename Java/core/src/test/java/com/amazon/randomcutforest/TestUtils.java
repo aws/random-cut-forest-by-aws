@@ -61,7 +61,7 @@ public class TestUtils {
         }
 
         @Override
-        public MultiVisitor<Double> newCopy() {
+        public MultiVisitor<Double> newPartialCopy() {
             return null;
         }
 
@@ -139,7 +139,7 @@ public class TestUtils {
                 }
 
                 @Override
-                public MultiVisitor<Double> newCopy() {
+                public MultiVisitor<Double> newPartialCopy() {
                     return null;
                 }
 

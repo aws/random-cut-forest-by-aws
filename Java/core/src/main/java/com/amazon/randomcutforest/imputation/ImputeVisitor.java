@@ -120,7 +120,8 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
     }
 
     /**
-     * A copy constructor which creates a deep copy of the original ImputeVisitor.
+     * A copy constructor which creates a deep but partial copy of the original
+     * ImputeVisitor.
      *
      * @param original
      */
@@ -238,7 +239,7 @@ public class ImputeVisitor implements MultiVisitor<ConditionalTreeSample> {
      * @return a copy of this visitor.
      */
     @Override
-    public MultiVisitor<ConditionalTreeSample> newCopy() {
+    public MultiVisitor<ConditionalTreeSample> newPartialCopy() {
         return new ImputeVisitor(this);
     }
 
