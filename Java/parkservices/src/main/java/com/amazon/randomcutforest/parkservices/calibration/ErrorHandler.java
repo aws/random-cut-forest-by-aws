@@ -270,9 +270,6 @@ public class ErrorHandler {
                 inputIndex = (inputIndex + arrayLength - 1) % arrayLength;
             }
         }
-        // sequence index is increased first so that recomputeErrors is idempotent;
-        // that is, they are only state dependent and not event dependent
-        ++sequenceIndex;
         lastDataDeviations = toFloatArray(deviations);
         recomputeErrors(lastInputs, inputLength);
     }
@@ -381,6 +378,7 @@ public class ErrorHandler {
      * @param vector the forecast
      */
     public void updateForecasts(RangeVector vector) {
+        ++sequenceIndex;
         int arrayLength = pastForecasts.length;
         int storedForecastIndex = (sequenceIndex + arrayLength - 1) % (arrayLength);
         int length = pastForecasts[0].values.length;

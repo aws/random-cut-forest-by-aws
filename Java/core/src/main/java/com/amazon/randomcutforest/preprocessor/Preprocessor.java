@@ -393,6 +393,11 @@ public class Preprocessor implements IPreprocessor {
         }
     }
 
+    @Override
+    public boolean isOutputReady() {
+        return internalTimeStamp > 0;
+    }
+
     public double[] getShift() {
         double[] previous = (inputLength == lastShingledInput.length) ? lastShingledInput
                 : getShingledInput(shingleSize - 1);

@@ -23,6 +23,8 @@ import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 
 public interface IPreprocessor {
 
+    boolean isOutputReady();
+
     int getShingleSize();
 
     int getInputLength();

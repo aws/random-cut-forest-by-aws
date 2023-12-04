@@ -175,16 +175,16 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         TimedRangeVector timedForecast = new TimedRangeVector(
                 forest.getDimensions() * forecastHorizon / preprocessor.getShingleSize(), forecastHorizon);
 
-        // note that internal timestamp of answer is 1 step in the past
-        // outputReady corresponds to first (and subsequent) forecast
-        if (forest.isOutputReady()) {
-            errorHandler.updateActuals(answer.getCurrentInput(), answer.getPostDeviations());
-            errorHandler.augmentDescriptor(answer);
+        // forest is ready mens that we can forecast -- but there is an implicit
+        // assumption that preprocessor is ready
+        if (forest.isOutputReady() && preprocessor.isOutputReady()) {
+            if (errorHandler.getSequenceIndex() > 0) {
+                // if not then there is no forecast stored
+                // forecast has to be there first
+                errorHandler.updateActuals(answer.getCurrentInput(), answer.getPostDeviations());
+                errorHandler.augmentDescriptor(answer);
+            }
 
-            // if the last point was an anomaly then it would be corrected
-            // note that forecast would show up for a point even when the anomaly score is 0
-            // because anomaly designation needs X previous points and forecast needs X
-            // points; note that calibration would have been performed already
             timedForecast = extrapolate(forecastHorizon, true, 1.0);
 
             // note that internal timestamp of answer is 1 step in the past

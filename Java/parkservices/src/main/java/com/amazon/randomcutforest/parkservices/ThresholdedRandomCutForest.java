@@ -564,7 +564,8 @@ public class ThresholdedRandomCutForest {
                 result.setPostShift(postShift);
                 result.setTransformDecay(preprocessor.getTransformDecay());
             }
-            // after the insertions
+        }
+        if (preprocessor.isOutputReady()) {
             result.setPostDeviations(preprocessor.getSmoothedDeviations());
         }
     }
