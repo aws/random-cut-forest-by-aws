@@ -91,7 +91,7 @@ public class PredictiveRandomCutForest {
             builder.internalShinglingEnabled = Optional.of(true);
         } else if (builder.forestMode == ForestMode.STREAMING_IMPUTE) {
             preprocessorBuilder.normalizeTime(true);
-            builder.internalShinglingEnabled = Optional.of(false);
+            builder.internalShinglingEnabled = Optional.of(true);
             preprocessorBuilder.imputationMethod(builder.imputationMethod);
             if (builder.fillValues != null) {
                 preprocessorBuilder.fillValues(builder.fillValues);
@@ -162,9 +162,8 @@ public class PredictiveRandomCutForest {
         if (point == null) {
             return new SampleSummary(preprocessor.getInputLength());
         }
-        return preprocessor.invertInPlaceRecentSummaryBlock(
-                forest.getConditionalFieldSummary(point, newMissingValues.length, newMissingValues,
-                        numberOfRepresentatives, shrinkage, true, false, centrality, preprocessor.getShingleSize()));
+        return preprocessor.invertInPlaceRecentSummaryBlock(forest.getConditionalFieldSummary(point, newMissingValues,
+                numberOfRepresentatives, shrinkage, true, false, centrality, preprocessor.getShingleSize()));
 
     }
 

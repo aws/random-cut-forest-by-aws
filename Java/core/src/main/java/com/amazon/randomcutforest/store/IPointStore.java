@@ -29,11 +29,18 @@ public interface IPointStore<PointReference, Point> extends IPointStoreView<Poin
      *
      * Note that delete is automatic, that is when no trees are accessing the point
      * 
-     * @param point       point to be added
-     * @param sequenceNum sequence number of the point
+     * @param point             point to be added
+     * @param sequenceNum       sequence number of the point
+     * @param updateShingleOnly only update the shingle but do not generate a point
+     *                          useful when we do not want to add a point with too
+     *                          many imputed values
      * @return reference of the stored point
      */
-    PointReference add(Point point, long sequenceNum);
+    PointReference add(Point point, long sequenceNum, boolean updateShingleOnly);
+
+    default PointReference add(Point point, long sequenceNum) {
+        return add(point, sequenceNum, false);
+    }
 
     // increments and returns the incremented value
     int incrementRefCount(int index);

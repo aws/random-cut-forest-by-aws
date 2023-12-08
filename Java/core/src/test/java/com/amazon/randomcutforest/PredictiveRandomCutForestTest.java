@@ -251,7 +251,7 @@ public class PredictiveRandomCutForestTest {
                 assertArrayEquals(summary.summaryPoints[0], fixedData, 1e-6f);
             }
         }
-        assertEquals(forest.getForest().getTotalUpdates() + newShingleSize - 1, count);
+        assertEquals(forest.getForest().getTotalUpdates(), count);
         // the next gap is 1226 + 113 which is about 11 times 113
         long newstamp = (long) count * 113 + 1226;
         assertEquals(11, forest.preprocessor.numberOfImputes(newstamp));

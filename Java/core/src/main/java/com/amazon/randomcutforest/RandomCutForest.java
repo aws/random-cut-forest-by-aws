@@ -566,20 +566,30 @@ public class RandomCutForest {
      * sampler in the forest. If the sampler accepts the point, the point is
      * submitted to the update method in the corresponding Random Cut Tree.
      *
-     * @param point The point used to update the forest.
+     * @param point             The point used to update the forest.
+     * @param updateShingleOnly only update the shingle (true for internal
+     *                          shingling)
      */
-    public void update(double[] point) {
-        update(toFloatArray(point));
-    }
 
-    public void update(float[] point) {
+    public void update(float[] point, boolean updateShingleOnly) {
         checkNotNull(point, "point must not be null");
         checkArgument(internalShinglingEnabled || point.length == dimensions,
                 String.format("point.length must equal %d", dimensions));
         checkArgument(!internalShinglingEnabled || point.length == inputDimensions,
                 String.format("point.length must equal %d for internal shingling", inputDimensions));
+        checkArgument(!updateShingleOnly || internalShinglingEnabled,
+                "update shingle setting is only valid for internal shingling");
 
-        updateExecutor.update(point);
+        updateExecutor.update(point, updateShingleOnly);
+    }
+
+    @Deprecated
+    public void update(double[] point) {
+        update(toFloatArray(point), false);
+    }
+
+    public void update(float[] point) {
+        update(point, false);
     }
 
     /**
@@ -957,33 +967,28 @@ public class RandomCutForest {
     }
 
     /**
-     * Given a point with missing values, return a new point with the missing values
-     * imputed. Each tree in the forest individual produces an imputed value. For
-     * 1-dimensional points, the median imputed value is returned. For points with
-     * more than 1 dimension, the imputed point with the 25th percentile anomaly
-     * score is returned.
+     * Given a point with missing values, return a collection of treesamples. These
+     * tree samples can be postprocessed in a variety of ways -- primarily to
+     * produce summaries and imputation. The treesamples correspond to pointstore
+     * index, distances to tree points (excluding the missing values) the actual
+     * point at the leaf and the tree sample is 1 for each tree.
      *
-     * The first function exposes the distribution.
      *
-     * @param point                 A point with missing values.
-     * @param numberOfMissingValues The number of missing values in the point.
-     * @param missingIndexes        An array containing the indexes of the missing
-     *                              values in the point. The length of the array
-     *                              should be greater than or equal to the number of
-     *                              missing values.
-     * @param centrality            a parameter that provides a central estimation
-     *                              versus a more random estimation
-     * @return A point with the missing values imputed.
+     * @param point          A point with missing values.
+     * @param missingIndexes An array containing the indexes of the missing values
+     *                       in the point. The length of the array should be greater
+     *                       than or equal to the number of missing values.
+     * @param centrality     a parameter that provides a central estimation versus a
+     *                       more random estimation
+     * @return A collection of tree samples
      */
-    public List<ConditionalTreeSample> getConditionalField(float[] point, int numberOfMissingValues,
-            int[] missingIndexes, double centrality) {
-        checkArgument(numberOfMissingValues > 0, "numberOfMissingValues must be greater than 0");
-        checkNotNull(missingIndexes, "missingIndexes must not be null");
-        checkArgument(numberOfMissingValues <= missingIndexes.length,
-                "numberOfMissingValues must be less than or equal to missingIndexes.length");
+    protected List<ConditionalTreeSample> getConditionalField(float[] point, int[] missingIndexes, double centrality) {
+
+        // missing indexes can be null -- but then getNearNeighborsInSample may be more
+        // efficient
         checkArgument(centrality >= 0, " cannot be negative");
         checkArgument(centrality <= 1, "centrality needs to be in range [0,1]");
-
+        checkArgument(point != null, " cannot be null");
         if (!isOutputReady()) {
             return new ArrayList<>();
         }
@@ -995,13 +1000,33 @@ public class RandomCutForest {
         return traverseForestMulti(transformToShingledPoint(point), visitorFactory, ConditionalTreeSample.collector);
     }
 
-    public SampleSummary getConditionalFieldSummary(float[] point, int numberOfMissingValues, int[] missingIndexes,
-            int numberOfRepresentatives, double shrinkage, boolean addtypical, boolean project, double centrality,
-            int shingleSize) {
-        checkArgument(numberOfMissingValues >= 0, "cannot be negative");
-        checkNotNull(missingIndexes, "missingIndexes must not be null");
-        checkArgument(numberOfMissingValues <= missingIndexes.length,
-                "numberOfMissingValues must be less than or equal to missingIndexes.length");
+    /**
+     * The function returns summary statistics of points close to a query point
+     * (with possible missing values). The statics can perform an optional
+     * multicentroid clustering
+     * 
+     * @param point                   the query point
+     * @param missingIndexes          the list of positions which are missing
+     * @param numberOfRepresentatives number of representatives in a cluster
+     * @param shrinkage               controls the shape of clusters (=0 corresponds
+     *                                to spanning trees, and =1 corresponds to
+     *                                centroidal clustering)
+     * @param addtypical              an option to perform the clustering/not
+     * @param project                 should the clustring/statistics be computed
+     *                                only on the data projected to the entries in
+     *                                missingIndexes
+     * @param centrality              how closely should each tree try to predict
+     *                                the missing values =0 implies loosely, =1
+     *                                implies closely
+     * @param shingleSize             the effective shingleSize -- the
+     *                                clustering/statistics would be projected to
+     *                                the last dimension/shinglesize values
+     * @return a summary of the predictions returned by each tree
+     */
+    public SampleSummary getConditionalFieldSummary(float[] point, int[] missingIndexes, int numberOfRepresentatives,
+            double shrinkage, boolean addtypical, boolean project, double centrality, int shingleSize) {
+        // missing indexes can be null -- but then getNearNeighborsInSample may be more
+        // efficient
         checkArgument(centrality >= 0, " cannot be negative");
         checkArgument(centrality <= 1, "centrality needs to be in range [0,1]");
         checkArgument(point != null, " cannot be null");
@@ -1012,30 +1037,31 @@ public class RandomCutForest {
         int[] liftedIndices = transformIndices(missingIndexes, point.length);
         ConditionalSampleSummarizer summarizer = new ConditionalSampleSummarizer(liftedIndices,
                 transformToShingledPoint(point), centrality, project, numberOfRepresentatives, shrinkage, shingleSize);
-        return summarizer.summarize(getConditionalField(point, numberOfMissingValues, missingIndexes, centrality),
-                addtypical);
-    }
-
-    public float[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
-        return getConditionalFieldSummary(point, numberOfMissingValues, missingIndexes, 1, 0, false, false, 1.0,
-                1).median;
+        return summarizer.summarize(getConditionalField(point, missingIndexes, centrality), addtypical);
     }
 
     /**
      * Given a point with missing values, return a new point with the missing values
-     * imputed. Each tree in the forest individual produces an imputed value. For
-     * 1-dimensional points, the median imputed value is returned. For points with
-     * more than 1 dimension, the imputed point with the 25th percentile anomaly
-     * score is returned.
+     * imputed. Each tree in the forest individual produces an imputed value. The
+     * median imputed value is returned. This can be improved using
+     * getConditionalSummary or getConditionalField
      *
-     * @param point                 A point with missing values.
-     * @param numberOfMissingValues The number of missing values in the point.
-     * @param missingIndexes        An array containing the indexes of the missing
-     *                              values in the point. The length of the array
-     *                              should be greater than or equal to the number of
-     *                              missing values.
+     * @param point          A point with missing values.
+     * @param missingIndexes An array containing the indexes of the missing values
+     *                       in the point. The length of the array should be greater
+     *                       than or equal to the number of missing values.
      * @return A point with the missing values imputed.
      */
+
+    public float[] imputeMissingValues(float[] point, int[] missingIndexes) {
+        return getConditionalFieldSummary(point, missingIndexes, 1, 0, false, false, 1.0, 1).median;
+    }
+
+    // number of missing values is redundant
+    @Deprecated
+    public float[] imputeMissingValues(float[] point, int numberOfMissingValues, int[] missingIndexes) {
+        return imputeMissingValues(point, missingIndexes);
+    }
 
     @Deprecated
     public double[] imputeMissingValues(double[] point, int numberOfMissingValues, int[] missingIndexes) {
@@ -1153,8 +1179,8 @@ public class RandomCutForest {
             // shift all entries in the query point left by 1 block
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
-            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
-                    false, false, centrality, 1);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, missingIndexes, 1, 0, false, false,
+                    centrality, 1);
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[dimensions
                         - blockSize + y];
@@ -1177,8 +1203,8 @@ public class RandomCutForest {
                 missingIndexes[y] = (currentPosition + y) % dimensions;
             }
 
-            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, blockSize, missingIndexes, 1, 0,
-                    false, false, centrality, 1);
+            SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, missingIndexes, 1, 0, false, false,
+                    centrality, 1);
 
             for (int y = 0; y < blockSize; y++) {
                 result.values[resultIndex] = queryPoint[(currentPosition + y)

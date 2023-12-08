@@ -146,8 +146,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         if (isFullyImputed) {
             numberOfImputed = numberOfImputed + 1;
         }
-        if (changeForest && updateAllowed()) {
-            forest.update(lastShingledPoint);
+        if (changeForest) {
+            if (forest.isInternalShinglingEnabled()) {
+                // update allowed = not updateShingleOnly
+                forest.update(scaledInput, !updateAllowed());
+            } else if (updateAllowed()) {
+                forest.update(lastShingledPoint);
+            }
         }
     }
 
@@ -206,8 +211,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                         updateShingle(result, scaledInput);
                         updateTimestamps(initialTimeStamps[i]);
                         numberOfImputed = numberOfImputed + 1;
-                        if (updateAllowed()) {
-                            forest.update(lastShingledPoint);
+                        if (forest.isInternalShinglingEnabled()) {
+                            // updateAllowed = not updateShingleOnly
+                            forest.update(scaledInput, !updateAllowed());
+                        } else {
+                            if (updateAllowed()) {
+                                forest.update(lastShingledPoint);
+                            }
                         }
                     }
                 }
@@ -217,8 +227,13 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             // note that initial values are all interpolated by 0,fixed, or linear
             // there are no missing values to handle
             updateState(initialValues[i], scaledInput, initialTimeStamps[i], lastInputTimeStamp, null);
-            if (updateAllowed()) {
-                forest.update(lastShingledPoint);
+            if (forest.isInternalShinglingEnabled()) {
+                // updateAllowed = not updateShingleOnly
+                forest.update(scaledInput, !updateAllowed());
+            } else {
+                if (updateAllowed()) {
+                    forest.update(lastShingledPoint);
+                }
             }
         }
         initialTimeStamps = null;

@@ -60,16 +60,24 @@ public abstract class AbstractForestUpdateExecutor<PointReference, Point> {
      * @param point The point used to update the forest.
      */
     public void update(Point point) {
+        update(point, false);
+    }
+
+    public void update(Point point, boolean updateShingleOnly) {
         long internalSequenceNumber = updateCoordinator.getTotalUpdates();
         IPointStore<?, ?> store = updateCoordinator.getStore();
         if (store != null && store.isInternalShinglingEnabled()) {
             internalSequenceNumber -= store.getShingleSize() - 1;
         }
-        update(point, internalSequenceNumber);
+        update(point, internalSequenceNumber, updateShingleOnly);
     }
 
     public void update(Point point, long sequenceNumber) {
-        PointReference updateInput = updateCoordinator.initUpdate(point, sequenceNumber);
+        update(point, sequenceNumber, false);
+    }
+
+    public void update(Point point, long sequenceNumber, boolean updateShingleOnly) {
+        PointReference updateInput = updateCoordinator.initUpdate(point, sequenceNumber, updateShingleOnly);
         boolean propagate = (updateInput != null) && currentlySampling;
         List<UpdateResult<PointReference>> results = (!propagate) ? Collections.emptyList()
                 : updateInternal(updateInput, sequenceNumber);

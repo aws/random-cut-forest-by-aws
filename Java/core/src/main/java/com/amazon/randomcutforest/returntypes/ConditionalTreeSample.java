@@ -25,8 +25,8 @@ import com.amazon.randomcutforest.tree.BoundingBox;
 public class ConditionalTreeSample {
 
     /**
-     * the index of the point in the PoinStore which is used to construct the sample
-     * for a query
+     * the index of the point in the PointStore which is used to construct the
+     * sample for a query
      */
     public int pointStoreIndex;
 

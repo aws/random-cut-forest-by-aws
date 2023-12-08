@@ -195,10 +195,10 @@ public abstract class PointStore implements IPointStore<Integer, float[]> {
      * @throws IllegalStateException    if the point store is full.
      */
     public int add(double[] point, long sequenceNum) {
-        return add(toFloatArray(point), sequenceNum);
+        return add(toFloatArray(point), sequenceNum, false);
     }
 
-    public Integer add(float[] point, long sequenceNum) {
+    public Integer add(float[] point, long sequenceNum, boolean updateShingleOnly) {
         checkArgument(internalShinglingEnabled || point.length == dimensions,
                 "point.length must be equal to dimensions");
         checkArgument(!internalShinglingEnabled || point.length == baseDimension,
@@ -209,7 +209,7 @@ public abstract class PointStore implements IPointStore<Integer, float[]> {
         if (internalShinglingEnabled) {
             // rotation is supported via the output and input is unchanged
             tempPoint = constructShingleInPlace(internalShingle, point, false);
-            if (nextSequenceIndex < shingleSize) {
+            if (nextSequenceIndex < shingleSize || updateShingleOnly) {
                 return INFEASIBLE_POINTSTORE_INDEX;
             }
         }

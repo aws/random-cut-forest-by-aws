@@ -111,7 +111,7 @@ public class ThresholdedRandomCutForest {
                 preprocessorBuilder.fillValues(builder.fillValues);
             }
             // forcing external for the forest to control admittance
-            builder.internalShinglingEnabled = Optional.of(false);
+            builder.internalShinglingEnabled = Optional.of(true);
             preprocessorBuilder.useImputedFraction(builder.useImputedFraction.orElse(0.5));
         } else {
             // STANDARD

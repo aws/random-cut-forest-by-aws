@@ -15,6 +15,23 @@
 
 package com.amazon.randomcutforest.preprocessor;
 
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
+import com.amazon.randomcutforest.statistics.Deviation;
+import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import java.util.Random;
+
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.config.ForestMode.STANDARD;
 import static com.amazon.randomcutforest.config.ForestMode.STREAMING_IMPUTE;
@@ -33,29 +50,10 @@ import static java.lang.Math.abs;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Random;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
-import com.amazon.randomcutforest.statistics.Deviation;
-import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 public class PreprocessorTest {
 
@@ -204,6 +202,9 @@ public class PreprocessorTest {
                 builder.fillValues(new double[] { 5 });
             }
         }
+        if (imputeMethod != null) {
+            builder.imputationMethod(imputeMethod);
+        }
         boolean internal = ((internalShinglingHint || method != NONE) && mode != STREAMING_IMPUTE);
         Preprocessor preprocessor = builder.build(); // polymorphism
         RandomCutForest forest = RandomCutForest.builder().dimensions(tempDimensions).randomSeed(seed + 2)
@@ -293,10 +294,10 @@ public class PreprocessorTest {
         preprocessorPlusForest(0, STANDARD, method, RCF, false, 1);
         preprocessorPlusForest(0, TIME_AUGMENTED, method, null, true, 1);
         preprocessorPlusForest(0, TIME_AUGMENTED, method, null, true, 3);
-        preprocessorPlusForest(0, STREAMING_IMPUTE, method, RCF, false, 10);
+        preprocessorPlusForest(0, STREAMING_IMPUTE, method, RCF, true, 10);
         preprocessorPlusForest(0, STREAMING_IMPUTE, method, PREVIOUS, false, 5);
         preprocessorPlusForest(0, STREAMING_IMPUTE, method, ZERO, false, 11);
-        preprocessorPlusForest(0, STREAMING_IMPUTE, method, FIXED_VALUES, false, 12);
+        preprocessorPlusForest(0, STREAMING_IMPUTE, method, FIXED_VALUES, true, 12);
         preprocessorPlusForest(0, STREAMING_IMPUTE, method, NEXT, false, 7);
         preprocessorPlusForest(0, STREAMING_IMPUTE, method, LINEAR, false, 2);
     }
@@ -333,7 +334,9 @@ public class PreprocessorTest {
             preprocessor.update(dataWithKey.data[i], shingle, timestamp, new int[] { 0 }, null);
         }
         assertTrue(preprocessor.getInitialValues() == null);
-
+        assertTrue(preprocessor.isOutputReady());
+        assertEquals(preprocessor.getScale().length, 1);
+        assertEquals(preprocessor.getShift().length, 1);
         if (method == NORMALIZE) {
             assertTrue(preprocessor.getDeviationList()[0].getMean() == defaultFill[0]);
             assertEquals(preprocessor.getLastShingledInput()[0], defaultFill[0]);
@@ -344,7 +347,7 @@ public class PreprocessorTest {
         assertEquals(preprocessor.inverseMapTimeValue(1L, 1L), 0);
         assertEquals(preprocessor.getShingledInput().length, shingleSize);
         assertEquals(preprocessor.dataQuality(), 0);
-        assertTrue(preprocessor.normalize(0, 1) < 0);
+        assertTrue(preprocessor.normalize(-200, 1) < 0);
         assertEquals(preprocessor.getScale().length, 1);
         assertEquals(preprocessor.getShift().length, 1);
     }
@@ -359,14 +362,14 @@ public class PreprocessorTest {
                 false);
         Preprocessor.Builder<?> builder = Preprocessor.builder().inputLength(1).dimensions(2 * shingleSize)
                 .weights(new double[] { 1.0 }).shingleSize(shingleSize).transformMethod(method).randomSeed(seed + 1)
-                .forestMode(TIME_AUGMENTED);
+                .forestMode(TIME_AUGMENTED).weightTime(0).normalizeTime(false);
         RandomCutForest forest = new RandomCutForest.Builder().dimensions(2 * shingleSize)
                 .internalShinglingEnabled(false) // not recommended
                 .shingleSize(shingleSize).build();
 
         Preprocessor preprocessor = builder.build();
         Random random = new Random(seed + 4);
-
+        assertTrue(!preprocessor.isOutputReady());
         assertThrows(IllegalArgumentException.class,
                 () -> preprocessor.getScaledShingledInput(dataWithKey.data[0], 0, null, null));
         for (int i = 0; i < preprocessor.getStartNormalization() + 1; i++) {
@@ -382,7 +385,7 @@ public class PreprocessorTest {
         assertEquals(preprocessor.getScale().length, 2);
         assertEquals(preprocessor.getShift().length, 2);
         assertThrows(IllegalArgumentException.class, () -> preprocessor.inverseMapTime(0, -(shingleSize + 1)));
-        assertNotEquals(preprocessor.inverseMapTimeValue(1L, 1L), 0);
+        assertEquals(preprocessor.inverseMapTimeValue(1L, 1L), 0);
         assertEquals(preprocessor.getShingledInput().length, shingleSize);
         assertEquals(preprocessor.dataQuality(), 0);
         assertTrue(preprocessor.normalize(0, 1) < 0);
@@ -394,7 +397,7 @@ public class PreprocessorTest {
                 new double[1], false, -100).timeStamps;
         long[] otherValues = preprocessor.invertForecastRange(new RangeVector(10), preprocessor.internalTimeStamp - 1,
                 new double[1], true, -100).timeStamps;
-        assertFalse(values[0] == otherValues[0]);
+        assertTrue(values[0] == otherValues[0]);
         assertThrows(IllegalArgumentException.class, () -> preprocessor.invertInPlace(new float[10], null, -1));
         assertDoesNotThrow(() -> preprocessor.invertInPlace(new float[2], new double[1], -1));
     }

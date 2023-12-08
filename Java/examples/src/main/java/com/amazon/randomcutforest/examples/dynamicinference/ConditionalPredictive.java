@@ -20,6 +20,7 @@ import static java.lang.Math.min;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.util.Arrays;
 import java.util.Random;
 
 import com.amazon.randomcutforest.PredictiveRandomCutForest;
@@ -70,7 +71,8 @@ public class ConditionalPredictive implements Example {
         String name = "predictive_example";
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
         for (int i = 0; i < dataSize; i++) {
-            float[] record = generateRecordKey(random);
+            float[] recordWithLabel = generateRecordKey(random);
+            float[] record = Arrays.copyOf(recordWithLabel, 5);
             checkArgument(record[3] == 0, " should not be filled");
             checkArgument(record[4] == 0, " should not be filled");
 
@@ -84,13 +86,13 @@ public class ConditionalPredictive implements Example {
             }
 
             file.append(record[0] + " " + record[1] + " " + record[2] + " " + record[3] + " " + record[4] + " " + tag
-                    + "\n");
+                    + " " + recordWithLabel[5] + "\n");
         }
         file.close();
     }
 
     float[] generateRecordKey(Random random) {
-        float[] record = new float[5];
+        float[] record = new float[6];
         double firstToss = random.nextDouble();
         double secondToss = random.nextDouble();
         double thirdToss = random.nextDouble();
@@ -98,8 +100,10 @@ public class ConditionalPredictive implements Example {
             record[0] = 1.0f;
             if (secondToss < 0.8) {
                 record[1] = 19;
+                record[5] = 0;
             } else {
                 record[1] = 25;
+                record[5] = 1;
             }
             record[2] = (float) thirdToss * 10;
         } else {
@@ -107,9 +111,11 @@ public class ConditionalPredictive implements Example {
             if (secondToss < 0.3) {
                 record[1] = 16;
                 record[2] = 12;
+                record[5] = 2;
             } else {
                 record[1] = 20;
                 record[2] = 4;
+                record[5] = 3;
             }
         }
         return record;
@@ -119,20 +125,20 @@ public class ConditionalPredictive implements Example {
         if (record[0] < 0.5) {
             double next = random.nextDouble();
             record[3] = (float) ((next < 0.5) ? normal.nextDouble(20, 5) : normal.nextDouble(40, 5));
-            record[4] = (float) normal.nextDouble(30, 3);
+            record[4] = (float) normal.nextDouble(-30, 3);
         } else {
             if (record[1] < 20) {
                 record[3] = (float) normal.nextDouble(30, 10);
-                record[4] = (float) normal.nextDouble(10, 3);
+                record[4] = (float) normal.nextDouble(-10, 3);
             } else {
                 if (record[2] < 6) {
                     double next = random.nextDouble();
                     record[3] = (float) ((next < 0.3) ? normal.nextDouble(20, 5) : normal.nextDouble(40, 3));
-                    record[4] = (float) normal.nextDouble(50, 1);
+                    record[4] = (float) normal.nextDouble(-50, 1);
                 } else {
                     double next = random.nextDouble();
                     record[3] = (float) normal.nextDouble(30, 1);
-                    record[4] = (float) ((next < 0.7) ? normal.nextDouble(10, 3) : normal.nextDouble(30, 5));
+                    record[4] = (float) ((next < 0.7) ? normal.nextDouble(-10, 3) : normal.nextDouble(-30, 5));
                 }
             }
         }

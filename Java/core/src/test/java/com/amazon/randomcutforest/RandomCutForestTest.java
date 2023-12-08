@@ -123,7 +123,7 @@ public class RandomCutForestTest {
     @Test
     void checkOutput() {
         assertFalse(forest.isOutputReady());
-        assertEquals(forest.getConditionalField(null, 1, new int[1], 1.0).size(), 0);
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, new int[1], 1.0).size());
         assertEquals(forest.extrapolateBasic(new float[2], 1, 1, false)[0], 0);
         assertEquals(forest.getDynamicScore(new float[2], 1, null, null, null), 0);
         assertEquals(forest.getDynamicAttribution(new float[2], 1, null, null, null).getHighLowSum(), 0);
@@ -136,17 +136,15 @@ public class RandomCutForestTest {
 
     @Test
     void checkParameters() {
-        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 0, null, 1));
-        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 2, new int[1], 1));
-        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 1, new int[1], -1));
-        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, 1, new int[1], 2));
-        assertDoesNotThrow(() -> forest.getConditionalField(null, 1, new int[1], 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, null, 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, new int[1], 1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, new int[1], -1));
+        assertThrows(IllegalArgumentException.class, () -> forest.getConditionalField(null, new int[1], 2));
         assertThrows(IllegalArgumentException.class,
-                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, -1, 1));
+                () -> forest.getConditionalFieldSummary(new float[2], new int[0], 1, 0, false, false, -1, 1));
         assertThrows(IllegalArgumentException.class,
-                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 2, 1));
-        assertDoesNotThrow(
-                () -> forest.getConditionalFieldSummary(new float[2], 0, new int[0], 1, 0, false, false, 1, 1));
+                () -> forest.getConditionalFieldSummary(new float[2], new int[0], 1, 0, false, false, 2, 1));
+        assertDoesNotThrow(() -> forest.getConditionalFieldSummary(new float[2], new int[0], 1, 0, false, false, 1, 1));
         assertThrows(IllegalArgumentException.class, () -> forest.setTimeDecay(-2));
         assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(-1));
         assertThrows(IllegalArgumentException.class, () -> forest.setBoundingBoxCacheFraction(2));
@@ -159,7 +157,7 @@ public class RandomCutForestTest {
     public void testUpdate() {
         float[] point = { 2.2f, -1.1f };
         forest.update(point);
-        verify(updateExecutor, times(1)).update(point);
+        verify(updateExecutor, times(1)).update(point, false);
         assertEquals(updateCoordinator.getStore().getCapacity(), 1);
     }
 
@@ -511,16 +509,9 @@ public class RandomCutForestTest {
         int numberOfMissingValues = 1;
         int[] missingIndexes = { 0, 1 };
 
-        assertThrows(IllegalArgumentException.class, () -> forest.imputeMissingValues(point, -1, missingIndexes));
-
-        assertThrows(NullPointerException.class, () -> forest.imputeMissingValues(point, numberOfMissingValues, null));
-
         assertThrows(IllegalArgumentException.class,
                 () -> forest.imputeMissingValues((float[]) null, numberOfMissingValues, missingIndexes));
 
-        int invalidNumberOfMissingValues = 99;
-        assertThrows(IllegalArgumentException.class,
-                () -> forest.imputeMissingValues(point, invalidNumberOfMissingValues, missingIndexes));
     }
 
     @Test
@@ -633,7 +624,7 @@ public class RandomCutForestTest {
         doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
-                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
+                .getConditionalFieldSummary(aryEq(queryPoint), any(int[].class), anyInt(), anyDouble(),
                         any(Boolean.class), any(Boolean.class), anyDouble(), anyInt());
 
         forest.extrapolateBasicSliding(result, horizon, blockSize, queryPoint, missingIndexes, 1.0);
@@ -671,7 +662,7 @@ public class RandomCutForestTest {
         doReturn(new SampleSummary(new float[] { 2.0f, -3.0f }))
                 .doReturn(new SampleSummary(new float[] { 4.0f, -5.0f }))
                 .doReturn(new SampleSummary(new float[] { 6.0f, -7.0f })).when(forest)
-                .getConditionalFieldSummary(aryEq(queryPoint), eq(blockSize), any(int[].class), anyInt(), anyDouble(),
+                .getConditionalFieldSummary(aryEq(queryPoint), any(int[].class), anyInt(), anyDouble(),
                         any(Boolean.class), any(Boolean.class), anyDouble(), anyInt());
 
         forest.extrapolateBasicCyclic(result, horizon, blockSize, shingleIndex, queryPoint, missingIndexes, 1.0);
@@ -940,8 +931,8 @@ public class RandomCutForestTest {
                 forest2.update(point);
                 forest.update(point);
             }
-            List<ConditionalTreeSample> first = forest.getConditionalField(new float[dimensions], 1, new int[1], 1.0);
-            List<ConditionalTreeSample> second = forest2.getConditionalField(new float[dimensions], 1, new int[1], 1.0);
+            List<ConditionalTreeSample> first = forest.getConditionalField(new float[dimensions], new int[1], 1.0);
+            List<ConditionalTreeSample> second = forest2.getConditionalField(new float[dimensions], new int[1], 1.0);
             assertEquals(first.size(), second.size());
             for (int i = 0; i < first.size(); i++) {
                 assertEquals(first.get(i).pointStoreIndex, second.get(i).pointStoreIndex);
@@ -978,10 +969,10 @@ public class RandomCutForestTest {
                 forest2.update(point);
                 forest.update(point);
             }
-            List<ICluster<float[]>> first = forest.summarize(10, 1, 5, null);
+            List<ICluster<float[]>> first = forest.summarize(10, 1, 1, null);
             System.out.println("DONE 1");
             List<ICluster<float[]>> second = forest2.summarize(10, 1, 1, null);
-            assert (abs(first.size() - second.size()) <= 1);
+            assert (abs(first.size() - second.size()) < 1);
         }
     }
 

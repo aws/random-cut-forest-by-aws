@@ -312,7 +312,7 @@ public class ThresholdedRandomCutForestTest {
         // after which the imputation is 100% and
         // only at most 76% imputed tuples are allowed in the forest
         // an additional one arise from the actual input
-        assertEquals(forest.getForest().getTotalUpdates(), count + 1);
+        assertEquals(forest.getForest().getTotalUpdates(), count + 9 + 1);
         // triggerring consecutive anomalies (no differencing)
         if (method == PREVIOUS && method == RCF) {
             assertEquals(forest.process(newData, (long) count * 113 + 1113).getAnomalyGrade(), 1.0);
@@ -349,7 +349,7 @@ public class ThresholdedRandomCutForestTest {
         }
 
         // note every will have an update
-        assertEquals(forest.getForest().getTotalUpdates() + shingleSize - 1, count);
+        assertEquals(forest.getForest().getTotalUpdates(), count);
         AnomalyDescriptor result = forest.process(newData, (long) count * 113 + 1000);
         if (method != NEXT && method != LINEAR) {
             assert (result.getAnomalyGrade() > 0);
@@ -368,9 +368,9 @@ public class ThresholdedRandomCutForestTest {
         // initial
         // entries are imputed and the method involves differencing
         if (transformMethod != DIFFERENCE && transformMethod != NORMALIZE_DIFFERENCE) {
-            assertEquals(forest.getForest().getTotalUpdates(), count + 1);
+            assertEquals(forest.getForest().getTotalUpdates(), count + 9 + 1);
         } else {
-            assertEquals(forest.getForest().getTotalUpdates(), count);
+            assertEquals(forest.getForest().getTotalUpdates(), count + 9 + 1);
         }
     }
 
