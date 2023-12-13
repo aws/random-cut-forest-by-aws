@@ -15,10 +15,10 @@
 
 package com.amazon.randomcutforest.preprocessor.transform;
 
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.statistics.Deviation;
 import lombok.Getter;
 import lombok.Setter;
-
-import com.amazon.randomcutforest.statistics.Deviation;
 
 @Getter
 @Setter
@@ -31,5 +31,19 @@ public class SubtractMATransformer extends WeightedTransformer {
     @Override
     protected double getShift(int i, Deviation[] devs) {
         return devs[i].getMean();
+    }
+
+    @Override
+    public void invertForecastRange(RangeVector ranges, int baseDimension, double[] previousInput,
+                                    double[] correction) {
+        super.invertForecastRange(ranges,baseDimension,previousInput,correction);
+        int horizon = ranges.values.length / baseDimension;
+        int inputLength = weights.length;
+        for (int i = 0; i < horizon; i++) {
+            for (int j = 0; j < inputLength; j++) {
+                ranges.shift(i * baseDimension + j,
+                        (float) (0.5 * getDrift(j, deviations)));
+            }
+        }
     }
 }
