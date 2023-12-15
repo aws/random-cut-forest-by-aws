@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.preprocessor.transform;
 
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import com.amazon.randomcutforest.statistics.Deviation;
-import lombok.Getter;
-import lombok.Setter;
+import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static java.lang.Math.min;
 
 import java.util.Arrays;
 
-import static com.amazon.randomcutforest.CommonUtils.checkArgument;
-import static java.lang.Math.min;
+import lombok.Getter;
+import lombok.Setter;
+
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.statistics.Deviation;
 
 /**
  * A weighted transformer maintains several data structures ( currently 3X) that
@@ -96,8 +97,7 @@ public class WeightedTransformer implements ITransformer {
             for (int j = 0; j < inputLength; j++) {
                 double weight = (weights[j] == 0) ? 0 : getScale(j, deviations) / weights[j];
                 ranges.scale(i * baseDimension + j, (float) weight);
-                ranges.shift(i * baseDimension + j,
-                        (float) (getShift(j, deviations) + i * getDrift(j, deviations)));
+                ranges.shift(i * baseDimension + j, (float) (getShift(j, deviations) + i * getDrift(j, deviations)));
             }
         }
     }

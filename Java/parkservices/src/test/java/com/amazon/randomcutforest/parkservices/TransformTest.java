@@ -15,15 +15,16 @@
 
 package com.amazon.randomcutforest.parkservices;
 
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 public class TransformTest {
 
@@ -198,16 +199,15 @@ public class TransformTest {
         }
     }
 
-
     @ParameterizedTest
-    @EnumSource(value = TransformMethod.class, names = {"NORMALIZE", "NORMALIZE_DIFFERENCE",  "DIFFERENCE"})
+    @EnumSource(value = TransformMethod.class, names = { "NORMALIZE", "NORMALIZE_DIFFERENCE", "DIFFERENCE" })
     public void RCFCastTest(TransformMethod method) {
         int sampleSize = 256;
         long seed = new Random().nextLong();
         System.out.println(" seed " + seed);
         Random rng = new Random(seed);
         int numTrials = 1;
-        int length = sampleSize/2;
+        int length = sampleSize / 2;
         int forecastHorizon = 2;
         for (int i = 0; i < numTrials; i++) {
             int numberOfTrees = 30 + rng.nextInt(20);
@@ -217,16 +217,16 @@ public class TransformTest {
             int baseDimensions = 1;
             int offset = rng.nextInt(10);
             int dimensions = baseDimensions * shingleSize;
-            RCFCaster first = new RCFCaster.Builder().dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).randomSeed(0).outputAfter(outputAfter).alertOnce(true)
-                    .forecastHorizon(forecastHorizon)
-                    .transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).build();
+            RCFCaster first = new RCFCaster.Builder().dimensions(dimensions).numberOfTrees(numberOfTrees).randomSeed(0)
+                    .outputAfter(outputAfter).alertOnce(true).forecastHorizon(forecastHorizon).transformMethod(method)
+                    .internalShinglingEnabled(true).shingleSize(shingleSize).build();
 
             for (int j = 0; j < length; j++) {
-                ForecastDescriptor firstResult = first.process(new double [] {j + offset}, 0L);
+                ForecastDescriptor firstResult = first.process(new double[] { j + offset }, 0L);
                 if (j >= outputAfter - 1) {
                     for (int y = 0; y < forecastHorizon; y++) {
-                        assertTrue(Math.abs(firstResult.getTimedForecast().rangeVector.values[y] - (j + offset + 1 + y))<0.3);
+                        assertTrue(Math.abs(
+                                firstResult.getTimedForecast().rangeVector.values[y] - (j + offset + 1 + y)) < 0.3);
                     }
                 }
             }

@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.parkservices;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
+import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.ALERT_ONCE;
 import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.CONDITIONAL_FORECAST;
 import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.DATA_DRIFT;
 import static com.amazon.randomcutforest.parkservices.config.CorrectionMode.NONE;
@@ -317,8 +318,9 @@ public class PredictorCorrector {
         double[] deltaShift = lastAnomalyDescriptor.getDeltaShift();
         double[] answer = new double[currentScale.length];
         // correct the effect of shifts in last observed anomaly because the anomaly may
-        // have skewed the shift and scale
-        if (deltaShift != null
+        // have skewed the shift and scale -- but the gap cannot last forever
+        // otherwise this will always change the point and force a costlier path
+        if (deltaShift != null && gap < 2 * lastAnomalyDescriptor.getShingleSize()
                 && (transformMethod == TransformMethod.NORMALIZE || transformMethod == TransformMethod.SUBTRACT_MA)) {
             double factor = exp(-gap * lastAnomalyDescriptor.getTransformDecay());
             for (int y = 0; y < answer.length; y++) {
@@ -497,7 +499,8 @@ public class PredictorCorrector {
      * of samples from different trees are in the uncertainty box around the queried
      * point
      * 
-     * @param undertaintyBox the potentially asymmetric box around a point
+     * @param uncertaintyBox the potentially asymmetric box around a point (original
+     *                       space)
      * @param point          the point in question
      * @param correctedPoint any correction applied to the point based on prior
      *                       anomalies
@@ -507,13 +510,14 @@ public class PredictorCorrector {
      * @param <P>            an extension of AnomalyDescriptor (to support forecast)
      * @return true if there is enough mass within the box
      */
-    protected <P extends AnomalyDescriptor> boolean explainedByConditionalField(DiVector undertaintyBox, float[] point,
+    protected <P extends AnomalyDescriptor> boolean explainedByConditionalField(DiVector uncertaintyBox, float[] point,
             float[] correctedPoint, int startPosition, P result, RandomCutForest forest) {
         List<Neighbor> list = forest.getNearNeighborsInSample(correctedPoint);
+        double averageDistance = list.stream().mapToDouble(e -> e.distance).average().getAsDouble();
         double weight = 0;
         for (Neighbor e : list) {
-            if (withinGap(undertaintyBox, startPosition, result.getScale(), point, e.point,
-                    point.length / result.getShingleSize())) {
+            if (e.distance < 1.1 * averageDistance && withinGap(uncertaintyBox, startPosition, result.getScale(), point,
+                    e.point, point.length / result.getShingleSize())) {
                 weight += e.count;
             }
         }
@@ -841,12 +845,6 @@ public class PredictorCorrector {
         }
 
         if (candidate) {
-            if (ignoreDrift && workingGrade > 0) {
-                if (runLength > 0) {
-                    result.setCorrectionMode(DATA_DRIFT);
-                    workingGrade = 0;
-                }
-            }
             if (autoAdjust) {
                 for (int y = 0; y < baseDimension; y++) {
                     deviationsActual[y].update(point[point.length - baseDimension + y]);
@@ -860,9 +858,12 @@ public class PredictorCorrector {
                         within = Math
                                 .abs(deviationsActual[y].getMean() - point[point.length - baseDimension + y]) < max(
                                         2 * deviationsActual[y].getDeviation(),
-                                        noiseFactor * result.getDeviations()[baseDimension + y]);
+                                        // results are in original space -- need to scale back to RCF space
+                                        noiseFactor * result.getDeviations()[baseDimension + y] / result.getScale()[y]);
                         // estimation of noise from within the run as well as a long term estimation
                         if (expectedPoint != null) {
+                            double u = Math.abs(
+                                    deviationsExpected[y].getMean() - expectedPoint[point.length - baseDimension + y]);
                             within = within && Math.abs(deviationsExpected[y].getMean()
                                     - expectedPoint[point.length - baseDimension + y]) < 2
                                             * max(deviationsExpected[y].getDeviation(),
@@ -877,6 +878,12 @@ public class PredictorCorrector {
                         result.setCorrectionMode(DATA_DRIFT);
                         workingGrade = 0;
                     }
+                }
+            }
+            if (ignoreDrift && workingGrade > 0) {
+                if (runLength > 0 && gap < shingleSize) {
+                    result.setCorrectionMode(ALERT_ONCE);
+                    workingGrade = 0;
                 }
             }
         }

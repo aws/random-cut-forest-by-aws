@@ -59,6 +59,9 @@ public enum CorrectionMode {
      * turned on
      */
 
-    DATA_DRIFT
+    DATA_DRIFT,
+
+    // forced suppression - do not use for extended anomalies
+    ALERT_ONCE
 
 }

@@ -279,68 +279,66 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
         long lastInputTimeStamp = previousTimeStamps[shingleSize - 1];
         double[] input = Arrays.copyOf(inputTuple, inputLength);
         double[] previous = getShingledInput(shingleSize - 1);
+        double[] savedInput = Arrays.copyOf(previous, inputLength);
+        int numberToImpute = determineGap(timestamp - lastInputTimeStamp, averageGap) - 1;
 
-        if (missingValues != null && imputationMethod != RCF) {
+        if (imputationMethod != RCF || !forest.isOutputReady()) {
+            ImputationMethod method = (imputationMethod == RCF) ? DEFAULT_DYNAMIC : imputationMethod;
             // for STREAMING_IMPUTE the timestamp cannot be missing
             // hence missingValues[] can be 0 to inputLength - 1
             // for next and Linear there are no current values
             // we are forced to use fixedvalues or previous
-            for (int missingValue : missingValues) {
-                input[missingValue] = (defaultFill == null) ? previous[missingValue] : defaultFill[missingValue];
+            if (missingValues != null) {
+                for (int missingValue : missingValues) {
+                    input[missingValue] = (defaultFill == null) ? previous[missingValue] : defaultFill[missingValue];
+                }
             }
-        }
 
-        double[] savedInput = Arrays.copyOf(previous, inputLength);
-        // using the global dependency
-        int numberToImpute = determineGap(timestamp - lastInputTimeStamp, averageGap) - 1;
-        if (numberToImpute > 0) {
-            double step = 1.0 / (numberToImpute + 1);
-            // the last impute corresponds to the current observed value
-            for (int i = 0; i < numberToImpute; i++) {
-                // only the last tuple is partial
-                double[] result = impute(input, missingValues, false, step * (i + 1), previous, forest);
-                updateForest(changeForest, result, timestamp, forest, true);
-            }
-        }
-        boolean ignoreImpute = (missingValues == null) || (missingValues.length == 0);
-
-        double[] newInput = (ignoreImpute) ? input : impute(input, missingValues, true, 0, previous, forest);
-
-        updateForest(changeForest, newInput, timestamp, forest, false);
-        if (changeForest) {
-            updateTimeStampDeviations(timestamp, lastInputTimeStamp);
-            transformer.updateDeviation(newInput, savedInput, missingValues);
-        }
-        return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
-    }
-
-    /**
-     * The impute step which predicts the completion of a partial input or predicts
-     * the entire input for that timestamp
-     * 
-     * @param isPartial    a boolean indicating if the input is partial
-     * @param stepFraction the (time) position of the point to impute (can also be
-     *                     the final possibly incomplete point)
-     * @param previous     the last input
-     * @param forest       the RCF
-     * @return the imputed tuple for the time position
-     */
-    protected double[] impute(double[] input, int[] missingValues, boolean isPartial, double stepFraction,
-            double[] previous, RandomCutForest forest) {
-        // we will pass partial input, which would be true for only one tuple
-        double[] partialInput = (isPartial) ? Arrays.copyOf(input, inputLength) : null;
-        // use a default for RCF if trees are unusable, as reflected in the
-        // isReasonableForecast()
-
-        if (imputationMethod == RCF) {
-            if (forest.isOutputReady()) {
-                return imputeRCF(forest, partialInput, missingValues);
-            } else {
-                return basicImpute(stepFraction, previous, partialInput, DEFAULT_DYNAMIC);
+            if (numberToImpute > 0) {
+                double step = 1.0 / (numberToImpute + 1);
+                // the last impute corresponds to the current observed value
+                for (int i = 0; i < numberToImpute; i++) {
+                    // only the last tuple is partial
+                    double[] result = basicImpute(step * (i + 1), previous, input, imputationMethod);
+                    updateForest(changeForest, result, timestamp, forest, true);
+                }
             }
         } else {
-            return basicImpute(stepFraction, previous, input, imputationMethod);
+            // the following is a mechanism to prevent a large number of updates using RCF
+            // supposing the data is aggregated at 10min interval and the gap in values
+            // correspond to a month = 30 * 24 * 6 imputations -- that would be not only
+            // be slow, but also it would be unclear if analysis at shingleSize = 10 is
+            // appropriate
+            // for imputing 4000+ values. RCF is an example of reinforcement/continuous
+            // learning
+            // this would be very ripe for hallucination
+            // in general, the intent of impute is to correct occasional drops of data
+            if (numberToImpute < 3 * shingleSize || !fastForward) {
+                for (int i = 0; i < numberToImpute; i++) {
+                    double[] result = imputeRCF(forest, null, null);
+                    updateForest(changeForest, result, timestamp, forest, true);
+                }
+            } else {
+                // we will skip a lot of values
+                double[] shift = getShift(); // uses the transformation to get typical values
+                // resets number of imputed
+                numberOfImputed = 0;
+                for (int i = 0; i < shingleSize - 1; i++) {
+                    updateForest(changeForest, shift, timestamp, forest, false);
+                }
+            }
+            // finally the current input may be partial
+            if (missingValues != null && missingValues.length > 0) {
+                input = imputeRCF(forest, input, missingValues);
+            }
         }
+
+        updateForest(changeForest, input, timestamp, forest, false);
+        if (changeForest) {
+            updateTimeStampDeviations(timestamp, lastInputTimeStamp);
+            transformer.updateDeviation(input, savedInput, missingValues);
+        }
+        return Arrays.copyOf(lastShingledPoint, lastShingledPoint.length);
     }
 
     /**

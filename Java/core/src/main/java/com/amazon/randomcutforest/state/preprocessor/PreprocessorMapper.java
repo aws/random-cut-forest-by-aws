@@ -61,6 +61,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         preprocessor.setLastShingledPoint(toFloatArray(state.getLastShingledPoint()));
         preprocessor.setPreviousTimeStamps(state.getPreviousTimeStamps());
         preprocessor.setNormalizeTime(state.isNormalizeTime());
+        preprocessor.setFastForward(state.isFastForward());
         return preprocessor;
     }
 
@@ -92,6 +93,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         state.setDeviationStates(getStates(model.getDeviationList(), deviationMapper));
         state.setTimeStampDeviationStates(getStates(model.getTimeStampDeviations(), deviationMapper));
         state.setDataQualityStates(getStates(model.getDataQuality(), deviationMapper));
+        state.setFastForward(model.isFastForward());
         return state;
     }
 

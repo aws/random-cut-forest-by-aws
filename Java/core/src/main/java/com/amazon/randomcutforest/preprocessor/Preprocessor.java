@@ -160,6 +160,9 @@ public class Preprocessor implements IPreprocessor {
 
     protected ITransformer transformer;
 
+    // to be used for speeding up STREAMING_IMPUTE over large gaps
+    protected boolean fastForward = false;
+
     public Preprocessor(Builder<?> builder) {
         checkArgument(builder.transformMethod != null, "transform required");
         checkArgument(builder.forestMode != null, " forest mode is required");
@@ -274,6 +277,7 @@ public class Preprocessor implements IPreprocessor {
             // imputationMethod = builder.imputationMethod;
             normalizeTime = true;
             this.useImputedFraction = builder.useImputedFraction.orElse(0.5);
+            this.fastForward = builder.fastForward;
         }
     }
 
@@ -974,6 +978,7 @@ public class Preprocessor implements IPreprocessor {
         protected Optional<Deviation[]> deviations = Optional.empty();
         protected Optional<Deviation[]> timeDeviations = Optional.empty();
         protected Optional<Deviation[]> dataQuality = Optional.empty();
+        protected boolean fastForward = false;
 
         public Preprocessor build() {
             if (forestMode == ForestMode.STREAMING_IMPUTE) {
@@ -1086,6 +1091,11 @@ public class Preprocessor implements IPreprocessor {
 
         public T initialPoint(float[] initialPoint) {
             this.initialPoint = copyIfNotnull(initialPoint);
+            return (T) this;
+        }
+
+        public T fastForward(boolean fastForward) {
+            this.fastForward = fastForward;
             return (T) this;
         }
     }

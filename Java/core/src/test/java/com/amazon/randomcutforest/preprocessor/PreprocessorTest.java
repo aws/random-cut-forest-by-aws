@@ -15,23 +15,6 @@
 
 package com.amazon.randomcutforest.preprocessor;
 
-import com.amazon.randomcutforest.RandomCutForest;
-import com.amazon.randomcutforest.config.ForestMode;
-import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.returntypes.RangeVector;
-import com.amazon.randomcutforest.returntypes.SampleSummary;
-import com.amazon.randomcutforest.returntypes.TimedRangeVector;
-import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
-import com.amazon.randomcutforest.statistics.Deviation;
-import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
-import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-
-import java.util.Random;
-
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
 import static com.amazon.randomcutforest.config.ForestMode.STANDARD;
 import static com.amazon.randomcutforest.config.ForestMode.STREAMING_IMPUTE;
@@ -54,6 +37,24 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.amazon.randomcutforest.RandomCutForest;
+import com.amazon.randomcutforest.config.ForestMode;
+import com.amazon.randomcutforest.config.ImputationMethod;
+import com.amazon.randomcutforest.config.TransformMethod;
+import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.returntypes.SampleSummary;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
+import com.amazon.randomcutforest.statistics.Deviation;
+import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
+import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 
 public class PreprocessorTest {
 
@@ -198,6 +199,7 @@ public class PreprocessorTest {
                 .forestMode(mode);
         if (mode == STREAMING_IMPUTE) {
             builder.imputationMethod(imputeMethod);
+            builder.fastForward(new Random().nextDouble() < 0.5);
             if (imputeMethod == FIXED_VALUES) {
                 builder.fillValues(new double[] { 5 });
             }
@@ -440,6 +442,47 @@ public class PreprocessorTest {
         assertThrows(IllegalArgumentException.class, () -> preprocessor.getExpectedValue(-2, null, null, new float[2]));
         preprocessor.getExpectedValue(-1, null, null, new float[2]);
         assertDoesNotThrow(() -> preprocessor.getExpectedValue(-1, null, null, new float[2]));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ImputationMethod.class)
+    public void streamingImputeLargeGap(ImputationMethod method) {
+        int dataSize = 1000;
+        int shingleSize = 4;
+        long seed = 0L;
+        MultiDimDataWithKey dataWithKey = ShingledMultiDimDataWithKeys.getMultiDimData(dataSize, 70, 50, 5, 0, 1,
+                false);
+        Preprocessor.Builder<?> builder = Preprocessor.builder().inputLength(1).dimensions(shingleSize)
+                .weights(new double[] { 1.0 }).shingleSize(shingleSize).randomSeed(seed + 1)
+                .forestMode(STREAMING_IMPUTE).imputationMethod(method).transformMethod(NORMALIZE).fastForward(true);
+        if (method == FIXED_VALUES) {
+            builder.fillValues(new double[] { 0 });
+        }
+        RandomCutForest forest = new RandomCutForest.Builder().dimensions(shingleSize).internalShinglingEnabled(true)
+                .shingleSize(shingleSize).build();
+
+        Preprocessor preprocessor = builder.build();
+        Random random = new Random(seed + 4);
+
+        assertDoesNotThrow(() -> preprocessor.getScaledShingledInput(dataWithKey.data[0], 0, null, null));
+        for (int i = 0; i < dataSize; i++) {
+            long timestamp = i * 100 + random.nextInt(20);
+            PreprocessorMapper mapper = new PreprocessorMapper();
+            Preprocessor newPre = mapper.toModel(mapper.toState(preprocessor));
+            float[] shingle = preprocessor.getScaledShingledInput(dataWithKey.data[i], timestamp, null, forest);
+            assertArrayEquals(shingle, newPre.getScaledShingledInput(dataWithKey.data[i], timestamp, null, forest));
+            preprocessor.update(dataWithKey.data[i], shingle, timestamp, null, forest);
+        }
+        long updates = forest.getTotalUpdates();
+        double[] newData = new double[] { -11.11 };
+        float[] shingle = preprocessor.getScaledShingledInput(newData, 100 * dataSize + 10000L, null, forest);
+        assertEquals(forest.getTotalUpdates(), updates);
+        preprocessor.update(newData, shingle, 100 * dataSize + 10000L, null, forest);
+        if (method == RCF) {
+            assertEquals(forest.getTotalUpdates(), updates + shingleSize);
+        } else {
+            assertEquals(forest.getTotalUpdates(), updates + 100 + shingleSize / 2);
+        }
     }
 
 }
