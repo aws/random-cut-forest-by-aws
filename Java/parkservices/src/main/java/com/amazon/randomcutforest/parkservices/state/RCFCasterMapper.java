@@ -91,6 +91,7 @@ public class RCFCasterMapper implements IStateMapper<RCFCaster, RCFCasterState> 
         descriptor.setTransformMethod(transformMethod);
         descriptor
                 .setImputationMethod(ImputationMethod.valueOf(state.getPreprocessorStates()[0].getImputationMethod()));
+        descriptor.setShingleSize(preprocessor.getShingleSize());
 
         PredictorCorrectorMapper mapper = new PredictorCorrectorMapper();
         PredictorCorrector predictorCorrector = mapper.toModel(state.getPredictorCorrectorState());

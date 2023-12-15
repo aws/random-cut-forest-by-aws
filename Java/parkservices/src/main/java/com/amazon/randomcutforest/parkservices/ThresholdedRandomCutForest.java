@@ -383,7 +383,7 @@ public class ThresholdedRandomCutForest {
                             preprocessor.getScale(), transformMethod, lastAnomalyDescriptor);
                 }
             }
-            RangeVector answer = forest.extrapolateFromShingle(newPoint, horizon, blockSize, centrality);
+            RangeVector answer = forest.extrapolateWithRanges(newPoint, horizon, blockSize, false, 0, centrality);
             return preprocessor.invertForecastRange(answer, lastAnomalyDescriptor.getInputTimestamp(),
                     lastAnomalyDescriptor.getDeltaShift(), lastAnomalyDescriptor.getExpectedRCFPoint() != null,
                     lastAnomalyDescriptor.getExpectedTimeStamp());

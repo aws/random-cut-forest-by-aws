@@ -76,6 +76,7 @@ public class ThresholdedRandomCutForestMapper
             descriptor = new ComputeDescriptorMapper().toModel(state.getLastDescriptorState());
         }
 
+        descriptor.setShingleSize(preprocessor.getShingleSize());
         descriptor.setForestMode(forestMode);
         descriptor.setTransformMethod(transformMethod);
         descriptor.setScoringStrategy(scoringStrategy);

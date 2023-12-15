@@ -1087,11 +1087,12 @@ public class RandomCutForest {
      * @return a forecasted time series.
      */
     @Deprecated
-    public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
+    double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
         return toDoubleArray(extrapolateBasic(toFloatArray(point), horizon, blockSize, cyclic, shingleIndex));
     }
 
-    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
+    @Deprecated
+    float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic, int shingleIndex) {
         return extrapolateWithRanges(point, horizon, blockSize, cyclic, shingleIndex, 1.0).values;
     }
 
@@ -1122,7 +1123,9 @@ public class RandomCutForest {
     // external management of shingle; can function for both internal and external
     // shingling
     // however blocksize has to be externally managed
-    public RangeVector extrapolateFromShingle(float[] shingle, int horizon, int blockSize, double centrality) {
+
+    @Deprecated
+    RangeVector extrapolateFromShingle(float[] shingle, int horizon, int blockSize, double centrality) {
         return extrapolateWithRanges(shingle, horizon, blockSize, isRotationEnabled(),
                 ((int) nextSequenceIndex()) % shingleSize, centrality);
     }
@@ -1142,11 +1145,11 @@ public class RandomCutForest {
      * @return a forecasted time series.
      */
     @Deprecated
-    public double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic) {
-        return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
+    double[] extrapolateBasic(double[] point, int horizon, int blockSize, boolean cyclic) {
+        return toDoubleArray(extrapolateBasic(toFloatArray(point), horizon, blockSize, cyclic, 0));
     }
 
-    public float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic) {
+    protected float[] extrapolateBasic(float[] point, int horizon, int blockSize, boolean cyclic) {
         return extrapolateBasic(point, horizon, blockSize, cyclic, 0);
     }
 
@@ -1162,8 +1165,8 @@ public class RandomCutForest {
      */
     @Deprecated
     public double[] extrapolateBasic(ShingleBuilder builder, int horizon) {
-        return extrapolateBasic(builder.getShingle(), horizon, builder.getInputPointSize(), builder.isCyclic(),
-                builder.getShingleIndex());
+        return toDoubleArray(extrapolateBasic(toFloatArray(builder.getShingle()), horizon, builder.getInputPointSize(),
+                builder.isCyclic(), builder.getShingleIndex()));
     }
 
     void extrapolateBasicSliding(RangeVector result, int horizon, int blockSize, float[] queryPoint,
@@ -1180,12 +1183,11 @@ public class RandomCutForest {
             System.arraycopy(queryPoint, blockSize, queryPoint, 0, dimensions - blockSize);
 
             SampleSummary imputedSummary = getConditionalFieldSummary(queryPoint, missingIndexes, 1, 0, false, false,
-                    centrality, 1);
+                    centrality, dimensions / blockSize);
             for (int y = 0; y < blockSize; y++) {
-                result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[dimensions
-                        - blockSize + y];
-                result.lower[resultIndex] = imputedSummary.lower[dimensions - blockSize + y];
-                result.upper[resultIndex] = imputedSummary.upper[dimensions - blockSize + y];
+                result.values[resultIndex] = queryPoint[dimensions - blockSize + y] = imputedSummary.median[y];
+                result.lower[resultIndex] = imputedSummary.lower[y];
+                result.upper[resultIndex] = imputedSummary.upper[y];
                 resultIndex++;
             }
         }

@@ -244,8 +244,8 @@ public class PreprocessorTest {
                     preprocessor.update(dataWithKey.data[i], input, timestamp, new int[1], forest);
                 }
                 if (shingleSize > 1) {
-                    RangeVector rangeVector = forest.extrapolateFromShingle(preprocessor.getLastShingledPoint(), 1,
-                            tempDimensions / shingleSize, 1.0);
+                    RangeVector rangeVector = forest.extrapolateWithRanges(preprocessor.getLastShingledPoint(), 1,
+                            tempDimensions / shingleSize, false, 0, 1.0);
                     TimedRangeVector timedRanges = preprocessor.invertForecastRange(rangeVector, timestamp, null, false,
                             timestamp);
                     // error of lookahead
