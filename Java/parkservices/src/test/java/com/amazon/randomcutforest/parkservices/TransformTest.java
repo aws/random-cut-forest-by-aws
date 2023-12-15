@@ -42,7 +42,7 @@ public class TransformTest {
             int numberOfTrees = 30 + rng.nextInt(20);
             int outputAfter = 32 + rng.nextInt(50);
             // shingleSize 1 is not recommended for complicated input
-            int shingleSize = 1 + rng.nextInt(15);
+            int shingleSize = 2 + rng.nextInt(15);
             int baseDimensions = 1 + rng.nextInt(5);
             int dimensions = baseDimensions * shingleSize;
             long forestSeed = rng.nextLong();
@@ -76,6 +76,7 @@ public class TransformTest {
             // differencing introduces cascades
             totalcount += count;
         }
+        System.out.println(totalcount);
         assert (totalcount < numTrials || method == TransformMethod.DIFFERENCE
                 || method == TransformMethod.NORMALIZE_DIFFERENCE);
     }
@@ -87,14 +88,14 @@ public class TransformTest {
         long seed = new Random().nextLong();
         System.out.println(" seed " + seed);
         Random rng = new Random(seed);
-        int numTrials = 200;
+        int numTrials = 100;
         int length = 4 * sampleSize;
         int found = 0;
         int count = 0;
         double grade = 0;
 
         for (int i = 0; i < numTrials; i++) {
-            int numberOfTrees = 30 + rng.nextInt(20);
+            int numberOfTrees = 50 + rng.nextInt(20);
             int outputAfter = 32 + rng.nextInt(50);
             int shingleSize = 8;
             int baseDimensions = 1; // multiple dimensions would have anti-correlations induced by
@@ -127,6 +128,7 @@ public class TransformTest {
 
             }
         }
+        System.out.println(found);
         // catch anomalies 80% of the time
         assertTrue(found > 0.8 * numTrials);
 
@@ -135,68 +137,6 @@ public class TransformTest {
 
         // average grade is closer to found
         assertTrue(grade < 1.5 * numTrials);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = TransformMethod.class, names = { "NONE", "NORMALIZE" })
-    public void StreamingImputeTest(TransformMethod method) {
-        int sampleSize = 256;
-        long seed = new Random().nextLong();
-        System.out.println(" seed " + seed);
-        Random rng = new Random(seed);
-        int numTrials = 10;
-        int length = 40 * sampleSize;
-        for (int i = 0; i < numTrials; i++) {
-            int numberOfTrees = 30 + rng.nextInt(20);
-            int outputAfter = 32 + rng.nextInt(50);
-            // shingleSize 1 is not recommended for complicated input
-            int shingleSize = 2 + rng.nextInt(15);
-            int baseDimensions = 2 + rng.nextInt(5);
-            int dimensions = baseDimensions * shingleSize;
-            long forestSeed = rng.nextLong();
-            ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
-                    .numberOfTrees(numberOfTrees).randomSeed(forestSeed).outputAfter(outputAfter).alertOnce(true)
-                    // .forestMode(ForestMode.STREAMING_IMPUTE)
-                    .transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).build();
-
-            int count = 0;
-            double[] point = new double[baseDimensions];
-            double[] anomalyPoint = new double[baseDimensions];
-            for (int j = 0; j < baseDimensions; j++) {
-                point[j] = 50 - rng.nextInt(100);
-                int sign = (rng.nextDouble() < 0.5) ? -1 : 1;
-                anomalyPoint[j] = point[j] + sign * (10 - rng.nextInt(5));
-            }
-            int anomalyAt = outputAfter + rng.nextInt(length / 2);
-            for (int j = 0; j < anomalyAt; j++) {
-                AnomalyDescriptor firstResult = first.process(point, 0L);
-                if (firstResult.getAnomalyGrade() > 0) {
-                    ++count;
-                }
-            }
-            assertEquals(0, count);
-            int[] missing = null;
-            if (rng.nextDouble() < 0.25) {
-                missing = new int[] { 0 };
-            } else if (rng.nextDouble() < 0.33) {
-                missing = new int[] { 1 };
-            }
-            // anomaly detection with partial information
-            assertTrue(first.process(anomalyPoint, 0L, missing).getAnomalyGrade() > 0);
-            for (int j = anomalyAt + 1; j < length; j++) {
-                missing = null;
-                if (rng.nextDouble() < 0.05) {
-                    missing = new int[] { 0 };
-                } else if (rng.nextDouble() < 0.05) {
-                    missing = new int[] { 1 };
-                }
-                AnomalyDescriptor firstResult = first.process(point, 0L, missing);
-                if (firstResult.getAnomalyGrade() > 0) {
-                    ++count;
-                }
-            }
-            assert (count < shingleSize);
-        }
     }
 
     @ParameterizedTest

@@ -75,7 +75,7 @@ public class RCFCasterMapperTest {
                 ForecastDescriptor firstResult = first.process(point, 0L);
                 ForecastDescriptor secondResult = second.process(point, 0L);
                 assertEquals(firstResult.getDataConfidence(), secondResult.getDataConfidence(), 1e-10);
-                verifyForecast(firstResult, secondResult, 1);
+                verifyForecast(firstResult, secondResult, inputLength);
             }
         }
     }
