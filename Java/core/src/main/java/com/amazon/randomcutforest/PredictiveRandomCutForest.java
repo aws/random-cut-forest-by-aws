@@ -134,14 +134,37 @@ public class PredictiveRandomCutForest {
         }
     }
 
-    public SampleSummary predict(float[] inputPoint, long timestamp, int[] missingValues) {
-        return predict(inputPoint, timestamp, missingValues, 5, 0.3, 0.5);
-    }
-
+    /**
+     * The following function provides a clustering of the predicted near neighbors
+     * of the input point. Note that all of these functions were always available in
+     * RCF
+     * 
+     * @param inputPoint              the input point, can have missing values
+     * @param timestamp               the timestamp for the input -- not useful
+     *                                unless we are using TIME_AUGMENTED mode or
+     *                                STREAMING_IMPUTE (for time series)
+     * @param missingValues           an integer array with the positions in
+     *                                inputPoint which are unknown
+     * @param numberOfRepresentatives a parameter that controls multi-centroid
+     *                                clustering of the (predicted) neighbors -- 5
+     *                                is a good default. Setting this as 1 would
+     *                                have a behavior similar to (but perhaps still
+     *                                better than) k-means
+     * @param shrinkage               a parameter that controls the shape of the
+     *                                clusters -- 1 would indicate behavior similar
+     *                                to centroids
+     * @param centrality              a parameter in [0:1] that controls the
+     *                                randomization/diversity in the prediction -- a
+     *                                value of 1 would correspond to p50 predictions
+     *                                and a value of 0 would correspond to looser
+     *                                random search
+     * @return a SampleSummary of the near neighbors in the same dimension as the
+     *         input (unless TIME_AUGMENTED, when the dimension increases by 1.
+     */
     public SampleSummary predict(float[] inputPoint, long timestamp, int[] missingValues, int numberOfRepresentatives,
             double shrinkage, double centrality) {
         checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
-        int[] newMissingValues = null;
+        int[] newMissingValues = new int[0]; // avoiding null; allows missingvalues to be null
         if (missingValues != null) {
             checkArgument(missingValues.length <= inputPoint.length, " incorrect data");
             newMissingValues = new int[missingValues.length];
@@ -164,21 +187,86 @@ public class PredictiveRandomCutForest {
         }
         return preprocessor.invertInPlaceRecentSummaryBlock(forest.getConditionalFieldSummary(point, newMissingValues,
                 numberOfRepresentatives, shrinkage, true, false, centrality, preprocessor.getShingleSize()));
-
     }
 
+    public SampleSummary predict(float[] inputPoint, long timestamp, int[] missingValues) {
+        return predict(inputPoint, timestamp, missingValues, 5, 0.3, 0.5);
+    }
+
+    /**
+     * Near neighbors is an extreme example of prediction where there aare no
+     * missing values
+     * 
+     * @param inputPoint the input
+     * @param timestamp  the timestamp (not used unless for TIME_AUGMENTED and
+     *                   STREAMING_IMPUTE)
+     * @return returns a clustering of the near neighbors in the (time decaying)
+     *         sample maintained by RCF
+     */
+    public SampleSummary neighborSummary(float[] inputPoint, long timestamp) {
+        return predict(inputPoint, timestamp, null, 1, 0, 1);
+    }
+
+    /**
+     * This is the anomalyScore() function in RCF -- that definition of score has
+     * diverged from the original paper and perhaps the more descriptive name is
+     * more useful. Note that it is important that this is Expectation of Inverse
+     * versus Inverse of Expectation -- a la Jensen's Inequality.
+     * 
+     * @param inputPoint the input point
+     * @param timestamp  the timestamp
+     * @return a score in the range (0:log_2(sampleSize)) where larger values
+     *         indicate potential anomalies. Note that the score can remain elevated
+     *         due to shingling for a while -- use
+     *         ParkServices/ThresholdedRandomCutForest where the PredictorCorrector
+     *         architecture is used to evaluate the score further and produce a more
+     *         refined anomalyGrade()in [0:1] ; including setting the grade to 0
+     *         (corrector) even though the score (of this function) is high.
+     */
     public double getExpectedInverseDepthScore(float[] inputPoint, long timestamp) {
         checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
         float[] point = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
         return (point != null) ? forest.getAnomalyScore(point) : 0;
     }
 
+    /**
+     * Same as above -- but now the subparts of the score are exposed in the full
+     * RCF space which is inputDimension (add +1 for TIME_AUGMENTED) times the
+     * shingleSize. For each of these, the score can arise from the input value
+     * being HIGH or LOW (as determined by the ensemble of trees) -- which is
+     * returned in the DiVector structure. This is extremely useful in pinpointing
+     * which attribute or which value in the shingle was likely indicator of the
+     * anomaly, and is used exactly such in PredictorCorrector in ParkServices. This
+     * function enables the use of PreProcessor.
+     * 
+     * @param inputPoint the input point
+     * @param timestamp  the timestamp for the point (used only in TIME_AUGMENTED
+     *                   and STREAMING_IMPUTE)
+     * @return a divector such that getHighLowSum() would equal (up to floating
+     *         point precision over summing values across the dimensions in RCF
+     *         space) the value of getExpectedInverseDepthScore()
+     */
     public DiVector getExpectedInverseDepthAttribution(float[] inputPoint, long timestamp) {
         checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
         float[] point = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
         return (point != null) ? forest.getAnomalyAttribution(point) : new DiVector(forest.getDimensions());
     }
 
+    /**
+     * One of the visions for RCF (see blog above) was that the same data structure
+     * that can compute anomaly scores somewhat effectively, also has information
+     * regarding other measures (say X) of the point set -- and if that measure X
+     * also is indicative of anomaly then RCF should be able to vend X. One such
+     * example is density around a point set and this was available in RCF and is
+     * carried over here. It is primarily used via the DISTANCE_MODE computation in
+     * ScoringStrategy in ParkServices. This function enables the use of
+     * preprocessor.
+     * 
+     * @param inputPoint the input point
+     * @param timestamp  the timestamp of the current point
+     * @return a density output structure -- see
+     *         examples/dynamicinference/dynamicdensity
+     */
     public DensityOutput getSimpleDensity(float[] inputPoint, long timestamp) {
         checkArgument(inputPoint.length == preprocessor.getInputLength(), "incorrect length");
         float[] scaled = preprocessor.getScaledShingledInput(toDoubleArray(inputPoint), timestamp, null, forest);
@@ -192,6 +280,23 @@ public class PredictiveRandomCutForest {
         return answer;
     }
 
+    /**
+     * The following provides an alternate scoring (as well as exposing the subparts
+     * of the computation) based on the density output. The function getHighLowSum()
+     * would correspond to a score (where higher corresponds to more unlikely
+     * behavior). This is based on the recursive partitioning in the RCF trees and
+     * the fact that they preserve distances -- this is used in DISTANCE_MODE and
+     * MULTI_MODE in ParkService/ThresholdedRandomCutForest See the example
+     * parkservices/NumericGLADExample
+     * 
+     * @param inputPoint the input point
+     * @param timestamp  the timestamp of the point
+     * @return a divector in RCF space of size inputDimension (add +1 for
+     *         TIME_AUGMENTED) times the shingleSize; with the same interpretation
+     *         in getExpectedInverseDepthAttribution(). This score is not calibrated
+     *         to be in any bounded ranges, and should perhaps be used as a
+     *         corroborative signal with getExpectedInverseDepthAttribution
+     */
     public DiVector getRCFDistanceAttribution(float[] inputPoint, long timestamp) {
         DensityOutput test = getSimpleDensity(inputPoint, timestamp);
         return test.distances;
