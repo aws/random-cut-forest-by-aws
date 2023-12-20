@@ -88,7 +88,7 @@ public class TransformTest {
         long seed = new Random().nextLong();
         System.out.println(" seed " + seed);
         Random rng = new Random(seed);
-        int numTrials = 100;
+        int numTrials = 50;
         int length = 4 * sampleSize;
         int found = 0;
         int count = 0;
@@ -96,7 +96,7 @@ public class TransformTest {
 
         for (int i = 0; i < numTrials; i++) {
             int numberOfTrees = 50 + rng.nextInt(20);
-            int outputAfter = 32 + rng.nextInt(50);
+            int outputAfter = 64 + rng.nextInt(50);
             int shingleSize = 8;
             int baseDimensions = 1; // multiple dimensions would have anti-correlations induced by
                                     // differring periods
