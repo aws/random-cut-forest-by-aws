@@ -299,7 +299,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
                 // the last impute corresponds to the current observed value
                 for (int i = 0; i < numberToImpute; i++) {
                     // only the last tuple is partial
-                    double[] result = basicImpute(step * (i + 1), previous, input, imputationMethod);
+                    double[] result = basicImpute(step * (i + 1), previous, input, method);
                     updateForest(changeForest, result, timestamp, forest, true);
                 }
             }
