@@ -522,16 +522,15 @@ public class ThresholdedRandomCutForest {
                 if (newPoint != null) {
                     double[] values = preprocessor.getExpectedValue(index, reference, point, newPoint);
                     if (forestMode == ForestMode.TIME_AUGMENTED) {
-                        int endPosition = (shingleSize - 1 + index + 1) * dimension / shingleSize;
+                        int endPosition = (shingleSize + index) * base;
                         double timeGap = (newPoint[endPosition - 1] - point[endPosition - 1]);
-                        long expectedTimestamp = (timeGap == 0) ? result.getInputTimestamp()
-                                : (long) values[dimension / shingleSize - 1];
+                        long expectedTimestamp = (timeGap == 0) ? result.getInputTimestamp() : (long) values[base - 1];
                         if (index < 0) {
                             expectedTimestamp = (timeGap == 0) ? preprocessor.getTimeStamp(shingleSize - 1 + index)
-                                    : (long) values[dimension / shingleSize - 1];
+                                    : (long) values[base - 1];
                         }
                         result.setExpectedTimeStamp(expectedTimestamp);
-                        double[] plausibleValues = Arrays.copyOf(values, dimension / shingleSize - 1);
+                        double[] plausibleValues = Arrays.copyOf(values, base - 1);
                         result.setExpectedValues(0, plausibleValues, 1.0);
                     } else {
                         result.setExpectedValues(0, values, 1.0);
