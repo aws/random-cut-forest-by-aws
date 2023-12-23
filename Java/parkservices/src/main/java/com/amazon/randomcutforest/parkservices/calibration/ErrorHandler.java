@@ -128,8 +128,14 @@ public class ErrorHandler {
             lowerLimit = new float[inputLength];
             Arrays.fill(lowerLimit, -Float.MAX_VALUE);
         }
-        // uses lastInputs as a markov input, the +1 corresponds to lookahead and then
-        // 2*inputlength correspond to the (correlated) positive and negative errors
+        // uses lastInputs as a markov input, the +2 corresponds to lookahead and
+        // forecasthorizon - lookahed; the 2*inputlength correspond to the
+        // (plausibly correlated) positive and negative errors
+        // There are potentially many different variations -- use a difference encoding
+        // for the
+        // last two values (keeps lastInputs the same length) -- or change lastInputs to
+        // be a full
+        // on wavelet transform, etc.
         //
         if (builder.useRCF) {
             int inputDimensions = lastInputs.length + 2 * inputLength + 2;

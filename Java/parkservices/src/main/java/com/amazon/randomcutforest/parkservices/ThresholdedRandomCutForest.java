@@ -172,9 +172,10 @@ public class ThresholdedRandomCutForest {
     }
 
     // this constructor produces an internally shingled ThresholdedRCF model from an
-    // externally shingled ThresholdedRCF model (which may or may not be in use in
-    // older
-    // versions of OpenSearch) absent any transformations and augmentations.
+    // externally shingled RCF model -- possibly as a part of an externally shingled
+    // ThresholdedRCF, absent any transformations and augmentations.
+    // (these externally shingled models may or may not be in use in current version
+    // of OpenSearch)
     // A benefit of this conversion would be that imputations would be accessible
     // to ThresholdedRCF -- that is, even if not every value of the input tuple is
     // known
