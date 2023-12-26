@@ -711,16 +711,17 @@ public class PredictorCorrector {
         if (workingGrade > 0 && lastDescriptor != null) {
             if (score > lastDescriptor.getRCFScore()) {
                 candidate = true;
-            }
-            double runDiscount = max(workingThreshold, lastDescriptor.getThreshold())
-                    * (1 + max(0.2, runLength / (2.0 * max(10, shingleSize))));
-            if (lastDescriptor.getRCFScore() - lastDescriptor.getThreshold() > score - runDiscount) {
-                // the 'run' or the sequence of observations that create large scores
-                // because of data (concept?) drift is defined to increase permissively
-                // so that it is clear when the threshold is above the scores
-                // a consequence of this can be masking -- anomalies just after a run/drift
-                // would be difficult to determine -- but those should be difficult to determine
-                candidate = true;
+            } else {
+                double runDiscount = max(workingThreshold, lastDescriptor.getThreshold())
+                        * (1 + max(0.2, runLength / (2.0 * max(10, shingleSize))));
+                if (lastDescriptor.getRCFScore() - lastDescriptor.getThreshold() > score - runDiscount) {
+                    // the 'run' or the sequence of observations that create large scores
+                    // because of data (concept?) drift is defined to increase permissively
+                    // so that it is clear when the threshold is above the scores
+                    // a consequence of this can be masking -- anomalies just after a run/drift
+                    // would be difficult to determine -- but those should be difficult to determine
+                    candidate = true;
+                }
             }
         }
 
