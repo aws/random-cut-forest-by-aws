@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 
 import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.store.StreamSampler;
 import com.amazon.randomcutforest.summarization.GenericMultiCenter;
 import com.amazon.randomcutforest.summarization.ICluster;
 import com.amazon.randomcutforest.summarization.Summarizer;
@@ -46,6 +47,8 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
     // detection
     // this controls masking effects
     public static double DEFAULT_IGNORE_SMALL_CLUSTER_REPRESENTATIVE = 0.005;
+
+    public static double DEFAULT_GLAD_THRESHOLD = 1.2;
 
     // the number of steps we have to wait before reclustering; in principle this
     // can be 1, but that would be
@@ -93,9 +96,9 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
 
     protected GlobalLocalAnomalyDetector(Builder<?> builder) {
         super(builder);
-        thresholder = new BasicThresholder(builder.timeDecay);
-        thresholder.setAbsoluteThreshold(1.2);
-        doNotreclusterWithin = builder.doNotReclusterWithin.orElse(builder.capacity / 2);
+        thresholder = new BasicThresholder(builder.getTimeDecay());
+        thresholder.setAbsoluteThreshold(DEFAULT_GLAD_THRESHOLD);
+        doNotreclusterWithin = builder.doNotReclusterWithin.orElse(builder.getCapacity() / 2);
         shrinkage = builder.shrinkage;
         maxAllowed = builder.maxAllowed;
         numberOfRepresentatives = builder.numberOfRepresentatives;
@@ -115,6 +118,8 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
     // likely lower recall)
     // this is the same as in BasicThresholder class
     public void setZfactor(double factor) {
+
+        checkArgument(factor > 1, "must be more than 1");
         thresholder.setZfactor(factor);
     }
 
@@ -124,6 +129,8 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
 
     // as in BasicThresholder class, useful in tuning
     public void setLowerThreshold(double lowerThreshold) {
+        checkArgument(lowerThreshold > 0, "cannot be negative");
+
         thresholder.setAbsoluteThreshold(lowerThreshold);
     }
 
@@ -145,7 +152,10 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
     }
 
     public void setNumberOfRepresentatives(int reps) {
+
         checkArgument(reps > 0, " has to be positive");
+        checkArgument(reps < 25, "too large a number");
+        numberOfRepresentatives = reps;
     }
 
     public double getShrinkage() {
@@ -311,14 +321,17 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
                         : FLOAT_MAX;
                 answer.add(new Weighted<P>(head.representative, tempMeasure));
                 if (considerOcclusion) {
-                    for (int j = index + 1; j < candidateList.size(); j++) {
-                        double occludeDistance = local.apply(head.representative, candidateList.get(j).representative);
-                        double candidateDistance = candidateList.get(j).distance;
-                        if (occludeDistance < candidateDistance && head.distance > Math
-                                .sqrt(head.distance * head.distance + candidateDistance * candidateDistance)) {
+                    int consider = index + 1;
+                    while (consider < candidateList.size()) {
+                        double occludeDistance = local.apply(head.representative,
+                                candidateList.get(consider).representative);
+                        double candidateDistance = candidateList.get(consider).distance;
+                        if (occludeDistance < candidateDistance && candidateDistance > Math
+                                .sqrt(head.distance * head.distance + occludeDistance * occludeDistance)) {
                             // delete element
-                            candidateList.remove(j);
+                            candidateList.remove(consider);
                         }
+                        consider++;
                     }
                 }
                 ++index;
@@ -342,10 +355,10 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
      */
     public GlobalLocalAnomalyDetector(GlobalLocalAnomalyDetector first, GlobalLocalAnomalyDetector second,
             Builder<?> builder, boolean recluster, BiFunction<P, P, Double> distance) {
-        super(first, second, builder.capacity, builder.timeDecay, builder.randomSeed);
-        thresholder = new BasicThresholder(builder.timeDecay, builder.anomalyRate, false);
+        super(first, second, builder.getCapacity(), builder.getTimeDecay(), builder.getRandomSeed());
+        thresholder = new BasicThresholder(builder.getTimeDecay(), builder.anomalyRate, false);
         thresholder.setAbsoluteThreshold(1.2);
-        doNotreclusterWithin = builder.doNotReclusterWithin.orElse(builder.capacity / 2);
+        doNotreclusterWithin = builder.doNotReclusterWithin.orElse(builder.getCapacity() / 2);
         shrinkage = builder.shrinkage;
         maxAllowed = builder.maxAllowed;
         numberOfRepresentatives = builder.numberOfRepresentatives;
@@ -371,10 +384,6 @@ public class GlobalLocalAnomalyDetector<P> extends StreamSampler<P> {
             this.averageRadiusOfCluster = averageRadiusOfCluster;
             this.distance = distance;
         }
-    }
-
-    public ArrayList<Weighted<P>> getObjectList() {
-        return objectList;
     }
 
     public List<ICluster<P>> getClusters() {

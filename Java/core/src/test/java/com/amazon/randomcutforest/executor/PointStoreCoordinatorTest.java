@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.executor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -49,11 +50,11 @@ public class PointStoreCoordinatorTest {
         int index = 123;
 
         ArgumentCaptor<float[]> captor = ArgumentCaptor.forClass(float[].class);
-        when(store.add(captor.capture(), anyLong())).thenReturn(index);
+        when(store.add(captor.capture(), anyLong(), anyBoolean())).thenReturn(index);
 
-        int result = coordinator.initUpdate(point, 0);
+        int result = coordinator.initUpdate(point, 0, false);
 
-        verify(store, times(1)).add(point, 0);
+        verify(store, times(1)).add(point, 0, false);
         assertEquals(result, index);
     }
 

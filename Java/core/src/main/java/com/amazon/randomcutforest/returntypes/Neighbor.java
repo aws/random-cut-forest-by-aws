@@ -64,15 +64,20 @@ public class Neighbor {
      *
      * @param point           The neighbor point.
      * @param distance        The distance between the neighbor point and the query
-     *                        point is was created from.
+     *                        point was created from.
      * @param sequenceIndexes A list of sequence indexes corresponding to the times
      *                        when this neighbor point was added to the forest.
+     * @param count           The number of copies
      */
-    public Neighbor(float[] point, double distance, List<Long> sequenceIndexes) {
+    public Neighbor(float[] point, double distance, List<Long> sequenceIndexes, int count) {
         this.point = point;
         this.distance = distance;
         this.sequenceIndexes = sequenceIndexes;
-        this.count = 1;
+        this.count = count;
+    }
+
+    public Neighbor(float[] point, double distance, List<Long> sequenceIndexes) {
+        this(point, distance, sequenceIndexes, 1);
     }
 
     /**

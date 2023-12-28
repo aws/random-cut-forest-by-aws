@@ -18,11 +18,11 @@ package com.amazon.randomcutforest.examples.parkservices;
 import java.util.Arrays;
 import java.util.Random;
 
-import com.amazon.randomcutforest.config.CorrectionMode;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.config.CorrectionMode;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
 import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
 

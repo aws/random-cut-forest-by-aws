@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.parkservices.state.threshold;
 
-import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getDeviations;
-import static com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper.getStates;
+import static com.amazon.randomcutforest.state.statistics.DeviationMapper.getDeviations;
+import static com.amazon.randomcutforest.state.statistics.DeviationMapper.getStates;
 
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.statistics.DeviationMapper;
+import com.amazon.randomcutforest.statistics.Deviation;
 
 @Getter
 @Setter

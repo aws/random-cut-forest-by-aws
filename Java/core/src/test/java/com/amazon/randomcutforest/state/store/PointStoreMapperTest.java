@@ -16,11 +16,14 @@
 package com.amazon.randomcutforest.state.store;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.store.PointStore;
 import com.amazon.randomcutforest.store.PointStoreSmall;
 
@@ -51,5 +54,15 @@ public class PointStoreMapperTest {
         assertEquals(3, store2.size());
         assertEquals(dimensions, store2.getDimensions());
         assertArrayEquals(store.getStore(), store2.getStore());
+
+        PointStoreState state = mapper.toState(store);
+        state.setDuplicateRefs(null);
+        assertDoesNotThrow(() -> mapper.toModel(state));
+        state.setDuplicateRefs(new int[1]);
+        assertThrows(IllegalArgumentException.class, () -> mapper.toModel(state));
+        state.setDuplicateRefs(new int[2]);
+        assertDoesNotThrow(() -> mapper.toModel(state));
+        state.setPrecision(Precision.FLOAT_64.name());
+        assertThrows(IllegalArgumentException.class, () -> mapper.toModel(state));
     }
 }

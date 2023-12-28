@@ -217,6 +217,10 @@ public class CommonUtils {
         return result;
     }
 
+    public static double[] toDoubleArrayNullable(float[] array) {
+        return (array == null) ? null : toDoubleArray(array);
+    }
+
     public static float[] toFloatArray(double[] array) {
         checkNotNull(array, "array must not be null");
         float[] result = new float[array.length];
@@ -225,6 +229,10 @@ public class CommonUtils {
             // eliminating -0.0 issues
         }
         return result;
+    }
+
+    public static float[] toFloatArrayNullable(double[] array) {
+        return (array == null) ? null : toFloatArray(array);
     }
 
     public static int[] toIntArray(byte[] values) {

@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.parkservices;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,9 +54,28 @@ public class DescriptorTest {
         assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setExpectedValues(2, new double[2], 1.0));
         forecastDescriptor.setExpectedValues(0, new double[2], 1.0);
         assertTrue(forecastDescriptor.isExpectedValuesPresent());
+        assertNull(forecastDescriptor.getLastExpectedRCFPoint());
         assertArrayEquals(forecastDescriptor.getExpectedValuesList()[0], new double[2]);
         forecastDescriptor.setExpectedValues(0, new double[] { -1.0, -1.0 }, 0.5);
         assertArrayEquals(forecastDescriptor.getExpectedValuesList()[0], new double[] { -1.0, -1.0 });
+        assertNull(forecastDescriptor.getMissingValues());
+        forecastDescriptor.setMissingValues(null);
+        assertNull(forecastDescriptor.getMissingValues());
+        forecastDescriptor.setMissingValues(new int[] { 17 });
+        assertArrayEquals(forecastDescriptor.getMissingValues(), new int[] { 17 });
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(0, null));
+        forecastDescriptor.setNumberOfNewImputes(1);
+        forecastDescriptor.setInputLength(1);
+        forecastDescriptor.setShingleSize(1);
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(0, null));
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(0, new double[3]));
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(0, new double[1]));
+        forecastDescriptor.setShingleSize(2);
+        forecastDescriptor.setImputedPoints(null); // reset
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(-1, new double[1]));
+        assertDoesNotThrow(() -> forecastDescriptor.setImputedPoint(0, new double[1]));
+        // cannot set twice
+        assertThrows(IllegalArgumentException.class, () -> forecastDescriptor.setImputedPoint(0, new double[1]));
     }
 
 }

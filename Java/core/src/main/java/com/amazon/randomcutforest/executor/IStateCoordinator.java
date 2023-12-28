@@ -33,12 +33,16 @@ public interface IStateCoordinator<PointReference, Point> {
      * Transform the input point into a value that can be submitted to IUpdatable
      * instances.
      *
-     * @param point          The input point.
-     * @param sequenceNumber the sequence number associated with the point
+     * @param point             The input point.
+     * @param sequenceNumber    the sequence number associated with the point
+     * @param updateShingleOnly Only update the shingles (Provide a null reference)
+     *                          or, also update the point store (provide a usable
+     *                          reference)
+     *
      * @return The point transformed into the representation expected by an
      *         IUpdatable instance.
      */
-    PointReference initUpdate(Point point, long sequenceNumber);
+    PointReference initUpdate(Point point, long sequenceNumber, boolean updateShingleOnly);
 
     /**
      * Complete the update. This method is called by IStateCoordinator after all
@@ -56,7 +60,5 @@ public interface IStateCoordinator<PointReference, Point> {
 
     void setTotalUpdates(long totalUpdates);
 
-    default IPointStore<PointReference, Point> getStore() {
-        return null;
-    }
+    IPointStore<PointReference, Point> getStore();
 }

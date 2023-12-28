@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest.store;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -51,6 +52,38 @@ public class PointStoreTest {
         for (int i = 0; i < pointStore.getIndexCapacity(); i++) {
             assertEquals(0, pointStore.getRefCount(i));
         }
+        pointStore.add(new float[2], 0);
+        int index = pointStore.add(new float[2], 0);
+        assertEquals(index, 1);
+        for (int y = 0; y < 1000; y++) {
+            pointStore.incrementRefCount(index);
+        }
+        assertEquals(pointStore.getRefCount(index), 1001);
+        int[] counts = pointStore.getRefCount();
+        assertEquals(counts[0], 1);
+        assertEquals(counts[index], 1001);
+        assertThrows(AssertionError.class, () -> pointStore.setLocation(0, 13));
+        assertThrows(AssertionError.class, () -> pointStore.extendLocationList(-10));
+    }
+
+    @Test
+    public void testConstructors() {
+        PointStore.Builder builder = new PointStore.Builder().dynamicResizingEnabled(true);
+        assertThrows(IllegalArgumentException.class, () -> new PointStoreSmall(builder));
+        builder.dimensions(1000);
+        assertThrows(IllegalArgumentException.class, () -> new PointStoreSmall(builder));
+        builder.capacity(100000);
+        assertThrows(IllegalArgumentException.class, () -> new PointStoreSmall(builder));
+        assertDoesNotThrow(() -> new PointStoreLarge(builder));
+        builder.shingleSize(3);
+        assertThrows(IllegalArgumentException.class, () -> new PointStoreLarge(builder));
+        builder.shingleSize(1);
+        builder.dimensions(2);
+        PointStoreLarge large = new PointStoreLarge(builder);
+        assertThrows(IllegalArgumentException.class, () -> large.checkFeasible(0));
+        assertEquals(large.size(), 0);
+        large.add(new float[2], 0L);
+        assertEquals(large.size(), 1);
     }
 
     @Test
@@ -156,7 +189,7 @@ public class PointStoreTest {
     }
 
     @Test
-    public void internalshinglingTestNoRotation() {
+    public void internalShinglingTestNoRotation() {
         int shinglesize = 10;
         PointStore store = new PointStore.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
@@ -179,7 +212,7 @@ public class PointStoreTest {
     }
 
     @Test
-    public void internalshinglingTestWithRotation() {
+    public void internalShinglingTestWithRotation() {
         int shinglesize = 10;
         PointStore store = new PointStore.Builder().capacity(20 * shinglesize).dimensions(shinglesize)
                 .shingleSize(shinglesize).indexCapacity(shinglesize).internalShinglingEnabled(true)
@@ -270,5 +303,20 @@ public class PointStoreTest {
         assertTrue(store.size() < store.capacity);
         index = store.add(new float[] { 8 }, 0L);
         assertArrayEquals(store.getNumericVector(index), new float[] { 7, 8 });
+    }
+
+    @Test
+    public void indexIntervalTest() {
+        assertThrows(IllegalArgumentException.class, () -> new IndexIntervalManager(0));
+        assertThrows(IllegalArgumentException.class, () -> new IndexIntervalManager(1, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> IndexIntervalManager.toBits(null));
+        IndexIntervalManager a = new IndexIntervalManager(new int[] { 0, 1 }, 2);
+        IndexIntervalManager manager = new IndexIntervalManager(1);
+        manager.takeIndex();
+        assertThrows(IllegalStateException.class, () -> manager.takeIndex());
+        assertThrows(IllegalArgumentException.class, () -> manager.extendCapacity(1));
+        manager.extendCapacity(2);
+        manager.extendCapacity(3);
+        assertEquals(manager.getCapacity(), 3);
     }
 }

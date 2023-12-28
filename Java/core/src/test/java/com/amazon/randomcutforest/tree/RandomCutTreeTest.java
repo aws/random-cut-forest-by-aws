@@ -17,7 +17,9 @@ package com.amazon.randomcutforest.tree;
 
 import static com.amazon.randomcutforest.CommonUtils.toDoubleArray;
 import static com.amazon.randomcutforest.CommonUtils.toFloatArray;
+import static com.amazon.randomcutforest.CommonUtils.validateInternalState;
 import static com.amazon.randomcutforest.tree.AbstractNodeStore.Null;
+import static java.lang.Math.max;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
@@ -42,8 +44,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.amazon.randomcutforest.MultiVisitor;
+import com.amazon.randomcutforest.MultiVisitorFactory;
 import com.amazon.randomcutforest.config.Config;
 import com.amazon.randomcutforest.sampler.Weighted;
+import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeContext;
+import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
+import com.amazon.randomcutforest.state.tree.RandomCutTreeMapper;
 import com.amazon.randomcutforest.store.PointStore;
 
 public class RandomCutTreeTest {
@@ -53,11 +60,13 @@ public class RandomCutTreeTest {
     private Random rng;
     private RandomCutTree tree;
 
+    private PointStore pointStoreFloat;
+
     @BeforeEach
     public void setUp() {
         rng = mock(Random.class);
-        PointStore pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100)
-                .dimensions(2).build();
+        pointStoreFloat = new PointStore.Builder().indexCapacity(100).capacity(100).initialSize(100).dimensions(2)
+                .build();
         tree = RandomCutTree.builder().random(rng).centerOfMassEnabled(true).pointStoreView(pointStoreFloat)
                 .storeSequenceIndexesEnabled(true).storeParent(true).dimension(2).build();
 
@@ -120,12 +129,13 @@ public class RandomCutTreeTest {
 
     @Test
     public void testConfig() {
+        Config config = new Config();
         assertThrows(IllegalArgumentException.class, () -> tree.setBoundingBoxCacheFraction(-0.5));
         assertThrows(IllegalArgumentException.class, () -> tree.setBoundingBoxCacheFraction(2.0));
         assertThrows(IllegalArgumentException.class, () -> tree.setConfig("foo", 0));
         assertThrows(IllegalArgumentException.class, () -> tree.getConfig("bar"));
         assertEquals(tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION), 1.0);
-        assertThrows(IllegalArgumentException.class, () -> tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, true));
+        assertThrows(IllegalArgumentException.class, () -> tree.setConfig(config.BOUNDING_BOX_CACHE_FRACTION, true));
         assertThrows(IllegalArgumentException.class,
                 () -> tree.getConfig(Config.BOUNDING_BOX_CACHE_FRACTION, boolean.class));
         tree.setConfig(Config.BOUNDING_BOX_CACHE_FRACTION, 0.2);
@@ -324,6 +334,59 @@ public class RandomCutTreeTest {
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(4L), 1);
         assertEquals(tree.getSequenceMap(tree.getPointIndex(tree.getRightChild(node))).get(5L), 1);
         assertThrows(IllegalArgumentException.class, () -> tree.deletePoint(5, 6));
+    }
+
+    @Test
+    public void testTreeMapper() {
+        RandomCutTreeMapper mapper = new RandomCutTreeMapper();
+        CompactRandomCutTreeState state = mapper.toState(tree);
+        CompactRandomCutTreeContext context = new CompactRandomCutTreeContext();
+        context.setPointStore(pointStoreFloat);
+        context.setDimension(tree.getDimension());
+        state.setDimensions(0);
+        RandomCutTree newTree = mapper.toModel(state, context);
+        assertEquals(newTree.getDimension(), 2);
+    }
+
+    @Test
+    public void treeTraversal() {
+        class DepthCounter implements MultiVisitor<Integer> {
+
+            int depth = 0;
+
+            DepthCounter(int num) {
+                depth = 0;
+            }
+
+            @Override
+            public boolean trigger(INodeView node) {
+                return true;
+            }
+
+            @Override
+            public MultiVisitor<Integer> newPartialCopy() {
+                return new DepthCounter(depth);
+            }
+
+            @Override
+            public void combine(MultiVisitor<Integer> other) {
+                depth = max(depth, other.getResult());
+            }
+
+            @Override
+            public void accept(INodeView node, int depthOfNode) {
+                validateInternalState(!isConverged(), "error");
+                depth++;
+            }
+
+            @Override
+            public Integer getResult() {
+                return depth;
+            }
+        }
+        MultiVisitorFactory<Integer> factory = new MultiVisitorFactory<>((tree, x) -> new DepthCounter(0));
+        assertEquals((int) tree.traverseMulti(new float[2], factory), 4);
+
     }
 
     @Test

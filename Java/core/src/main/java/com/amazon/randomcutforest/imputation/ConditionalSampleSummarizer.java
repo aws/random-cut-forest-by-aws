@@ -64,18 +64,21 @@ public class ConditionalSampleSummarizer {
      */
     protected boolean project = false;
 
-    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality) {
-        this.missingDimensions = Arrays.copyOf(missingDimensions, missingDimensions.length);
-        this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
-        this.centrality = centrality;
-    }
+    protected int numberOfReps = 1;
 
-    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality,
-            boolean project) {
+    protected double shrinkage = 0;
+
+    protected int shingleSize = 1;
+
+    public ConditionalSampleSummarizer(int[] missingDimensions, float[] queryPoint, double centrality, boolean project,
+            int numberOfReps, double shrinkage, int shingleSize) {
         this.missingDimensions = Arrays.copyOf(missingDimensions, missingDimensions.length);
         this.queryPoint = Arrays.copyOf(queryPoint, queryPoint.length);
         this.centrality = centrality;
         this.project = project;
+        this.numberOfReps = numberOfReps;
+        this.shrinkage = shrinkage;
+        this.shingleSize = shingleSize;
     }
 
     public SampleSummary summarize(List<ConditionalTreeSample> alist) {
@@ -102,21 +105,28 @@ public class ConditionalSampleSummarizer {
         List<ConditionalTreeSample> newList = ConditionalTreeSample.dedup(alist);
 
         newList.sort((o1, o2) -> Double.compare(o1.distance, o2.distance));
-
-        ArrayList<Weighted<float[]>> points = new ArrayList<>();
-        newList.stream().forEach(e -> {
-            if (!project) {
-                points.add(new Weighted<>(e.leafPoint, (float) e.weight));
-            } else {
-                float[] values = new float[missingDimensions.length];
-                for (int i = 0; i < missingDimensions.length; i++) {
-                    values[i] = e.leafPoint[missingDimensions[i]];
-                }
-                points.add(new Weighted<>(values, (float) e.weight));
-            }
-        });
+        int dimensions = queryPoint.length;
 
         if (!addTypical) {
+            ArrayList<Weighted<float[]>> points = new ArrayList<>();
+            newList.stream().forEach(e -> {
+                if (!project) {
+                    if (shingleSize == 1) {
+                        points.add(new Weighted<>(e.leafPoint, (float) e.weight));
+                    } else {
+                        float[] values = Arrays.copyOfRange(e.leafPoint, dimensions - dimensions / shingleSize,
+                                dimensions);
+                        points.add(new Weighted<>(values, (float) e.weight));
+                    }
+                } else {
+                    float[] values = new float[missingDimensions.length];
+                    for (int i = 0; i < missingDimensions.length; i++) {
+                        values[i] = e.leafPoint[missingDimensions[i]];
+                    }
+                    points.add(new Weighted<>(values, (float) e.weight));
+                }
+            });
+
             return new SampleSummary(points);
         }
 
@@ -131,34 +141,37 @@ public class ConditionalSampleSummarizer {
          * exact matches would go against the dynamic sampling based use of RCF.
          **/
 
-        int dimensions = queryPoint.length;
-
-        double threshold = centrality * newList.get(0).distance;
-        double currentWeight = 0;
-        int alwaysInclude = 0;
-        double remainderWeight = totalWeight;
-        while (newList.get(alwaysInclude).distance == 0) {
-            remainderWeight -= newList.get(alwaysInclude).weight;
-            ++alwaysInclude;
-            if (alwaysInclude == newList.size()) {
-                break;
-            }
-        }
-        for (int j = 1; j < newList.size(); j++) {
-            if ((currentWeight < remainderWeight / 3 && currentWeight + newList.get(j).weight >= remainderWeight / 3)
-                    || (currentWeight < remainderWeight / 2
-                            && currentWeight + newList.get(j).weight >= remainderWeight / 2)) {
-                threshold = centrality * newList.get(j).distance;
-            }
-            currentWeight += newList.get(j).weight;
-        }
-        // note that the threshold is currently centrality * (some distance in the list)
-        // thus the sequel uses a convex combination; and setting centrality = 0 removes
-        // the entire filtering based on distances
-        threshold += (1 - centrality) * newList.get(newList.size() - 1).distance;
         int num = 0;
-        while (num < newList.size() && newList.get(num).distance <= threshold) {
-            ++num;
+        if (centrality > 0) {
+            double threshold = centrality * newList.get(0).distance + 1e-6;
+            double currentWeight = 0;
+            int alwaysInclude = 0;
+            double remainderWeight = totalWeight;
+            while (newList.get(alwaysInclude).distance == 0) {
+                remainderWeight -= newList.get(alwaysInclude).weight;
+                ++alwaysInclude;
+                if (alwaysInclude == newList.size()) {
+                    break;
+                }
+            }
+            for (int j = 1; j < newList.size(); j++) {
+                if ((currentWeight < remainderWeight / 3
+                        && currentWeight + newList.get(j).weight >= remainderWeight / 3)
+                        || (currentWeight < remainderWeight / 2
+                                && currentWeight + newList.get(j).weight >= remainderWeight / 2)) {
+                    threshold = centrality * newList.get(j).distance;
+                }
+                currentWeight += newList.get(j).weight;
+            }
+            // note that the threshold is currently centrality * (some distance in the list)
+            // thus the sequel uses a convex combination; and setting centrality = 0 removes
+            // the entire filtering based on distances
+            threshold += (1 - centrality) * newList.get(newList.size() - 1).distance;
+            while (num < newList.size() && newList.get(num).distance <= threshold) {
+                ++num;
+            }
+        } else {
+            num = newList.size();
         }
 
         ArrayList<Weighted<float[]>> typicalPoints = new ArrayList<>();
@@ -171,26 +184,21 @@ public class ConditionalSampleSummarizer {
                     values[i] = e.leafPoint[missingDimensions[i]];
                 }
             } else {
-                values = Arrays.copyOf(e.leafPoint, dimensions);
+                if (shingleSize == 1) {
+                    values = e.leafPoint;
+                } else {
+                    values = Arrays.copyOfRange(e.leafPoint, dimensions - dimensions / shingleSize, dimensions);
+                }
             }
             typicalPoints.add(new Weighted<>(values, (float) e.weight));
         }
         int maxAllowed = min(queryPoint.length * MAX_NUMBER_OF_TYPICAL_PER_DIMENSION, MAX_NUMBER_OF_TYPICAL_ELEMENTS);
         maxAllowed = min(maxAllowed, num);
-        SampleSummary projectedSummary = Summarizer.l2summarize(typicalPoints, maxAllowed, num, false, 72);
 
-        float[][] pointList = new float[projectedSummary.summaryPoints.length][];
-        float[] likelihood = new float[projectedSummary.summaryPoints.length];
+        SampleSummary projectedSummary = Summarizer.summarize(typicalPoints, maxAllowed, num, false,
+                Summarizer::L2distance, 72, false, numberOfReps, shrinkage);
 
-        for (int i = 0; i < projectedSummary.summaryPoints.length; i++) {
-            pointList[i] = Arrays.copyOf(queryPoint, dimensions);
-            for (int j = 0; j < missingDimensions.length; j++) {
-                pointList[i][missingDimensions[j]] = projectedSummary.summaryPoints[i][j];
-            }
-            likelihood[i] = projectedSummary.relativeWeight[i];
-        }
-
-        return new SampleSummary(points, pointList, likelihood);
+        return new SampleSummary(typicalPoints, projectedSummary);
     }
 
 }

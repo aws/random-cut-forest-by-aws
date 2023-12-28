@@ -15,26 +15,28 @@
 
 package com.amazon.randomcutforest.parkservices.state;
 
+import static com.amazon.randomcutforest.CommonUtils.toFloatArrayNullable;
+
 import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
-import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
-import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
-import com.amazon.randomcutforest.parkservices.preprocessor.Preprocessor;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
 import com.amazon.randomcutforest.parkservices.state.predictorcorrector.PredictorCorrectorMapper;
-import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorMapper;
-import com.amazon.randomcutforest.parkservices.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorMapper;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
+import com.amazon.randomcutforest.preprocessor.Preprocessor;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorMapper;
+import com.amazon.randomcutforest.state.preprocessor.PreprocessorState;
 import com.amazon.randomcutforest.state.returntypes.DiVectorMapper;
 
 @Getter
@@ -66,14 +68,15 @@ public class ThresholdedRandomCutForestMapper
             descriptor.setRCFScore(state.getLastAnomalyScore());
             descriptor.setInternalTimeStamp(state.getLastAnomalyTimeStamp());
             descriptor.setAttribution(new DiVectorMapper().toModel(state.getLastAnomalyAttribution()));
-            descriptor.setRCFPoint(state.getLastAnomalyPoint());
-            descriptor.setExpectedRCFPoint(state.getLastExpectedPoint());
+            descriptor.setRCFPoint(toFloatArrayNullable(state.getLastAnomalyPoint()));
+            descriptor.setExpectedRCFPoint(toFloatArrayNullable(state.getLastExpectedPoint()));
             descriptor.setRelativeIndex(state.getLastRelativeIndex());
             descriptor.setScoringStrategy(scoringStrategy);
         } else {
             descriptor = new ComputeDescriptorMapper().toModel(state.getLastDescriptorState());
         }
 
+        descriptor.setShingleSize(preprocessor.getShingleSize());
         descriptor.setForestMode(forestMode);
         descriptor.setTransformMethod(transformMethod);
         descriptor.setScoringStrategy(scoringStrategy);
@@ -117,8 +120,7 @@ public class ThresholdedRandomCutForestMapper
         state.setTransformMethod(model.getTransformMethod().name());
         state.setScoringStrategy(model.getScoringStrategy().name());
 
-        state.setLastDescriptorState(
-                new ComputeDescriptorMapper().toState((RCFComputeDescriptor) model.getLastAnomalyDescriptor()));
+        state.setLastDescriptorState(new ComputeDescriptorMapper().toState(model.getLastAnomalyDescriptor()));
         return state;
     }
 

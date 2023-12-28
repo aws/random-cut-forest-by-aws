@@ -24,7 +24,7 @@ import java.util.List;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.calibration.Calibration;
+import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.parkservices.returntypes.AnalysisDescriptor;
 
 public class SequentialAnalysis {

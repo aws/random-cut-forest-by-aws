@@ -37,12 +37,14 @@ public class ConditionalSampleSummarizerTest {
     private float[] queryPoint;
     private int[] missingIndexes;
     ConditionalSampleSummarizer summarizer;
+    ConditionalSampleSummarizer projectedSummarizer;
 
     @BeforeEach
     public void setUp() {
         queryPoint = new float[] { 50, 70, 90, 100 };
         missingIndexes = new int[] { 2, 3 };
-        summarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, true);
+        summarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, false, 1, 0, 1);
+        projectedSummarizer = new ConditionalSampleSummarizer(missingIndexes, queryPoint, 0.2, true, 5, 0.3, 1);
     }
 
     @Test
@@ -68,8 +70,13 @@ public class ConditionalSampleSummarizerTest {
             assertEquals(element[2], 90);
             assertTrue(100 < element[3] && element[3] < 102);
         }
-        assertEquals(2, summaryTwo.mean.length);
+        assertEquals(4, summaryTwo.mean.length);
         assertEquals(0, summaryTwo.deviation[0]);
+        SampleSummary summaryThree = projectedSummarizer.summarize(list);
+        assertNotNull(summaryThree.summaryPoints);
+        for (float[] element : summaryThree.summaryPoints) {
+            assertEquals(element.length, missingIndexes.length);
+        }
     }
 
     @Test

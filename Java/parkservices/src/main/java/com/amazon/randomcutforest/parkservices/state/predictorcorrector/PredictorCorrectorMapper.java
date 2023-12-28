@@ -15,16 +15,16 @@
 
 package com.amazon.randomcutforest.parkservices.state.predictorcorrector;
 
-import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.PredictorCorrector;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorMapper;
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationMapper;
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderMapper;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
 import com.amazon.randomcutforest.parkservices.threshold.BasicThresholder;
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.statistics.DeviationMapper;
+import com.amazon.randomcutforest.state.statistics.DeviationState;
+import com.amazon.randomcutforest.statistics.Deviation;
 
 public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector, PredictorCorrectorState> {
 
@@ -59,6 +59,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
             ComputeDescriptorMapper descriptorMapper = new ComputeDescriptorMapper();
             state.setLastDescriptor(descriptorMapper.toState(model.getLastDescriptor()));
         }
+        state.setModeInformation(model.getModeInformation());
         state.setRunLength(model.getRunLength());
         state.setIgnoreDrift(model.isIgnoreDrift());
         state.setSamplingSuppport(model.getSamplingSupport());
@@ -90,6 +91,7 @@ public class PredictorCorrectorMapper implements IStateMapper<PredictorCorrector
         predictorCorrector.setAutoAdjust(state.isAutoAdjust());
         predictorCorrector.setNoiseFactor(state.getNoiseFactor());
         predictorCorrector.setRunLength(state.getRunLength());
+        predictorCorrector.setModeInformation(state.getModeInformation());
         if (state.getLastDescriptor() != null) {
             ComputeDescriptorMapper descriptorMapper = new ComputeDescriptorMapper();
             predictorCorrector.setLastDescriptor(descriptorMapper.toModel(state.getLastDescriptor()));

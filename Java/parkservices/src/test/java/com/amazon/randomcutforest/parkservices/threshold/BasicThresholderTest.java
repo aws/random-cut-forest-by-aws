@@ -32,7 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.statistics.Deviation;
 
 public class BasicThresholderTest {
 

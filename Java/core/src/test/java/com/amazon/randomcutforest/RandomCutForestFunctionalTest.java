@@ -551,7 +551,7 @@ public class RandomCutForestFunctionalTest {
     @ArgumentsSource(TestForestProvider.class)
     public void testSimpleDensityWhenSamplerNotFullThenDensityIsZero(RandomCutForest forest) {
         RandomCutForest forestSpy = spy(forest);
-        when(forestSpy.samplersFull()).thenReturn(false);
+        when(forestSpy.isOutputReady()).thenReturn(false);
 
         DensityOutput output = forestSpy.getSimpleDensity(new double[] { 0.0, 0.0, 0.0 });
         assertEquals(0, output.getDensity(0.001, 3));

@@ -49,7 +49,6 @@ public class PointStoreLarge extends PointStore {
 
     public PointStoreLarge(PointStore.Builder builder) {
         super(builder);
-        checkArgument(dimensions * capacity < Integer.MAX_VALUE, " incorrect parameters");
         if (builder.locationList != null) {
             locationList = Arrays.copyOf(builder.locationList, builder.locationList.length);
         } else {

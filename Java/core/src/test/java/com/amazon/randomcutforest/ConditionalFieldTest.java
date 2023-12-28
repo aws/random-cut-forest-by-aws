@@ -16,6 +16,7 @@
 package com.amazon.randomcutforest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
@@ -49,7 +50,7 @@ public class ConditionalFieldTest {
         randomSeed = 101;
         sampleSize = 256;
         RandomCutForest newForest = RandomCutForest.builder().numberOfTrees(100).sampleSize(sampleSize)
-                .dimensions(newDimensions).randomSeed(randomSeed).compact(true).boundingBoxCacheFraction(0.0).build();
+                .dimensions(newDimensions).randomSeed(randomSeed).boundingBoxCacheFraction(0.0).build();
 
         dataSize = 2000 + 5;
 
@@ -79,7 +80,8 @@ public class ConditionalFieldTest {
         float[] queryOne = new float[newDimensions];
         float[] queryTwo = new float[newDimensions];
         queryTwo[1] = 1;
-        SampleSummary summary = newForest.getConditionalFieldSummary(queryOne, 1, new int[] { 0 }, 1);
+        SampleSummary summary = newForest.getConditionalFieldSummary(queryOne, new int[] { 0 }, 1, 0, true, false, 1,
+                1);
 
         assert (summary.summaryPoints.length == 2);
         assert (summary.relativeWeight.length == 2);
@@ -89,8 +91,24 @@ public class ConditionalFieldTest {
                 || Math.abs(summary.summaryPoints[1][0] + 5.0) < 0.01);
         assert (summary.relativeWeight[0] > 0.25);
         assert (summary.relativeWeight[1] > 0.25);
+        SampleSummary projectedSummaryOne = newForest.getConditionalFieldSummary(queryOne, new int[] { 0 }, 1, 0, false,
+                true, 1, 1);
+        assertTrue(projectedSummaryOne.summaryPoints == null);
+        assertTrue(projectedSummaryOne.mean.length == 1);
+        SampleSummary projectedSummaryTwo = newForest.getConditionalFieldSummary(queryOne, new int[] { 0 }, 1, 0, true,
+                true, 0, 1);
+        assertTrue(projectedSummaryTwo.summaryPoints != null);
+        assertTrue(projectedSummaryTwo.mean.length == 1);
+        SampleSummary projectedSummaryThree = newForest.getConditionalFieldSummary(queryOne, new int[] { 0 }, 1, 0,
+                false, false, 1, 3);
+        assertTrue(projectedSummaryThree.summaryPoints == null);
+        assertTrue(projectedSummaryThree.mean.length == newDimensions / 3);
+        SampleSummary projectedSummaryFour = newForest.getConditionalFieldSummary(queryOne, new int[] { 0 }, 1, 0, true,
+                false, 1, 4);
+        assertTrue(projectedSummaryFour.summaryPoints != null);
+        assertTrue(projectedSummaryFour.mean.length == newDimensions / 4);
 
-        summary = newForest.getConditionalFieldSummary(queryTwo, 1, new int[] { 0 }, 1);
+        summary = newForest.getConditionalFieldSummary(queryTwo, new int[] { 0 }, 1, 0, true, false, 1, 1);
 
         assert (summary.summaryPoints.length == 2);
         assert (summary.relativeWeight.length == 2);

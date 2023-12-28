@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.state;
 
-import static com.amazon.randomcutforest.state.Version.V3_0;
+import static com.amazon.randomcutforest.state.Version.V4_0;
 
 import java.io.Serializable;
 import java.util.List;
@@ -34,7 +34,7 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 public class RandomCutForestState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String version = V3_0;
+    private String version = V4_0;
 
     private long totalUpdates;
 
@@ -81,5 +81,7 @@ public class RandomCutForestState implements Serializable {
     private boolean saveSamplerStateEnabled;
 
     private boolean saveCoordinatorStateEnabled;
+
+    private boolean currentlySampling;
 
 }

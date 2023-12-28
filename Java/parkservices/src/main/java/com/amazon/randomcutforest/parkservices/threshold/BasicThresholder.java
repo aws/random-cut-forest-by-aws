@@ -25,7 +25,7 @@ import static java.lang.Math.sqrt;
 import java.util.List;
 
 import com.amazon.randomcutforest.config.TransformMethod;
-import com.amazon.randomcutforest.parkservices.statistics.Deviation;
+import com.amazon.randomcutforest.statistics.Deviation;
 import com.amazon.randomcutforest.util.Weighted;
 
 public class BasicThresholder {

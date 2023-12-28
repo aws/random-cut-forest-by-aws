@@ -15,12 +15,15 @@
 
 package com.amazon.randomcutforest.parkservices.state.returntypes;
 
+import static com.amazon.randomcutforest.CommonUtils.toDoubleArrayNullable;
+import static com.amazon.randomcutforest.CommonUtils.toFloatArrayNullable;
+
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.config.CorrectionMode;
-import com.amazon.randomcutforest.config.ScoringStrategy;
-import com.amazon.randomcutforest.parkservices.RCFComputeDescriptor;
+import com.amazon.randomcutforest.parkservices.config.CorrectionMode;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
 import com.amazon.randomcutforest.state.IStateMapper;
 import com.amazon.randomcutforest.state.returntypes.DiVectorMapper;
 
@@ -35,8 +38,8 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         descriptor.setRCFScore(state.getScore());
         descriptor.setInternalTimeStamp(state.getInternalTimeStamp());
         descriptor.setAttribution(new DiVectorMapper().toModel(state.getAttribution()));
-        descriptor.setRCFPoint(state.getPoint());
-        descriptor.setExpectedRCFPoint(state.getExpectedPoint());
+        descriptor.setRCFPoint(toFloatArrayNullable(state.getPoint()));
+        descriptor.setExpectedRCFPoint(toFloatArrayNullable(state.getExpectedPoint()));
         descriptor.setRelativeIndex(state.getRelativeIndex());
         descriptor.setScoringStrategy(ScoringStrategy.valueOf(state.getStrategy()));
         descriptor.setShift(state.getShift());
@@ -57,8 +60,8 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         state.setInternalTimeStamp(descriptor.getInternalTimeStamp());
         state.setScore(descriptor.getRCFScore());
         state.setAttribution(new DiVectorMapper().toState(descriptor.getAttribution()));
-        state.setPoint(descriptor.getRCFPoint());
-        state.setExpectedPoint(descriptor.getExpectedRCFPoint());
+        state.setPoint(toDoubleArrayNullable(descriptor.getRCFPoint()));
+        state.setExpectedPoint(toDoubleArrayNullable(descriptor.getExpectedRCFPoint()));
         state.setRelativeIndex(descriptor.getRelativeIndex());
         state.setStrategy(descriptor.getScoringStrategy().name());
         state.setShift(descriptor.getShift());

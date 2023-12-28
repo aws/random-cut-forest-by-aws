@@ -146,7 +146,7 @@ public class MultiCenterTest {
 
             float[][] points = getData(dataSize, newDimensions, random.nextInt(), Summarizer::L2distance);
 
-            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.9, 1, seed);
+            List<ICluster<float[]>> summary = Summarizer.multiSummarize(points, 5 * newDimensions, 0.9, true, 1, seed);
             System.out.println("trial " + numTrials + " : " + summary.size() + " clusters for " + newDimensions
                     + " dimensions, seed : " + seed);
             if (summary.size() < 2 * newDimensions) {

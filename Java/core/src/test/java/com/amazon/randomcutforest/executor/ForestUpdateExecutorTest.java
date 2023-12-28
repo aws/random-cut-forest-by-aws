@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -146,5 +147,15 @@ public class ForestUpdateExecutorTest {
 
         point2Copy[0] = -0.0f;
         assertArrayEquals(point2, point2Copy);
+    }
+
+    @Test
+    public void constructorTest() {
+        ParallelForestUpdateExecutor<?, ?> executor = new ParallelForestUpdateExecutor(null, null, 1);
+        executor.forkJoinPool = null;
+        executor.submitAndJoin(() -> {
+            return 0;
+        });
+        assertEquals(executor.forkJoinPool.getPoolSize(), 1);
     }
 }

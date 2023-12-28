@@ -22,6 +22,8 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
+
 @Getter
 @Setter
 public class AnomalyDescriptor extends RCFComputeDescriptor {

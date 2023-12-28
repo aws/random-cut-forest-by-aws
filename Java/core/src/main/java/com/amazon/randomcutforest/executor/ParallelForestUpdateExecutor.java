@@ -32,7 +32,7 @@ import com.amazon.randomcutforest.ComponentList;
 public class ParallelForestUpdateExecutor<PointReference, Point>
         extends AbstractForestUpdateExecutor<PointReference, Point> {
 
-    private ForkJoinPool forkJoinPool;
+    ForkJoinPool forkJoinPool;
     private final int threadPoolSize;
 
     public ParallelForestUpdateExecutor(IStateCoordinator<PointReference, Point> updateCoordinator,
@@ -48,7 +48,7 @@ public class ParallelForestUpdateExecutor<PointReference, Point>
                 .filter(UpdateResult::isStateChange).collect(Collectors.toList()));
     }
 
-    private <T> T submitAndJoin(Callable<T> callable) {
+    <T> T submitAndJoin(Callable<T> callable) {
         if (forkJoinPool == null) {
             forkJoinPool = new ForkJoinPool(threadPoolSize);
         }

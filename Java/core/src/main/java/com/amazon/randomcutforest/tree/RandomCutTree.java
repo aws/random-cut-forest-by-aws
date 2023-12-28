@@ -908,7 +908,7 @@ public class RandomCutTree implements ITree<Integer, float[]> {
             currentNodeView.setCurrentNodeOnly(node);
             if (visitor.trigger(currentNodeView)) {
                 traverseTreeMulti(point, visitor, currentNodeView, nodeStore.getLeftIndex(node), depthOfNode + 1);
-                MultiVisitor<R> newVisitor = visitor.newCopy();
+                MultiVisitor<R> newVisitor = visitor.newPartialCopy();
                 currentNodeView.setCurrentNodeOnly(nodeStore.getRightIndex(node));
                 traverseTreeMulti(point, newVisitor, currentNodeView, nodeStore.getRightIndex(node), depthOfNode + 1);
                 currentNodeView.updateToParent(node, nodeStore.getLeftIndex(node), false);

@@ -25,11 +25,11 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.Random;
 
-import com.amazon.randomcutforest.config.ScoringStrategy;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.GlobalLocalAnomalyDetector;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.config.ScoringStrategy;
 import com.amazon.randomcutforest.parkservices.returntypes.GenericAnomalyDescriptor;
 import com.amazon.randomcutforest.summarization.Summarizer;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;

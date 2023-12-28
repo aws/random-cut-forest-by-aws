@@ -17,6 +17,7 @@ package com.amazon.randomcutforest.returntypes;
 
 import static com.amazon.randomcutforest.CommonUtils.checkArgument;
 import static com.amazon.randomcutforest.CommonUtils.checkNotNull;
+import static java.lang.Math.round;
 
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -32,7 +33,7 @@ public class InterpolationMeasure {
     public final DiVector distances;
     public final DiVector probMass;
     protected final int dimensions;
-    protected final int sampleSize;
+    protected int sampleSize;
 
     /**
      * Create a new InterpolationMeasure object with the given number of spatial
@@ -96,7 +97,7 @@ public class InterpolationMeasure {
         checkNotNull(left, "left must not be null");
         checkNotNull(right, "right must not be null");
         checkArgument(left.dimensions == right.dimensions, "dimensions must be the same");
-
+        left.sampleSize += right.sampleSize;
         DiVector.addToLeft(left.distances, right.distances);
         DiVector.addToLeft(left.measure, right.measure);
         DiVector.addToLeft(left.probMass, right.probMass);
@@ -144,7 +145,8 @@ public class InterpolationMeasure {
      *         factor.
      */
     public InterpolationMeasure scale(double z) {
-        return new InterpolationMeasure(sampleSize, measure.scale(z), distances.scale(z), probMass.scale(z));
+        return new InterpolationMeasure((int) round(sampleSize * z), measure.scale(z), distances.scale(z),
+                probMass.scale(z));
     }
 
     public InterpolationMeasure lift(Function<double[], double[]> projection) {

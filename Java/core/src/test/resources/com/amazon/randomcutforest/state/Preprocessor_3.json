@@ -1,0 +1,35 @@
+    {
+      "version": "2.1",
+      "useImputedFraction": 0.5,
+      "imputationMethod": "PREVIOUS",
+      "forestMode": "STANDARD",
+      "transformMethod": "NONE",
+      "weights": [1.0, 1.0],
+      "lastShingledPoint": [81.0, 82.0, 83.0, 84.0, 86.0, 87.0, 88.0, 88.0],
+      "lastShingledInput": [81.0, 82.0, 83.0, 84.0, 86.0, 87.0, 88.0, 88.0],
+      "timeDecay": 0.0,
+      "startNormalization": 10,
+      "stopNormalization": 2147483647,
+      "shingleSize": 8,
+      "dimensions": 8,
+      "inputLength": 1,
+      "clipFactor": 10.0,
+      "normalizeTime": false,
+      "previousTimeStamps": [0, 0, 0, 0, 0, 0, 0, 0],
+      "valuesSeen": 1502,
+      "internalTimeStamp": 1502,
+      "dataQualityState": {
+        "discount": 1.0e-4,
+        "weight": 751.9993346640052,
+        "sumSquared": 751.9993346640052,
+        "sum": 751.9993346640052,
+        "count": 1502
+      },
+      "timeStampDeviationState": {
+        "discount": 1.0e-4,
+        "weight": 751.9993346640052,
+        "sumSquared": 0.0,
+        "sum": 0.0,
+        "count": 1502
+      }
+    }

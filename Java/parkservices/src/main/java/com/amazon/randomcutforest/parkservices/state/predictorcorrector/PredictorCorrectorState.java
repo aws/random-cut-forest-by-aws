@@ -22,8 +22,8 @@ import java.io.Serializable;
 import lombok.Data;
 
 import com.amazon.randomcutforest.parkservices.state.returntypes.ComputeDescriptorState;
-import com.amazon.randomcutforest.parkservices.state.statistics.DeviationState;
 import com.amazon.randomcutforest.parkservices.state.threshold.BasicThresholderState;
+import com.amazon.randomcutforest.state.statistics.DeviationState;
 
 @Data
 public class PredictorCorrectorState implements Serializable {

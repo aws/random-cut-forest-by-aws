@@ -38,12 +38,13 @@ public interface MultiVisitor<R> extends Visitor<R> {
     boolean trigger(final INodeView node);
 
     /**
-     * Return a copy of this visitor. The original visitor plus the copy will each
-     * traverse one branch of the tree.
+     * Return a partial copy of this visitor. The original visitor plus the copy
+     * will each traverse one branch of the tree. The fields not copied will be
+     * filled in by the branches of the tree
      *
      * @return a copy of this visitor
      */
-    MultiVisitor<R> newCopy();
+    MultiVisitor<R> newPartialCopy();
 
     /**
      * Combine two visitors. The state of the argument visitor should be combined

@@ -84,13 +84,18 @@ public class SampleSummaryTest {
             weighted.add(new Weighted<>(point, 1.0f));
         }
         SampleSummary summary = new SampleSummary(weighted);
-        assertThrows(IllegalArgumentException.class, () -> summary.addTypical(new float[1][2], new float[2]));
-        assertDoesNotThrow(() -> summary.addTypical(new float[0][2], new float[0]));
-        assertDoesNotThrow(() -> summary.addTypical(new float[2][4], new float[2]));
         assertThrows(IllegalArgumentException.class,
-                () -> summary.addTypical(new float[][] { new float[2], new float[3] }, new float[2]));
+                () -> summary.addTypical(new float[1][2], new float[2], new float[2][2]));
+        assertDoesNotThrow(() -> summary.addTypical(new float[0][2], new float[0], new float[0][2]));
+        assertDoesNotThrow(() -> summary.addTypical(new float[2][4], new float[2], new float[2][4]));
         assertThrows(IllegalArgumentException.class,
-                () -> summary.addTypical(new float[][] { new float[2], new float[3] }, new float[2]));
+                () -> summary.addTypical(new float[2][4], new float[2], new float[2][2]));
+        assertThrows(IllegalArgumentException.class,
+                () -> summary.addTypical(new float[][] { new float[2], new float[3] }, new float[2], new float[2][2]));
+        assertThrows(IllegalArgumentException.class,
+                () -> summary.addTypical(new float[][] { new float[2], new float[3] }, new float[2], new float[2][1]));
+        assertThrows(IllegalArgumentException.class,
+                () -> summary.addTypical(new float[2][4], new float[2], new float[1][4]));
     }
 
     public float[][] getData(int dataSize, int newDimensions, int seed, BiFunction<float[], float[], Double> distance) {

@@ -25,7 +25,7 @@ import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.parkservices.ForecastDescriptor;
 import com.amazon.randomcutforest.parkservices.RCFCaster;
-import com.amazon.randomcutforest.parkservices.calibration.Calibration;
+import com.amazon.randomcutforest.parkservices.config.Calibration;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
@@ -44,7 +44,7 @@ import com.amazon.randomcutforest.testutils.ShingledMultiDimDataWithKeys;
  * [0:1000][-100:500] "example" i 0 u 1:2 w l lc "black" t "Data (seen one at a
  * time)", "example" index (i+3) u 1:2 w l lw 2 lc "blue" t " Online Forecast
  * (future)", "example" i (i+2) u 1:(100*$8) w l lw 2 lc "magenta" t "Interval
- * Accuracy %", "example" index (i+3) u 1:($4-$2):($3-$4) w filledcurves fc
+ * Accuracy %", "example" index (i+3) u 1:($4-$2):($3-$2) w filledcurves fc
  * "blue" fs transparent solid 0.3 noborder t "Calibrated uncertainty range
  * (future)", "example" index (i+2) u 1:7:6 w filledcurves fc "brown" fs
  * transparent solid 0.5 noborder t "Observed error distribution range (past)",
@@ -119,12 +119,13 @@ public class RCFCasterExample implements Example {
         TransformMethod transformMethod = TransformMethod.NORMALIZE;
         RCFCaster caster = RCFCaster.builder().dimensions(dimensions).randomSeed(seed + 1).numberOfTrees(numberOfTrees)
                 .shingleSize(shingleSize).sampleSize(sampleSize).internalShinglingEnabled(true).precision(precision)
-                .anomalyRate(0.01).outputAfter(outputAfter).calibration(Calibration.MINIMAL)
+                .anomalyRate(0.01).outputAfter(outputAfter).calibration(Calibration.SIMPLE)
                 // the following affects the moving average in many of the transformations
                 // the 0.02 corresponds to a half life of 1/0.02 = 50 observations
                 // this is different from the timeDecay() of RCF; however it is a similar
                 // concept
-                .transformDecay(0.02).forecastHorizon(forecastHorizon).initialAcceptFraction(0.125).build();
+                .transformDecay(0.02).forecastHorizon(forecastHorizon).initialAcceptFraction(0.125)
+                .useRCFCallibration(true).build();
 
         String name = "example";
         BufferedWriter file = new BufferedWriter(new FileWriter(name));
@@ -155,7 +156,6 @@ public class RCFCasterExample implements Example {
         DiVector rmse = result.getErrorRMSE();
         float[] mean = result.getErrorMean();
         float[] intervalPrecision = result.getIntervalPrecision();
-
         file.append(current + " " + 1000 + "\n");
         file.append("\n");
         file.append("\n");

@@ -22,9 +22,9 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.amazon.randomcutforest.parkservices.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.returntypes.DiVector;
 import com.amazon.randomcutforest.returntypes.RangeVector;
+import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 
 @Getter
 @Setter
@@ -87,14 +87,14 @@ public class ForecastDescriptor extends AnomalyDescriptor {
         this.intervalPrecision = new float[forecastLength];
     }
 
-    void setObservedErrorDistribution(RangeVector base) {
+    public void setObservedErrorDistribution(RangeVector base) {
         checkArgument(base.values.length == this.observedErrorDistribution.values.length, " incorrect length");
         System.arraycopy(base.values, 0, this.observedErrorDistribution.values, 0, base.values.length);
         System.arraycopy(base.upper, 0, this.observedErrorDistribution.upper, 0, base.upper.length);
         System.arraycopy(base.lower, 0, this.observedErrorDistribution.lower, 0, base.lower.length);
     }
 
-    void setIntervalPrecision(float[] calibration) {
+    public void setIntervalPrecision(float[] calibration) {
         System.arraycopy(calibration, 0, this.intervalPrecision, 0, calibration.length);
     }
 
@@ -102,11 +102,11 @@ public class ForecastDescriptor extends AnomalyDescriptor {
         return Arrays.copyOf(intervalPrecision, intervalPrecision.length);
     }
 
-    void setErrorMean(float[] errorMean) {
+    public void setErrorMean(float[] errorMean) {
         System.arraycopy(errorMean, 0, this.errorMean, 0, errorMean.length);
     }
 
-    void setErrorRMSE(DiVector errorRMSE) {
+    public void setErrorRMSE(DiVector errorRMSE) {
         checkArgument(this.errorRMSE.getDimensions() == errorRMSE.getDimensions(), " incorrect input");
         System.arraycopy(errorRMSE.high, 0, this.errorRMSE.high, 0, errorRMSE.high.length);
         System.arraycopy(errorRMSE.low, 0, this.errorRMSE.low, 0, errorRMSE.low.length);
