@@ -28,7 +28,7 @@ jobs:
         run: mvn -B package --file pom.xml
       - name: Extract project version
         id: project
-        run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
       - name: Publish to snapshot repo
         if: ${{ endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
         run: mvn -B deploy --file pom.xml -Pgpg-sign
