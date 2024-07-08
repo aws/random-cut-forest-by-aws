@@ -27,6 +27,7 @@ import static java.lang.Math.min;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 import com.amazon.randomcutforest.RandomCutForest;
@@ -960,7 +961,7 @@ public class PredictorCorrector {
     }
 
     void validateIgnore(double[] shift, int length) {
-        checkArgument(shift.length == length, () -> "has to be of length " + 4 * baseDimension);
+        checkArgument(shift.length == length, () -> String.format(Locale.ROOT, "has to be of length %d but is %d", length, shift.length));
         for (double element : shift) {
             checkArgument(element >= 0, "has to be non-negative");
         }
