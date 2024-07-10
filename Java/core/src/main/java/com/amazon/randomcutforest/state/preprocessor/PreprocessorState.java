@@ -59,4 +59,5 @@ public class PreprocessorState implements Serializable {
     private DeviationState[] dataQualityStates;
     private DeviationState[] timeStampDeviationStates;
     private boolean fastForward;
+    private int numberOfImputed;
 }

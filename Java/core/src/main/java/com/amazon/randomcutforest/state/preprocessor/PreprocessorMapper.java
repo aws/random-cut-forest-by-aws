@@ -62,6 +62,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         preprocessor.setPreviousTimeStamps(state.getPreviousTimeStamps());
         preprocessor.setNormalizeTime(state.isNormalizeTime());
         preprocessor.setFastForward(state.isFastForward());
+        preprocessor.setNumberOfImputed(state.getNumberOfImputed());
         return preprocessor;
     }
 
@@ -94,6 +95,7 @@ public class PreprocessorMapper implements IStateMapper<Preprocessor, Preprocess
         state.setTimeStampDeviationStates(getStates(model.getTimeStampDeviations(), deviationMapper));
         state.setDataQualityStates(getStates(model.getDataQuality(), deviationMapper));
         state.setFastForward(model.isFastForward());
+        state.setNumberOfImputed(model.getNumberOfImputed());
         return state;
     }
 
