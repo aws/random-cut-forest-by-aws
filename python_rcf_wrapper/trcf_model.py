@@ -40,7 +40,8 @@ class TRandomCutForestModel:
 
     def process(self, point: List[float]) -> AnomalyDescriptor:
         """
-        Compute an anomaly score for the given point.
+        a single call that prepreprocesses data, compute score/grade and updates
+        state.
 
         Parameters
         ----------
@@ -49,8 +50,9 @@ class TRandomCutForestModel:
 
         Returns
         -------
-        float
-            The anomaly score for the given point
+        AnomalyDescriptor
+             Encapsulate detailed information about anomalies detected by RCF model. This class stores various attributes
+             related to an anomaly, such as confidence levels, attribution scores, and expected values.
 
         """
         return self.forest.process(point, 0)
