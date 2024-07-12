@@ -15,7 +15,7 @@
 
 package com.amazon.randomcutforest.state.preprocessor;
 
-import static com.amazon.randomcutforest.state.Version.V4_0;
+import static com.amazon.randomcutforest.state.Version.V4_1;
 
 import java.io.Serializable;
 
@@ -27,7 +27,7 @@ import com.amazon.randomcutforest.state.statistics.DeviationState;
 public class PreprocessorState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String version = V4_0;
+    private String version = V4_1;
     private double useImputedFraction;
     private String imputationMethod;
     private String forestMode;
