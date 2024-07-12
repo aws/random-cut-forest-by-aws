@@ -88,7 +88,31 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
      */
     @Override
     protected void updateTimestamps(long timestamp) {
-        if (previousTimeStamps[0] == previousTimeStamps[1]) {
+        /*
+         * For imputations done on timestamps other than the current one (specified by
+         * the timestamp parameter), the timestamp of the imputed tuple matches that of
+         * the input tuple, and we increment numberOfImputed. For imputations done at
+         * the current timestamp (if all input values are missing), the timestamp of the
+         * imputed tuple is the current timestamp, and we increment numberOfImputed.
+         *
+         * To check if imputed values are still present in the shingle, we use the first
+         * condition (previousTimeStamps[0] == previousTimeStamps[1]). This works
+         * because previousTimeStamps has a size equal to the shingle size and is filled
+         * with the current timestamp. However, there are scenarios where we might miss
+         * decrementing numberOfImputed:
+         *
+         * 1. Not all values in the shingle are imputed. 2. We accumulated
+         * numberOfImputed when the current timestamp had missing values.
+         *
+         * As a result, this could cause the data quality measure to decrease
+         * continuously since we are always counting missing values that should
+         * eventually be reset to zero. The second condition <pre> timestamp >
+         * previousTimeStamps[previousTimeStamps.length-1] && numberOfImputed > 0 </pre>
+         * will decrement numberOfImputed when we move to a new timestamp, provided
+         * numberOfImputed is greater than zero.
+         */
+        if (previousTimeStamps[0] == previousTimeStamps[1]
+                || (timestamp > previousTimeStamps[previousTimeStamps.length - 1] && numberOfImputed > 0)) {
             numberOfImputed = numberOfImputed - 1;
         }
         super.updateTimestamps(timestamp);
@@ -333,7 +357,10 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
             }
         }
 
-        updateForest(changeForest, input, timestamp, forest, false);
+        // last parameter isFullyImputed = if we miss everything in inputTuple?
+        // This would ensure dataQuality is decreasing if we impute whenever
+        updateForest(changeForest, input, timestamp, forest,
+                missingValues != null ? missingValues.length == inputTuple.length : false);
         if (changeForest) {
             updateTimeStampDeviations(timestamp, lastInputTimeStamp);
             transformer.updateDeviation(input, savedInput, missingValues);
