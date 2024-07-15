@@ -157,7 +157,7 @@ vector data point, scores the data point, and then updates the model with this
 point. The program output appends a column of anomaly scores to the input:
 
 ```text
-$ java -cp core/target/randomcutforest-core-3.5.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
+$ java -cp core/target/randomcutforest-core-4.1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner < ../example-data/rcf-paper.csv > example_output.csv
 $ tail example_output.csv
 -5.0029,0.0170,-0.0057,0.8129401629464965
 -4.9975,-0.0102,-0.0065,0.6591046054520615
@@ -176,8 +176,8 @@ read additional usage instructions, including options for setting model
 hyperparameters, using the `--help` flag:
 
 ```text
-$ java -cp core/target/randomcutforest-core-3.5.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
-Usage: java -cp target/random-cut-forest-3.5.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
+$ java -cp core/target/randomcutforest-core-4.1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner --help
+Usage: java -cp target/random-cut-forest-4.1.0.jar com.amazon.randomcutforest.runner.AnomalyScoreRunner [options] < input_file > output_file
 
 Compute scalar anomaly scores from the input rows and append them to the output rows.
 
@@ -239,14 +239,14 @@ framework. Build an executable jar containing the benchmark code by running
 To invoke the full benchmark suite:
 
 ```text
-% java -jar benchmark/target/randomcutforest-benchmark-3.5.0-jar-with-dependencies.jar
+% java -jar benchmark/target/randomcutforest-benchmark-4.1.0-jar-with-dependencies.jar
 ```
 
 The full benchmark suite takes a long time to run. You can also pass a regex at the command-line, then only matching
 benchmark methods will be executed.
 
 ```text
-% java -jar benchmark/target/randomcutforest-benchmark-3.5.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
+% java -jar benchmark/target/randomcutforest-benchmark-4.1.0-jar-with-dependencies.jar RandomCutForestBenchmark\.updateAndGetAnomalyScore
 ```
 
 [rcf-paper]: http://proceedings.mlr.press/v48/guha16.pdf
