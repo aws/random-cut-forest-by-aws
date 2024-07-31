@@ -961,7 +961,8 @@ public class PredictorCorrector {
     }
 
     void validateIgnore(double[] shift, int length) {
-        checkArgument(shift.length == length, () -> String.format(Locale.ROOT, "has to be of length %d but is %d", length, shift.length));
+        checkArgument(shift.length == length,
+                () -> String.format(Locale.ROOT, "has to be of length %d but is %d", length, shift.length));
         for (double element : shift) {
             checkArgument(element >= 0, "has to be non-negative");
         }

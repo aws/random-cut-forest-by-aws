@@ -19,11 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.amazon.randomcutforest.config.ForestMode;
 import com.amazon.randomcutforest.config.ImputationMethod;
@@ -31,12 +37,20 @@ import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.config.TransformMethod;
 
 public class MissingValueTest {
+    private static class EnumAndValueProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(ImputationMethod.PREVIOUS, ImputationMethod.ZERO, ImputationMethod.FIXED_VALUES)
+                    .flatMap(method -> Stream.of(4, 8, 16) // Example shingle sizes
+                            .map(shingleSize -> Arguments.of(method, shingleSize)));
+        }
+    }
+
     @ParameterizedTest
-    @EnumSource(ImputationMethod.class)
-    public void testConfidence(ImputationMethod method) {
+    @ArgumentsSource(EnumAndValueProvider.class)
+    public void testConfidence(ImputationMethod method, int shingleSize) {
         // Create and populate a random cut forest
 
-        int shingleSize = 4;
         int numberOfTrees = 50;
         int sampleSize = 256;
         Precision precision = Precision.FLOAT_32;
@@ -45,11 +59,19 @@ public class MissingValueTest {
         long count = 0;
 
         int dimensions = baseDimensions * shingleSize;
-        ThresholdedRandomCutForest forest = new ThresholdedRandomCutForest.Builder<>().compact(true)
+        ThresholdedRandomCutForest.Builder forestBuilder = new ThresholdedRandomCutForest.Builder<>().compact(true)
                 .dimensions(dimensions).randomSeed(0).numberOfTrees(numberOfTrees).shingleSize(shingleSize)
                 .sampleSize(sampleSize).precision(precision).anomalyRate(0.01).imputationMethod(method)
-                .fillValues(new double[] { 3 }).forestMode(ForestMode.STREAMING_IMPUTE)
-                .transformMethod(TransformMethod.NORMALIZE).autoAdjust(true).build();
+                .forestMode(ForestMode.STREAMING_IMPUTE).transformMethod(TransformMethod.NORMALIZE).autoAdjust(true);
+
+        if (method == ImputationMethod.FIXED_VALUES) {
+            // we cannot pass fillValues when the method is not fixed values. Otherwise, we
+            // will impute
+            // filled in values irregardless of imputation method
+            forestBuilder.fillValues(new double[] { 3 });
+        }
+
+        ThresholdedRandomCutForest forest = forestBuilder.build();
 
         // Define the size and range
         int size = 400;
@@ -75,18 +97,38 @@ public class MissingValueTest {
                 float[] rcfPoint = result.getRCFPoint();
                 double scale = result.getScale()[0];
                 double shift = result.getShift()[0];
-                double[] actual = new double[] { (rcfPoint[3] * scale) + shift };
+                double[] actual = new double[] { (rcfPoint[shingleSize - 1] * scale) + shift };
                 if (method == ImputationMethod.ZERO) {
                     assertEquals(0, actual[0], 0.001d);
+                    if (count == 300) {
+                        assertTrue(result.getAnomalyGrade() > 0);
+                    }
                 } else if (method == ImputationMethod.FIXED_VALUES) {
                     assertEquals(3.0d, actual[0], 0.001d);
+                    if (count == 300) {
+                        assertTrue(result.getAnomalyGrade() > 0);
+                    }
+                } else if (method == ImputationMethod.PREVIOUS) {
+                    assertEquals(0, result.getAnomalyGrade(), 0.001d,
+                            "count: " + count + " actual: " + Arrays.toString(actual));
                 }
             } else {
                 AnomalyDescriptor result = forest.process(point, newStamp);
-                if ((count > 100 && count < 300) || count >= 326) {
+                // after 325, we have a period of confidence decreasing. After that, confidence
+                // starts increasing again.
+                // We are not sure where the confidence will start increasing after decreasing.
+                // So we start check the behavior after 325 + shingleSize.
+                int backupPoint = 325 + shingleSize;
+                if ((count > 100 && count < 300) || count >= backupPoint) {
                     // The first 65+ observations gives 0 confidence.
                     // Confidence start increasing after 1 observed point
-                    assertTrue(result.getDataConfidence() > lastConfidence);
+                    assertTrue(result.getDataConfidence() > lastConfidence,
+                            String.format(Locale.ROOT, "count: %d, confidence: %f, last confidence: %f", count,
+                                    result.getDataConfidence(), lastConfidence));
+                } else if (count < 325 && count > 300) {
+                    assertTrue(result.getDataConfidence() < lastConfidence,
+                            String.format(Locale.ROOT, "count: %d, confidence: %f, last confidence: %f", count,
+                                    result.getDataConfidence(), lastConfidence));
                 }
                 lastConfidence = result.getDataConfidence();
             }
