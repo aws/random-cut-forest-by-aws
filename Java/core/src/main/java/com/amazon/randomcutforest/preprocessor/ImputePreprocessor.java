@@ -142,7 +142,7 @@ public class ImputePreprocessor extends InitialSegmentPreprocessor {
          * continuously since we are always counting missing values that should
          * eventually be reset to zero. To address the issue, we add code in method
          * updateForest to decrement numberOfImputed when we move to a new timestamp,
-         * provided there is no imputation. This ensures th e imputation fraction does
+         * provided there is no imputation. This ensures the imputation fraction does
          * not increase as long as the imputation is continuing. This also ensures that
          * the forest update decision, which relies on the imputation fraction,
          * functions correctly. The forest is updated only when the imputation fraction

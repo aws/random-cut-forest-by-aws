@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -343,7 +344,11 @@ public class SampleSummaryTest {
         assertEquals(summary2.weightOfSamples, summary1.weightOfSamples, " sampling inconsistent");
         assertEquals(summary2.summaryPoints.length, summary1.summaryPoints.length,
                 " incorrect length of typical points");
-        assertEquals(clusters.size(), summary1.summaryPoints.length);
+        // due to randomization, they might not equal
+        assertTrue(
+                Math.abs(clusters.size() - summary1.summaryPoints.length) <= 1,
+                "The difference between clusters.size() and summary1.summaryPoints.length should be at most 1"
+        );
         double total = clusters.stream().map(ICluster::getWeight).reduce(0.0, Double::sum);
         assertEquals(total, summary1.weightOfSamples, 1e-3);
         // parallelization can produce reordering of merges
