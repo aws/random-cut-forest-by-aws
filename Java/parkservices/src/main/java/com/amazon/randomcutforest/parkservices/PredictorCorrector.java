@@ -464,19 +464,74 @@ public class PredictorCorrector {
         double[] gapLow = new double[baseDimensions];
         double[] gapHigh = new double[baseDimensions];
         for (int y = 0; y < baseDimensions; y++) {
+            // 'a' represents the scaled value of the current point for dimension 'y'.
+            // Given that 'point[startPosition + y]' is the normalized value of the actual
+            // data point (x - mean) / std,
+            // and 'scale[y]' is the standard deviation (std), we have:
+            // a = std * ((x - mean) / std) = x - mean
             double a = scale[y] * point[startPosition + y];
+
+            // 'shiftBase' is the shift value for dimension 'y', which is the mean (mean)
             double shiftBase = shift[y];
+
+            // Initialize 'shiftAmount' to zero. This will account for numerical precision
+            // adjustments later
             double shiftAmount = 0;
+
+            // If the mean ('shiftBase') is not zero, adjust 'shiftAmount' to account for
+            // numerical precision
             if (shiftBase != 0) {
+                // 'shiftAmount' accounts for potential numerical errors due to shifting and
+                // scaling
                 shiftAmount += DEFAULT_NORMALIZATION_PRECISION * (scale[y] + Math.abs(shiftBase));
             }
+
+            // Calculate the average L1 deviation along the path for dimension 'y'.
+            // This function computes the average absolute difference between successive
+            // values in the shingle,
+            // helping to capture recent fluctuations or trends in the data.
             double pathGap = calculatePathDeviation(point, startPosition, y, baseDimension, differenced);
+
+            // 'noiseGap' is calculated based on the noise factor and the deviation for
+            // dimension 'y'.
+            // It represents the expected variation due to noise, scaled appropriately.
             double noiseGap = noiseFactor * result.getDeviations()[baseDimension + y];
+
+            // 'gap' is the maximum of the scaled 'pathGap' and 'noiseGap', adjusted by
+            // 'shiftAmount'
+            // and a small constant to ensure it's not zero. This gap accounts for recent
+            // deviations and noise,
+            // and serves as a baseline threshold for detecting anomalies.
             double gap = max(scale[y] * pathGap, noiseGap) + shiftAmount + DEFAULT_NORMALIZATION_PRECISION;
-            gapLow[y] = max(max(ignoreNearExpectedFromBelow[y], ignoreNearExpectedFromBelowByRatio[y] * Math.abs(a)),
-                    gap);
-            gapHigh[y] = max(max(ignoreNearExpectedFromAbove[y], ignoreNearExpectedFromAboveByRatio[y] * Math.abs(a)),
-                    gap);
+
+            // Compute 'gapLow[y]' and 'gapHigh[y]', which are thresholds to determine if
+            // the deviation is significant
+            // Since 'a = x - mean' and 'shiftBase = mean', then 'a + shiftBase = x - mean +
+            // mean = x'
+            // Therefore, 'Math.abs(a + shiftBase)' simplifies to the absolute value of the
+            // actual data point |x|
+            // For 'gapLow[y]', calculate the maximum of:
+            // - 'ignoreNearExpectedFromBelow[y]', an absolute threshold for ignoring small
+            // deviations below expected
+            // - 'ignoreNearExpectedFromBelowByRatio[y] * |x|', a relative threshold based
+            // on the actual value x
+            // - 'gap', the calculated deviation adjusted for noise and precision
+            // This ensures that minor deviations within the specified ratio or fixed
+            // threshold are ignored,
+            // reducing false positives.
+            gapLow[y] = max(max(ignoreNearExpectedFromBelow[y],
+                    ignoreNearExpectedFromBelowByRatio[y] * (Math.abs(a + shiftBase))), gap);
+
+            // Similarly, for 'gapHigh[y]':
+            // - 'ignoreNearExpectedFromAbove[y]', an absolute threshold for ignoring small
+            // deviations above expected
+            // - 'ignoreNearExpectedFromAboveByRatio[y] * |x|', a relative threshold based
+            // on the actual value x
+            // - 'gap', the calculated deviation adjusted for noise and precision
+            // This threshold helps in ignoring anomalies that are within an acceptable
+            // deviation ratio from the expected value.
+            gapHigh[y] = max(max(ignoreNearExpectedFromAbove[y],
+                    ignoreNearExpectedFromAboveByRatio[y] * (Math.abs(a + shiftBase))), gap);
         }
         return new DiVector(gapHigh, gapLow);
     }
