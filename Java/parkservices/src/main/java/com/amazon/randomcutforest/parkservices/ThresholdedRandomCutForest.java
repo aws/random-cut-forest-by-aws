@@ -284,8 +284,7 @@ public class ThresholdedRandomCutForest {
      * of the word batch -- the entire goal of this procedure is to provide
      * sequential processing and not standard batch processing). The procedure
      * avoids transfer of ephemeral transient objects for non-anomalies and thereby
-     * can have additional benefits. At the moment the operation does not support
-     * external timestamps.
+     * can have additional benefits.
      *
      * @param data   a vectors of vectors (each of which has to have the same
      *               inputLength)
@@ -340,6 +339,7 @@ public class ThresholdedRandomCutForest {
     public List<AnomalyDescriptor> processSequentially(double[][] data, long[] timestamps,
             Function<AnomalyDescriptor, Boolean> filter) {
         // Precondition checks
+        checkArgument(filter != null, "filter must not be null");
         if (data != null && data.length > 0) {
             checkArgument(timestamps != null, "timestamps must not be null when data is non-empty");
             checkArgument(timestamps.length == data.length, String.format(Locale.ROOT,
@@ -365,6 +365,7 @@ public class ThresholdedRandomCutForest {
                 for (int i = 0; i < data.length; i++) {
                     double[] point = data[i];
                     long timestamp = timestamps[i];
+                    checkArgument(point != null, " data should not be null ");
                     checkArgument(point.length == length, " nonuniform lengths ");
                     AnomalyDescriptor description = new AnomalyDescriptor(point, timestamp);
                     augment(description);

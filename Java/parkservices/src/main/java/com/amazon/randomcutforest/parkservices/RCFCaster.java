@@ -260,8 +260,10 @@ public class RCFCaster extends ThresholdedRandomCutForest {
         return processSequentially(data, timestamps, filter);
     }
 
-    public List<AnomalyDescriptor> processSequentially(double[][] data, long[] timestamps, Function<AnomalyDescriptor, Boolean> filter) {
+    public List<AnomalyDescriptor> processSequentially(double[][] data, long[] timestamps,
+            Function<AnomalyDescriptor, Boolean> filter) {
         // Precondition checks
+        checkArgument(filter != null, "filter must not be null");
         if (data != null && data.length > 0) {
             checkArgument(timestamps != null, "timestamps must not be null when data is non-empty");
             checkArgument(timestamps.length == data.length, String.format(Locale.ROOT,
@@ -286,6 +288,7 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                     int length = preprocessor.getInputLength();
                     for (int i = 0; i < data.length; i++) {
                         double[] point = data[i];
+                        checkArgument(point != null, " data should not be null ");
                         checkArgument(point.length == length, " nonuniform lengths ");
                         ForecastDescriptor description = new ForecastDescriptor(point, timestamps[i], forecastHorizon);
                         augment(description);

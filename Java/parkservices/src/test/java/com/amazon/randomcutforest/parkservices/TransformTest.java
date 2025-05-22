@@ -78,18 +78,12 @@ public class TransformTest {
         }
         System.out.println(totalcount);
         int finalTotalcount = totalcount;
-        assertTrue (totalcount < numTrials || method == TransformMethod.DIFFERENCE
-                || method == TransformMethod.NORMALIZE_DIFFERENCE,
+        assertTrue(
+                totalcount < numTrials || method == TransformMethod.DIFFERENCE
+                        || method == TransformMethod.NORMALIZE_DIFFERENCE,
                 () -> String.format(
                         "Assertion failed: totalcount=%d, numTrials=%d, method=%s, sampleSize=%d, length=%d, seed=%d",
-                        finalTotalcount,
-                        numTrials,
-                        method,
-                        sampleSize,
-                        length,
-                        seed
-                )
-                );
+                        finalTotalcount, numTrials, method, sampleSize, length, seed));
     }
 
     @ParameterizedTest
