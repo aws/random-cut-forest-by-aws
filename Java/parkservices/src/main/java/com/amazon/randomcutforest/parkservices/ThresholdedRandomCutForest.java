@@ -39,6 +39,7 @@ import static java.lang.Math.min;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Function;
@@ -138,7 +139,11 @@ public class ThresholdedRandomCutForest {
         lastAnomalyDescriptor = new RCFComputeDescriptor(null, 0, builder.forestMode, builder.transformMethod,
                 builder.imputationMethod);
 
-        predictorCorrector.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_ABSOLUTE_THRESHOLD));
+        // when autoAdjust is true, the lowerThreshold is dynamically calculated
+        if (!builder.autoAdjust) {
+            predictorCorrector.setAbsoluteThreshold(builder.lowerThreshold.orElse(DEFAULT_ABSOLUTE_THRESHOLD));
+        }
+
         predictorCorrector.setZfactor(builder.zFactor);
 
         predictorCorrector.setScoreDifferencing(builder.scoreDifferencing.orElse(DEFAULT_SCORE_DIFFERENCING));
@@ -279,8 +284,7 @@ public class ThresholdedRandomCutForest {
      * of the word batch -- the entire goal of this procedure is to provide
      * sequential processing and not standard batch processing). The procedure
      * avoids transfer of ephemeral transient objects for non-anomalies and thereby
-     * can have additional benefits. At the moment the operation does not support
-     * external timestamps.
+     * can have additional benefits.
      *
      * @param data   a vectors of vectors (each of which has to have the same
      *               inputLength)
@@ -289,6 +293,66 @@ public class ThresholdedRandomCutForest {
      * @return collection of descriptors of the anomalies filtered by the condition
      */
     public List<AnomalyDescriptor> processSequentially(double[][] data, Function<AnomalyDescriptor, Boolean> filter) {
+        if (data == null || data.length == 0) {
+            return new ArrayList<>();
+        }
+
+        long timestamp = preprocessor.getInternalTimeStamp();
+        long[] timestamps = new long[data.length];
+        for (int i = 0; i < data.length; i++) {
+            timestamps[i] = ++timestamp;
+        }
+
+        return processSequentially(data, timestamps, filter);
+    }
+
+    /**
+     * the following function processes a list of vectors sequentially; the main
+     * benefit of this invocation is the caching is persisted from one data point to
+     * another and thus the execution is efficient. Moreover in many scenarios where
+     * serialization deserialization is expensive then it may be of benefit of
+     * invoking sequential process on a contiguous chunk of input (we avoid the use
+     * of the word batch -- the entire goal of this procedure is to provide
+     * sequential processing and not standard batch processing). The procedure
+     * avoids transfer of ephemeral transient objects for non-anomalies and thereby
+     * can have additional benefits. At the moment the operation does not support
+     * external timestamps.
+     *
+     * @param data       a vectors of vectors (each of which has to have the same
+     *                   inputLength)
+     * @param timestamps a vector of timestamps (in the same order as the data, has
+     *                   to be same length as data, and ascending)
+     * @param filter     a condition to drop desriptor (recommended filter:
+     *                   anomalyGrade positive)
+     * @return collection of descriptors of the anomalies filtered by the condition
+     * @throws IllegalArgumentException if
+     *                                  <ul>
+     *                                  <li>data is non-null but timestamps is
+     *                                  null</li>
+     *                                  <li>timestamps.length != data.length</li>
+     *                                  <li>timestamps is not strictly
+     *                                  ascending</li>
+     *                                  <li>any data[i].length !=
+     *                                  preprocessor.getInputLength()</li>
+     *                                  </ul>
+     */
+    public List<AnomalyDescriptor> processSequentially(double[][] data, long[] timestamps,
+            Function<AnomalyDescriptor, Boolean> filter) {
+        // Precondition checks
+        checkArgument(filter != null, "filter must not be null");
+        if (data != null && data.length > 0) {
+            checkArgument(timestamps != null, "timestamps must not be null when data is non-empty");
+            checkArgument(timestamps.length == data.length, String.format(Locale.ROOT,
+                    "timestamps length (%s) must equal data length (%s)", timestamps.length, data.length));
+            for (int i = 1; i < timestamps.length; i++) {
+                checkArgument(timestamps[i] > timestamps[i - 1],
+                        String.format(Locale.ROOT,
+                                "timestamps must be strictly ascending: "
+                                        + "timestamps[%s]=%s is not > timestamps[%s]=%s",
+                                i, timestamps[i], i - 1, timestamps[i - 1]));
+            }
+        }
+
         ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
 
         if (data != null && data.length > 0) {
@@ -297,11 +361,13 @@ public class ThresholdedRandomCutForest {
                 if (cacheDisabled) { // turn caching on temporarily
                     forest.setBoundingBoxCacheFraction(1.0);
                 }
-                long timestamp = preprocessor.getInternalTimeStamp();
                 int length = preprocessor.getInputLength();
-                for (double[] point : data) {
+                for (int i = 0; i < data.length; i++) {
+                    double[] point = data[i];
+                    long timestamp = timestamps[i];
+                    checkArgument(point != null, " data should not be null ");
                     checkArgument(point.length == length, " nonuniform lengths ");
-                    AnomalyDescriptor description = new AnomalyDescriptor(point, timestamp++);
+                    AnomalyDescriptor description = new AnomalyDescriptor(point, timestamp);
                     augment(description);
                     if (saveDescriptor(description)) {
                         lastAnomalyDescriptor = description.copyOf();
@@ -519,7 +585,11 @@ public class ThresholdedRandomCutForest {
                     reference = preprocessor.getShingledInput(shingleSize + index);
                     result.setPastTimeStamp(preprocessor.getTimeStamp(shingleSize + index));
                 }
+
+                // relative index is the source of truth. Past values always have value:
+                // either current input or previous input.
                 result.setPastValues(reference);
+
                 if (newPoint != null) {
                     double[] values = preprocessor.getExpectedValue(index, reference, point, newPoint);
                     if (forestMode == ForestMode.TIME_AUGMENTED) {

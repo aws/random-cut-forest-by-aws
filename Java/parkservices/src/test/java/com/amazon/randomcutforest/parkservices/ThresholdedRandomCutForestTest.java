@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 
@@ -533,4 +534,142 @@ public class ThresholdedRandomCutForestTest {
         }
         assert (correct > 0.9 * numTrials);
     }
+
+    @Test
+    public void testAutoAdjustDoesNotSetAbsoluteThreshold() {
+        int dimensions = 4; // any small positive value is fine
+        long seed = new Random().nextLong();
+
+        // ── autoAdjust = false → setAbsoluteThreshold *is* invoked
+        ThresholdedRandomCutForest manual = ThresholdedRandomCutForest.builder().dimensions(dimensions).randomSeed(seed)
+                .shingleSize(1).autoAdjust(false).build();
+
+        // ── autoAdjust = true → setAbsoluteThreshold is *skipped*
+        ThresholdedRandomCutForest auto = ThresholdedRandomCutForest.builder().dimensions(dimensions).randomSeed(seed)
+                .shingleSize(1).autoAdjust(true).build();
+
+        boolean autoThresholdOff = !manual.getPredictorCorrector().getThresholders()[0].isAutoThreshold();
+
+        boolean autoThresholdOn = auto.getPredictorCorrector().getThresholders()[0].isAutoThreshold();
+
+        // the manual lower thresholder should turn off auto-adjusting
+        assertTrue(autoThresholdOff);
+
+        // … whereas the auto-adjusting build should *not* turn off auto-adjusting
+        assertTrue(autoThresholdOn);
+    }
+
+    @Test
+    void psqPrecondition_nullTimestamps() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        double[][] data = { { 1.0 } };
+        long[] stamps = null;
+
+        assertThrows(IllegalArgumentException.class, () -> f.processSequentially(data, stamps, d -> true));
+    }
+
+    @Test
+    void psqPrecondition_lengthMismatch() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        double[][] data = { { 1.0 }, { 2.0 } };
+        long[] stamps = { 0L }; // shorter than data.length
+
+        assertThrows(IllegalArgumentException.class, () -> f.processSequentially(data, stamps, d -> true));
+    }
+
+    @Test
+    void psqPrecondition_notAscending() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        double[][] data = { { 1.0 }, { 2.0 } };
+        long[] stamps = { 1L, 0L }; // 2nd stamp ≤ 1st
+
+        assertThrows(IllegalArgumentException.class, () -> f.processSequentially(data, stamps, d -> true));
+    }
+
+    @Test
+    void psqLoop_nonUniformLengths() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        // second row has the wrong length
+        double[][] data = { { 1.0 }, { 2.0, 3.0 } };
+        long[] stamps = { 0L, 1L };
+
+        assertThrows(IllegalArgumentException.class, () -> f.processSequentially(data, stamps, d -> true));
+    }
+
+    /**
+     * Filter rejects everything → returned list must be empty even after warm-up.
+     */
+    @Test
+    void psqValidButFilterRejectsAll() {
+        int warmup = 450; // > 400 to guarantee outputReady
+        int total = warmup + 3;
+
+        double[][] data = new double[total][1];
+        long[] stamps = new long[total];
+
+        // 450 normal points (value 1.0) + 3 more normal points
+        for (int i = 0; i < total; i++) {
+            data[i][0] = 1.0;
+            stamps[i] = i; // strictly ascending
+        }
+
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        // filter ALWAYS returns false
+        List<AnomalyDescriptor> out = f.processSequentially(data, stamps, d -> false);
+
+        assertTrue(out.isEmpty(), "filter rejects all so list must be empty");
+    }
+
+    @Test
+    void psqCacheToggle_path() {
+        int warmup = 500;
+        int total = warmup + 3;
+
+        double[][] data = new double[total][1];
+        long[] stamps = new long[total];
+
+        // 500 benign points (≈1.0), then a spike (20.0), then two benign points
+        for (int i = 0; i < warmup; i++) {
+            data[i][0] = 1.0 + 0.05 * ((i % 5) - 2); // tiny noise
+            stamps[i] = i;
+        }
+        data[warmup][0] = 20.0; // clear outlier
+        data[warmup + 1][0] = 1.0;
+        data[warmup + 2][0] = 1.0;
+        stamps[warmup] = warmup;
+        stamps[warmup + 1] = warmup + 1;
+        stamps[warmup + 2] = warmup + 2;
+
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1)
+                .boundingBoxCacheFraction(0) // ensures cacheDisabled == true
+                .build();
+
+        assertEquals(0.0, f.getForest().getBoundingBoxCacheFraction(), 1e-10);
+
+        List<AnomalyDescriptor> out = f.processSequentially(data, stamps, d -> d.getAnomalyGrade() > 0);
+
+        /*
+         * Expectations ───────────── 1. The spike should raise at least one descriptor
+         * with grade>0. 2. The finally-block must restore the cache fraction to 0.
+         */
+        assertFalse(out.isEmpty(), "spike should be detected as anomaly");
+        assertEquals(0.0, f.getForest().getBoundingBoxCacheFraction(), 1e-10);
+    }
+
+    @Test
+    void psqEmptyDataReturnsEmpty() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(1).shingleSize(1).build();
+
+        List<AnomalyDescriptor> out1 = f.processSequentially(new double[0][0], new long[0], d -> true);
+        assertTrue(out1.isEmpty());
+
+        List<AnomalyDescriptor> out2 = f.processSequentially(null, null, d -> true);
+        assertTrue(out2.isEmpty());
+    }
+
 }

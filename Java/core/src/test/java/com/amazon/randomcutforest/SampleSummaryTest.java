@@ -345,10 +345,8 @@ public class SampleSummaryTest {
         assertEquals(summary2.summaryPoints.length, summary1.summaryPoints.length,
                 " incorrect length of typical points");
         // due to randomization, they might not equal
-        assertTrue(
-                Math.abs(clusters.size() - summary1.summaryPoints.length) <= 1,
-                "The difference between clusters.size() and summary1.summaryPoints.length should be at most 1"
-        );
+        assertTrue(Math.abs(clusters.size() - summary1.summaryPoints.length) <= 1,
+                "The difference between clusters.size() and summary1.summaryPoints.length should be at most 1");
         double total = clusters.stream().map(ICluster::getWeight).reduce(0.0, Double::sum);
         assertEquals(total, summary1.weightOfSamples, 1e-3);
         // parallelization can produce reordering of merges

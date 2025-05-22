@@ -20,6 +20,7 @@ import static java.lang.Math.max;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -246,6 +247,36 @@ public class RCFCaster extends ThresholdedRandomCutForest {
 
     @Override
     public List<AnomalyDescriptor> processSequentially(double[][] data, Function<AnomalyDescriptor, Boolean> filter) {
+        if (data == null || data.length == 0) {
+            return new ArrayList<>();
+        }
+
+        long timestamp = preprocessor.getInternalTimeStamp();
+        long[] timestamps = new long[data.length];
+        for (int i = 0; i < data.length; i++) {
+            timestamps[i] = ++timestamp;
+        }
+
+        return processSequentially(data, timestamps, filter);
+    }
+
+    public List<AnomalyDescriptor> processSequentially(double[][] data, long[] timestamps,
+            Function<AnomalyDescriptor, Boolean> filter) {
+        // Precondition checks
+        checkArgument(filter != null, "filter must not be null");
+        if (data != null && data.length > 0) {
+            checkArgument(timestamps != null, "timestamps must not be null when data is non-empty");
+            checkArgument(timestamps.length == data.length, String.format(Locale.ROOT,
+                    "timestamps length (%s) must equal data length (%s)", timestamps.length, data.length));
+            for (int i = 1; i < timestamps.length; i++) {
+                checkArgument(timestamps[i] > timestamps[i - 1],
+                        String.format(Locale.ROOT,
+                                "timestamps must be strictly ascending: "
+                                        + "timestamps[%s]=%s is not > timestamps[%s]=%s",
+                                i, timestamps[i], i - 1, timestamps[i - 1]));
+            }
+        }
+
         ArrayList<AnomalyDescriptor> answer = new ArrayList<>();
         if (data != null) {
             if (data.length > 0) {
@@ -254,11 +285,12 @@ public class RCFCaster extends ThresholdedRandomCutForest {
                     if (cacheDisabled) { // turn caching on temporarily
                         forest.setBoundingBoxCacheFraction(1.0);
                     }
-                    long timestamp = preprocessor.getInternalTimeStamp();
                     int length = preprocessor.getInputLength();
-                    for (double[] point : data) {
+                    for (int i = 0; i < data.length; i++) {
+                        double[] point = data[i];
+                        checkArgument(point != null, " data should not be null ");
                         checkArgument(point.length == length, " nonuniform lengths ");
-                        ForecastDescriptor description = new ForecastDescriptor(point, timestamp++, forecastHorizon);
+                        ForecastDescriptor description = new ForecastDescriptor(point, timestamps[i], forecastHorizon);
                         augment(description);
                         if (filter.apply(description)) {
                             answer.add(description);
