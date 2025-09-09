@@ -23,7 +23,7 @@ import com.amazon.randomcutforest.state.returntypes.DiVectorState;
 
 @Data
 public class ComputeDescriptorState implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     private long internalTimeStamp;
     private double score;
@@ -42,4 +42,6 @@ public class ComputeDescriptorState implements Serializable {
     private double threshold;
     private double anomalyGrade;
     private String correctionMode;
+    private long inputTimeStamp;
+    private double[] currentInput;
 }

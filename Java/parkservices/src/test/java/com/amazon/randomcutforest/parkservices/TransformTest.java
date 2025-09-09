@@ -42,10 +42,20 @@ public class TransformTest {
             int numberOfTrees = 30 + rng.nextInt(20);
             int outputAfter = 32 + rng.nextInt(50);
             // shingleSize 1 is not recommended for complicated input
-            int shingleSize = 2 + rng.nextInt(15);
+            // The test sets alertOnce(true) to suppress cascades after a single injected spike.
+            // Current suppression only triggers for overlapping shingles: gap < shingleSize
+            // (in PredictorCorrector.detect), so “late” follow-on spikes (gap ≥ shingleSize)
+            // still raise grades.
+            // If shingleSize is small (e.g., 2), gap is small, anomaly would not be suppressed,
+            // may cause totalcount > numTrials.
+            int shingleSize = 3 + rng.nextInt(15);
             int baseDimensions = 1 + rng.nextInt(5);
             int dimensions = baseDimensions * shingleSize;
             long forestSeed = rng.nextLong();
+            System.out.println(" forestSeed " + forestSeed + " method " + method + " seed " + seed + " outputAfter "
+                    + outputAfter + " shingleSize " + shingleSize + " baseDimensions " + baseDimensions + " dimensions "
+                    + dimensions + " numberOfTrees " + numberOfTrees + " rng " + rng + " i " + i + " shingleSize "
+                    + shingleSize + " rng.nextLong() ");
             ThresholdedRandomCutForest first = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
                     .numberOfTrees(numberOfTrees).randomSeed(forestSeed).outputAfter(outputAfter).alertOnce(true)
                     .transformMethod(method).internalShinglingEnabled(true).shingleSize(shingleSize).build();

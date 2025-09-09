@@ -34,7 +34,7 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
     @Override
     public RCFComputeDescriptor toModel(ComputeDescriptorState state, long seed) {
 
-        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(null, 0L);
+        RCFComputeDescriptor descriptor = new RCFComputeDescriptor(state.getCurrentInput(), state.getInputTimeStamp());
         descriptor.setRCFScore(state.getScore());
         descriptor.setInternalTimeStamp(state.getInternalTimeStamp());
         descriptor.setAttribution(new DiVectorMapper().toModel(state.getAttribution()));
@@ -72,6 +72,8 @@ public class ComputeDescriptorMapper implements IStateMapper<RCFComputeDescripto
         state.setAnomalyGrade(descriptor.getAnomalyGrade());
         state.setThreshold(descriptor.getThreshold());
         state.setCorrectionMode(descriptor.getCorrectionMode().name());
+        state.setInputTimeStamp(descriptor.getInputTimestamp());
+        state.setCurrentInput(descriptor.getCurrentInput());
         return state;
     }
 

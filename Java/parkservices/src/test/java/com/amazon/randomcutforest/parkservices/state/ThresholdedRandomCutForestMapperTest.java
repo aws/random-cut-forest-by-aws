@@ -19,6 +19,8 @@ import static com.amazon.randomcutforest.preprocessor.Preprocessor.copyAtEnd;
 import static com.amazon.randomcutforest.preprocessor.Preprocessor.shiftLeft;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Random;
 import java.util.stream.Stream;
@@ -36,6 +38,7 @@ import com.amazon.randomcutforest.config.ImputationMethod;
 import com.amazon.randomcutforest.config.TransformMethod;
 import com.amazon.randomcutforest.parkservices.AnomalyDescriptor;
 import com.amazon.randomcutforest.parkservices.ThresholdedRandomCutForest;
+import com.amazon.randomcutforest.parkservices.returntypes.RCFComputeDescriptor;
 import com.amazon.randomcutforest.returntypes.TimedRangeVector;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.MultiDimDataWithKey;
@@ -705,6 +708,75 @@ public class ThresholdedRandomCutForestMapperTest {
             assertEquals(firstResult.getRCFScore(), thirdResult.getRCFScore(), 1e-10);
             ++count;
         }
+    }
+
+    @Test
+    public void testRoundTripLastDescriptor() {
+        int dimensions = 2;
+        long seed = new Random().nextLong();
+
+        ThresholdedRandomCutForest trcf = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .randomSeed(seed).build();
+
+        double[] point = { 1.0, Double.NaN };
+        long timestamp = 123L;
+
+        trcf.process(point, timestamp, new int[] { 1 });
+
+        ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+        ThresholdedRandomCutForestState state = mapper.toState(trcf);
+        ThresholdedRandomCutForest deserializedTrcf = mapper.toModel(state);
+
+        RCFComputeDescriptor deserializedDescriptor = deserializedTrcf.getPredictorCorrector().getLastDescriptor();
+        assertNotNull(deserializedDescriptor);
+        assertArrayEquals(point, deserializedDescriptor.getCurrentInput());
+        assertEquals(timestamp, deserializedDescriptor.getInputTimestamp());
+    }
+
+    @Test
+    public void testRoundTripProcessSequentially() {
+        int dimensions = 2;
+        long seed = new Random().nextLong();
+        ThresholdedRandomCutForestMapper mapper = new ThresholdedRandomCutForestMapper();
+
+        // Case 1: Zero input
+        ThresholdedRandomCutForest emptyTrcf = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .randomSeed(seed).build();
+        ThresholdedRandomCutForestState emptyState = mapper.toState(emptyTrcf);
+        ThresholdedRandomCutForest deserializedEmptyTrcf = mapper.toModel(emptyState);
+        assertNull(deserializedEmptyTrcf.getPredictorCorrector().getLastDescriptor());
+
+        // Case 2: 100 inputs
+        ThresholdedRandomCutForest trcf = new ThresholdedRandomCutForest.Builder<>().dimensions(dimensions)
+                .randomSeed(seed).build();
+
+        int numPoints = 100;
+        double[][] data = new double[numPoints][dimensions];
+        long[] timestamps = new long[numPoints];
+        Random random = new Random(seed);
+
+        for (int i = 0; i < numPoints; i++) {
+            for (int j = 0; j < dimensions; j++) {
+                data[i][j] = random.nextDouble();
+            }
+            timestamps[i] = i * 100L;
+        }
+        // Set the last point to have a missing value
+        data[numPoints - 1][dimensions - 1] = Double.NaN;
+
+        trcf.processSequentially(data, timestamps, d -> true);
+
+        ThresholdedRandomCutForestState state = mapper.toState(trcf);
+        ThresholdedRandomCutForest deserializedTrcf = mapper.toModel(state);
+
+        RCFComputeDescriptor deserializedDescriptor = deserializedTrcf.getPredictorCorrector().getLastDescriptor();
+        assertNotNull(deserializedDescriptor);
+
+        double[] lastPoint = data[numPoints - 1];
+        long lastTimestamp = timestamps[numPoints - 1];
+
+        assertArrayEquals(lastPoint, deserializedDescriptor.getCurrentInput());
+        assertEquals(lastTimestamp, deserializedDescriptor.getInputTimestamp());
     }
 
     static Stream<Arguments> args() {

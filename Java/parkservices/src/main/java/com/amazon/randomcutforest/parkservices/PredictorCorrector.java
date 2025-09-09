@@ -730,6 +730,7 @@ public class PredictorCorrector {
     protected <P extends AnomalyDescriptor> P detect(P result, RCFComputeDescriptor lastSignificantDescriptor,
             RandomCutForest forest) {
         if (result.getRCFPoint() == null) {
+            lastDescriptor = result.copyOf();
             return result;
         }
         float[] point = result.getRCFPoint();
@@ -747,6 +748,7 @@ public class PredictorCorrector {
 
         // we will not have zero scores affect any thresholding
         if (score == 0) {
+            lastDescriptor = result.copyOf();
             return result;
         }
 

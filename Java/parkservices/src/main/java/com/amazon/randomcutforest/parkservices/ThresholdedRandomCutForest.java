@@ -318,8 +318,11 @@ public class ThresholdedRandomCutForest {
      * can have additional benefits. At the moment the operation does not support
      * external timestamps.
      *
+     *
+     *
      * @param data       a vectors of vectors (each of which has to have the same
-     *                   inputLength)
+     *                   inputLength). Mising values are represented by Double.NaN
+     *                   in a vector.
      * @param timestamps a vector of timestamps (in the same order as the data, has
      *                   to be same length as data, and ascending)
      * @param filter     a condition to drop desriptor (recommended filter:
@@ -368,6 +371,11 @@ public class ThresholdedRandomCutForest {
                     checkArgument(point != null, " data should not be null ");
                     checkArgument(point.length == length, " nonuniform lengths ");
                     AnomalyDescriptor description = new AnomalyDescriptor(point, timestamp);
+                    // check missing values in point.
+                    int[] missingValues = generateMissingIndicesArray(point);
+                    if (missingValues != null) {
+                        description.setMissingValues(missingValues);
+                    }
                     augment(description);
                     if (saveDescriptor(description)) {
                         lastAnomalyDescriptor = description.copyOf();
@@ -388,6 +396,20 @@ public class ThresholdedRandomCutForest {
     // recommended filter
     public List<AnomalyDescriptor> processSequentially(double[][] data) {
         return processSequentially(data, x -> x.getAnomalyGrade() > 0);
+    }
+
+    private int[] generateMissingIndicesArray(double[] point) {
+        List<Integer> intArray = new ArrayList<>();
+        for (int i = 0; i < point.length; i++) {
+            if (Double.isNaN(point[i])) {
+                intArray.add(i);
+            }
+        }
+        // Return null if the array is empty
+        if (intArray.size() == 0) {
+            return null;
+        }
+        return intArray.stream().mapToInt(Integer::intValue).toArray();
     }
 
     /**

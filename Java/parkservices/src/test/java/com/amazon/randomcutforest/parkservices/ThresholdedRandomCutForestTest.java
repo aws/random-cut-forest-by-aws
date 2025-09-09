@@ -672,4 +672,38 @@ public class ThresholdedRandomCutForestTest {
         assertTrue(out2.isEmpty());
     }
 
+    @Test
+    void testProcessSequentiallyWithMissingValues() {
+        ThresholdedRandomCutForest f = ThresholdedRandomCutForest.builder().dimensions(2).shingleSize(1).build();
+
+        double[][] data = { { 1.0, Double.NaN }, { 3.0, 4.0 }, { Double.NaN, 5.0 }, { Double.NaN, Double.NaN } };
+        long[] stamps = { 10L, 20L, 30L, 40L };
+
+        List<AnomalyDescriptor> descriptors = f.processSequentially(data, stamps, d -> true);
+
+        assertEquals(4, descriptors.size());
+
+        AnomalyDescriptor first = descriptors.get(0);
+        assertEquals(10L, first.getInputTimestamp());
+        assertArrayEquals(new double[] { 1.0, Double.NaN }, first.getCurrentInput());
+        assertNotNull(first.getMissingValues());
+        assertArrayEquals(new int[] { 1 }, first.getMissingValues());
+
+        AnomalyDescriptor second = descriptors.get(1);
+        assertEquals(20L, second.getInputTimestamp());
+        assertArrayEquals(new double[] { 3.0, 4.0 }, second.getCurrentInput());
+        assertNull(second.getMissingValues());
+
+        AnomalyDescriptor third = descriptors.get(2);
+        assertEquals(30L, third.getInputTimestamp());
+        assertArrayEquals(new double[] { Double.NaN, 5.0 }, third.getCurrentInput());
+        assertNotNull(third.getMissingValues());
+        assertArrayEquals(new int[] { 0 }, third.getMissingValues());
+
+        AnomalyDescriptor fourth = descriptors.get(3);
+        assertEquals(40L, fourth.getInputTimestamp());
+        assertArrayEquals(new double[] { Double.NaN, Double.NaN }, fourth.getCurrentInput());
+        assertNotNull(fourth.getMissingValues());
+        assertArrayEquals(new int[] { 0, 1 }, fourth.getMissingValues());
+    }
 }
