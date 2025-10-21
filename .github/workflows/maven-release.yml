@@ -15,6 +15,10 @@ defaults:
 on:
   workflow_dispatch:
 
+
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build project and publish release
