@@ -5,6 +5,10 @@ on:
     branches: [ main ]
     paths: [ Rust/** ]
 
+
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   
