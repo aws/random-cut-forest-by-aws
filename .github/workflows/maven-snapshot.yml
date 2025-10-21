@@ -4,6 +4,10 @@ on:
     branches:
       - main
 
+
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: Java/
